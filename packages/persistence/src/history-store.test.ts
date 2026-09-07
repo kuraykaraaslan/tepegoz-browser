@@ -84,13 +84,20 @@ describe('HistoryStore', () => {
       const now = 1000 * DAY;
       // 55 pages all matching "site", each seen once, all more recent than the favourite.
       for (let i = 0; i < 55; i++) {
-        seed(`https://recent-${String(i)}.ex/`, `Recent site ${String(i)}`, now - (i + 10) * DAY, 1);
+        seed(
+          `https://recent-${String(i)}.ex/`,
+          `Recent site ${String(i)}`,
+          now - (i + 10) * DAY,
+          1,
+        );
       }
       // The page the user actually lives on: old last-visit, but 200 visits.
       seed('https://fav.ex/', 'Favourite site', now - 400 * DAY, 200);
 
       // The recency-ordered window (limit 50) never even sees it.
-      expect(HistoryStore.search(db, 'site', 50).map((e) => e.url)).not.toContain('https://fav.ex/');
+      expect(HistoryStore.search(db, 'site', 50).map((e) => e.url)).not.toContain(
+        'https://fav.ex/',
+      );
 
       // The omnibox window puts it first — the frequency ranker downstream can finally score it.
       const omni = HistoryStore.searchForOmnibox(db, 'site', now, 50);
@@ -133,9 +140,9 @@ describe('HistoryStore', () => {
 
     it('shares the Turkish-folded match path with search', () => {
       seed('https://sisli.ex/', 'Şişli Gezisi', 1000 * DAY, 4);
-      expect(HistoryStore.searchForOmnibox(db, 'sisli', 1000 * DAY, 10).map((e) => e.title)).toEqual([
-        'Şişli Gezisi',
-      ]);
+      expect(
+        HistoryStore.searchForOmnibox(db, 'sisli', 1000 * DAY, 10).map((e) => e.title),
+      ).toEqual(['Şişli Gezisi']);
     });
   });
 

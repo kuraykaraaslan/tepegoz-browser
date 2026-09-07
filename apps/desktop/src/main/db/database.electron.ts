@@ -71,7 +71,9 @@ export function openWithRepair(dbPath: string): Db | null {
     }
   }
   if (!movedMain) {
-    Logger.error('Could not quarantine the unreadable database — persistence disabled this session');
+    Logger.error(
+      'Could not quarantine the unreadable database — persistence disabled this session',
+    );
     return null;
   }
 

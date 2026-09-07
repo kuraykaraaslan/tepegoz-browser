@@ -4,6 +4,7 @@
 > Dev-only, `private`, uygulamaya asla girmeyen "gerçek sonuç" eval harness'i: gerçek bir agent'ın gerçek sayfaları sürüp ground-truth ile puanlandığı, AI yetkinlik track'inin ölçüm omurgası.
 
 ## Kesinlikle olmalı
+
 - [ ] Senaryo registry'sini `scenarios/*.json` dosyalarından yüklemeli
 - [ ] Yüklenen her senaryo girişini `safeParse` ile doğrulamalı
 - [ ] Yeni bir senaryo eklemek tek bir JSON girişi kadar olmalı (kod değişikliği gerektirmemeli)
@@ -30,6 +31,7 @@
 - [ ] `pnpm eval` bloklayan bir CI gate'i olmamalı (out-of-band çalışmalı)
 
 ## Olsa iyi olur
+
 - [ ] Live tier'i provider seçimiyle (`TEPEGOZ_EVAL_PROVIDER`) çalıştırabilmeli
 - [ ] API anahtarını `TEPEGOZ_EVAL_API_KEY` env değişkeninden almalı, repoya gömmemeli
 - [ ] Nightly non-blocking workflow JSON artifact'ini yüklemeli
@@ -41,6 +43,7 @@
 - [ ] Live tier'in Electron `better-sqlite3` ABI gereksinimini belgelemeli/kontrol etmeli
 
 ## Çok niş
+
 - [ ] Judge verdict formatı beklenmeyen model çıktısında bile ayrıştırılabilir olmalı
 - [ ] `calibration/human-labels.json` eksik/boşsa uyum oranını raporda "hesaplanamadı" olarak göstermeli
 - [ ] Fixture sunucusu port çakışmasında deterministik biçimde başka porta düşebilmeli

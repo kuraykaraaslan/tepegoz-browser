@@ -4,6 +4,7 @@
 > Chrome başlık satırındaki yatay sekme şeridi: favicon'lu tab chip'leri, wheel→yatay kaydırma, container-query ile daralma, renkli grup blokları, dnd-kit sürükle-sırala; tüm mutasyonlar callback ile enjekte edilir ve paketin kendi string'i yoktur.
 
 ## Kesinlikle olmalı
+
 - [ ] Yatay tab strip'ini chrome başlık satırında render edebilmeli
 - [ ] `tabs` dizisini favicon'lu tab chip'leri olarak render edebilmeli
 - [ ] Favicon yüklenemediğinde fallback göstermeli (favicon-with-fallback)
@@ -30,6 +31,7 @@
 - [ ] Host'ların kendi zengin tab nesnelerini geçebilmesine yapısal olarak izin vermeli
 
 ## Olsa iyi olur
+
 - [ ] `unnamedGroup` / `toggleGroup` opsiyonel etiketlerini varsa kullanmalı
 - [ ] Grup üye blokundan bir sekmeyi dışarı sürüklemeyi niyet olarak raporlamalı
 - [ ] Sekmeyi bir gruba sürükleyip bırakmayı `assign` niyeti olarak raporlamalı
@@ -43,6 +45,7 @@
 - [ ] Orta tık ile sekme kapatmayı `onClose` niyetine bağlayabilmeli
 
 ## Çok niş
+
 - [ ] Yüzlerce sekmede yatay kaydırma ve chip render'ını akıcı tutabilmeli
 - [ ] RTL yerleşimde wheel→yatay kaydırma yönünü doğru çevirmeli
 - [ ] Sürükleme sırasında grup sınırlarını geçerken overlay'i doğru konumlamalı

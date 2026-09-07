@@ -73,7 +73,8 @@ export function TransferActivityButton() {
     const previous = statusesRef.current;
     const finished = items.filter(
       (item) =>
-        ANNOUNCE_ON.includes(item.status) && previous.get(item.id) !== item.status &&
+        ANNOUNCE_ON.includes(item.status) &&
+        previous.get(item.id) !== item.status &&
         previous.has(item.id),
     );
     statusesRef.current = new Map(items.map((item) => [item.id, item.status]));

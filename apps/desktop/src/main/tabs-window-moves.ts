@@ -1,7 +1,11 @@
 import { WindowTabsGroups } from './tabs-window-groups';
 import { type DetachedTab } from './tabs-shared';
 import { unwireView } from './tabs-view-wiring';
-import { hideInternalPageView, rewireInternalPageView, unwireInternalPageView } from './tabs-internal-page-view';
+import {
+  hideInternalPageView,
+  rewireInternalPageView,
+  unwireInternalPageView,
+} from './tabs-internal-page-view';
 
 /**
  * Cross-window tear-off / merge layer of the per-window model, split out of `tabs.ts` (ADR-0010

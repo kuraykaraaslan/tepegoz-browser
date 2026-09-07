@@ -30,7 +30,9 @@ function InfoRow({ label, value, mono }: { label: string; value: string; mono?: 
   return (
     <>
       <dt className="text-text-secondary">{label}</dt>
-      <dd className={mono === true ? 'font-mono text-text-primary' : 'text-text-primary'}>{value}</dd>
+      <dd className={mono === true ? 'font-mono text-text-primary' : 'text-text-primary'}>
+        {value}
+      </dd>
     </>
   );
 }
@@ -99,8 +101,7 @@ export function AboutSection() {
   const buildLine = stamped
     ? [build.commit, build.builtAt].filter((part) => part !== '').join(' · ')
     : s.aboutBuildUnstamped;
-  const osLine =
-    info === null ? unknown : `${info.os.name} ${info.os.version} (${info.os.arch})`;
+  const osLine = info === null ? unknown : `${info.os.name} ${info.os.version} (${info.os.arch})`;
 
   function copyDiagnostics(): void {
     window.tepegoz.copyDiagnostics().then(
@@ -227,11 +228,7 @@ export function AboutSection() {
           <p className="mt-1 text-xs text-text-secondary">{s.aboutThirdPartyMissing}</p>
         )}
         <div className="mt-4 flex flex-wrap gap-2">
-          <ExternalLink
-            url={LICENSE_URL}
-            label={s.aboutLicenseText}
-            hint={s.aboutOpensInNewTab}
-          />
+          <ExternalLink url={LICENSE_URL} label={s.aboutLicenseText} hint={s.aboutOpensInNewTab} />
           <Button size="sm" variant="outline" onClick={openNotices}>
             {s.aboutThirdPartyOpen}
           </Button>

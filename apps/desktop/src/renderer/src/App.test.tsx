@@ -2,7 +2,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, render } from '@testing-library/react';
 import { INTERNAL_SETTINGS_URL } from '@tepegoz/desktop-ipc';
-import type { AppNotification, NotificationPermissionRequest, TabsState } from '@tepegoz/desktop-ipc';
+import type {
+  AppNotification,
+  NotificationPermissionRequest,
+  TabsState,
+} from '@tepegoz/desktop-ipc';
 import type { ExtensionDef } from './extensions/registry';
 import type { BookmarksBarResult } from './app-bookmarks';
 import type { ExtensionSurfacesResult } from './app-extension-surfaces';
@@ -198,7 +202,11 @@ describe('App', () => {
     act(() => lastAppOverlaysProps().answerPermission(true, true));
     expect(bridge.respondNotificationPermission).not.toHaveBeenCalled();
 
-    const req: NotificationPermissionRequest = { requestId: 'r1', origin: 'https://a.example', capability: 'notifications' };
+    const req: NotificationPermissionRequest = {
+      requestId: 'r1',
+      origin: 'https://a.example',
+      capability: 'notifications',
+    };
     act(() => lastAppEffectsParams().setPermReq(req));
     expect(lastAppOverlaysProps().permReq).toBe(req);
 
@@ -308,7 +316,10 @@ describe('App', () => {
   });
 
   it('onToggleExtension disabling an extension that is neither the open surface nor the dock touches neither', () => {
-    const extSurfaces = extSurfacesFixture({ activeSurface: { id: 'other', kind: 'modal' }, sidebarExtId: 'other' });
+    const extSurfaces = extSurfacesFixture({
+      activeSurface: { id: 'other', kind: 'modal' },
+      sidebarExtId: 'other',
+    });
     vi.mocked(useExtensionSurfaces).mockReturnValue(extSurfaces);
     render(<App />);
     act(() => lastAppEffectsParams().onToggleExtension('ext-a', false));
@@ -353,7 +364,7 @@ describe('App', () => {
     expect(call[2]).toBe(true);
   });
 
-  it('currentUrl falls back to the empty string with no active tab, and reads the active tab\'s url otherwise', () => {
+  it("currentUrl falls back to the empty string with no active tab, and reads the active tab's url otherwise", () => {
     render(<App />);
     expect(lastAppContentProps().currentUrl).toBe('');
     act(() =>
@@ -365,7 +376,10 @@ describe('App', () => {
   });
 
   it('enabled extensions default to the whole registry before prefs load, then honour a disabled entry', () => {
-    const registry = [{ id: 'x1' } as unknown as ExtensionDef, { id: 'x2' } as unknown as ExtensionDef];
+    const registry = [
+      { id: 'x1' } as unknown as ExtensionDef,
+      { id: 'x2' } as unknown as ExtensionDef,
+    ];
     vi.mocked(useExtensionCatalog).mockReturnValue({ registry, ready: true });
     render(<App />);
     expect(lastAppChromeProps().enabledExtensions.map((e) => e.id)).toEqual(['x1', 'x2']);
@@ -377,7 +391,9 @@ describe('App', () => {
   });
 
   it('contentSnapshot prefers a resize snapshot over the omnibox one', () => {
-    vi.mocked(useExtensionSurfaces).mockReturnValue(extSurfacesFixture({ resizeSnapshot: 'resize-data' }));
+    vi.mocked(useExtensionSurfaces).mockReturnValue(
+      extSurfacesFixture({ resizeSnapshot: 'resize-data' }),
+    );
     render(<App />);
     act(() => lastAppEffectsParams().setOmniboxViewHidden(true));
     act(() => lastAppEffectsParams().setOmniboxSnapshot('omnibox-data'));

@@ -1008,7 +1008,10 @@ describe('browser_analyze_page — registered only with a sandbox', () => {
     registerBrowserTools({ host: fakeHost({ runExtractionScript }) });
     const cap = CapabilityRegistry.get('browser_analyze_page')!;
 
-    const ok = (await cap.handler({ script: 'document.title', tabId: 't1' })) as Record<string, unknown>;
+    const ok = (await cap.handler({ script: 'document.title', tabId: 't1' })) as Record<
+      string,
+      unknown
+    >;
     expect(runExtractionScript).toHaveBeenCalledWith('document.title', 't1');
     expect(ok).toMatchObject({ items: 3, truncated: false });
     expect(typeof ok['scriptHash']).toBe('string');

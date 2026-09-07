@@ -4,6 +4,7 @@
 > Main/preload/renderer arasında paylaşılan typed IPC sözleşmesi: `.` entry'si zod'suz ve preload-safe, `./schemas` entry'si main-process-only zod validator'lar; `Preferences`, `TabInfo`/`TabGroupInfo` ve `TepegozApi` tiplerinin sahibi (ADR-0009).
 
 ## Kesinlikle olmalı
+
 - [ ] Paket main / preload / renderer arasında paylaşılan typed IPC sözleşmesini sağlamalı
 - [ ] Kanal adları `domain:action` biçiminde olmalı
 - [ ] Default `.` entry dependency-free olmalı (sıfır zod import — doğrulanmış)
@@ -27,6 +28,7 @@
 - [ ] `@tepegoz/preferences` kendi zod şemasını bu tipe `satisfies` ile pinlemeli
 
 ## Olsa iyi olur
+
 - [ ] credential / tab / history / bookmark / popup / login / macro / agent kanalları için şemalar bulunmalı
 - [ ] `TabMoveSchema` / `TabPinSchema` / `TabGroupCreateSchema` gibi drag-reorder / grouping / pinning şemaları (ADR-0020)
 - [ ] `AddProviderKeyInputSchema` / `RemoveKeyByIdSchema` / `ReorderKeysSchema` credential şemaları
@@ -35,6 +37,7 @@
 - [ ] `statusCode` değerleri HTTP-benzeri semantik taşımalı (403 = policy)
 
 ## Çok niş
+
 - [ ] `.` entry'ye zod sızması CI'da yakalanmalı (zero-zod doğrulaması)
 - [ ] Yeni bir preference `SETTINGS_VISIBILITY`'e eklenmezse build kırılmalı
 - [ ] Decode edilemeyen malformed boundary string'i için güvenli fallback olmalı

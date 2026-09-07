@@ -4,6 +4,7 @@
 > Her model çağrısı için tek, sağlayıcıdan bağımsız giriş noktası (L7): maxTokens/timeoutMs zorunluluğunu dayatan ModelGateway, capability'yi tier+effort+transport'a eşleyen ModelRouter, kullanım muhasebesi tutan TokenLedger ve vendor formatını canonical CanonRequest/CanonResponse'a normalize eden sağlayıcı adaptörleri.
 
 ## Kesinlikle olmalı
+
 - [ ] ModelGateway.complete() her model çağrısı için tek, sağlayıcıdan bağımsız giriş noktası olmalı
 - [ ] maxTokens'sız (sınırsız) hiçbir model çağrısına izin vermemeli
 - [ ] timeoutMs'siz (zamansız) hiçbir model çağrısına izin vermemeli
@@ -25,6 +26,7 @@
 - [ ] ANTHROPIC_MODEL / OPENAI_MODEL / LOCAL_MODEL / EffortLevel ile model-id ve effort tier'larını merkezileştirmeli — çağıranlar model string'i hardcode etmemeli
 
 ## Olsa iyi olur
+
 - [ ] TokenLedger bütçe aşımını çağırana görünür kılmalı (cost transparency)
 - [ ] Router local-SLM offload'u Phase 1a'da no-op placeholder olarak ele almalı (cloud'a düşmeli)
 - [ ] ONNX/DirectML gelene kadar local transport isteği sessizce cloud'a yönlenmeli
@@ -35,6 +37,7 @@
 - [ ] TokenLedger'ı bellek-içi tutup süreç ömrüyle sınırlı bırakmalı
 
 ## Çok niş
+
 - [ ] complete() maxTokens=0 gibi sınır değerlerde de guard'ı devreye sokmalı
 - [ ] Router transport=local ama yerel model yoksa cloud fallback'i şeffaf yapmalı
 - [ ] MockProvider aynı girdi için her zaman aynı çıktıyı vermeli (golden replay determinizmi)

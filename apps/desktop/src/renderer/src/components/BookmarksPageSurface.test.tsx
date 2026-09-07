@@ -110,7 +110,9 @@ describe('BookmarksPageSurface', () => {
   it('onNewFolder opens the add-folder dialog anchored under the toolbar', () => {
     render(<BookmarksPageSurface />);
     lastManagerProps().onNewFolder('f1');
-    expect(bridge.openPopup).toHaveBeenCalledWith('bookmark-add-folder', expect.anything(), { id: 'f1' });
+    expect(bridge.openPopup).toHaveBeenCalledWith('bookmark-add-folder', expect.anything(), {
+      id: 'f1',
+    });
   });
 
   it('onOpen navigates the active tab', () => {

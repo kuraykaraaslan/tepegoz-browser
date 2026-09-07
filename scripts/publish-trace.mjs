@@ -44,7 +44,9 @@ const SLUG = flag('slug');
 const FORCE = args.includes('--force');
 
 if (!SLUG || !/^[a-z0-9][a-z0-9-]{2,60}$/.test(SLUG)) {
-  console.error('usage: node scripts/publish-trace.mjs [in-dir] --slug <kebab-case-name> [--force]');
+  console.error(
+    'usage: node scripts/publish-trace.mjs [in-dir] --slug <kebab-case-name> [--force]',
+  );
   process.exit(1);
 }
 
@@ -69,14 +71,18 @@ for (const [i, e] of (raw.events ?? []).entries()) {
   for (const f of ['message', 'detail']) {
     const v = e[f];
     if (typeof v === 'string' && v.length > MAX_FIELD) {
-      problems.push(`events[${i}].${f} is ${v.length} chars (max ${MAX_FIELD}) — page text may have leaked into the journal`);
+      problems.push(
+        `events[${i}].${f} is ${v.length} chars (max ${MAX_FIELD}) — page text may have leaked into the journal`,
+      );
     }
   }
 }
 if (problems.length && !FORCE) {
   console.error('refusing to publish:');
   for (const p of problems) console.error('  -', p);
-  console.error('\nFix the capture, or pass --force if you have read every line above and still mean it.');
+  console.error(
+    '\nFix the capture, or pass --force if you have read every line above and still mean it.',
+  );
   process.exit(1);
 }
 if (problems.length) {
@@ -138,7 +144,11 @@ writeFileSync(out, `${JSON.stringify(doc, null, 2)}\n`, 'utf8');
 const kinds = {};
 for (const e of doc.events) kinds[e.kind] = (kinds[e.kind] ?? 0) + 1;
 console.log(`wrote ${out}`);
-console.log(`  captured ${doc.capturedOn} · provider ${doc.provider} · autonomy ${doc.autonomy} · ${doc.terminal}`);
+console.log(
+  `  captured ${doc.capturedOn} · provider ${doc.provider} · autonomy ${doc.autonomy} · ${doc.terminal}`,
+);
 console.log(`  ${doc.events.length} events ${JSON.stringify(kinds)}`);
-console.log(`  ${doc.plans.length} plan(s), ${doc.approvals.length} approval(s), ${doc.answeredByHarness.length} answered by the harness`);
+console.log(
+  `  ${doc.plans.length} plan(s), ${doc.approvals.length} approval(s), ${doc.answeredByHarness.length} answered by the harness`,
+);
 console.log('\nNext, in the website checkout:  node scripts/trace-sync.mjs ../tepegoz-browser');

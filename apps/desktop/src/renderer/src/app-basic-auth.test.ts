@@ -64,9 +64,7 @@ describe('useBasicAuth', () => {
     const { result } = renderHook(() => useBasicAuth());
     act(() => push?.(req('a')));
     act(() => result.current.cancel());
-    expect(responses).toEqual([
-      { requestId: 'a', username: '', password: '', cancelled: true },
-    ]);
+    expect(responses).toEqual([{ requestId: 'a', username: '', password: '', cancelled: true }]);
     expect(result.current.request).toBeNull();
   });
 

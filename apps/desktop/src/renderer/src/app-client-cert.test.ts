@@ -1,10 +1,7 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { act, cleanup, renderHook } from '@testing-library/react';
-import type {
-  ClientCertificateRequest,
-  ClientCertificateResponse,
-} from '@tepegoz/desktop-ipc';
+import type { ClientCertificateRequest, ClientCertificateResponse } from '@tepegoz/desktop-ipc';
 import { useClientCert } from './app-client-cert';
 
 /**

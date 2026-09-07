@@ -56,9 +56,10 @@ describe('decodeRiceDeltas', () => {
 
 describe('parseHashListResponse', () => {
   it('splits uncompressed additionsFourBytes into 8-hex prefixes', () => {
-    expect(
-      parseHashListResponse({ additionsFourBytes: { rawHashes: TWO_PREFIXES } }),
-    ).toEqual(['deadbeef', 'feedface']);
+    expect(parseHashListResponse({ additionsFourBytes: { rawHashes: TWO_PREFIXES } })).toEqual([
+      'deadbeef',
+      'feedface',
+    ]);
   });
 
   it('decodes a Rice-coded additionsFourBytes payload to ascending prefixes', () => {
@@ -79,7 +80,9 @@ describe('parseHashListResponse', () => {
     expect(parseHashListResponse(null)).toEqual([]);
     expect(parseHashListResponse({})).toEqual([]);
     expect(
-      parseHashListResponse({ additionsFourBytes: { riceParameter: 99, firstValue: 0, entriesCount: 1, encodedData: '' } }),
+      parseHashListResponse({
+        additionsFourBytes: { riceParameter: 99, firstValue: 0, entriesCount: 1, encodedData: '' },
+      }),
     ).toEqual([]);
     expect(
       parseHashListResponse({

@@ -22,7 +22,7 @@ const pc = settingsDict.en.permissionsCenter;
 
 const cert = (over: Partial<CertificateSummary> = {}): CertificateSummary => ({
   subjectName: 'example.com',
-  issuerName: "Example CA",
+  issuerName: 'Example CA',
   validFrom: '2026-01-01T00:00:00.000Z',
   validTo: '2027-01-01T00:00:00.000Z',
   serialNumber: 'AA:BB',
@@ -159,7 +159,9 @@ describe('SiteInfoPopup', () => {
 
     fireEvent.click(screen.getByText(t.clearSiteData));
     fireEvent.click(screen.getByRole('button', { name: t.clearSiteDataConfirm }));
-    await waitFor(() => expect(bridge.clearSiteData).toHaveBeenCalledWith('https://example.com/page'));
+    await waitFor(() =>
+      expect(bridge.clearSiteData).toHaveBeenCalledWith('https://example.com/page'),
+    );
     await waitFor(() => expect(bridge.getPageInfo).toHaveBeenCalledTimes(2));
   });
 
@@ -167,7 +169,8 @@ describe('SiteInfoPopup', () => {
     renderPopup();
     await screen.findByText(t.connectionSecureTitle);
     fireEvent.click(screen.getByText(t.clearSiteData));
-    const confirmBox = screen.getByText(t.clearSiteDataBody.replace('{site}', 'example.com')).parentElement as HTMLElement;
+    const confirmBox = screen.getByText(t.clearSiteDataBody.replace('{site}', 'example.com'))
+      .parentElement as HTMLElement;
     fireEvent.click(within(confirmBox).getByRole('button', { name: t.close }));
     expect(bridge.clearSiteData).not.toHaveBeenCalled();
     expect(screen.queryByText(t.clearSiteDataBody.replace('{site}', 'example.com'))).toBeNull();
@@ -181,9 +184,11 @@ describe('SiteInfoPopup', () => {
     const select = await screen.findByLabelText(pc.capability.geolocation);
     fireEvent.change(select, { target: { value: 'denied' } });
     await waitFor(() => expect(bridge.updatePreferences).toHaveBeenCalled());
-    const patch = bridge.updatePreferences.mock.calls[0]?.[0] as {
-      sitePermissions?: Record<string, { geolocation?: string }>;
-    } | undefined;
+    const patch = bridge.updatePreferences.mock.calls[0]?.[0] as
+      | {
+          sitePermissions?: Record<string, { geolocation?: string }>;
+        }
+      | undefined;
     expect(patch?.sitePermissions?.['https://example.com']?.geolocation).toBe('denied');
 
     // a non-prompt state → the reset link is shown

@@ -28,9 +28,13 @@ interface Bridge {
   dataFolder: 'ok' | 'false' | 'reject';
   tabs: string[];
 }
-const bridge = vi.hoisted(
-  (): Bridge => ({ info: 'reject', canCopy: true, noticesOpened: true, dataFolder: 'ok', tabs: [] }),
-);
+const bridge = vi.hoisted((): Bridge => ({
+  info: 'reject',
+  canCopy: true,
+  noticesOpened: true,
+  dataFolder: 'ok',
+  tabs: [],
+}));
 
 function appInfo(over: Partial<AppInfo> = {}): AppInfo {
   return {
@@ -40,7 +44,12 @@ function appInfo(over: Partial<AppInfo> = {}): AppInfo {
     glassAvailable: false,
     os: { name: 'Windows 11', version: '10.0.26200', arch: 'x64' },
     engines: { chromium: '140.0.7339.207', electron: '43.0.0', node: '24.4.0', v8: '14.0.365.4' },
-    build: { channel: 'stable', commit: 'abc12345', builtAt: '2026-08-28T09:00:00.000Z', packaged: true },
+    build: {
+      channel: 'stable',
+      commit: 'abc12345',
+      builtAt: '2026-08-28T09:00:00.000Z',
+      packaged: true,
+    },
     license: 'AGPL-3.0-only',
     ...over,
   };
@@ -60,9 +69,7 @@ beforeEach(() => {
           ? Promise.reject(new Error('bridge unavailable'))
           : Promise.resolve(bridge.info),
       copyDiagnostics: () =>
-        bridge.canCopy
-          ? Promise.resolve('diagnostics')
-          : Promise.reject(new Error('no clipboard')),
+        bridge.canCopy ? Promise.resolve('diagnostics') : Promise.reject(new Error('no clipboard')),
       openThirdPartyNotices: () =>
         bridge.noticesOpened === 'reject'
           ? Promise.reject(new Error('notices path blew up'))
@@ -207,9 +214,7 @@ describe('opening the data folder', () => {
     renderAbout();
     await waitFor(() => expect(screen.getByRole('button', { name: /data folder/i })).toBeTruthy());
     fireEvent.click(screen.getByRole('button', { name: /data folder/i }));
-    await waitFor(() =>
-      expect(screen.queryByText(/data folder could not be opened/i)).toBeNull(),
-    );
+    await waitFor(() => expect(screen.queryByText(/data folder could not be opened/i)).toBeNull());
   });
 
   it('shows the failure line when the folder did not open', async () => {
@@ -217,9 +222,7 @@ describe('opening the data folder', () => {
     renderAbout();
     await waitFor(() => expect(screen.getByRole('button', { name: /data folder/i })).toBeTruthy());
     fireEvent.click(screen.getByRole('button', { name: /data folder/i }));
-    await waitFor(() =>
-      expect(screen.getByText(/data folder could not be opened/i)).toBeTruthy(),
-    );
+    await waitFor(() => expect(screen.getByText(/data folder could not be opened/i)).toBeTruthy());
   });
 
   it('shows the failure line when the open call rejects', async () => {
@@ -227,9 +230,7 @@ describe('opening the data folder', () => {
     renderAbout();
     await waitFor(() => expect(screen.getByRole('button', { name: /data folder/i })).toBeTruthy());
     fireEvent.click(screen.getByRole('button', { name: /data folder/i }));
-    await waitFor(() =>
-      expect(screen.getByText(/data folder could not be opened/i)).toBeTruthy(),
-    );
+    await waitFor(() => expect(screen.getByText(/data folder could not be opened/i)).toBeTruthy());
   });
 });
 

@@ -4,6 +4,7 @@
 > Klasör-sandbox'lı `file_*` / `fileaccess_*` capability'leri: kullanıcının folder-grant whitelist'i tek yetkilendirme kaynağı, `FileAccessPolicy` saf path-math (ADR-0022).
 
 ## Kesinlikle olmalı
+
 - [ ] `registerFileOperations(deps)` `file_*`/`fileaccess_*` araçlarını `CapabilityRegistry`'ye kaydetmeli
 - [ ] Araçları verilen `FileSystemHost`/`FileAccessPolicy`/`GrantStore`'a bağlamalı
 - [ ] Kullanıcının folder-grant whitelist'ini tek yetkilendirme kaynağı yapmalı — daha geniş dosya sistemi erişimi olmamalı
@@ -26,6 +27,7 @@
 - [ ] `resetFileOperationsForTest` ile temiz unregister/yeniden register test seam'i sağlamalı
 
 ## Olsa iyi olur
+
 - [ ] `..`/symlink ile grant dışına kaçış denemelerini `canonicalize` sonrası membership ile engellemeli
 - [ ] Recursive olmayan bir grant'te alt klasör yollarını reddetmeli
 - [ ] `decide` `ask` döndürdüğünde ToolGateway confirm akışını tetiklemeli
@@ -36,6 +38,7 @@
 - [ ] Var olmayan yol üzerinde `stat`/`exists` çağrısı çökmeden sonuç dönmeli
 
 ## Çok niş
+
 - [ ] Grant kökünün kendisinin silinmesi/taşınması gibi opları özel olarak ele almalı
 - [ ] Canonicalize sırasında çözülemeyen yol için net bir ret üretmeli
 - [ ] Çok büyük dosyada `base64` okuma/yazmada IPC boyut sınırını gözetmeli

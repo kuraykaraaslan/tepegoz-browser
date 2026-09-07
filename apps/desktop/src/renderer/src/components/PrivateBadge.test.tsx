@@ -44,8 +44,9 @@ describe('PrivateBadge', () => {
     const notHidden = within(panel).getByText(t.privateNotHidden);
     const discardsTitle = within(panel).getByText(t.privateDiscardsTitle);
 
-    expect(notHidden.compareDocumentPosition(discardsTitle) & Node.DOCUMENT_POSITION_FOLLOWING).
-      toBeTruthy();
+    expect(
+      notHidden.compareDocumentPosition(discardsTitle) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
   });
 
   it('lists both what is discarded and what is kept', () => {

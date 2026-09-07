@@ -106,9 +106,9 @@ test('tepegoz://settings loads as a real page and its right-click opens the nati
     // blanked to the chrome background. Assert the capture path produces a real image for this page.
     const settingsSnapshot = await app.evaluate(({ webContents }) => {
       const chrome = webContents.getAllWebContents().find((w) => w.getURL().startsWith('file:'));
-      return chrome?.executeJavaScript(
-        'window.tepegoz.captureActiveTab()',
-      ) as Promise<string | null>;
+      return chrome?.executeJavaScript('window.tepegoz.captureActiveTab()') as Promise<
+        string | null
+      >;
     });
     expect(settingsSnapshot).toMatch(/^data:image\/png/);
 
@@ -134,9 +134,7 @@ test('tepegoz://settings loads as a real page and its right-click opens the nati
       );
 
     await app.evaluate(({ webContents }) => {
-      const chrome = webContents
-        .getAllWebContents()
-        .find((w) => w.getURL().startsWith('file:'));
+      const chrome = webContents.getAllWebContents().find((w) => w.getURL().startsWith('file:'));
       return chrome?.executeJavaScript(
         'window.tepegoz.setContentBounds({ x: 0, y: 96, width: 1600, height: 700 })',
       );
@@ -144,9 +142,7 @@ test('tepegoz://settings loads as a real page and its right-click opens the nati
     await expect.poll(settingsInnerWidth, { timeout: 10_000 }).toBe(1600);
 
     await app.evaluate(({ webContents }) => {
-      const chrome = webContents
-        .getAllWebContents()
-        .find((w) => w.getURL().startsWith('file:'));
+      const chrome = webContents.getAllWebContents().find((w) => w.getURL().startsWith('file:'));
       return chrome?.executeJavaScript(
         'window.tepegoz.setContentBounds({ x: 0, y: 96, width: 900, height: 700 })',
       );

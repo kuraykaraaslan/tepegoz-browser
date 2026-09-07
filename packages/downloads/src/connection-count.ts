@@ -53,13 +53,7 @@ export interface ConnectionCountInput {
 
 export interface ConnectionCountPlan {
   count: number;
-  reason:
-    | 'first-transfer'
-    | 'scaled-up'
-    | 'held-at-ceiling'
-    | 'held-flat'
-    | 'backed-off'
-    | 'floor';
+  reason: 'first-transfer' | 'scaled-up' | 'held-at-ceiling' | 'held-flat' | 'backed-off' | 'floor';
 }
 
 /** Clamp a candidate count into `[1, ceiling]` where `ceiling` is itself clamped to the hard cap. */

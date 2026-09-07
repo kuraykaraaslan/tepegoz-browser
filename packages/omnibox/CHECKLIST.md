@@ -4,6 +4,7 @@
 > Tarayıcının adres çubuğu: yazılan değeri sahiplenen, aktif sekmenin URL'siyle senkron tutan, satır-içi aritmetik değerlendiren ve enjekte edilen `onSuggest` ile deterministik birleşik öneri açılır listesi gösteren sunum katmanı.
 
 ## Kesinlikle olmalı
+
 - [ ] `Omnibox` adres çubuğu girişini render edebilmeli
 - [ ] Yazılan değeri kendi içinde sahiplenmeli (controlled)
 - [ ] Görünen değeri aktif sekmenin `currentUrl`'i ile senkron tutmalı
@@ -29,6 +30,7 @@
 - [ ] Önerilerde klavye gezinmesini (ok tuşları, Enter) desteklemeli
 
 ## Olsa iyi olur
+
 - [ ] İlk öneriyi varsayılan olarak vurgulayabilmeli
 - [ ] Escape ile girişi mevcut sekme URL'sine geri döndürebilmeli
 - [ ] Öneri türlerini görsel olarak (türe özgü ikon) ayırt edebilmeli
@@ -41,6 +43,7 @@
 - [ ] Calc sonucunda Enter ile sonucu panoya kopyalayabilmeli
 
 ## Çok niş
+
 - [ ] Calc işlem önceliği, parantez ve sıfıra bölmeyi doğru ele almalı
 - [ ] `looksNavigable`'da IDN / punycode gösterimini ele almalı
 - [ ] Çok uzun URL'yi ortadan kısaltarak (ellipsis) gösterebilmeli

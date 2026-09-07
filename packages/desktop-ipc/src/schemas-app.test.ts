@@ -57,7 +57,9 @@ describe('the credential-vault schemas', () => {
     expect(RenameProviderKeyInputSchema.parse({ keyId: 'k1', label: 'New' })).toMatchObject({
       keyId: 'k1',
     });
-    expect(SetProviderKeyModelSchema.parse({ keyId: 'k1', model: '' })).toMatchObject({ model: '' });
+    expect(SetProviderKeyModelSchema.parse({ keyId: 'k1', model: '' })).toMatchObject({
+      model: '',
+    });
     expect(RenameProviderKeyInputSchema.safeParse({ keyId: 'k1', label: '' }).success).toBe(false);
   });
 
@@ -81,7 +83,12 @@ describe('CasRefSchema', () => {
 describe('the HITL-prompt response schemas', () => {
   it('BasicAuthResponseSchema length-caps the credential fields', () => {
     expect(
-      BasicAuthResponseSchema.parse({ requestId: 'r', username: 'u', password: 'p', cancelled: false }),
+      BasicAuthResponseSchema.parse({
+        requestId: 'r',
+        username: 'u',
+        password: 'p',
+        cancelled: false,
+      }),
     ).toMatchObject({ cancelled: false });
     expect(
       BasicAuthResponseSchema.safeParse({

@@ -4,6 +4,7 @@
 > Tarayıcının bildirim yüzeyleri: bildirim merkezi paneli, sağ-alt toast yığını ve Web Notification izin-onay istemi — köprüden bağımsız, kendi i18n sözlüğünü taşıyan sunum katmanı.
 
 ## Kesinlikle olmalı
+
 - [ ] `NotificationCenter` bir `AppNotification` listesini panel olarak render edebilmeli
 - [ ] Her satırda tekil "kapat" (dismiss) eylemi sunabilmeli
 - [ ] Her satırda tekil "okundu işaretle" eylemi sunabilmeli
@@ -29,6 +30,7 @@
 - [ ] `NotificationAction` girişlerini tıklanabilir eylem düğmeleri olarak render edebilmeli
 
 ## Olsa iyi olur
+
 - [ ] Bildirim yokken boş durum (empty state) göstermeli
 - [ ] Panel başlığında okunmamış sayacı gösterebilmeli
 - [ ] Toast yığını görünür toast sayısını sınırlayıp taşmayı yönetebilmeli
@@ -41,6 +43,7 @@
 - [ ] Merkez satırlarında `KIND_VISUALS`'tan gelen türe özgü vurgu rengini kullanabilmeli
 
 ## Çok niş
+
 - [ ] `prefers-reduced-motion` altında toast animasyonlarını sadeleştirebilmeli
 - [ ] Panel ve toast yığını için RTL yerleşimini desteklemeli
 - [ ] Çok uzun bildirim gövdesini kırpıp "genişlet" ile açabilmeli

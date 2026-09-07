@@ -41,9 +41,8 @@ vi.mock('electron', () => ({
 }));
 vi.mock('@tepegoz/libs', () => ({ Logger: { warn: vi.fn() } }));
 
-const { buildAutostartEntry, linuxAutostartExec, setLaunchAtLogin } = await import(
-  './launch-at-login'
-);
+const { buildAutostartEntry, linuxAutostartExec, setLaunchAtLogin } =
+  await import('./launch-at-login');
 
 const realPlatform = process.platform;
 function setPlatform(p: string): void {
@@ -73,13 +72,19 @@ describe('buildAutostartEntry', () => {
 describe('linuxAutostartExec', () => {
   it('packaged: just the binary', () => {
     el.isPackaged = true;
-    Object.defineProperty(process, 'execPath', { value: '/opt/Tepegoz/tepegoz', configurable: true });
+    Object.defineProperty(process, 'execPath', {
+      value: '/opt/Tepegoz/tepegoz',
+      configurable: true,
+    });
     expect(linuxAutostartExec()).toBe('/opt/Tepegoz/tepegoz');
   });
 
   it('dev: electron + the app dir, each quoted only when it has a space', () => {
     el.isPackaged = false;
-    Object.defineProperty(process, 'execPath', { value: '/opt/electron/electron', configurable: true });
+    Object.defineProperty(process, 'execPath', {
+      value: '/opt/electron/electron',
+      configurable: true,
+    });
     el.appPath = '/home/u/my app';
     expect(linuxAutostartExec()).toBe('/opt/electron/electron "/home/u/my app"');
     el.appPath = '/home/u/app';

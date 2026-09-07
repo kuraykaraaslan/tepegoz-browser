@@ -122,7 +122,9 @@ class SafeBrowsingServiceImpl {
     if (this.listFetcher !== null) {
       this.scheduler.start();
     } else if (on) {
-      Logger.info('Safe Browsing has no API key — navigation and download checks resolve to unknown');
+      Logger.info(
+        'Safe Browsing has no API key — navigation and download checks resolve to unknown',
+      );
     }
   }
 

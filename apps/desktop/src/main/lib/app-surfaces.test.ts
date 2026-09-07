@@ -96,7 +96,9 @@ describe('broadcastToAppSurfaces', () => {
 
     broadcastToAppSurfaces('public-settings:changed', { theme: 'dark' });
 
-    expect(chrome.send).toHaveBeenCalledExactlyOnceWith('public-settings:changed', { theme: 'dark' });
+    expect(chrome.send).toHaveBeenCalledExactlyOnceWith('public-settings:changed', {
+      theme: 'dark',
+    });
     expect(page.send).toHaveBeenCalledExactlyOnceWith('public-settings:changed', { theme: 'dark' });
   });
 });

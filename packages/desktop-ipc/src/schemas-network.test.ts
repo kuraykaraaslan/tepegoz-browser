@@ -33,9 +33,9 @@ describe('ScopeBindingInputSchema', () => {
 
 describe('BindTabNetworkSchema / BindGroupNetworkSchema', () => {
   it('wrap a bounded id + a scope binding', () => {
-    expect(
-      BindTabNetworkSchema.parse({ tabId: 't1', binding: { kind: 'direct' } }),
-    ).toMatchObject({ tabId: 't1' });
+    expect(BindTabNetworkSchema.parse({ tabId: 't1', binding: { kind: 'direct' } })).toMatchObject({
+      tabId: 't1',
+    });
     expect(
       BindGroupNetworkSchema.parse({ groupId: 'g1', binding: { kind: 'inherit' } }),
     ).toMatchObject({ groupId: 'g1' });
@@ -69,7 +69,8 @@ describe('AddNetworkConnectionSchema', () => {
 
   it('rejects an out-of-range SOCKS port, an empty wireguard path, and an unknown kind', () => {
     expect(
-      AddNetworkConnectionSchema.safeParse({ ...base, kind: 'byo-socks', socksPort: 70000 }).success,
+      AddNetworkConnectionSchema.safeParse({ ...base, kind: 'byo-socks', socksPort: 70000 })
+        .success,
     ).toBe(false);
     expect(
       AddNetworkConnectionSchema.safeParse({ ...base, kind: 'wireguard', sourcePath: '' }).success,
@@ -89,7 +90,9 @@ describe('the small connection-management schemas', () => {
       id: 'conn-x',
       active: true,
     });
-    expect(SetConnectionActiveSchema.safeParse({ id: 'conn-x', active: 'yes' }).success).toBe(false);
+    expect(SetConnectionActiveSchema.safeParse({ id: 'conn-x', active: 'yes' }).success).toBe(
+      false,
+    );
   });
 
   it('SetBinaryPathSchema / VpnBinarySchema bound the helper binary name', () => {

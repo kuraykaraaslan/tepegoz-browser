@@ -37,7 +37,9 @@ export function BookmarksPageSurface() {
             window.tepegoz.moveBookmark(id, newParentId, index).then(bumpRefresh, () => undefined);
           }}
           onNewFolder={(parentId) =>
-            window.tepegoz.openPopup('bookmark-add-folder', bookmarkDialogAnchor(), { id: parentId })
+            window.tepegoz.openPopup('bookmark-add-folder', bookmarkDialogAnchor(), {
+              id: parentId,
+            })
           }
           onOpen={(url) => window.tepegoz.navigateTab(url)}
           onContextMenu={(id, type) => window.tepegoz.showBookmarkContextMenu(id, type)}

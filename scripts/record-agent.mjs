@@ -177,7 +177,10 @@ writeFileSync(
   ),
 );
 
-const app = await electron.launch({ args: [`--user-data-dir=${profileDir}`, appDir], env: guiEnv() });
+const app = await electron.launch({
+  args: [`--user-data-dir=${profileDir}`, appDir],
+  env: guiEnv(),
+});
 const win = await app.firstWindow();
 
 /**
@@ -215,7 +218,9 @@ if (PROVIDER !== 'local') {
     },
     { provider: PROVIDER, key: API_KEY },
   );
-  console.log(ok ? `provider key installed (${PROVIDER})` : `WARNING: key install failed (${PROVIDER})`);
+  console.log(
+    ok ? `provider key installed (${PROVIDER})` : `WARNING: key install failed (${PROVIDER})`,
+  );
   await win.waitForTimeout(800);
 }
 
@@ -352,7 +357,12 @@ async function stopRecording(file) {
     console.log('wrote', file, (buf.length / 1e6).toFixed(2), 'MB (remuxed for duration)');
   } else {
     rmSync(remuxed, { force: true });
-    console.log('wrote', file, (buf.length / 1e6).toFixed(2), 'MB — remux failed, no duration in container');
+    console.log(
+      'wrote',
+      file,
+      (buf.length / 1e6).toFixed(2),
+      'MB — remux failed, no duration in container',
+    );
   }
 }
 
@@ -393,8 +403,15 @@ async function answerIfVisible(name, kind) {
   await win.waitForTimeout(READ_DWELL_MS);
   if (!(await btn.isVisible().catch(() => false))) return;
   await btn.click().catch(() => undefined);
-  uiAnswers.push({ kind, button: name, atMs: Date.now() - startedWait, answeredBy: 'capture-harness' });
-  console.log(`  answered ${kind} via "${name}" at ${((Date.now() - startedWait) / 1000).toFixed(1)}s`);
+  uiAnswers.push({
+    kind,
+    button: name,
+    atMs: Date.now() - startedWait,
+    answeredBy: 'capture-harness',
+  });
+  console.log(
+    `  answered ${kind} via "${name}" at ${((Date.now() - startedWait) / 1000).toFixed(1)}s`,
+  );
 }
 
 while (Date.now() - startedWait < DEADLINE_MS) {
@@ -450,7 +467,9 @@ console.log(
   'gate(s) answered by the harness',
 );
 for (const e of payload.events.slice(0, 40)) {
-  console.log(`  ${String(e.atMs).padStart(6)}ms  ${e.kind.padEnd(18)} ${String(e.message).slice(0, 90)}`);
+  console.log(
+    `  ${String(e.atMs).padStart(6)}ms  ${e.kind.padEnd(18)} ${String(e.message).slice(0, 90)}`,
+  );
 }
 
 await win.screenshot({ path: join(OUT, 'agent-final.png') });

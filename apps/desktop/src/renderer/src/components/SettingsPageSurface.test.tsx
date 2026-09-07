@@ -30,11 +30,25 @@ function credentialsStatus(over: Partial<CredentialsStatus> = {}): CredentialsSt
 }
 
 function key(over: Partial<ProviderKeyMeta> = {}): ProviderKeyMeta {
-  return { id: 'k1', provider: 'anthropic', label: 'Work', createdAt: 0, last4: 'abcd', model: '', ...over };
+  return {
+    id: 'k1',
+    provider: 'anthropic',
+    label: 'Work',
+    createdAt: 0,
+    last4: 'abcd',
+    model: '',
+    ...over,
+  };
 }
 
 function login(over: Partial<LoginCredentialMeta> = {}): LoginCredentialMeta {
-  return { id: 'c1', url: 'https://example.com', username: 'alice', title: '', ...over } as LoginCredentialMeta;
+  return {
+    id: 'c1',
+    url: 'https://example.com',
+    username: 'alice',
+    title: '',
+    ...over,
+  } as LoginCredentialMeta;
 }
 
 const bridge = {
@@ -168,7 +182,9 @@ describe('SettingsPageSurface', () => {
   });
 
   it('renames a provider key through onRenameKey', async () => {
-    bridge.getCredentialsStatus.mockResolvedValue(credentialsStatus({ keys: [key({ label: 'Old' })] }));
+    bridge.getCredentialsStatus.mockResolvedValue(
+      credentialsStatus({ keys: [key({ label: 'Old' })] }),
+    );
     await renderAt('providers');
     fireEvent.click(screen.getByRole('button', { name: s.rename }));
     fireEvent.change(document.getElementById('rename-k1')!, { target: { value: 'New name' } });
@@ -178,7 +194,9 @@ describe('SettingsPageSurface', () => {
 
   it('pins a model on a provider key through onSetKeyModel', async () => {
     bridge.getCredentialsStatus.mockResolvedValue(credentialsStatus({ keys: [key()] }));
-    bridge.getAgentConfig.mockResolvedValue({ models: { anthropic: [{ id: 'sonnet', label: 'Sonnet' }] } });
+    bridge.getAgentConfig.mockResolvedValue({
+      models: { anthropic: [{ id: 'sonnet', label: 'Sonnet' }] },
+    });
     await renderAt('providers');
     const trigger = await screen.findByRole('button', { name: s.keyModel.label });
     fireEvent.click(trigger);
@@ -187,7 +205,9 @@ describe('SettingsPageSurface', () => {
   });
 
   it('removes a provider key through onRemoveKeyById', async () => {
-    bridge.getCredentialsStatus.mockResolvedValue(credentialsStatus({ keys: [key({ label: 'Doomed' })] }));
+    bridge.getCredentialsStatus.mockResolvedValue(
+      credentialsStatus({ keys: [key({ label: 'Doomed' })] }),
+    );
     await renderAt('providers');
     fireEvent.click(screen.getByRole('button', { name: s.remove }));
     const confirms = screen.getAllByRole('button', { name: s.remove });
@@ -234,7 +254,11 @@ describe('SettingsPageSurface', () => {
     fireEvent.click(screen.getByRole('button', { name: /^save$/i }));
     await waitFor(() =>
       expect(bridge.setLogin).toHaveBeenCalledWith(
-        expect.objectContaining({ url: 'https://site.example', username: 'bob', password: 'hunter2' }),
+        expect.objectContaining({
+          url: 'https://site.example',
+          username: 'bob',
+          password: 'hunter2',
+        }),
       ),
     );
   });
@@ -243,7 +267,9 @@ describe('SettingsPageSurface', () => {
     await renderAt('passwords');
     const input = document.querySelector('input[type="file"]') as HTMLInputElement;
     const file = new File(['url,username,password\n'], 'passwords.csv', { type: 'text/csv' });
-    Object.defineProperty(file, 'text', { value: () => Promise.resolve('url,username,password\n') });
+    Object.defineProperty(file, 'text', {
+      value: () => Promise.resolve('url,username,password\n'),
+    });
     Object.defineProperty(input, 'files', { value: [file] });
     fireEvent.change(input);
     await waitFor(() =>

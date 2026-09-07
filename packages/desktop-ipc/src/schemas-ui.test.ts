@@ -39,7 +39,9 @@ describe('PopupOpenSchema', () => {
   it('rejects an empty surface, a non-positive height, and an unknown align', () => {
     expect(PopupOpenSchema.safeParse({ surface: '', anchor }).success).toBe(false);
     expect(PopupOpenSchema.safeParse({ surface: 's', anchor, height: 0 }).success).toBe(false);
-    expect(PopupOpenSchema.safeParse({ surface: 's', anchor, align: 'middle' }).success).toBe(false);
+    expect(PopupOpenSchema.safeParse({ surface: 's', anchor, align: 'middle' }).success).toBe(
+      false,
+    );
   });
 });
 
@@ -50,7 +52,9 @@ describe('PopupResizeSchema / PageInfoGetSchema / SubmenuOpenSchema', () => {
   });
 
   it('page-info:get is a bounded URL', () => {
-    expect(PageInfoGetSchema.parse({ url: 'https://x.test' })).toMatchObject({ url: 'https://x.test' });
+    expect(PageInfoGetSchema.parse({ url: 'https://x.test' })).toMatchObject({
+      url: 'https://x.test',
+    });
     expect(PageInfoGetSchema.safeParse({ url: '' }).success).toBe(false);
   });
 

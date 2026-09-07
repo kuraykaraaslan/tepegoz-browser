@@ -354,8 +354,6 @@ describe('the export handlers', () => {
 
   it('agentOpenFile opens the asserted real path on the happy path', async () => {
     helpers.actions.get('agent:openFile')!('/home/u/tepegoz/real.txt');
-    await vi.waitFor(() =>
-      expect(shell.openPath).toHaveBeenCalledWith('/home/u/tepegoz/real.txt'),
-    );
+    await vi.waitFor(() => expect(shell.openPath).toHaveBeenCalledWith('/home/u/tepegoz/real.txt'));
   });
 });

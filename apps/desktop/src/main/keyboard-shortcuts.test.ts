@@ -158,7 +158,9 @@ describe('the window-level shortcuts', () => {
   });
 
   it('Ctrl+Alt+D is NOT the address bar — AltGr on a Turkish keyboard types with it', () => {
-    expect(handleWindowShortcut(win, press('d', { control: true, alt: true }), { page })).toBe(false);
+    expect(handleWindowShortcut(win, press('d', { control: true, alt: true }), { page })).toBe(
+      false,
+    );
     expect(sent).toEqual([]);
   });
 

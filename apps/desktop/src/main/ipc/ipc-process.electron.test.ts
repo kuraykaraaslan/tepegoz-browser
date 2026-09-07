@@ -36,7 +36,10 @@ vi.mock('../lib/i18n-main', () => ({
 }));
 
 const metrics = vi.hoisted(() => ({
-  snapshot: { rows: [{ pid: 1, kind: 'browser', label: 'Browser', cpuPercent: 0, memoryBytes: 0 }], sampledAt: 7 },
+  snapshot: {
+    rows: [{ pid: 1, kind: 'browser', label: 'Browser', cpuPercent: 0, memoryBytes: 0 }],
+    sampledAt: 7,
+  },
   collect: vi.fn(),
   end: vi.fn(),
 }));
@@ -77,7 +80,9 @@ describe('registerProcessIpc', () => {
   });
 
   it('process-metrics:get throws (mapped 403) for an untrusted sender', () => {
-    expect(() => h.handlers.get(IpcChannels.processMetricsGet)?.(untrustedEvent, undefined)).toThrow();
+    expect(() =>
+      h.handlers.get(IpcChannels.processMetricsGet)?.(untrustedEvent, undefined),
+    ).toThrow();
     expect(metrics.collect).not.toHaveBeenCalled();
   });
 

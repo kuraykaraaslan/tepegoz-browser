@@ -4,6 +4,7 @@
 > Kalıcı uygulama tercihleri deposu (theme, locale, telemetry, "run locally" toggle, default AI provider, extension states, MCP servers, …); tip `@tepegoz/desktop-ipc`'ye ait, bu paket zod şemasını ve varsayılanları kurup `satisfies` ile o tipe sabitler.
 
 ## Kesinlikle olmalı
+
 - [ ] `PreferenceStore.init({ filePath })` dosyayı yükleyip doğrulamalı
 - [ ] Eksik/bozuk dosyada varsayılanlara düşmeli (untrusted kabul: `readJsonFile` + `safeParse`)
 - [ ] `getAll()` savunmacı bir kopya döndürmeli (iç duruma referans vermemeli)
@@ -22,6 +23,7 @@
 - [ ] `ThemePrefSchema`, `LocalePrefSchema`, `ProviderPrefSchema`, `ExtensionIdSchema`, `ExtensionStateSchema`, `McpServerPrefSchema` gibi yeniden kullanılabilir alan şemalarını dışa aktarmalı
 
 ## Olsa iyi olur
+
 - [ ] `update` yalnızca geçerli patch'leri kabul etmeli, geçersizde mevcut durumu bozmamalı
 - [ ] Birleştirme (merge) kısmi patch'te belirtilmeyen alanları korumalı
 - [ ] Bilinmeyen/fazladan alanlar doğrulamada güvenli biçimde ele alınmalı
@@ -32,6 +34,7 @@
 - [ ] Bozuk dosyadan kurtulurken kullanıcıya sessiz veri kaybı olmadan yeni geçerli varsayılan yazılmalı
 
 ## Çok niş
+
 - [ ] `init` çağrılmadan `getAll`/`update` çağrıldığında öngörülebilir davranmalı
 - [ ] MCP server tercihleri liste halinde birden çok kayıt tutabilmeli
 - [ ] Şemadan düşürülen eski bir tercih alanı dosyada kalmışsa yükte sorun çıkarmamalı

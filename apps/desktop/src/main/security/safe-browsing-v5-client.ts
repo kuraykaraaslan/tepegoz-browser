@@ -271,7 +271,11 @@ export function parseHashListResponse(json: unknown): HashPrefix[] {
   return decodeFourByteAdditions((json as Record<string, unknown>).additionsFourBytes) ?? [];
 }
 
-export function hashListUrl(listName: string, apiKey: string, versionToken?: string | null): string {
+export function hashListUrl(
+  listName: string,
+  apiKey: string,
+  versionToken?: string | null,
+): string {
   const params = new URLSearchParams({ key: apiKey, name: listName });
   if (versionToken !== undefined && versionToken !== null && versionToken.length > 0) {
     params.set('version', versionToken);
@@ -375,9 +379,7 @@ export function parseHashListDelta(json: unknown): HashListDelta {
   if (typeof cr === 'object' && cr !== null) {
     removalIndices = decodeRiceValues(cr as Record<string, unknown>) ?? [];
   } else if (Array.isArray(rec.removalIndices)) {
-    removalIndices = rec.removalIndices.filter(
-      (n): n is number => Number.isInteger(n) && n >= 0,
-    );
+    removalIndices = rec.removalIndices.filter((n): n is number => Number.isInteger(n) && n >= 0);
   }
   removalIndices = [...new Set(removalIndices)].sort((a, b) => a - b);
 
@@ -385,8 +387,7 @@ export function parseHashListDelta(json: unknown): HashListDelta {
     additions,
     removalIndices,
     partial: rec.partialUpdate === true,
-    versionToken:
-      typeof rec.version === 'string' && rec.version.length > 0 ? rec.version : null,
+    versionToken: typeof rec.version === 'string' && rec.version.length > 0 ? rec.version : null,
     checksum: readChecksum(rec.sha256Checksum) ?? readChecksum(rec.checksum),
   };
 }
@@ -458,7 +459,8 @@ export function createHashListDeltaFetcher(
         headers: { Accept: 'application/json', 'User-Agent': PRODUCT_UA },
         signal: controller.signal,
       });
-      if (!res.ok) throw new Error(`Safe Browsing v5 hashList "${listName}" returned ${res.status}`);
+      if (!res.ok)
+        throw new Error(`Safe Browsing v5 hashList "${listName}" returned ${res.status}`);
       return parseHashListDelta(await res.json());
     } finally {
       clearTimeout(timer);

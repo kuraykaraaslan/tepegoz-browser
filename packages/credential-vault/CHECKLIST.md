@@ -4,6 +4,7 @@
 > AI sağlayıcı API anahtarları için BYO-key vault: anahtarları enjekte edilen `SecretCrypto` ile şifreleyip base64 ciphertext olarak diske yazan, renderer'a yalnızca metadata/boolean status veren Electron'suz çekirdek.
 
 ## Kesinlikle olmalı
+
 - [ ] API anahtarları enjekte edilen `SecretCrypto` ile şifrelenmeli
 - [ ] Anahtarlar diske base64 ciphertext olarak yazılmalı
 - [ ] Persist yolu enjekte edilen `filePath` olmalı (`@tepegoz/json-store` üzerinden)
@@ -30,6 +31,7 @@
 - [ ] `SecretCrypto` arayüzü `isAvailable` / `encrypt` / `decrypt` sağlamalı
 
 ## Olsa iyi olur
+
 - [ ] `reset()` test seam'i sağlanmalı
 - [ ] Priority sırası liste okumalarına yansımalı
 - [ ] `last4` anahtarın yalnızca son 4 karakterini açığa çıkarmalı, gerisini değil
@@ -39,6 +41,7 @@
 - [ ] `json-store` yazımı yarıda kalmış dosya bırakmamalı
 
 ## Çok niş
+
 - [ ] Upconvert yalnızca bir kez çalışmalı, sonraki yüklemelerde tekrar tetiklenmemeli
 - [ ] Disk dosyası tamamen bozuksa vault boş ama kullanılabilir başlamalı
 - [ ] `removeKey` bilinmeyen id ile çağrılınca hata değil no-op olmalı

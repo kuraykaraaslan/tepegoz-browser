@@ -126,7 +126,11 @@ export function toCertificateSummary(recorded: RecordedCert): CertificateSummary
   const chain: CertificateNode[] = [];
   const seen = new Set<string>([leaf.fingerprint]);
   let current: Certificate | undefined = leaf.issuerCert;
-  while (current !== undefined && chain.length < MAX_CHAIN_DEPTH && !seen.has(current.fingerprint)) {
+  while (
+    current !== undefined &&
+    chain.length < MAX_CHAIN_DEPTH &&
+    !seen.has(current.fingerprint)
+  ) {
     seen.add(current.fingerprint);
     chain.push(node(current));
     current = current.issuerCert === current ? undefined : current.issuerCert;

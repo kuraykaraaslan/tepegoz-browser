@@ -1,6 +1,11 @@
 import { useCallback, useEffect, useState } from 'react';
 import { I18nProvider } from '@tepegoz/i18n/react';
-import type { CredentialsStatus, LoginCredentialMeta, Preferences, ProviderId } from '@tepegoz/desktop-ipc';
+import type {
+  CredentialsStatus,
+  LoginCredentialMeta,
+  Preferences,
+  ProviderId,
+} from '@tepegoz/desktop-ipc';
 import { effectiveLocale, internalPageHash } from '../App-helpers';
 import { useAppliedTheme } from '../lib/use-applied-theme';
 import { InternalPageLoadFailed, InternalPageLoading } from './InternalPageState';

@@ -2,7 +2,7 @@
 
 The **one place a keyboard shortcut is defined**. Before this, shortcuts were spread across three
 files that couldn't see each other — the main-process `before-input-event` handler (keys that must
-work while a *page* has focus), a renderer effect, and the command palette's own listener — each
+work while a _page_ has focus), a renderer effect, and the command palette's own listener — each
 hardcoding its own modifier test. That meant nothing could detect a collision, nothing could list the
 shortcuts for a help surface, and each site spelled the modifier check differently (so `Ctrl+Alt+T`,
 a terminal on Linux, also opened a tab). No dependencies; pure; unit-tested.

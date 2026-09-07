@@ -124,14 +124,20 @@ describe('captureAndStore', () => {
     mockWindow = windowThatAnswers(new Uint8Array(5000)); // bigger than the 1000-byte PNG
     const shot = await captureAndStore('viewport');
     expect(shot?.format).toBe('image/png');
-    expect(blob.put).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ length: 1000 }));
+    expect(blob.put).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ length: 1000 }),
+    );
   });
 
   it('stores WebP when the round trip produced a smaller file', async () => {
     mockWindow = windowThatAnswers(new Uint8Array(200)); // smaller than the PNG
     const shot = await captureAndStore('viewport');
     expect(shot?.format).toBe('image/webp');
-    expect(blob.put).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ length: 200 }));
+    expect(blob.put).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ length: 200 }),
+    );
   });
 
   it('clamps a very tall full-page capture to MAX_CAPTURE_PIXELS', async () => {

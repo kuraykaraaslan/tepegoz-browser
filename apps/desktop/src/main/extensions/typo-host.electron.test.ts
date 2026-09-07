@@ -168,7 +168,9 @@ describe('aiReview', () => {
       source: 'local-llm',
       kind: 'spelling',
     });
-    const registered = gateway.register.mock.calls[0]![0] as { opts: { resolveModel: () => unknown } };
+    const registered = gateway.register.mock.calls[0]![0] as {
+      opts: { resolveModel: () => unknown };
+    };
     expect(registered.opts.resolveModel()).toEqual({ id: 'm' });
   });
 

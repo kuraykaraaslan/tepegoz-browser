@@ -4,6 +4,7 @@
 > Sunumsal `tepegoz://newtab` başlangıç sayfası — AI / Favoriler / Boş şeklinde 3 seçenekli chooser (Phase 1a L9); kendi i18n sözlüğüne sahip leaf paket, tüm veri ve yan etkiler props ile enjekte.
 
 ## Kesinlikle olmalı
+
 - [ ] `tepegoz://newtab` başlangıç sayfasını render etmeli
 - [ ] AI / Favoriler / Boş şeklinde 3 seçenekli bir chooser sunmalı
 - [ ] Üç seçeneği segmented (bölümlü) bir seçici olarak göstermeli
@@ -18,6 +19,7 @@
 - [ ] Tüm veri ve yan etkileri yalnızca props üzerinden almalı
 
 ## Olsa iyi olur
+
 - [ ] Favori yokken Favoriler görünümünde anlamlı bir boş durum göstermeli
 - [ ] Aktif sekme `tepegoz://newtab` adreslediğinde apps/desktop App.tsx tarafından render edilebilir olmalı
 - [ ] Ctrl+T / yeni-sekme butonu / açılışta gelen boş sekme buraya inmeli
@@ -25,6 +27,7 @@
 - [ ] tr çevirilerinin en anahtar kümesiyle tam parite içinde olması
 
 ## Çok niş
+
 - [ ] Çok sayıda favori olduğunda grid'in düzeni kayması olmadan taşması
 - [ ] listFavorites() gecikmeli/boş döndüğünde arayüz çökmeden beklemeli
 - [ ] onOpenAgent chrome'un agent sidebar'ını toggle etmesiyle uyumlu çalışmalı

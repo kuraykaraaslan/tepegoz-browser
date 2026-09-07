@@ -27,9 +27,8 @@ vi.mock('./download-service-store.electron', () => store);
 vi.mock('./download-service-resume.electron', () => resume);
 vi.mock('@tepegoz/libs', () => ({ Logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() } }));
 
-const { scheduleAutoRetry, forget, forgetAll, attemptsFor } = await import(
-  './download-service-autoretry.electron'
-);
+const { scheduleAutoRetry, forget, forgetAll, attemptsFor } =
+  await import('./download-service-autoretry.electron');
 
 function seed(id: string, over: Record<string, unknown> = {}): void {
   records.set(id, { id, status: 'in_progress', canResume: true, ...over });

@@ -165,7 +165,8 @@ async function shot(name, opts = {}) {
   const hostBuf = Buffer.from(cap.host, 'base64');
 
   if (mode === 'chrome' || !cap.view) {
-    if (mode === 'composite' && !cap.view) console.log('  !', name, '— no page view captured; chrome only');
+    if (mode === 'composite' && !cap.view)
+      console.log('  !', name, '— no page view captured; chrome only');
     writeFileSync(file, hostBuf);
     console.log('  ✓', name, mode === 'chrome' ? '(chrome)' : '(chrome only)');
     return;
@@ -185,8 +186,18 @@ async function shot(name, opts = {}) {
   const { x, y, width, height } = cap.bounds;
   const r = spawnSync(
     'ffmpeg',
-    ['-y', '-loglevel', 'error', '-i', tmpHost, '-i', tmpView, '-filter_complex',
-     `[1]scale=${width}:${height}[v];[0][v]overlay=${x}:${y}`, file],
+    [
+      '-y',
+      '-loglevel',
+      'error',
+      '-i',
+      tmpHost,
+      '-i',
+      tmpView,
+      '-filter_complex',
+      `[1]scale=${width}:${height}[v];[0][v]overlay=${x}:${y}`,
+      file,
+    ],
     { encoding: 'utf8' },
   );
   rmSync(tmpHost, { force: true });
@@ -194,7 +205,12 @@ async function shot(name, opts = {}) {
   if (r.status !== 0) {
     // Never silently ship half a product shot: keep the chrome-only capture and say so.
     writeFileSync(file, hostBuf);
-    console.log('  !', name, '— composite failed, wrote chrome only:', (r.stderr || '').trim().slice(0, 160));
+    console.log(
+      '  !',
+      name,
+      '— composite failed, wrote chrome only:',
+      (r.stderr || '').trim().slice(0, 160),
+    );
     return;
   }
   console.log('  ✓', name, `(composite ${width}x${height} @ ${x},${y})`);

@@ -4,6 +4,7 @@
 > Bookmarks özellik modülü (L1): enjekte edilen `Db` üzerinde çalışan `BookmarkStore` (URL'de idempotent CRUD/arama), `isBookmarkable(url)` scheme allow-list'i ve IPC ile paylaşılan `BookmarkEntry` şekli; saf ve app-free.
 
 ## Kesinlikle olmalı
+
 - [ ] `BookmarkStore` `bookmarks` tablosu üzerinde CRUD sağlamalı
 - [ ] Bookmark arama (search) yeteneği sunmalı
 - [ ] Ekleme işlemi URL üzerinde idempotent olmalı (aynı URL iki kez eklenince tekrar oluşturmamalı)
@@ -19,6 +20,7 @@
 - [ ] `isBookmarkable` hem renderer'da (yıldız gösterimi) hem ana süreç IPC guard'ında aynı kararı vermeli
 
 ## Olsa iyi olur
+
 - [ ] CRUD dışında toplu okuma/listeleme sağlamalı
 - [ ] `BookmarkEntry` alanları (url, title vb.) IPC ile birebir eşleşmeli
 - [ ] Store metodları `Db` dışında hiçbir global duruma dokunmamalı
@@ -26,6 +28,7 @@
 - [ ] `pnpm typecheck` · `pnpm lint` · `pnpm test` · `pnpm build` betiklerini sağlamalı
 
 ## Çok niş
+
 - [ ] URL normalizasyonu idempotency'yi bozmadan (ör. fragment / trailing slash) tutarlı olmalı
 - [ ] `file://` yolu Windows ve POSIX ayrımında da bookmarklanabilir sayılmalı
 - [ ] `tepegoz://` bilinmeyen bir alt sayfa olsa bile şema bazında kabul edilmeli

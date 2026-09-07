@@ -50,7 +50,10 @@ function hostOf(url: string): string {
  *
  * `workingSetSize` is in KiB (Electron docs) — converted to bytes here so the renderer only formats.
  */
-export function mapAppMetrics(metrics: readonly RawProcessMetric[], tabs: readonly TabLite[]): ProcessRow[] {
+export function mapAppMetrics(
+  metrics: readonly RawProcessMetric[],
+  tabs: readonly TabLite[],
+): ProcessRow[] {
   const tabByPid = new Map<number, TabLite>();
   for (const t of tabs) if (t.pid !== null) tabByPid.set(t.pid, t);
 

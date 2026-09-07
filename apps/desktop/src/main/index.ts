@@ -87,7 +87,10 @@ import { runTaskAgent } from './agent/task-agent-runner.electron';
 import { maybeRunEval } from './agent/agent-eval-runner.electron';
 import { webToolsHost } from './web/web-tools-host.electron';
 import TabDiscardService from './tab-discard-service';
-import { registerInternalPagesProtocol, registerInternalPagesScheme } from './internal-pages/protocol';
+import {
+  registerInternalPagesProtocol,
+  registerInternalPagesScheme,
+} from './internal-pages/protocol';
 
 // Last-resort process-level hooks: an async error that escapes every boundary must be LOGGED, not a
 // silent crash. Both are logged and survived — a stray error in a single main-process event handler

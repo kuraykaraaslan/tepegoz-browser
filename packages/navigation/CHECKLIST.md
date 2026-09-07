@@ -4,6 +4,7 @@
 > Omnibox ile main-process navigasyon guard'ının paylaştığı saf TS URL mantığı: tarama görünümüne yüklenen her şey için şema allow-list'i, `tepegoz://` iç-sayfa yönlendirmesi ve IPC gönderen allow-list'inde kullanılan güvenilir-origin kontrolü — zero-dep ve Electron-free.
 
 ## Kesinlikle olmalı
+
 - [ ] isWebUrl(url) yalnızca http(s):// URL'ler için true dönmeli — bir tarama görünümüne yüklenebilecek tek şema kümesi
 - [ ] isWebUrl saf (yan etkisiz) olmalı
 - [ ] internalPageUrl(input, internalUrls) input bir iç sayfayı adresliyorsa canonical `tepegoz://…` URL'i, değilse null dönmeli
@@ -24,6 +25,7 @@
 - [ ] Her yükleme giriş noktası tarafından yeniden kullanılabilir ve birim-test edilebilir kalmalı
 
 ## Olsa iyi olur
+
 - [ ] internalPageUrl birden çok eşdeğer girdi biçimini (host, host/, tam URL) aynı canonical sonuca indirgemeli
 - [ ] toNavigationUrl localhost:port'u http'ye, diğer host:port'u https'e ayırmalı
 - [ ] buildSearch enjekte edilerek varsayılan arama motoru değiştirilebilmeli
@@ -31,6 +33,7 @@
 - [ ] fallbackUrl parametresi ile boş/çözümsüz girdide bilinen bir hedefe düşebilmeli
 
 ## Çok niş
+
 - [ ] `http://localhost.evil.com` gibi prefix-spoof host'lar exact host eşleşmesiyle reddedilmeli
 - [ ] IDN/punycode host'lar URL host karşılaştırmasında tutarlı ele alınmalı
 - [ ] `tepegoz://` şeması ama allow-list dışı host isTrustedAppUrl'de false dönmeli

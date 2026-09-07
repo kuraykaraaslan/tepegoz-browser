@@ -11,7 +11,7 @@
 - [ ] `evaluateAssertion(assertion, snapshot)` bir recipe'in post-koşulunu `RunSnapshot`'a karşı değerlendirmeli.
 - [ ] `evaluateAssertion` `{ passed }` döndürmeli ve başarısızlıkta bir gerekçe (reason) taşımalı.
 - [ ] `RunSnapshot` değerlendirmesi URL, sayfa metni, journal'lanmış efekt türleri ve çıkarılmış sayısal değerleri kapsamalı.
-- [ ] Değerlendirilen post-koşul, recipe'in *orijinal başarılı* çalışmasının fiilen sağladığı koşul olmalı (distill anında yakalanan, dilek olarak yazılmayan).
+- [ ] Değerlendirilen post-koşul, recipe'in _orijinal başarılı_ çalışmasının fiilen sağladığı koşul olmalı (distill anında yakalanan, dilek olarak yazılmayan).
 - [ ] `evaluateAssertion` "penultimate-step abandonment"i (bir adım erken durup yine de başarı raporlayan ajan) yakalayabilmeli.
 - [ ] `shouldHaltOnFailure(...)` başarısız bir assertion'ın çalışmayı durduracağını mı yoksa yalnızca uyarı mı olduğunu belirlemeli.
 - [ ] `narrowToUnattended` AutomationScheduler için mühürlü, tek yönlü daraltma sağlamalı (ADR-0013).

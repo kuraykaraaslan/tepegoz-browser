@@ -95,9 +95,7 @@ export function notifySessionRestored(win: BrowserWindow): void {
       title: s.sessionRestoredTitle,
       body,
       channels: ['toast'],
-      actions: [
-        { id: 'undo-restore', label: s.sessionRestoredUndo, type: 'undo_session_restore' },
-      ],
+      actions: [{ id: 'undo-restore', label: s.sessionRestoredUndo, type: 'undo_session_restore' }],
     });
   });
 }

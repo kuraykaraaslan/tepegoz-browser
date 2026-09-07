@@ -25,8 +25,16 @@ describe('HistoryStore.deleteSince', () => {
     // The row is one per URL: a page first seen last year but opened ten minutes ago belongs to the
     // last hour of browsing, and leaving it would defeat the reason someone picks "last hour".
     HistoryStore.record(db, { url: 'https://old.example/', title: 'Old', ts: NOW - 48 * HOUR });
-    HistoryStore.record(db, { url: 'https://revisited.example/', title: 'Back', ts: NOW - 48 * HOUR });
-    HistoryStore.record(db, { url: 'https://revisited.example/', title: 'Back', ts: NOW - 10 * 60_000 });
+    HistoryStore.record(db, {
+      url: 'https://revisited.example/',
+      title: 'Back',
+      ts: NOW - 48 * HOUR,
+    });
+    HistoryStore.record(db, {
+      url: 'https://revisited.example/',
+      title: 'Back',
+      ts: NOW - 10 * 60_000,
+    });
 
     expect(HistoryStore.deleteSince(db, NOW - HOUR)).toBe(1);
     expect(HistoryStore.list(db).map((h) => h.url)).toEqual(['https://old.example/']);
@@ -109,9 +117,9 @@ describe('AgentConversationStore.clearSince', () => {
     expect(AgentConversationStore.get(db, old)).not.toBeNull();
     // Turns cascade on the FK — a cleared conversation must not leave its prompts behind, which is the
     // text the user actually asked to be rid of.
-    const orphans = db
-      .prepare('SELECT COUNT(*) AS n FROM agent_conversation_turns')
-      .get() as { n: number };
+    const orphans = db.prepare('SELECT COUNT(*) AS n FROM agent_conversation_turns').get() as {
+      n: number;
+    };
     expect(orphans.n).toBe(0);
   });
 });

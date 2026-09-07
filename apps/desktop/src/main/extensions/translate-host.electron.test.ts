@@ -58,7 +58,9 @@ vi.mock('@tepegoz/json-store', () => store);
 
 const gateway = vi.hoisted(() => ({
   register: vi.fn(),
-  complete: vi.fn<(req: unknown) => Promise<{ text: string }>>(() => Promise.resolve({ text: '{}' })),
+  complete: vi.fn<(req: unknown) => Promise<{ text: string }>>(() =>
+    Promise.resolve({ text: '{}' }),
+  ),
 }));
 vi.mock('@tepegoz/model-gateway', () => ({
   ModelGateway: gateway,
@@ -321,15 +323,18 @@ describe('the batch runners', () => {
     ['xai', 'x'],
     ['groq', 'q'],
     ['anthropic', 'a'], // else branch of registerExternalProvider + modelFor default
-  ])('runCloudBatch registers the %s provider and completes with its model', async (provider, model) => {
-    isRunnableProvider.mockReturnValue(true);
-    vault.listMeta.mockReturnValue([{ provider, region: 'r' }]);
-    vault.getFirstKeyForProvider.mockReturnValue('sk');
-    await load();
-    await o().runCloudBatch({ items: [{ id: '1', text: 'hi' }], glossaryTerms: [] });
-    expect(gateway.register).toHaveBeenCalledTimes(1);
-    expect(gateway.complete).toHaveBeenCalledWith(expect.objectContaining({ provider, model }));
-  });
+  ])(
+    'runCloudBatch registers the %s provider and completes with its model',
+    async (provider, model) => {
+      isRunnableProvider.mockReturnValue(true);
+      vault.listMeta.mockReturnValue([{ provider, region: 'r' }]);
+      vault.getFirstKeyForProvider.mockReturnValue('sk');
+      await load();
+      await o().runCloudBatch({ items: [{ id: '1', text: 'hi' }], glossaryTerms: [] });
+      expect(gateway.register).toHaveBeenCalledTimes(1);
+      expect(gateway.complete).toHaveBeenCalledWith(expect.objectContaining({ provider, model }));
+    },
+  );
 
   it('renders glossary terms into the system prompt when there are any', async () => {
     isRunnableProvider.mockReturnValue(true);

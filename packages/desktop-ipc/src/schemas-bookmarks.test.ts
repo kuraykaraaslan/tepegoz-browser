@@ -58,9 +58,9 @@ describe('the tree ops', () => {
     expect(BookmarkContextMenuSchema.parse({ id: 'n1', type: 'folder' })).toMatchObject({
       type: 'folder',
     });
-    expect(
-      BookmarkContextMenuSchema.safeParse({ id: 'n1', type: 'separator' }).success,
-    ).toBe(false);
+    expect(BookmarkContextMenuSchema.safeParse({ id: 'n1', type: 'separator' }).success).toBe(
+      false,
+    );
   });
 });
 

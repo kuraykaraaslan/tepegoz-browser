@@ -10,11 +10,11 @@ prompt consumes the `docs/versus/tepegoz-vs-<rival>.md` this one produces.
 
 ## Placeholders — fill before running
 
-| Token          | Meaning                | Values                                              |
-| -------------- | ---------------------- | ------------------------------------------------- |
-| `{RAKİP}`      | slug (files)           | `nanobrowser` · `kilocode` · `aipex` · `webbrain` |
-| `{RAKİP_ADI}`  | human-readable name    | `Nanobrowser` · `Kilo Code` · `AIPex` · `WebBrain` |
-| `{TARİH}`      | today's date           | e.g. `2026-09-01`                                 |
+| Token         | Meaning             | Values                                             |
+| ------------- | ------------------- | -------------------------------------------------- |
+| `{RAKİP}`     | slug (files)        | `nanobrowser` · `kilocode` · `aipex` · `webbrain`  |
+| `{RAKİP_ADI}` | human-readable name | `Nanobrowser` · `Kilo Code` · `AIPex` · `WebBrain` |
+| `{TARİH}`     | today's date        | e.g. `2026-09-01`                                  |
 
 ## Preconditions
 

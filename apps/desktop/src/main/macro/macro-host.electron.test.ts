@@ -21,9 +21,9 @@ class PolicyDeniedError extends Error {}
 vi.mock('@tepegoz/libs', () => ({ AppError }));
 vi.mock('@tepegoz/macro-engine', () => ({ PolicyDeniedError }));
 
-const adapterArgs = vi.hoisted(
-  (): { cursorCb?: ((x: number, y: number) => void) | undefined } => ({ cursorCb: undefined }),
-);
+const adapterArgs = vi.hoisted((): { cursorCb?: ((x: number, y: number) => void) | undefined } => ({
+  cursorCb: undefined,
+}));
 vi.mock('@tepegoz/human-input', () => ({
   HumanInputAdapter: class {
     constructor(_send: unknown, cursorCb: (x: number, y: number) => void) {
@@ -127,8 +127,7 @@ describe('waitForLoad', () => {
     wcStub.isLoadingMainFrame.mockReturnValue(true);
     const p = make().waitForLoad(5000);
     const done = wcStub.once.mock.calls.find((c) => c[0] === 'did-stop-loading')?.[1] as
-      | (() => void)
-      | undefined;
+      (() => void) | undefined;
     expect(done).toBeDefined();
     done!();
     await expect(p).resolves.toBeUndefined();
@@ -139,8 +138,7 @@ describe('waitForLoad', () => {
     wcStub.isLoadingMainFrame.mockReturnValue(true);
     const p = make().waitForLoad(5000);
     const done = wcStub.once.mock.calls.find((c) => c[0] === 'did-stop-loading')?.[1] as
-      | (() => void)
-      | undefined;
+      (() => void) | undefined;
     wcStub.isDestroyed.mockReturnValue(true);
     done!();
     await expect(p).resolves.toBeUndefined();

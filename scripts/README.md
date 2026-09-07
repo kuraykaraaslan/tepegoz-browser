@@ -34,7 +34,7 @@ uptime and markup, it shows another party's branding, and a re-record is not byt
 does **not** relax is everything else on this page — the profile stays public and outside the repo,
 the capture stays window-scoped, and nothing staged or re-enacted may be published as a real run.
 
-**Profile resets spare `models/`.** Both capture scripts wipe the demo profile's *entries* rather than
+**Profile resets spare `models/`.** Both capture scripts wipe the demo profile's _entries_ rather than
 the directory, because `fetch-demo-model.mjs` puts a 1.1 GB `.gguf` under `models/` and a blanket
 `rmSync(profileDir)` deletes it silently — the next run then re-downloads a gigabyte to reach the same
 state. `screenshots.mjs` did exactly that until it was caught, while this file already claimed both
@@ -56,7 +56,7 @@ window's.
 
 ```js
 const views = win.contentView.children.filter((c) => c.webContents);
-const img = await views[views.length - 1].webContents.capturePage();   // the page, in full
+const img = await views[views.length - 1].webContents.capturePage(); // the page, in full
 ```
 
 It was measured both ways before this was rewritten: a loaded `http://127.0.0.1` page and an internal
@@ -67,7 +67,7 @@ sets of real pixels with a seam at a rectangle Electron itself supplied.
 
 Two consequences worth carrying forward:
 
-- **The caveat in the old text came true.** It warned that internal `tepegoz://` pages were *also*
+- **The caveat in the old text came true.** It warned that internal `tepegoz://` pages were _also_
   hosted in a `WebContentsView` (`createInternalPageView` in
   `apps/desktop/src/main/tabs-internal-page-view.ts`) and might one day stop appearing in the capture.
   They have: on this build every internal page returns blank through the host window. The page itself

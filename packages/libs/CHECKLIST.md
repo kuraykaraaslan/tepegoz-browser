@@ -4,6 +4,7 @@
 > Katmanlar arası paylaşılan altyapı (framework-agnostik, Electron importu yok): `AppError`/`toBoundary`, zod ile parse edilen `env`, redaksiyonlu `Logger`, sabit `Messages` katalogu.
 
 ## Kesinlikle olmalı
+
 - [ ] `AppError(message, statusCode)` sınıfını sağlamalı; servisler bunu fırlatır
 - [ ] `toBoundary(err)` her hatayı `{ message, statusCode }` biçimine indirmeli
 - [ ] `statusCode` değerleri HTTP semantiğinde olmalı (ADR-0009)
@@ -19,6 +20,7 @@
 - [ ] Electron importu içermemeli; katmanlar arası framework-agnostik kalmalı
 
 ## Olsa iyi olur
+
 - [ ] `Logger.redact` iç içe nesnelerde ve dizilerde de gizli alanları maskelemeli
 - [ ] `env` parse hatası hangi değişkenin neden geçersiz olduğunu söylemeli
 - [ ] `AppError` orijinal `cause`'u zincirleyebilmeli
@@ -28,6 +30,7 @@
 - [ ] Redaksiyon uygulanmış çıktı hâlâ okunabilir/teşhis edilebilir olmalı
 
 ## Çok niş
+
 - [ ] Redaksiyon, token benzeri uzun rastgele string'leri kalıpla yakalayabilmeli
 - [ ] `env` testlerde deterministik olacak şekilde bir kez dondurulmalı
 - [ ] Döngüsel referans içeren hata nesnelerinde `toBoundary` güvenli davranmalı

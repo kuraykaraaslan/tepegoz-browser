@@ -886,7 +886,9 @@ describe('every inline menu listener repeats the trust + payload checks', () => 
 
     fire(IpcChannels.tabsGroupContextMenu, TRUSTED, {});
     expect(menus.group).not.toHaveBeenCalled();
-    expect(libsLogger.warn).toHaveBeenCalledWith('Ignored tabs:group-context-menu: invalid payload');
+    expect(libsLogger.warn).toHaveBeenCalledWith(
+      'Ignored tabs:group-context-menu: invalid payload',
+    );
 
     fire(IpcChannels.submenuOpen, TRUSTED, { kind: 'history' });
     expect(popups.submenus).toEqual([]);

@@ -4,6 +4,7 @@
 > Sunum amaçlı yaprak: nav toolbar'ın altında oturan Chrome tarzı bookmarks bar şeridi; yatay, kaydırılabilir bir bookmark chip satırı render eder ve chip'e tıklanınca enjekte edilen `onOpen(url)`'ü çağırır.
 
 ## Kesinlikle olmalı
+
 - [ ] Nav toolbar'ın altında yatay bir bookmark şerit çubuğu render etmeli
 - [ ] Bookmark'ları chip olarak yatay, kaydırılabilir bir satırda göstermeli
 - [ ] Bir chip'e tıklandığında enjekte edilen `onOpen(url)`'ü çağırmalı
@@ -16,6 +17,7 @@
 - [ ] Chip tıklaması dışında navigasyon kararı vermemeli (yalnızca `onOpen`'ı çağırmalı)
 
 ## Olsa iyi olur
+
 - [ ] Çubuk taşarsa yatay kaydırma ile tüm chip'lere erişilebilmeli
 - [ ] `labels.bar` metnini erişilebilirlik (aria-label) için kullanmalı
 - [ ] Diğer chrome yaprakları (tab-strip, nav-toolbar) ile tutarlı stilde olmalı
@@ -24,6 +26,7 @@
 - [ ] `pnpm typecheck` · `pnpm lint` · `pnpm test` betiklerini sağlamalı
 
 ## Çok niş
+
 - [ ] `title`'ı olmayan bir bookmark için `url`'e düşerek chip etiketi göstermeli
 - [ ] Çok sayıda (yüzlerce) bookmark'ta bile kaydırma performansını korumalı
 - [ ] Favicon verisi verilmese bile chip düzgün render olmalı

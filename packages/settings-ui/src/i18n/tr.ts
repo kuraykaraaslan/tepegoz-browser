@@ -147,7 +147,8 @@ export const tr: SettingsStrings = {
     isDefault: 'Tepegöz varsayılan tarayıcınız.',
     isDefaultDesc: 'Diğer uygulamalardan ve e-postalardan gelen bağlantılar burada açılır.',
     notDefault: 'Tepegöz varsayılan tarayıcınız değil.',
-    notDefaultDesc: 'Diğer uygulamalardan ve e-postalardan gelen bağlantılar şu anda başka bir yerde açılıyor.',
+    notDefaultDesc:
+      'Diğer uygulamalardan ve e-postalardan gelen bağlantılar şu anda başka bir yerde açılıyor.',
     makeDefault: "Tepegöz'ü varsayılan tarayıcım yap",
     checking: 'Kontrol ediliyor…',
     failed: 'Tepegöz kaydedilemedi — bunun yerine sistem ayarlarınızdan deneyin.',
@@ -156,7 +157,8 @@ export const tr: SettingsStrings = {
   // --- Dosya işlemleri ---
   fileOps: {
     removeTitle: 'Klasör erişimini kaldır',
-    removeBody: 'Asistanın {path} erişimi kalkar. Diskteki hiçbir şeye dokunulmaz, dilediğinde yeniden verebilirsin.',
+    removeBody:
+      'Asistanın {path} erişimi kalkar. Diskteki hiçbir şeye dokunulmaz, dilediğinde yeniden verebilirsin.',
     title: 'Dosya işlemleri',
     subtitle:
       'Yapay zekâ asistanının okuyup değiştirebileceği klasörler. Diskinizdeki diğer her şey erişime kapalı kalır. Varsayılan klasör home/tepegoz.',
@@ -244,7 +246,8 @@ export const tr: SettingsStrings = {
   localModels: {
     sizeUnknown: 'boyut bilinmiyor',
     deleteTitle: 'Modeli sil',
-    deleteBody: '{name} ({size}) bu bilgisayardan silinir. Yeniden kullanmak istersen baştan indirmen gerekir.',
+    deleteBody:
+      '{name} ({size}) bu bilgisayardan silinir. Yeniden kullanmak istersen baştan indirmen gerekir.',
     title: 'Cihaz-içi modeller',
     hint: 'Ajanı yerelde çalıştırmak için bir model indir. Profilinde saklanır — uygulamayla paketlenmez.',
     recommended: 'Önerilen',
@@ -372,7 +375,8 @@ export const tr: SettingsStrings = {
   // ajan matrisi Policy Kernel üzerine bir GÖRÜNÜMdür ve değildir. `agentReadOnly` nedenini söylüyor,
   // çünkü açıklamasız salt-okunur bir tablo, bozuk bir tablo gibi okunur.
   permissionsCenter: {
-    forgetSiteBody: '{origin} için saklanan tüm kararlar unutulur. Site bir sonraki ihtiyacında yeniden sorar.',
+    forgetSiteBody:
+      '{origin} için saklanan tüm kararlar unutulur. Site bir sonraki ihtiyacında yeniden sorar.',
     addSite: 'Bir site için önceden karar ver',
     addSiteHint: 'Siteyi ekler; o daha sormadan yanıtlarını belirleyebilirsin.',
     addSitePlaceholder: 'example.com',
@@ -424,14 +428,16 @@ export const tr: SettingsStrings = {
     sessionNote: 'Bu yanıtlar hiçbir zaman diske yazılmaz — uygulamadan çıkınca unutulur.',
   },
   clearHistoryDesc: 'Bu cihazda ziyaret ettiğiniz sayfaların listesini kaldırır.',
-  telemetryNothingSent: 'Bu derlemede hiçbir şey toplanmıyor ve gönderilmiyor — bu ayarı okuyan bir kod henüz yok. Bir gün olduğunda seçim baştan senin olsun diye burada duruyor.',
+  telemetryNothingSent:
+    'Bu derlemede hiçbir şey toplanmıyor ve gönderilmiyor — bu ayarı okuyan bir kod henüz yok. Bir gün olduğunda seçim baştan senin olsun diye burada duruyor.',
   safeBrowsing: {
     title: 'Güvenli Tarama koruması',
     desc: 'Tehlikeli siteleri ziyaret etmeden önce uyar ve tehlikeli indirmeleri engelle. Sayfa ve indirme adreslerini Google Güvenli Tarama ile karşılaştırır; sayfa adresinin kendisi asla gönderilmez.',
     inactiveNote:
       'Bu derlemede henüz etkin değil — tehdit listesi ve anahtarı bağlanmadı. Anahtar geldiğinde seçim baştan senin olsun diye bu düğme burada.',
   },
-  clearHistoryConfirm: 'Bu cihazdaki tüm gezinme geçmişini siler. Yer imleri, parolalar ve site izinleri etkilenmez.',
+  clearHistoryConfirm:
+    'Bu cihazdaki tüm gezinme geçmişini siler. Yer imleri, parolalar ve site izinleri etkilenmez.',
   clearHistoryButton: 'Geçmişi temizle',
   historyCleared: 'Tarama geçmişi temizlendi.',
 
@@ -470,7 +476,8 @@ export const tr: SettingsStrings = {
   shortcuts: {
     filterLabel: 'Süz',
     filterPlaceholder: 'Komut ya da tuş ara',
-    notRebindable: 'Bu derlemede sabittirler — yeniden atama henüz yok, yani burada bir ayarın arkasına saklanmış bir şey de yok.',
+    notRebindable:
+      'Bu derlemede sabittirler — yeniden atama henüz yok, yani burada bir ayarın arkasına saklanmış bir şey de yok.',
     title: 'Klavye kısayolları',
     subtitle: 'Uygulamanın kısayolları bağladığı tek kayıttan gelen tüm genel kısayollar.',
     /**
@@ -534,7 +541,8 @@ export const tr: SettingsStrings = {
   developerFlagsTitle: 'Chromium flagleri',
   developerFlagsDesc:
     'Sadece geliştirme ortamı. İzin listesindeki bir Chromium/Electron flagini aç, sonra yeniden başlat. Burada yalnızca incelenmiş flagler görünür — serbest giriş yoktur ve sayfa izolasyonunu zayıflatan hiçbir şey listelenemez.',
-  developerFlagsRelaunchHint: 'Flag değişikliklerinin geçerli olması için Tepegöz’ü yeniden başlat.',
+  developerFlagsRelaunchHint:
+    'Flag değişikliklerinin geçerli olması için Tepegöz’ü yeniden başlat.',
   developerFlagsExperimental: 'Deneysel',
   developerFlagName: {
     forceDarkMode: 'Koyu modu zorla',
@@ -626,7 +634,8 @@ export const tr: SettingsStrings = {
   downloadLocationBrowse: 'Gözat…',
   downloadLocationOpen: 'Klasörü aç',
   downloadLocationOpenFailed: 'Bu klasör açılamadı. Taşınmış veya silinmiş olabilir.',
-  clearDownloadsConfirm: 'Biten, iptal edilen ve başarısız tüm aktarımları listeden kaldırır. Dosyaların kendisi silinmez.',
+  clearDownloadsConfirm:
+    'Biten, iptal edilen ve başarısız tüm aktarımları listeden kaldırır. Dosyaların kendisi silinmez.',
   clearDownloadsResult: '{count} kayıt listeden kaldırıldı.',
   searchEngineEdit: 'Düzenle',
   searchEngineSave: 'Kaydet',
@@ -681,7 +690,8 @@ export const tr: SettingsStrings = {
   keyRemoveBody:
     '{name} kaldırılır. Anahtarın kendisi bir daha gösterilmez; geri almak için sağlayıcınızdan yeniden yapıştırmanız gerekir.',
 
-  notificationsSiteNote: 'Bu ana anahtardır. Siteler ayrıca kendi izinlerini de almalıdır; bunu kapatmak hepsini izinlerinden bağımsız susturur.',
+  notificationsSiteNote:
+    'Bu ana anahtardır. Siteler ayrıca kendi izinlerini de almalıdır; bunu kapatmak hepsini izinlerinden bağımsız susturur.',
   notificationsSiteLink: 'Site bazlı bildirim izinleri',
   developerResetRow: 'Varsayılana döndür',
 
@@ -715,7 +725,8 @@ export const tr: SettingsStrings = {
     kioskUrlHint: 'Kiosk modunda adres çubuğu yoktur; yüklenecek tek sayfa budur.',
     urlInvalid: 'Tam bir http:// veya https:// adresi girin.',
     rangeInvalid: '{min} ile {max} arasında tam bir sayı girin.',
-    movedHere: 'Başlangıç modu ve oturum açılışında başlatma, Tercihler → Açılışta sayfasına taşındı.',
+    movedHere:
+      'Başlangıç modu ve oturum açılışında başlatma, Tercihler → Açılışta sayfasına taşındı.',
   },
 
   // --- Ajan denetimleri (eskiden, üçü zaten sevk edilmiş dört maddeyi sayan bir yer tutucuydu) ---
@@ -738,7 +749,8 @@ export const tr: SettingsStrings = {
     hardwareAcceleration: 'Donanım hızlandırma kullan',
     hardwareAccelerationDesc:
       'Sayfaları GPU ile çiz. Yalnızca çizim bozuklukları ya da sürücü çökmeleri görüyorsanız kapatın — yazılımla çizim daha yavaştır ve daha çok pil harcar.',
-    restartRequired: 'Tepegöz bunu açılışta karar verir; değişiklik yeniden başlattıktan sonra geçerli olur.',
+    restartRequired:
+      'Tepegöz bunu açılışta karar verir; değişiklik yeniden başlattıktan sonra geçerli olur.',
     restartNow: 'Şimdi yeniden başlat',
     crashReporting: 'Çökme raporları topla',
     crashReportingDesc:
@@ -759,7 +771,8 @@ export const tr: SettingsStrings = {
   // --- Ağ gizliliği (Faz 5): yerel bir SOCKS uç noktası üzerinden sekme/grup bazında yönlendirme ---
   network: {
     routesTitle: 'Trafik nereye gidiyor',
-    routesHint: 'Sekme ve grup başına yönlendirmeler sekme ve grup menülerinden ayarlanır; burası onları gözden geçirdiğin yer.',
+    routesHint:
+      'Sekme ve grup başına yönlendirmeler sekme ve grup menülerinden ayarlanır; burası onları gözden geçirdiğin yer.',
     routesGroups: 'Gruplar',
     routesTabs: 'Sekmeler',
     routesNoOverrides: 'Kendi rotasında olan sekme yok — her şey yukarıdaki varsayılanı izliyor.',
@@ -771,7 +784,8 @@ export const tr: SettingsStrings = {
     routeHeld: 'Tutuluyor — tünel kapalı',
     removeTitle: 'Bağlantıyı kaldır',
     removeBody: '{name} kaldırılır. Ona bağlı sekme veya gruplar profil varsayılanına döner.',
-    removeBodyDefault: '{name} profil varsayılanı. Kaldırırsan bağlanmamış TÜM trafik doğrudan bağlantıya döner.',
+    removeBodyDefault:
+      '{name} profil varsayılanı. Kaldırırsan bağlanmamış TÜM trafik doğrudan bağlantıya döner.',
     title: 'Ağ gizliliği',
     intro:
       'Bir sekmeyi ya da bütün bir sekme grubunu WireGuard, Tor veya zaten çalıştırdığınız bir SOCKS5 uç noktası üzerinden yönlendirin. Tepegöz tüneli kendisi sağlamaz; siz seçmedikçe hiçbir şey tünelden geçmez.',

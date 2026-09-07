@@ -68,9 +68,7 @@ describe('DownloadSettingsSection', () => {
     openDownloadFolder.mockResolvedValue(false);
     renderSection({ downloadDirectory: '/somewhere' });
     fireEvent.click(screen.getByRole('button', { name: s.downloadLocationOpen }));
-    await vi.waitFor(() =>
-      expect(screen.getByText(s.downloadLocationOpenFailed)).toBeTruthy(),
-    );
+    await vi.waitFor(() => expect(screen.getByText(s.downloadLocationOpenFailed)).toBeTruthy());
   });
 
   it('shows the open-failed message when the open call rejects outright', async () => {

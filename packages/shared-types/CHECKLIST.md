@@ -4,6 +4,7 @@
 > Katmanlar arası sözleşmelerin (zod şemaları + türetilen tipler) tek doğruluk kaynağı: her paket `z.infer` tiplerini buradan tüketir, şemalar asla kopyalanmaz, tüm trust boundary'ler (`safeParse`) bunlara karşı doğrular.
 
 ## Kesinlikle olmalı
+
 - [ ] Katmanlar arası sözleşmeler için tek doğruluk kaynağı (single source of truth) olmalı
 - [ ] Her sözleşmeyi zod şeması + ondan türetilen (`z.infer`) tip olarak sunmalı
 - [ ] Şemalar asla kopyalanmamalı — diğer paketler tipi buradan tüketmeli
@@ -16,6 +17,7 @@
 - [ ] Her tip yalnızca `z.infer` ile şemadan türetilmeli, elle yazılmamalı
 
 ## Olsa iyi olur
+
 - [ ] `EventInput` şeması `lsn` / `deviceId` alanlarını girdi olarak kabul etmemeli (journal atar)
 - [ ] `cas://` blobRef formatı şema düzeyinde doğrulanmalı
 - [ ] Enum değerleri tek yazımla tutulmalı, tüketen paketlerde yeniden yazılmamalı
@@ -24,6 +26,7 @@
 - [ ] Paket Electron/Node runtime'ına bağımsız, saf şema/tip olmalı
 
 ## Çok niş
+
 - [ ] Geçersiz `{domain}_{verb}_{noun}` tool adları `safeParse` ile net biçimde reddedilmeli
 - [ ] Bilinmeyen enum değeri taşıyan bir olay boundary'de sessizce kabul edilmemeli
 - [ ] `EventRecord` alanları geriye dönük uyumlu biçimde genişletilebilmeli (opsiyonel alan ekleme)

@@ -25,7 +25,7 @@
 - [ ] Verbatim URL'ler `artifacts`/`pageRefs` envelope slot'larında tutulmalı; navigasyon çalışmaya devam etmeli.
 - [ ] `createSitemapReader` `robots.txt` → `Sitemap:` → `sitemap.xml` `<loc>` zincirini keşfetmeli.
 - [ ] Sitemap reader yalnızca origin fiilen yayımladığında konvansiyonel yola (`/blog`) gitmeli.
-- [ ] Sitemap reader SSRF'e karşı inşa gereği güvenli olmalı: yalnızca Policy plane üzerinden zaten yüklenmiş sayfayla *aynı origin*'deki URL'leri getirmeli.
+- [ ] Sitemap reader SSRF'e karşı inşa gereği güvenli olmalı: yalnızca Policy plane üzerinden zaten yüklenmiş sayfayla _aynı origin_'deki URL'leri getirmeli.
 - [ ] Keşif private-IP veya cloud-metadata host'una pivot yapamamalı.
 - [ ] Sitemap keşfi sınırlı (bounded) ve origin başına cache'li olmalı.
 - [ ] `pnpm typecheck`, `pnpm lint`, `pnpm test` script'leri çalışır olmalı.

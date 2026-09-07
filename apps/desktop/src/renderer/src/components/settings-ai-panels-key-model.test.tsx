@@ -75,7 +75,9 @@ describe('KeyModelMenu', () => {
   it('shows "Auto" on the trigger when no model is pinned, the model label otherwise', () => {
     const { onChange } = renderMenu({ value: 'opus' });
     void onChange;
-    expect(screen.getByRole('button', { name: s.keyModel.label }).textContent).toContain('Opus 4.6');
+    expect(screen.getByRole('button', { name: s.keyModel.label }).textContent).toContain(
+      'Opus 4.6',
+    );
   });
 
   it('opens a portalled radio menu listing Auto + every model', () => {

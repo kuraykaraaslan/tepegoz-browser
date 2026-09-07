@@ -4,6 +4,7 @@
 > Salt sunum `tepegoz://uploads` aktivite yüzeyi: host list/command/subscribe callback'lerini enjekte eder; paket yalnızca UI state'i ile en/tr string'lerini sahiplenir. Upload kayıtları redaktedir — yerel yollar ve içerik bu renderer paketine hiç girmez.
 
 ## Kesinlikle olmalı
+
 - [ ] `tepegoz://uploads` aktivite yüzeyini salt sunum bileşeni olarak render edebilmeli
 - [ ] Upload listesini host'un enjekte ettiği list callback'i üzerinden almalı
 - [ ] Upload üzerinde eylemleri host'un enjekte ettiği command callback'i üzerinden çalıştırmalı
@@ -15,6 +16,7 @@
 - [ ] Electron bridge'e doğrudan bağımlılığı olmamalı (her şey callback ile enjekte)
 
 ## Olsa iyi olur
+
 - [ ] Upload'ları duruma (aktif / tamamlanmış / hatalı) göre gruplayarak veya filtreleyerek gösterebilmeli
 - [ ] Risk seviyesini görsel bir rozet/uyarı ile gösterebilmeli
 - [ ] subscribe callback'i güncelleme yayınladığında listeyi yeniden çekmeden tazeleyebilmeli
@@ -25,6 +27,7 @@
 - [ ] Zaman damgalarını yerelleştirilmiş biçimde gösterebilmeli
 
 ## Çok niş
+
 - [ ] subscribe callback'inden unmount'ta düzgün şekilde abonelikten çıkabilmeli (sızıntı olmadan)
 - [ ] command callback bir hata döndürdüğünde UI state'ini tutarlı bırakıp kullanıcıya bildirmeli
 - [ ] Aynı upload için hızlı ardışık güncellemelerde son durumu yanlış sıralamadan göstermeli

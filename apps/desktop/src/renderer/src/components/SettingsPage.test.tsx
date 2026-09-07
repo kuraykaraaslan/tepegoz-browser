@@ -23,7 +23,12 @@ vi.mock('../lib/developer-env', () => ({
 const s = settingsDict.en;
 
 function credentialsStatus(): CredentialsStatus {
-  return { encryptionAvailable: true, providers: {} as CredentialsStatus['providers'], keys: [], regions: {} };
+  return {
+    encryptionAvailable: true,
+    providers: {} as CredentialsStatus['providers'],
+    keys: [],
+    regions: {},
+  };
 }
 
 const bridge = {
@@ -46,7 +51,9 @@ function renderPage(
   initialSectionId?: string,
   propOverrides: Partial<{ onResetPrefs: () => Promise<void> }> = {},
 ) {
-  const onUpdatePrefs = vi.fn<(patch: Partial<Preferences>) => Promise<void>>(() => Promise.resolve());
+  const onUpdatePrefs = vi.fn<(patch: Partial<Preferences>) => Promise<void>>(() =>
+    Promise.resolve(),
+  );
   const props = {
     ...(initialSectionId !== undefined ? { initialSectionId } : {}),
     prefs: { ...DEFAULT_PREFERENCES, ...over },
@@ -86,9 +93,7 @@ describe('SettingsPage', () => {
     fireEvent.click(screen.getAllByRole('button', { name: s.developerEdit })[0]!);
     const dialog = screen.getByRole('dialog');
     fireEvent.click(within(dialog).getByRole('switch'));
-    await waitFor(() =>
-      expect(onUpdatePrefs).toHaveBeenCalledWith({ onboardingCompleted: true }),
-    );
+    await waitFor(() => expect(onUpdatePrefs).toHaveBeenCalledWith({ onboardingCompleted: true }));
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
   });
 
@@ -114,7 +119,9 @@ describe('SettingsPage', () => {
     fireEvent.change(select!, { target: { value: 'allowed' } });
     await waitFor(() => expect(onUpdatePrefs).toHaveBeenCalledTimes(1));
     const setPatch = onUpdatePrefs.mock.calls[0]?.[0];
-    expect(setPatch?.sitePermissions?.[origin]).toEqual(expect.objectContaining({ camera: 'allowed' }));
+    expect(setPatch?.sitePermissions?.[origin]).toEqual(
+      expect.objectContaining({ camera: 'allowed' }),
+    );
 
     fireEvent.click(screen.getByRole('button', { name: s.permissionsCenter.forgetSite }));
     const confirms = screen.getAllByRole('button', { name: s.permissionsCenter.forgetSite });

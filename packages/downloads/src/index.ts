@@ -378,7 +378,9 @@ export function downloadsToForget(
       // then; `on-completion` deliberately keeps them.
       if (policy !== 'after-day') return false;
       return (
-        (record.status === 'canceled' || record.status === 'failed' || record.status === 'blocked') &&
+        (record.status === 'canceled' ||
+          record.status === 'failed' ||
+          record.status === 'blocked') &&
         now - record.updatedAt >= RETENTION_DAY_MS
       );
     })
@@ -445,8 +447,7 @@ export function planDownloadResume(
   }
   // No `ETag` and no `Last-Modified` means the server offered no way to tell whether the bytes we
   // hold came from the same resource. A range request would still succeed and still be wrong.
-  const hasValidator =
-    (record.etag ?? '').length > 0 || (record.lastModified ?? '').length > 0;
+  const hasValidator = (record.etag ?? '').length > 0 || (record.lastModified ?? '').length > 0;
   if (!hasValidator) return restart('no-validator');
 
   return { action: 'resume', offset: bytesOnDisk, reason: 'ok' };
@@ -482,9 +483,10 @@ export interface DownloadRetryPlan {
  *
  * A user CANCEL is never retried. It is the one interruption that carries an instruction.
  */
-export function planDownloadRetry(
-  input: { doneState: 'completed' | 'cancelled' | 'interrupted'; attemptsSoFar: number },
-): DownloadRetryPlan {
+export function planDownloadRetry(input: {
+  doneState: 'completed' | 'cancelled' | 'interrupted';
+  attemptsSoFar: number;
+}): DownloadRetryPlan {
   if (input.doneState === 'cancelled') return { retry: false, delayMs: 0, reason: 'user-canceled' };
   if (input.doneState !== 'interrupted') {
     return { retry: false, delayMs: 0, reason: 'not-interrupted' };

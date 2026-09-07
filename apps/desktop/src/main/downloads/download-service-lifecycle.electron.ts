@@ -95,9 +95,7 @@ export function handleWillDownload(
     // live `DownloadItem` exists; after a restart there is nothing left to ask.
     urlChain: item.getURLChain(),
     ...(item.getETag().length > 0 ? { etag: item.getETag() } : {}),
-    ...(item.getLastModifiedTime().length > 0
-      ? { lastModified: item.getLastModifiedTime() }
-      : {}),
+    ...(item.getLastModifiedTime().length > 0 ? { lastModified: item.getLastModifiedTime() } : {}),
     // The route it was on. Matched by session identity rather than assumed to be Direct: a
     // tunnel-bound transfer resumed on the clear path is the leak the tab model exists to prevent.
     ...(partitionOf(wc) !== null ? { partition: partitionOf(wc)! } : {}),

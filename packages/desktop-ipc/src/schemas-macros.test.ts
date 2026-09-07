@@ -36,10 +36,12 @@ describe('MacroRunInputSchema', () => {
   it('rejects a missing id, an over-long var name, and an over-long var value', () => {
     expect(MacroRunInputSchema.safeParse({}).success).toBe(false);
     expect(
-      MacroRunInputSchema.safeParse({ macroId: 'm1', variables: { ['n'.repeat(65)]: 'v' } }).success,
+      MacroRunInputSchema.safeParse({ macroId: 'm1', variables: { ['n'.repeat(65)]: 'v' } })
+        .success,
     ).toBe(false);
     expect(
-      MacroRunInputSchema.safeParse({ macroId: 'm1', variables: { n: 'v'.repeat(10_001) } }).success,
+      MacroRunInputSchema.safeParse({ macroId: 'm1', variables: { n: 'v'.repeat(10_001) } })
+        .success,
     ).toBe(false);
   });
 });

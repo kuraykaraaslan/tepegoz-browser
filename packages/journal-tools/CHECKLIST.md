@@ -4,6 +4,7 @@
 > Ajanın `journal_search_events` builtin yeteneğinin Electron'suz evi: append-only Event Journal'dan güncel audit olaylarını okur; `CapabilityRegistry`'ye kayıtlı, yalnızca ToolGateway PEP üzerinden erişilir.
 
 ## Kesinlikle olmalı
+
 - [ ] `registerJournalTools({ host })` ile `journal_search_events` yeteneğini kaydetmeli
 - [ ] Yeteneği `@tepegoz/capability-plane` `CapabilityRegistry`'sine eklemeli
 - [ ] Aracı enjekte edilen bir `JournalReader`'a bağlamalı
@@ -18,6 +19,7 @@
 - [ ] `@tepegoz/file-operations` builtin desenini izlemeli
 
 ## Olsa iyi olur
+
 - [ ] `journal_search_events` olayları filtreleyip/arayabilmeli (sorgu parametreleri)
 - [ ] Yalnızca okuma sunmalı; journal'a yazma yolu olmamalı
 - [ ] Host `main/agent/journal-host.electron.ts` içinde `EventJournal` + SQLite üzerinden uygulanmalı
@@ -27,6 +29,7 @@
 - [ ] `JournalReader` dönüşü zaten redakte olduğundan tüketicide ek redaksiyon gerektirmemeli
 
 ## Çok niş
+
 - [ ] ADR-0021/0024 alan bölünmesine uymalı (artık `com.tepegoz.agent` uzantısında değil)
 - [ ] `com.tepegoz.agent` uzantısından taşınan eski davranışla geriye dönük tutarlı olmalı
 - [ ] Enjekte edilen `JournalReader` yoksa kayıt anlamlı bir hata vermeli

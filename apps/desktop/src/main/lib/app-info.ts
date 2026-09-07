@@ -22,7 +22,8 @@ import type { AppInfo, AppBuildInfo, AppOsInfo } from '@tepegoz/desktop-ipc';
  */
 const BUILD_COMMIT = typeof __TEPEGOZ_BUILD_COMMIT__ === 'string' ? __TEPEGOZ_BUILD_COMMIT__ : '';
 const BUILD_TIME = typeof __TEPEGOZ_BUILD_TIME__ === 'string' ? __TEPEGOZ_BUILD_TIME__ : '';
-const BUILD_CHANNEL = typeof __TEPEGOZ_BUILD_CHANNEL__ === 'string' ? __TEPEGOZ_BUILD_CHANNEL__ : '';
+const BUILD_CHANNEL =
+  typeof __TEPEGOZ_BUILD_CHANNEL__ === 'string' ? __TEPEGOZ_BUILD_CHANNEL__ : '';
 
 /**
  * Tepegöz's own license. Duplicated from `apps/desktop/package.json` because main has no loader for it

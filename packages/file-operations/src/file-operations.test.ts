@@ -178,14 +178,14 @@ describe('registerFileOperations', () => {
     const file = path.join(ROOT, 'log.txt');
     await invoke('file_create_file', { path: file, content: 'a' });
     await invoke('file_update_file', { path: file, content: 'b', mode: 'append' });
-    expect(((await invoke('file_get_content', { path: file })) as { content: string }).content).toBe(
-      'ab',
-    );
+    expect(
+      ((await invoke('file_get_content', { path: file })) as { content: string }).content,
+    ).toBe('ab');
     // Default mode overwrites.
     await invoke('file_update_file', { path: file, content: 'fresh' });
-    expect(((await invoke('file_get_content', { path: file })) as { content: string }).content).toBe(
-      'fresh',
-    );
+    expect(
+      ((await invoke('file_get_content', { path: file })) as { content: string }).content,
+    ).toBe('fresh');
 
     await expect(
       invoke('file_update_file', { path: path.join(ROOT, 'ghost.txt'), content: 'x' }),
@@ -209,17 +209,17 @@ describe('registerFileOperations', () => {
       to: path.join(ROOT, 'copy.txt'),
     })) as { from: string; to: string };
     expect(copied.to).toBe(path.join(ROOT, 'copy.txt'));
-    expect(((await invoke('file_get_content', { path: copied.to })) as { content: string }).content).toBe(
-      'payload',
-    );
+    expect(
+      ((await invoke('file_get_content', { path: copied.to })) as { content: string }).content,
+    ).toBe('payload');
 
     const moved = (await invoke('file_update_location', {
       from,
       to: path.join(ROOT, 'moved.txt'),
     })) as { to: string };
-    expect(((await invoke('file_get_content', { path: moved.to })) as { content: string }).content).toBe(
-      'payload',
-    );
+    expect(
+      ((await invoke('file_get_content', { path: moved.to })) as { content: string }).content,
+    ).toBe('payload');
     const gone = (await invoke('file_get_metadata', { path: from })) as { exists: boolean };
     expect(gone.exists).toBe(false);
   });

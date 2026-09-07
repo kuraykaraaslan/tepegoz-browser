@@ -4,6 +4,7 @@
 > `model-gateway` için on-device inference sağlayıcısı: `LocalProvider`, enjekte edilen bir `LlamaEngine` üzerine gateway'in `ModelProvider` sözleşmesini uygular; Electron'suz kalır, JSON modunda çıktıyı GBNF grameriyle tek JSON nesnesine kısıtlar.
 
 ## Kesinlikle olmalı
+
 - [ ] `LocalProvider` gateway'in `ModelProvider` sözleşmesini uygulamalı
 - [ ] Enjekte edilen bir `LlamaEngine` üzerine kurulmalı; native binary'ye kendisi dokunmamalı
 - [ ] Electron'dan bağımsız olmalı
@@ -21,6 +22,7 @@
 - [ ] `fromLocalResult` engine `GenerateResult`'ı canonical `CanonResponse`'a çevirmeli (saf)
 
 ## Olsa iyi olur
+
 - [ ] JSON modunda zayıf model fiziksel olarak prose veya markdown fence üretememeli
 - [ ] Çıkış şeması yine de downstream'de zod ile doğrulanmalı (gramer tek garanti değil)
 - [ ] Somut engine (node-llama-cpp) masaüstü uygulaması tarafından enjekte edilmeli
@@ -30,6 +32,7 @@
 - [ ] `isAvailable` ile motorun kullanılabilirliği generate'ten önce sorgulanabilmeli
 
 ## Çok niş
+
 - [ ] Model değişince eski modeli `unload` edip yenisini yükleyebilmeli
 - [ ] `sampling` verilmezse makul varsayılan sampling knob'larına düşmeli
 - [ ] GBNF grameri iç içe/keyfi değerlere izin verirken tek kök JSON nesnesini zorlamalı

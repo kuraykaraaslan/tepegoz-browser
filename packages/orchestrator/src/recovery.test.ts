@@ -103,9 +103,7 @@ describe('agent recovery classification', () => {
 
 describe('classifyRuntimeError', () => {
   it('flags an Egress-Firewall 403 with the stable phrase as a non-retryable security stop', () => {
-    const f = classifyRuntimeError(
-      new AppError('The outbound model request was blocked', 403),
-    );
+    const f = classifyRuntimeError(new AppError('The outbound model request was blocked', 403));
     expect(f).toMatchObject({ kind: 'egress_blocked', retryable: false });
   });
 
@@ -135,20 +133,26 @@ describe('classifyRuntimeError', () => {
 describe('classifyToolFailure — the remaining branches', () => {
   it('auth handoff from the message alone', () => {
     expect(
-      classifyToolFailure({ tool: 'browser_update_page', error: err('INTERNAL_ERROR', 'solve the captcha', false) }),
+      classifyToolFailure({
+        tool: 'browser_update_page',
+        error: err('INTERNAL_ERROR', 'solve the captcha', false),
+      }),
     ).toMatchObject({ kind: 'auth_handoff', retryable: false });
   });
 
   it('page_changed from a context-destroyed message', () => {
     expect(
-      classifyToolFailure({ tool: 'agent_think', error: err('INTERNAL_ERROR', 'execution context was destroyed', false) }),
+      classifyToolFailure({
+        tool: 'agent_think',
+        error: err('INTERNAL_ERROR', 'execution context was destroyed', false),
+      }),
     ).toMatchObject({ kind: 'page_changed', retryable: true });
   });
 
   it('transient from a RATE_LIMITED / UPSTREAM_ERROR / retryable-flag error', () => {
-    expect(classifyToolFailure({ tool: 't', error: err('RATE_LIMITED', 'slow down', false) }).kind).toBe(
-      'transient',
-    );
+    expect(
+      classifyToolFailure({ tool: 't', error: err('RATE_LIMITED', 'slow down', false) }).kind,
+    ).toBe('transient');
     expect(classifyToolFailure({ tool: 't', error: err('UPSTREAM_ERROR', 'x', false) }).kind).toBe(
       'transient',
     );

@@ -4,6 +4,7 @@
 > Parola yöneticisi özellik-sayfası UI'ı: tek bir kabuk değil, üç bağımsız parça — `CredentialsSettings` (kayıtlı kimlik-bilgisi listesi + ekle/düzenle formu + sil), `ImportExportPanel` (CSV sürükle-bırak import + Google-CSV export) ve `AutofillSuggestion` (eşleşen giriş alanı üzerinde açılan otomatik-doldur menüsü).
 
 ## Kesinlikle olmalı
+
 - [ ] `CredentialsSettings` kayıtlı kimlik-bilgisi listesini gösterebilmeli
 - [ ] `CredentialsSettings` listede arama/filtreleme sunmalı
 - [ ] `CredentialsSettings` ekleme formu sunmalı
@@ -26,6 +27,7 @@
 - [ ] `passwordUiDict`'i dışa vermeli
 
 ## Olsa iyi olur
+
 - [ ] Parola alanı varsayılan olarak maskeli, "göster" düğmesiyle açılabilir olmalı
 - [ ] İçe aktarım sonrası özet (imported/skipped/errors) göstermeli
 - [ ] Silmeden önce onay istemeli
@@ -38,6 +40,7 @@
 - [ ] Kimlik-bilgisi metadata'sından satır başına favicon / site etiketi göstermeli
 
 ## Çok niş
+
 - [ ] İçe aktarım alanına bırakılan CSV olmayan dosyayı net bir mesajla reddetmeli
 - [ ] `AutofillSuggestion` giriş alanı görünüm alanı kenarına yakınken kendini yeniden konumlandırmalı
 - [ ] Ayarlar sayfası ve açılır menü için RTL yerleşimini desteklemeli

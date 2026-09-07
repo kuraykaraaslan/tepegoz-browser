@@ -71,8 +71,7 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-const fire = () =>
-  handler?.({ requestId: 'req-1', png: new Uint8Array([1, 2, 3]), quality: 0.7 });
+const fire = () => handler?.({ requestId: 'req-1', png: new Uint8Array([1, 2, 3]), quality: 0.7 });
 
 describe('useScreenshotEncoder', () => {
   it('encodes the PNG to WebP bytes and sends them back for the request id', async () => {

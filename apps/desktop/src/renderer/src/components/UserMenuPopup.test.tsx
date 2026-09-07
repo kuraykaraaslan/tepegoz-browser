@@ -71,6 +71,10 @@ describe('UserMenuPopup', () => {
     render(<UserMenuPopup />);
     const rows = screen.getAllByRole('menuitem');
     expect(rows.length).toBeGreaterThan(0);
-    expect(rows.every((r) => (r as HTMLButtonElement).disabled || r.getAttribute('aria-disabled') === 'true')).toBe(true);
+    expect(
+      rows.every(
+        (r) => (r as HTMLButtonElement).disabled || r.getAttribute('aria-disabled') === 'true',
+      ),
+    ).toBe(true);
   });
 });

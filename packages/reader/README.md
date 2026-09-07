@@ -1,7 +1,7 @@
 # @tepegoz/reader
 
 The **reading view** — article extraction and rendering for browsed web pages. The security decision
-the whole feature rests on: a reader view renders the body of an arbitrary page inside the *trusted*
+the whole feature rests on: a reader view renders the body of an arbitrary page inside the _trusted_
 app chrome, so it takes **structured typed blocks with plain-text fields, never HTML**. There is no
 `html` field anywhere and the renderer has no `dangerouslySetInnerHTML` — injection is structurally
 impossible rather than filtered against. The accepted cost is that rich inline markup is flattened to

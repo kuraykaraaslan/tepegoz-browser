@@ -4,6 +4,7 @@
 > Başlık satırının altına oturan sunumsal (presentational) navigasyon çubuğu: geri/ileri/yeniden-yükle/ana-sayfa butonları, omnibox adres çubuğu, opsiyonel yer imi yıldızı, host'un verdiği `actions` slot'u ve trailing kenardaki ana menü kontrolü — her eylem callback ile enjekte, kendi metni yok.
 
 ## Kesinlikle olmalı
+
 - [ ] `@tepegoz/browser-chrome` başlık satırının altına oturan navigasyon çubuğu satırını render etmeli (NavToolbar)
 - [ ] Geri / ileri / yeniden yükle / ana sayfa butonlarını göstermeli
 - [ ] Adres çubuğunu `@tepegoz/omnibox` (Omnibox) ile kompoze etmeli
@@ -21,6 +22,7 @@
 - [ ] Sunumsal leaf olarak desktop app'e geri import yapmamalı
 
 ## Olsa iyi olur
+
 - [ ] NAV_BTN'i dışa vererek host'un eşleşen kontrolleri (sabit eklenti ikonları) aynı biçimde stillemesine izin vermeli
 - [ ] bookmarkAdd/bookmarkRemove etiketiyle yıldızın durum-bağlı aria-label'ını değiştirebilmeli
 - [ ] actions slot'u boşken düzeni bozmamalı
@@ -28,6 +30,7 @@
 - [ ] Home butonu onHome ile yapılandırılmış herhangi bir ana sayfa URL'ine gidebilmeli
 
 ## Çok niş
+
 - [ ] Çok sayıda pinned eklenti ikonu `actions` slot'una geldiğinde taşma zarifçe ele alınmalı
 - [ ] currentUrl `tepegoz://` iç sayfa iken de Omnibox'ta düzgün gösterilmeli
 - [ ] RTL yerelde geri/ileri butonlarının yönü doğru olmalı

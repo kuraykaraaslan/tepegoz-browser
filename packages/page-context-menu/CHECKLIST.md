@@ -1,9 +1,10 @@
 # page-context-menu — CHECKLIST
 
 > Bu liste yalnızca README okunarak üretildi; kod incelenmedi.
-> Chrome tarzı web sayfası sağ-tık bağlam menüsünün *modeli*: kendisi hiçbir şey render etmez; `buildPageContextMenuModel`, sağ-tık bağlamına (düzenlenebilir alan, bağlantı, görsel, video/ses, metin seçimi veya genel sayfa) dallanarak jenerik bir `MenuItem[]` üretir.
+> Chrome tarzı web sayfası sağ-tık bağlam menüsünün _modeli_: kendisi hiçbir şey render etmez; `buildPageContextMenuModel`, sağ-tık bağlamına (düzenlenebilir alan, bağlantı, görsel, video/ses, metin seçimi veya genel sayfa) dallanarak jenerik bir `MenuItem[]` üretir.
 
 ## Kesinlikle olmalı
+
 - [ ] `buildPageContextMenuModel` saf `(t, ctx, actions) => MenuItem[]` imzasıyla çalışmalı
 - [ ] Döndürdüğü model, `@tepegoz/browser-menu`'nün `<Menu>`'sünün tükettiği `MenuItem[]` tipiyle aynı olmalı
 - [ ] Kendisi hiçbir şey render etmemeli (yalnızca model)
@@ -29,6 +30,7 @@
 - [ ] Hiçbir menü etiketini sabit kodlamamalı
 
 ## Olsa iyi olur
+
 - [ ] Henüz yapılmamış özellikler için yer tutucu satırlar sunmalı (Cast, Lens, okuma modu)
 - [ ] Mantıksal gruplar arasında ayraç (separator) koyabilmeli
 - [ ] "Görseli kopyala" ile "Görsel adresini kopyala"yı ayırt edebilmeli
@@ -40,6 +42,7 @@
 - [ ] Öğe sıralamasını Chrome'un menüsüyle tutarlı tutmalı
 
 ## Çok niş
+
 - [ ] Düzenlenebilir bağlamda "Geri Al / Yinele" sunabilmeli
 - [ ] Düzenlenebilir alanlar için yazım yönü (writing-direction) alt menüsü sunabilmeli
 - [ ] `data:` / `blob:` URL bağlantılarını zarifçe ele almalı

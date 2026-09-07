@@ -23,7 +23,10 @@ export function ChromiumFlagsCard({ prefs, onUpdatePrefs }: ChromiumFlagsCardPro
   // The selection this renderer first saw — i.e. what the running process booted with. Frozen on mount.
   const booted = useRef(flags);
   const needsRelaunch = useMemo(
-    () => CHROMIUM_FLAG_ALLOWLIST.some((f) => (booted.current[f.id] ?? false) !== (flags[f.id] ?? false)),
+    () =>
+      CHROMIUM_FLAG_ALLOWLIST.some(
+        (f) => (booted.current[f.id] ?? false) !== (flags[f.id] ?? false),
+      ),
     [flags],
   );
 

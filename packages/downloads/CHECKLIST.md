@@ -7,6 +7,7 @@
 > (`apps/desktop/src/main/downloads/*`).
 
 ## Kesinlikle olmalı
+
 - [x] Paket headless olmalı — Electron, filesystem ve IPC içermemeli
       — _grep over `src/*.ts` (tests aside): no `electron`, no `node:fs`/`node:path`, no
       `ipcMain`/`ipcRenderer`. `index.ts` imports nothing at all; `schemas.ts` imports only `zod` +
@@ -44,6 +45,7 @@
       so the preload-safe type carries no zod, with the package owning both halves._
 
 ## Olsa iyi olur
+
 - [x] Selector'lar aktif / tamamlanmış / başarısız indirmeleri ayırabilmeli
       — _`activeDownloads` (requested/in_progress/paused/quarantined) vs `isTerminalDownloadStatus`
       (completed/blocked/canceled/failed); `status === 'failed'` isolates the failed set._
@@ -66,6 +68,7 @@
       reference-stable no-op path would be a real, separate change._
 
 ## Çok niş
+
 - [x] Aynı dosya adının tekrar indirilmesi state'te çakışmadan temsil edilmeli
       — _records are keyed by a UUID `id`, never by `filename`; two downloads of `report.pdf` are two
       rows._

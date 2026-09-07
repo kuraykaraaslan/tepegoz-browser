@@ -78,7 +78,9 @@ test('the omnibox marks an http page "Not secure" and opens the Site Info popup'
     await siteInfoButton.click();
 
     // The bubble is a native popup window (PopupWindowManager), so a new window appears.
-    await expect.poll(() => app.windows().length, { timeout: 15_000 }).toBeGreaterThan(windowsBefore);
+    await expect
+      .poll(() => app.windows().length, { timeout: 15_000 })
+      .toBeGreaterThan(windowsBefore);
   } finally {
     await app.close();
     server.close();

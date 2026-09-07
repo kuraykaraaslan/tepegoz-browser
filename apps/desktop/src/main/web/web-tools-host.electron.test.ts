@@ -136,7 +136,9 @@ describe('the transformResponse/validateStatus thunks passed to the http client'
     http.get.mockResolvedValue({ data: '<html></html>', status: 200, headers: {} });
 
     await webToolsHost.search({ query: 'q', maxResults: 1 });
-    const searchOpts = http.get.mock.calls[0]![1] as { transformResponse: [(d: unknown) => string] };
+    const searchOpts = http.get.mock.calls[0]![1] as {
+      transformResponse: [(d: unknown) => string];
+    };
     expect(searchOpts.transformResponse[0](123)).toBe('123');
 
     http.get.mockClear();

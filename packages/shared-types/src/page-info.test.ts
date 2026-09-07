@@ -1,9 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import {
-  CertificateSummarySchema,
-  PageInfoSchema,
-  classifyPageSecurity,
-} from './page-info';
+import { CertificateSummarySchema, PageInfoSchema, classifyPageSecurity } from './page-info';
 
 /**
  * The address bar's leading glyph is the first thing a user reads against Chrome, and the one line
@@ -24,12 +20,14 @@ describe('classifyPageSecurity', () => {
   });
 
   it('maps https with a recorded certificate error to dangerous', () => {
-    expect(classifyPageSecurity('https://expired.example', { certErrorCode: 'net::ERR_CERT_DATE_INVALID' })).toBe(
-      'dangerous',
-    );
-    expect(classifyPageSecurity('https://self-signed.example', { proceededPastCertError: true })).toBe(
-      'dangerous',
-    );
+    expect(
+      classifyPageSecurity('https://expired.example', {
+        certErrorCode: 'net::ERR_CERT_DATE_INVALID',
+      }),
+    ).toBe('dangerous');
+    expect(
+      classifyPageSecurity('https://self-signed.example', { proceededPastCertError: true }),
+    ).toBe('dangerous');
     // An empty / null code is "no error", not a truthy string.
     expect(classifyPageSecurity('https://example.com', { certErrorCode: '' })).toBe('secure');
     expect(classifyPageSecurity('https://example.com', { certErrorCode: null })).toBe('secure');
@@ -53,7 +51,7 @@ describe('classifyPageSecurity', () => {
 describe('PageInfoSchema', () => {
   const cert = {
     subjectName: 'example.com',
-    issuerName: "Example Root CA",
+    issuerName: 'Example Root CA',
     validFrom: '2026-01-01T00:00:00.000Z',
     validTo: '2027-01-01T00:00:00.000Z',
     serialNumber: '0A1B2C',

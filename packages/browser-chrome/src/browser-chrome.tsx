@@ -116,8 +116,8 @@ export interface BrowserChromeProps {
   /** The active page's security level — drives the leading site-info glyph. Omit/`'unknown'` hides it. */
   securityLevel?: OmniboxSecurityLevel | undefined;
   /** Open the Site Info bubble; receives the button's viewport rect for popup anchoring. */
-  onOpenSiteInfo?: ((anchor: { x: number; y: number; width: number; height: number }) => void)
-    | undefined;
+  onOpenSiteInfo?:
+    ((anchor: { x: number; y: number; width: number; height: number }) => void) | undefined;
   /** Async omnibox suggestion source (history/tab/search); omit to disable the dropdown. */
   /** Bumped by the host to focus the address bar (Ctrl+L / Alt+D). */
   omniboxFocusToken?: number | undefined;

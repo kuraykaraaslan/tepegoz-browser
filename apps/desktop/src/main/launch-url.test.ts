@@ -18,9 +18,9 @@ describe('extractLaunchUrl', () => {
   });
 
   it('ignores the electron binary + app-directory pair from an unpackaged dev launch', () => {
-    expect(extractLaunchUrl(['C:\\electron.exe', 'C:\\Users\\dev\\tepegoz-browser\\apps\\desktop'])).toBe(
-      null,
-    );
+    expect(
+      extractLaunchUrl(['C:\\electron.exe', 'C:\\Users\\dev\\tepegoz-browser\\apps\\desktop']),
+    ).toBe(null);
   });
 
   it('returns null when nothing looks like a URL', () => {
@@ -32,8 +32,8 @@ describe('extractLaunchUrl', () => {
   });
 
   it('takes the FIRST URL when more than one is present', () => {
-    expect(extractLaunchUrl(['Tepegöz.exe', 'https://first.example/', 'https://second.example/'])).toBe(
-      'https://first.example/',
-    );
+    expect(
+      extractLaunchUrl(['Tepegöz.exe', 'https://first.example/', 'https://second.example/']),
+    ).toBe('https://first.example/');
   });
 });

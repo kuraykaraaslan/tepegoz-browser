@@ -20,6 +20,7 @@ export const tr: ProcessStrings = {
   discarded: 'Uyuyor',
   total: 'Toplam',
   endProcess: 'İşlemi sonlandır',
-  endProcessConfirm: 'Bu sekmenin işlemi sonlandırılsın mı? Geri döndüğünüzde sayfa yeniden yüklenir.',
+  endProcessConfirm:
+    'Bu sekmenin işlemi sonlandırılsın mı? Geri döndüğünüzde sayfa yeniden yüklenir.',
   refresh: 'Şimdi yenile',
 };

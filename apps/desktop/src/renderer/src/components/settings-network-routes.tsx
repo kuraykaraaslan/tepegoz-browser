@@ -87,9 +87,7 @@ export function NetworkRoutesCard({ s, state }: { s: SettingsStrings; state: Net
                   <span className="min-w-0 flex-1 truncate text-text-primary" title={tab.url}>
                     {tab.title === '' ? tab.url : tab.title}
                   </span>
-                  <span className="shrink-0 text-text-secondary">
-                    {label(route.connectionId)}
-                  </span>
+                  <span className="shrink-0 text-text-secondary">{label(route.connectionId)}</span>
                   <Badge variant="neutral" size="sm">
                     {s.network.routeSource[route.source]}
                   </Badge>

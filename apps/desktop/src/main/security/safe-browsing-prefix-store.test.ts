@@ -1,10 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { checkUrl, hashPrefix } from '@tepegoz/security-policy';
-import {
-  parsePrefixFile,
-  PrefixStore,
-  type PrefixStoreIo,
-} from './safe-browsing-prefix-store';
+import { parsePrefixFile, PrefixStore, type PrefixStoreIo } from './safe-browsing-prefix-store';
 
 function memIo(initial: string | null = null): PrefixStoreIo & { contents: string | null } {
   const box = {

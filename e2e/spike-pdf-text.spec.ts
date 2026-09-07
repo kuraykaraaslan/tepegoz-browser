@@ -118,7 +118,11 @@ test('SPIKE: which route, if any, reads text out of the built-in PDF viewer', as
         for (const frame of frames) {
           try {
             const text = (await frame.executeJavaScript('document.body.innerText', true)) as string;
-            perFrame.push({ url: frame.url.slice(0, 60), length: text.length, hasProbe: text.includes(probe) });
+            perFrame.push({
+              url: frame.url.slice(0, 60),
+              length: text.length,
+              hasProbe: text.includes(probe),
+            });
           } catch (err) {
             perFrame.push({ url: frame.url.slice(0, 60), error: String(err).slice(0, 80) });
           }

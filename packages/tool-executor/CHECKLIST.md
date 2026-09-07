@@ -4,6 +4,7 @@
 > Bir tool call yürütülürken kullanılan saf yardımcılar: web metnindeki gizli/zero-width/bidi/homoglyph enjeksiyon vektörlerini temizleyen içerik sanitizer'ı (ADR-0008) ve planlayıcıya verilen sonlanmış, boyutu sınırlı, etiketi temizlenmiş interactable DOM-eleman modeli. Sıfır bağımlılık, Electron yok, DOM erişimi yok.
 
 ## Kesinlikle olmalı
+
 - [ ] Web kaynaklı metinden gizli (hidden) karakterleri modele ulaşmadan önce temizleyebilmeli
 - [ ] Sıfır genişlikli (zero-width) karakterleri temizleyebilmeli
 - [ ] Bidi (çift yönlü metin) kontrol karakterlerini temizleyebilmeli
@@ -27,6 +28,7 @@
 - [ ] Tüm yardımcıları saf (pure) tutmalı — yan etki üretmemeli
 
 ## Olsa iyi olur
+
 - [ ] Temizleme sırasında görünür/meşru Unicode metni (ör. çok dilli içerik) bozmadan korumalı
 - [ ] `SanitizeResult`'taki "çıkarıldı" bayrağını çağıranın loglama/uyarı için kullanmasına izin vermeli
 - [ ] Kırpma sırasında planlayıcı için en olası eyleme uygun elemanları önceliklendirebilmeli
@@ -38,6 +40,7 @@
 - [ ] Rol sınıflandırmasını hem tıklanabilir hem düzenlenebilir elemanları ayıracak biçimde sunmalı
 
 ## Çok niş
+
 - [ ] İç içe geçmiş bidi override/isolate dizilerini dengesiz bırakmadan temizleyebilmeli
 - [ ] Latin dışı alfabeleri homoglyph temizliğinde yanlış pozitif olmadan ele alabilmeli
 - [ ] Çok büyük ham eleman listelerinde kırpmayı sabit sınırlar içinde tutabilmeli

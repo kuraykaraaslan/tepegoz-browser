@@ -4,6 +4,7 @@
 > SQLite ile desteklenen yerel şifreli parola kasası: enjekte edilen bir `SecretCrypto` ile şifreleyen, ham parolayı paket dışına çıkarmayan bir `PasswordProvider` ve onun CRUD katmanı.
 
 ## Kesinlikle olmalı
+
 - [ ] `PasswordVault`'ı `PasswordProvider` olarak `id: 'local'`, `displayName: 'Local Vault'` kimliğiyle sunmalı
 - [ ] Parolayı diske yazmadan önce enjekte edilen `SecretCrypto` ile şifrelemeli
 - [ ] Ham (şifresiz) parola bu paketin dışına asla çıkmamalı
@@ -24,6 +25,7 @@
 - [ ] Tam yazma/içe aktarma/dışa aktarma yeteneklerine sahip olmalı
 
 ## Olsa iyi olur
+
 - [ ] `import(csvData)` ile genel CSV formatından (name/url/username/password/note sütunları) en iyi çaba ile içe aktarma yapabilmeli
 - [ ] CSV içe aktarmada başlık satırını otomatik algılamalı
 - [ ] `import` sonucunda `{ imported, skipped, errors }` özetini döndürmeli
@@ -36,6 +38,7 @@
 - [ ] Origin normalizasyonu tutarlı olmalı (aynı sitenin farklı yazımları tek kayda düşmeli)
 
 ## Çok niş
+
 - [ ] Bozuk/eksik sütunlu CSV satırlarını atlayıp `errors`'a raporlamalı, tüm içe aktarmayı düşürmemeli
 - [ ] `init` çağrılmadan yapılan erişimlerde net biçimde başarısız olmalı
 - [ ] Aynı `init`'in iki kez çağrılmasına karşı korunmalı (veya idempotent olmalı)

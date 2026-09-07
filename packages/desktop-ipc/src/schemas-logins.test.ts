@@ -30,8 +30,12 @@ describe('LoginSetSchema', () => {
   });
 
   it('rejects an empty secret, an empty username, and an over-long url', () => {
-    expect(LoginSetSchema.safeParse({ url: 'https://x.test', username: 'ada', secret: '' }).success).toBe(false);
-    expect(LoginSetSchema.safeParse({ url: 'https://x.test', username: '', secret: 's' }).success).toBe(false);
+    expect(
+      LoginSetSchema.safeParse({ url: 'https://x.test', username: 'ada', secret: '' }).success,
+    ).toBe(false);
+    expect(
+      LoginSetSchema.safeParse({ url: 'https://x.test', username: '', secret: 's' }).success,
+    ).toBe(false);
     expect(
       LoginSetSchema.safeParse({ url: 'h'.repeat(4097), username: 'ada', secret: 's' }).success,
     ).toBe(false);

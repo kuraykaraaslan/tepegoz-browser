@@ -333,7 +333,8 @@ export function ProvidersSection({
                         </span>
                         {k.region !== undefined && k.region !== '' && (
                           <span className="ml-2 text-xs text-text-secondary">
-                            {regions?.[k.provider]?.find((r) => r.id === k.region)?.label ?? k.region}
+                            {regions?.[k.provider]?.find((r) => r.id === k.region)?.label ??
+                              k.region}
                           </span>
                         )}
                         {k.provider !== undefined && !isRunnableProvider(k.provider) && (

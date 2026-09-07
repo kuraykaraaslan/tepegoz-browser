@@ -50,7 +50,9 @@ test('reader mode opens the reading view on an article and declines on a non-art
   const server: Server = createServer((req, res) => {
     if (req.url === '/app') {
       res.writeHead(200, { 'content-type': 'text/html' });
-      res.end('<!doctype html><html><head><title>Dashboard</title></head><body><h1>Dashboard</h1><p>ok</p></body></html>');
+      res.end(
+        '<!doctype html><html><head><title>Dashboard</title></head><body><h1>Dashboard</h1><p>ok</p></body></html>',
+      );
       return;
     }
     res.writeHead(200, { 'content-type': 'text/html' });
@@ -140,9 +142,9 @@ test('reader mode opens the reading view on an article and declines on a non-art
     await toggleReader();
     // `role="article"` never mounts for a non-article; the decline copy does — and it names the PAGE
     // as the reason ("does not look like an article"), not a failure of the feature.
-    await expect(
-      window.getByRole('heading', { name: 'Nothing to read here' }),
-    ).toBeVisible({ timeout: 15_000 });
+    await expect(window.getByRole('heading', { name: 'Nothing to read here' })).toBeVisible({
+      timeout: 15_000,
+    });
     await expect(window.getByText(/does not look like an article/i)).toBeVisible();
     await expect(window.getByRole('article')).toHaveCount(0);
   } finally {

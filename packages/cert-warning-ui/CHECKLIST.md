@@ -4,6 +4,7 @@
 > Bir sitenin sertifikası doğrulanamadığında gösterilen, sertifika detayları enjekte edilen ve kararı callback'lerle dışarı veren Electron'suz TLS sertifika uyarı bileşeni (Phase 2c).
 
 ## Kesinlikle olmalı
+
 - [ ] `CertWarning` doğrulanamayan TLS sertifikası için uyarı yüzeyini render etmeli
 - [ ] Güvenli eylem (geri dön) birincil, odaklı ve ilk olmalı
 - [ ] Yanlışlıkla basılan Enter kullanıcıyı geri götürmeli, siteye geçirmemeli
@@ -20,6 +21,7 @@
 - [ ] "Yine de devam et" eylemi ikincil ve az vurgulu olmalı
 
 ## Olsa iyi olur
+
 - [ ] Bileşen hassas siteler (bankacılık, kripto, sağlık, şifre yöneticileri) için hiç çağrılmadığını varsayabilmeli — ana süreç onları hard-block eder
 - [ ] Issuer / konu / geçerlilik alanları ayrı ayrı gösterilebilmeli
 - [ ] İstisnanın kalıcı olmadığı metinde açıkça yer almalı
@@ -28,6 +30,7 @@
 - [ ] Hata nedeni (geçersiz CA, süresi dolmuş, isim uyuşmazlığı) kullanıcı diline çevrilebilmeli
 
 ## Çok niş
+
 - [ ] Çok uzun veya kötü niyetli issuer metni layout'u bozmamalı ve script enjekte edememeli
 - [ ] Sertifika detayı eksik/kısmi enjekte edilirse bileşen çökmemeli
 - [ ] `tr` ve `en` metinleri aynı görsel hiyerarşiyi korumalı

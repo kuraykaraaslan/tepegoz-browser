@@ -4,6 +4,7 @@
 > CDP tabanlı otomasyon için insan benzeri fare/klavye/scroll hareketi üreten adapter (`HumanInputAdapter`) ve saf matematik yardımcıları.
 
 ## Kesinlikle olmalı
+
 - [ ] `HumanInputAdapter` ham bir CDP `send` fonksiyonunu sarmalamalı
 - [ ] `moveTo` fare yolunu Catmull-Rom eğrisiyle üretmeli
 - [ ] Yol boyunca hızı eased (ivmeli/yavaşlamalı) uygulamalı
@@ -20,6 +21,7 @@
 - [ ] `gaussianJitter`, `easeInOut`, `easeOut`, `easeIn`, `catmullRom` saf yardımcılarını dışa vermeli
 
 ## Olsa iyi olur
+
 - [ ] `gaussianJitter` Box-Muller örneklemesini ±3σ'ya clamp etmeli
 - [ ] Matematik yardımcıları CDP adapter'dan bağımsız kullanılabilmeli
 - [ ] `onCursorMove` hook'u ile UI geri bildirimi (ör. `CursorOverlay`) desteklemeli
@@ -29,6 +31,7 @@
 - [ ] `main/agent/cdp-driver.ts` ve `main/macro/macro-cdp.ts` tarafından tüketilebilmeli
 
 ## Çok niş
+
 - [ ] `shouldYield()` tetiklendiğinde imleç son ulaşılan noktada bırakılmalı
 - [ ] Catmull-Rom ilk/son segmentte taşma yapmadan interpole etmeli
 - [ ] Çok kısa mesafeli `moveTo` çağrılarında da en az birkaç ara adım üretmeli

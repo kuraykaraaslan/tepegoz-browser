@@ -89,9 +89,11 @@ vi.mock('../tabs', () => ({ default: tabs }));
 const binding = vi.hoisted(() => ({
   prune: vi.fn(),
   resolveFor: vi.fn(() => ({ resolved: { connectionId: null }, source: 'default' })),
-  resolveForGroup: vi.fn<(groupId: string) => { resolved: { connectionId: string | null } }>(() => ({
-    resolved: { connectionId: null },
-  })),
+  resolveForGroup: vi.fn<(groupId: string) => { resolved: { connectionId: string | null } }>(
+    () => ({
+      resolved: { connectionId: null },
+    }),
+  ),
   mayEgress: vi.fn(() => true),
   general: vi.fn(() => ({ mode: 'direct' })),
   bindTab: vi.fn(() => Promise.resolve()),

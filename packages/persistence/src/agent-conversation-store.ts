@@ -232,7 +232,9 @@ export class AgentConversationStore {
     if (MetaStore.get(db, FOLD_VERSION_META_KEY) === String(AGENT_CONVERSATION_FOLD_VERSION)) {
       return 0;
     }
-    const conversations = db.prepare('SELECT id, title, preview FROM agent_conversations').all() as {
+    const conversations = db
+      .prepare('SELECT id, title, preview FROM agent_conversations')
+      .all() as {
       id: string;
       title: string;
       preview: string;

@@ -47,6 +47,8 @@ export function applyChromiumSwitches(app: App): void {
     if (sw.value === undefined) app.commandLine.appendSwitch(sw.name);
     else app.commandLine.appendSwitch(sw.name, sw.value);
   }
-  const enabled = Object.keys(overrides).filter((id) => overrides[id as keyof ChromiumFlagOverrides]);
+  const enabled = Object.keys(overrides).filter(
+    (id) => overrides[id as keyof ChromiumFlagOverrides],
+  );
   if (enabled.length > 0) Logger.info('Chromium flag overrides applied', { flags: enabled });
 }

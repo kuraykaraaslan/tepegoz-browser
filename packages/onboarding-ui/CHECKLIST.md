@@ -4,6 +4,7 @@
 > Masaüstü kabuğu için ilk-çalıştırma karşılama/onboarding arayüzü: akışın sunumunu ve i18n'ini sahiplenir, Electron/preload eylemleri masaüstü uygulaması tarafından prop olarak enjekte edilir.
 
 ## Kesinlikle olmalı
+
 - [ ] Masaüstü kabuğu için ilk-çalıştırma karşılama ekranını render edebilmeli
 - [ ] Onboarding'i çok adımlı bir akış olarak sunabilmeli
 - [ ] Tüm onboarding metinlerini kendi i18n sözlüğünde sahiplenmeli
@@ -17,6 +18,7 @@
 - [ ] İngilizce öncelikli, Türkçe birinci sınıf olacak şekilde yerelleştirilmiş olmalı
 
 ## Olsa iyi olur
+
 - [ ] Adım ilerleme göstergesi sunabilmeli
 - [ ] Adımlar arasında klavye gezinmesini desteklemeli
 - [ ] "Varsayılan tarayıcı yap" adımını enjekte edilen bir eylemle bağlayabilmeli
@@ -27,6 +29,7 @@
 - [ ] Son adımda "taramaya başla" çağrısı (CTA) sunabilmeli
 
 ## Çok niş
+
 - [ ] `prefers-reduced-motion` altında adım geçişlerini sadeleştirebilmeli
 - [ ] Akış için RTL yerleşimini desteklemeli
 - [ ] Akışı yalnızca ilk çalıştırmada değil, sonradan ayarlardan da açılabilir kılmalı

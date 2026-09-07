@@ -144,7 +144,11 @@ describe('buildAdaptorConnections', () => {
       authKind: 'none',
       auditRequired: true,
     });
-    expect(conn?.permissions[0]).toMatchObject({ capability: 'web', scopes: [], state: 'connected' });
+    expect(conn?.permissions[0]).toMatchObject({
+      capability: 'web',
+      scopes: [],
+      state: 'connected',
+    });
   });
 
   it('carries an errored standalone MCP server’s message as the permission reason', () => {

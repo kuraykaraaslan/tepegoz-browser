@@ -23,7 +23,15 @@ function guiEnv(): Record<string, string> {
   return env;
 }
 
-const PAGES = ['extensions', 'history', 'downloads', 'uploads', 'bookmarks', 'process', 'developer'];
+const PAGES = [
+  'extensions',
+  'history',
+  'downloads',
+  'uploads',
+  'bookmarks',
+  'process',
+  'developer',
+];
 
 test('every migrated tepegoz:// internal page loads as a real page with real content', async () => {
   const profileDir = join(process.cwd(), '.tepegoz-internal-pages-profile');
@@ -88,9 +96,13 @@ test('every migrated tepegoz:// internal page loads as a real page with real con
       // `isTrustedAppUrl` never learned the `tepegoz://` scheme, so every real page's data fetch silently
       // failed this exact way).
       const bridgeOk = await app.evaluate(({ webContents }, host) => {
-        const wc = webContents.getAllWebContents().find((w) => w.getURL().startsWith(`tepegoz://${host}`));
+        const wc = webContents
+          .getAllWebContents()
+          .find((w) => w.getURL().startsWith(`tepegoz://${host}`));
         if (wc === undefined || wc.isDestroyed()) return false;
-        return wc.executeJavaScript('window.tepegoz.getPreferences().then(() => true, () => false)');
+        return wc.executeJavaScript(
+          'window.tepegoz.getPreferences().then(() => true, () => false)',
+        );
       }, page);
       expect(bridgeOk, `tepegoz://${page}'s IPC bridge call was rejected`).toBe(true);
 
@@ -102,7 +114,9 @@ test('every migrated tepegoz:// internal page loads as a real page with real con
       // tag early — both produced a page that STILL rendered SOME content (so `innerText.length > 0`
       // above didn't catch them) but was actively failing to load its own code correctly underneath.
       const violations = await app.evaluate(({ webContents }, host) => {
-        const wc = webContents.getAllWebContents().find((w) => w.getURL().startsWith(`tepegoz://${host}`));
+        const wc = webContents
+          .getAllWebContents()
+          .find((w) => w.getURL().startsWith(`tepegoz://${host}`));
         if (wc === undefined) return Promise.resolve([] as string[]);
         return new Promise<string[]>((resolve) => {
           const seen: string[] = [];

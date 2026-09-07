@@ -1,8 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import {
-  INTERNAL_DEVELOPER_URL,
-  INTERNAL_SETTINGS_URL,
-} from '@tepegoz/desktop-ipc';
+import { INTERNAL_DEVELOPER_URL, INTERNAL_SETTINGS_URL } from '@tepegoz/desktop-ipc';
 
 /**
  * The desktop adapter over `@tepegoz/navigation`'s pure `internalPageUrl` (which owns its own suite).

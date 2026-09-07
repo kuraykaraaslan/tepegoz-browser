@@ -4,6 +4,7 @@
 > Pure, Electron-free tab-state modeli: eklenme sıralı sekme kümesi, tab grupları, pinleme, aktif sekme, id tahsisi, renderer-facing `TabsState` projeksiyonu ve agent'ın built-in `tab_*` yeteneği.
 
 ## Kesinlikle olmalı
+
 - [ ] Sekmeleri eklenme sırasına göre koruyan bir küme olarak tutabilmeli (Map insertion order; ayrı index alanı yok)
 - [ ] `add`/`get`/`has`/`delete` ile sekme kaydı yaşam döngüsünü yönetebilmeli
 - [ ] Her sekmeye benzersiz bir id tahsis edebilmeli
@@ -31,6 +32,7 @@
 - [ ] `TabGroup` engine-local tipini wire `TabGroupInfo`'dan ayrı tutmalı (engine-only grup alanları ileride eklenebilsin)
 
 ## Olsa iyi olur
+
 - [ ] Grup adını yeniden adlandırma mutasyonunu desteklemeli
 - [ ] Bir grubu bütün olarak taşımayı (üye blokunun bütünlüğü korunarak) desteklemeli
 - [ ] Sekme başka bir gruba taşındığında bitişiklik değişmezini yeniden kurabilmeli
@@ -44,6 +46,7 @@
 - [ ] Aynı grup adının tekrar kullanımında yeni grup mu mevcut grup mu kararını netleştirmeli
 
 ## Çok niş
+
 - [ ] Çok sayıda sekme altında `normalize()` maliyetini yapısal mutasyon başına sınırlı tutabilmeli
 - [ ] Pinli sekme sayısı toplam sekme sayısına eşitken sıralama değişmezini koruyabilmeli
 - [ ] Tek üyeli grup son üyesi kaldırıldığında grubu anında budayabilmeli

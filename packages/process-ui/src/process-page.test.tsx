@@ -9,7 +9,13 @@ function snapshot(): ProcessSnapshot {
   return {
     sampledAt: 1,
     rows: [
-      { pid: 100, kind: 'browser', label: 'Browser', cpuPercent: 1.2, memoryBytes: 200 * 1024 * 1024 },
+      {
+        pid: 100,
+        kind: 'browser',
+        label: 'Browser',
+        cpuPercent: 1.2,
+        memoryBytes: 200 * 1024 * 1024,
+      },
       { pid: 200, kind: 'gpu', label: 'GPU', cpuPercent: 0, memoryBytes: 80 * 1024 * 1024 },
       {
         pid: 300,

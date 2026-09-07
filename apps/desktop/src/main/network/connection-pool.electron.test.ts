@@ -248,7 +248,14 @@ describe('adding and removing', () => {
 });
 
 const wgConn = (id: string): NetworkConnection =>
-  ({ id, label: id.toUpperCase(), kind: 'wireguard', note: '', updatedAt: 1, version: 1 }) as NetworkConnection;
+  ({
+    id,
+    label: id.toUpperCase(),
+    kind: 'wireguard',
+    note: '',
+    updatedAt: 1,
+    version: 1,
+  }) as NetworkConnection;
 const torConn = (id: string, upstreamConnectionId: string | null): NetworkConnection => ({
   id,
   label: id.toUpperCase(),
@@ -308,7 +315,9 @@ describe('providerFor — the one place that knows protocols exist', () => {
   });
 
   it('reports — does not silently drop — a persisted connection whose kind has no provider', () => {
-    h.prefs.networkConnections = [{ ...conn('weird'), kind: 'quantum-link' } as unknown as NetworkConnection];
+    h.prefs.networkConnections = [
+      { ...conn('weird'), kind: 'quantum-link' } as unknown as NetworkConnection,
+    ];
     ConnectionPool.init();
     // The exhaustive `never` default threw; init caught it, so the pool loads with nothing.
     expect(ConnectionPool.list()).toEqual([]);

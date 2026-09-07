@@ -106,13 +106,7 @@ describe('showBookmarkContextMenu', () => {
 
   it('the folder-item variant (inside a bar dropdown) is the reduced set', () => {
     showBookmarkContextMenu(win, 'b1', 'bookmark', 'folder-item');
-    expect(labels()).toEqual([
-      'Open',
-      'Open in new tab',
-      '<separator>',
-      'Move to bar',
-      'Delete',
-    ]);
+    expect(labels()).toEqual(['Open', 'Open in new tab', '<separator>', 'Move to bar', 'Delete']);
     clickAll();
     expect((sent as { p: { action: string } }[]).map((m) => m.p.action)).toEqual([
       'open',

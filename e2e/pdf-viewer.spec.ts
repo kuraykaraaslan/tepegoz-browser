@@ -88,9 +88,7 @@ test('an application/pdf URL renders in-tab in the built-in viewer, not as a dow
     const viewerMounted = await pollEvaluate(
       () =>
         app.evaluate(async ({ webContents }, extId: string) => {
-          const tab = webContents
-            .getAllWebContents()
-            .find((w) => w.getURL().endsWith('/doc.pdf'));
+          const tab = webContents.getAllWebContents().find((w) => w.getURL().endsWith('/doc.pdf'));
           if (tab === undefined) return false;
           const html = (await tab.executeJavaScript(
             'document.documentElement.outerHTML',

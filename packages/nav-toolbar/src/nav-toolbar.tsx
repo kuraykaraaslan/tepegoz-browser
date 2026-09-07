@@ -59,8 +59,8 @@ export interface NavToolbarProps {
   /** Localized strings for the site-info control. Required when `securityLevel` is a shown level. */
   securityLabels?: OmniboxSecurityLabels | undefined;
   /** Open the Site Info bubble; receives the button's viewport rect for popup anchoring. */
-  onOpenSiteInfo?: ((anchor: { x: number; y: number; width: number; height: number }) => void)
-    | undefined;
+  onOpenSiteInfo?:
+    ((anchor: { x: number; y: number; width: number; height: number }) => void) | undefined;
   /** Async omnibox suggestion source (history/tab/search); omit to disable the dropdown. */
   /** Bumped by the host to focus the address bar (Ctrl+L / Alt+D). Forwarded to the omnibox. */
   omniboxFocusToken?: number | undefined;

@@ -45,9 +45,8 @@ vi.mock('../tabs', () => ({
   },
 }));
 
-const { clearRestoreUndo, recordRestoredTabs, restoredTabCount, undoSessionRestore } = await import(
-  './session-restore-undo'
-);
+const { clearRestoreUndo, recordRestoredTabs, restoredTabCount, undoSessionRestore } =
+  await import('./session-restore-undo');
 
 beforeEach(() => {
   vi.useFakeTimers();

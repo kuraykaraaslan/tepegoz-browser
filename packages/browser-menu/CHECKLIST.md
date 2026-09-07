@@ -4,6 +4,7 @@
 > Sunum amaçlı yaprak: tümüyle generic bir `MenuItem[]` modelinden sürülen, KUIreact stilinde yeniden kullanılabilir menü yüzeyi; aynı bileşen hem ana (hamburger) menüyü hem web sayfası sağ tık menüsünü besler.
 
 ## Kesinlikle olmalı
+
 - [ ] Menüyü tümüyle generic bir `MenuItem[]` modelinden render etmeli
 - [ ] Aynı bileşen hem ana (hamburger) menüyü hem web sayfası sağ tık menüsünü besleyebilmeli
 - [ ] `item` (normal satır) varyantını render etmeli
@@ -23,6 +24,7 @@
 - [ ] `MenuFlyout` `onOpen` / `onClose` host hook'larını sağlamalı
 
 ## Olsa iyi olur
+
 - [ ] `autoFocus` verildiğinde menü açılışında ilk öğeye odaklanmalı
 - [ ] Opsiyonel `className` ile host'un stil geçişine izin vermeli
 - [ ] `flyout.onOpen`'a parent satırın `id`'si ve `rect`'i verilmeli (host popup'ı konumlasın)
@@ -32,6 +34,7 @@
 - [ ] `pnpm typecheck` · `pnpm lint` · `pnpm test` betiklerini sağlamalı
 
 ## Çok niş
+
 - [ ] Bu uygulamada flyout in-window değil, sola açılan ayrı native popup pencere olarak ele alınmalı
 - [ ] Boş bir `items` modelinde bile geçerli (boş) bir menü yüzeyi render etmeli
 - [ ] Ardışık `separator`'ları görsel olarak tekilleştirebilmeli

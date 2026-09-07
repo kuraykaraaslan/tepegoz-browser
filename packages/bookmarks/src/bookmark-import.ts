@@ -32,7 +32,6 @@ export interface BookmarkImportResult {
   errors: string[];
 }
 
-
 const TOKEN_RE = /<DT>\s*<H3\b[^>]*>([\s\S]*?)<\/H3>|<DT>\s*<A\b([^>]*)>([\s\S]*?)<\/A>|<\/DL>/gi;
 /**
  * Parse the Netscape bookmarks HTML format exported by Chromium, Firefox, Edge, and Brave.

@@ -4,6 +4,7 @@
 > Ajanın Planner + Executor + Reactor döngüsü (L3): kullanıcı istemini bir DAG planına çevirir, planı tek `@tepegoz/capability-plane` ToolGateway PEP üzerinden adım adım çalıştırır ve her adımın sonucuna göre bir sonraki hamleye karar verir.
 
 ## Kesinlikle olmalı
+
 - [ ] `Planner` bir `PlanRequest` alıp adım DAG'i üretebilmeli
 - [ ] Üretilen plan bir DAG olmalı (adımlar arası bağımlılıkları desteklemeli, düz liste değil)
 - [ ] `Executor` bir planın adımlarını sırayla çalıştırabilmeli
@@ -26,6 +27,7 @@
 - [ ] Electron/uygulama seam'lerini kendisi sağlamamalı (bunları `@tepegoz/agent-runtime`'a bırakmalı)
 
 ## Olsa iyi olur
+
 - [ ] Adım başına sınırlı retry sayısı uygulayabilmeli
 - [ ] Koşu başına sınırlı replan sayısı uygulayabilmeli
 - [ ] Her `StepOutcome` çözüldükçe ilerlemeyi dışarı bildirebilmeli
@@ -37,6 +39,7 @@
 - [ ] Çalışan bir koşuyu iptal edebilmeli (abort/cancel)
 
 ## Çok niş
+
 - [ ] DAG'in bağımsız dallarını paralel çalıştırabilmeli
 - [ ] Kısmi plan yürütmesi / belirli bir adımdan devam edebilmeli
 - [ ] Bir koşunun tamamı için bütçe/adım-sayısı tavanı uygulayabilmeli

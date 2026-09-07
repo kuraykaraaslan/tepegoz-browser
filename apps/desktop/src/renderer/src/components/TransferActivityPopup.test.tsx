@@ -312,9 +312,13 @@ describe('what each row tells you', () => {
     });
   });
 
-  it('falls back from an upload\'s target origin to its target url, then to a dash', async () => {
+  it("falls back from an upload's target origin to its target url, then to a dash", async () => {
     bridge.uploads.items = [
-      upload({ targetOrigin: undefined, targetUrl: 'https://forms.example/submit', provenance: { actor: 'user' } }),
+      upload({
+        targetOrigin: undefined,
+        targetUrl: 'https://forms.example/submit',
+        provenance: { actor: 'user' },
+      }),
     ];
     render(<TransferActivityPopup />);
     await waitFor(() => {

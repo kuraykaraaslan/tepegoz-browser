@@ -65,18 +65,10 @@ export function FileOperationsSection({
         }}
       />
 
-      <div
-        className={cn('mt-5 space-y-3', !enabled && 'opacity-50')}
-        aria-disabled={!enabled}
-      >
+      <div className={cn('mt-5 space-y-3', !enabled && 'opacity-50')} aria-disabled={!enabled}>
         <div className="flex items-center justify-between gap-3">
           <p className="text-xs text-text-secondary">{f.modeHint}</p>
-          <Button
-            size="sm"
-            variant="outline"
-            disabled={!enabled}
-            onClick={() => void addFolder()}
-          >
+          <Button size="sm" variant="outline" disabled={!enabled} onClick={() => void addFolder()}>
             {f.addFolder}
           </Button>
         </div>

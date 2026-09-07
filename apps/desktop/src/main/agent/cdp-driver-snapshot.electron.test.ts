@@ -135,7 +135,9 @@ describe('render-DOM perception', () => {
     // the empty branch probes the page viewport rather than falling through to a11y
     expect(send).toHaveBeenCalledWith(
       'Runtime.evaluate',
-      expect.objectContaining({ expression: expect.stringContaining('window.innerWidth') as string }),
+      expect.objectContaining({
+        expression: expect.stringContaining('window.innerWidth') as string,
+      }),
     );
     expect(send).not.toHaveBeenCalledWith('Accessibility.getFullAXTree');
   });

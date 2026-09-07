@@ -25,8 +25,8 @@ this package stays pure and unit-testable with no network access.
   navigation still works.
 - **Sitemap reader (AI-7).** `createSitemapReader` discovers `robots.txt` → `Sitemap:` →
   `sitemap.xml` `<loc>` entries so the agent visits a conventional path (`/blog`) only when the
-  origin actually publishes it. **SSRF-safe by construction**: it only fetches URLs on the *same
-  origin* as the page already loaded through the Policy plane, so discovery can't pivot to a
+  origin actually publishes it. **SSRF-safe by construction**: it only fetches URLs on the _same
+  origin_ as the page already loaded through the Policy plane, so discovery can't pivot to a
   private-IP or cloud-metadata host. Bounded and cached per origin.
 
 ## Scripts

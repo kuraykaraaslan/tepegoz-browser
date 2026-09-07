@@ -279,7 +279,13 @@ describe('page-URL + source resolution in the request hooks', () => {
   it('leaves pageOrigin off when the resolved page URL will not parse', async () => {
     const cb = await armed();
     await cb(
-      details({ id: 202, referrer: '', frame: undefined, webContents: undefined, url: 'not a url' }),
+      details({
+        id: 202,
+        referrer: '',
+        frame: undefined,
+        webContents: undefined,
+        url: 'not a url',
+      }),
     );
     const arg = host.recordBlocked.mock.calls[0]![0] as Record<string, unknown>;
     expect(arg).not.toHaveProperty('pageOrigin');
@@ -300,7 +306,10 @@ describe('cosmetic injection guards', () => {
     await flush();
     return tabs.onNavigation.mock.calls[0]![0];
   };
-  const liveWc = (): Wc => ({ isDestroyed: () => false, insertCSS: vi.fn(() => Promise.resolve()) });
+  const liveWc = (): Wc => ({
+    isDestroyed: () => false,
+    insertCSS: vi.fn(() => Promise.resolve()),
+  });
 
   it('does nothing for a navigation URL that will not parse as a web URL', async () => {
     const nav = await navFn();

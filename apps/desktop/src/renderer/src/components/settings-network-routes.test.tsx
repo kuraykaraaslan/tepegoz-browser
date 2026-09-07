@@ -127,7 +127,9 @@ describe('NetworkRoutesCard', () => {
     );
     renderCard(
       state({
-        groups: { g1: { connectionId: 'fra', label: 'FRA', vpn: null, tor: null } } as unknown as NetworkState['groups'],
+        groups: {
+          g1: { connectionId: 'fra', label: 'FRA', vpn: null, tor: null },
+        } as unknown as NetworkState['groups'],
       }),
     );
     const row = (await screen.findByText('Work')).closest('li') as HTMLElement;

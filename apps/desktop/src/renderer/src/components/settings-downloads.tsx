@@ -95,9 +95,7 @@ export function DownloadSettingsSection({
               {s.downloadLocationOpen}
             </Button>
           </div>
-          {folderError && (
-            <p className="mt-1 text-xs text-error">{s.downloadLocationOpenFailed}</p>
-          )}
+          {folderError && <p className="mt-1 text-xs text-error">{s.downloadLocationOpenFailed}</p>}
         </div>
 
         <Toggle
@@ -120,8 +118,7 @@ export function DownloadSettingsSection({
             value={prefs.downloadHistoryRetention}
             onChange={(e) => {
               setPref({
-                downloadHistoryRetention: e.target
-                  .value as typeof prefs.downloadHistoryRetention,
+                downloadHistoryRetention: e.target.value as typeof prefs.downloadHistoryRetention,
               });
             }}
             className="h-9 w-full max-w-sm rounded-md border border-border bg-surface-base px-3 text-sm text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus"

@@ -4,6 +4,7 @@
 > Tarayıcının yerleşik/birinci-parti eklenti listesi için veri-güdümlü katalog modeli ve yükleyicisi.
 
 ## Kesinlikle olmalı
+
 - [ ] `CatalogFileSchema` ile on-disk katalog dosyası envelope'unu zod şeması olarak tanımlamalı
 - [ ] `CATALOG_VERSION` sabitini dışa aktarıp katalog dosyasının şema sürümünü işaretlemeli
 - [ ] `loadCatalog(raw)` parse edilmiş katalog dosyasını güven sınırında doğrulamalı
@@ -18,6 +19,7 @@
 - [ ] Her katalog girişini extension-sdk manifest şemasına göre doğrulamalı
 
 ## Olsa iyi olur
+
 - [ ] Her hata mesajı reddedilen girişi tanımlayacak kadar bağlam taşımalı (id/indeks)
 - [ ] Aynı katalog dosyasında yinelenen eklenti id'lerini yakalamalı
 - [ ] Beklenenden farklı `CATALOG_VERSION` değerini net bir hatayla bildirmeli
@@ -26,6 +28,7 @@
 - [ ] `@tepegoz/model-catalog` ile tutarlı veri-güdümlü yükleyici deseni sunmalı
 
 ## Çok niş
+
 - [ ] Bir girişin yalnızca bazı alanları bozuksa hata mesajında hangi alan olduğunu göstermeli
 - [ ] İleride şema sürüm atlamaları için geriye dönük uyumluluk/dönüştürme noktası bırakmalı
 - [ ] Çok sayıda girişli büyük katalog dosyasını tek geçişte doğrulayabilmeli

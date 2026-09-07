@@ -49,7 +49,9 @@ describe('DefaultBrowserSection', () => {
 
   it('re-fetches the status when the make-default attempt resolves', async () => {
     renderSection();
-    await waitFor(() => expect(screen.getByRole('button', { name: /make.*default/i })).toBeTruthy());
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: /make.*default/i })).toBeTruthy(),
+    );
     fireEvent.click(screen.getByRole('button', { name: /make.*default/i }));
     await waitFor(() => expect(setAsDefaultBrowser).toHaveBeenCalledTimes(1));
     // it became default → the offer button is gone
@@ -61,7 +63,9 @@ describe('DefaultBrowserSection', () => {
   it('shows the failure line when the OS picker did not make it default', async () => {
     setAsDefaultBrowser.mockResolvedValue({ isDefault: false });
     renderSection();
-    await waitFor(() => expect(screen.getByRole('button', { name: /make.*default/i })).toBeTruthy());
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: /make.*default/i })).toBeTruthy(),
+    );
     fireEvent.click(screen.getByRole('button', { name: /make.*default/i }));
     await waitFor(() => expect(screen.getByText(/could not register/i)).toBeTruthy());
   });
@@ -69,13 +73,17 @@ describe('DefaultBrowserSection', () => {
   it('treats a rejected status check as "not default"', async () => {
     getDefaultBrowserStatus.mockRejectedValue(new Error('shell query failed'));
     renderSection();
-    await waitFor(() => expect(screen.getByRole('button', { name: /make.*default/i })).toBeTruthy());
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: /make.*default/i })).toBeTruthy(),
+    );
   });
 
   it('shows the failure line when the make-default call rejects outright', async () => {
     setAsDefaultBrowser.mockRejectedValue(new Error('picker crashed'));
     renderSection();
-    await waitFor(() => expect(screen.getByRole('button', { name: /make.*default/i })).toBeTruthy());
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: /make.*default/i })).toBeTruthy(),
+    );
     fireEvent.click(screen.getByRole('button', { name: /make.*default/i }));
     await waitFor(() => expect(screen.getByText(/could not register/i)).toBeTruthy());
   });

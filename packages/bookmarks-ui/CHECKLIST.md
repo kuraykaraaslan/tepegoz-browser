@@ -4,6 +4,7 @@
 > Sunum amaçlı chrome yaprağı: `tepegoz://bookmarks` yöneticisi — solda klasör ağacı, sağda seçili klasör içeriği olan iki panelli düzen; @dnd-kit sürükle-sırala/reparent, ağaç genelinde arama, yeni klasör ve host'un native context menüsüne devreden sağ tık. Ağaç verisi, mutasyonlar ve navigasyon tümüyle enjekte edilir.
 
 ## Kesinlikle olmalı
+
 - [ ] İki panelli düzen sunmalı: solda klasör ağacı, sağda seçili klasörün içeriği
 - [ ] Bir klasör seçildiğinde sağ panelde o klasörün içeriğini göstermeli
 - [ ] Aynı klasör içinde @dnd-kit ile sürükle-bırak yeniden sıralamayı desteklemeli
@@ -23,6 +24,7 @@
 - [ ] `BookmarkNodeType` yalnızca `'folder' | 'bookmark'` olmalı
 
 ## Olsa iyi olur
+
 - [ ] `onMove` çağrısında hedef `newParentId` ve `index`'i vermeli
 - [ ] `bookmarksUiDict` ana süreçte `tepegoz://bookmarks` sekme başlığı için yeniden kullanılabilmeli
 - [ ] Sürükleme sırasında geçerli bırakma hedeflerini görsel olarak belirtmeli
@@ -32,6 +34,7 @@
 - [ ] `pnpm typecheck` · `pnpm lint` · `pnpm test` betiklerini sağlamalı
 
 ## Çok niş
+
 - [ ] Bir öğeyi kendi alt ağacındaki bir klasöre sürüklemeyi engellemeli (döngü oluşmamalı)
 - [ ] `refreshKey` değişmeden `getTree` çıktısı değişse bile kontrat gereği yeniden fetch'e zorlamamalı
 - [ ] Çok derin klasör ağacında sol panel kaydırma ile gezinilebilmeli

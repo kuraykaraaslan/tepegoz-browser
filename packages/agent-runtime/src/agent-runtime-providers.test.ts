@@ -76,7 +76,12 @@ describe('registerRunProvider', () => {
   beforeEach(() => ModelGateway.reset());
 
   const deps = (over: Partial<AgentRunDeps> = {}): AgentRunDeps => ({ ...over }) as AgentRunDeps;
-  const prefs = (over: Partial<{ agentProviderOverride: AIProvider | null; localProvider: { mode: 'off' | 'simple' | 'default' } }> = {}) => ({
+  const prefs = (
+    over: Partial<{
+      agentProviderOverride: AIProvider | null;
+      localProvider: { mode: 'off' | 'simple' | 'default' };
+    }> = {},
+  ) => ({
     agentProviderOverride: null as AIProvider | null,
     localProvider: { mode: 'off' as const },
     ...over,
@@ -96,7 +101,12 @@ describe('registerRunProvider', () => {
   it('registers an injected provider as-is and returns its id (the eval/test seam)', () => {
     const register = vi.spyOn(ModelGateway, 'register');
     const instance = { id: 'anthropic' as const, complete: () => Promise.resolve({}) } as never;
-    const id = registerRunProvider(deps({ provider: { id: 'anthropic', instance } }), prefs(), false, 'high');
+    const id = registerRunProvider(
+      deps({ provider: { id: 'anthropic', instance } }),
+      prefs(),
+      false,
+      'high',
+    );
     expect(id).toBe('anthropic');
     expect(register).toHaveBeenCalledWith(instance);
     register.mockRestore();
@@ -122,7 +132,12 @@ describe('registerRunProvider', () => {
     'builds the %s adapter when it is the per-run override',
     (provider) => {
       CredentialVault.addKey(provider, 'k', `sk-${provider}`);
-      const id = registerRunProvider(deps(), prefs({ agentProviderOverride: provider }), false, 'low');
+      const id = registerRunProvider(
+        deps(),
+        prefs({ agentProviderOverride: provider }),
+        false,
+        'low',
+      );
       expect(id).toBe(provider);
     },
   );
@@ -139,7 +154,12 @@ describe('registerRunProvider', () => {
 
   it('picks whole-agent-local when mode:default and local is available', () => {
     const register = vi.spyOn(ModelGateway, 'register');
-    const id = registerRunProvider(deps({ localInference: localCfg }), prefs({ localProvider: { mode: 'default' } }), true, 'high');
+    const id = registerRunProvider(
+      deps({ localInference: localCfg }),
+      prefs({ localProvider: { mode: 'default' } }),
+      true,
+      'high',
+    );
     expect(id).toBe('local');
     expect(register).toHaveBeenCalledWith(expect.objectContaining({ id: 'local' }));
     register.mockRestore();

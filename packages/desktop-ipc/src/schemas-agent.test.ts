@@ -43,9 +43,9 @@ describe('AgentRunInputSchema', () => {
 
   it('rejects an empty prompt, a bad skillId, and an unknown attachment kind', () => {
     expect(AgentRunInputSchema.safeParse({ prompt: '', groupId: 'g1' }).success).toBe(false);
-    expect(AgentRunInputSchema.safeParse({ prompt: 'x', groupId: 'g1', skillId: 'nope' }).success).toBe(
-      false,
-    );
+    expect(
+      AgentRunInputSchema.safeParse({ prompt: 'x', groupId: 'g1', skillId: 'nope' }).success,
+    ).toBe(false);
     expect(
       AgentRunInputSchema.safeParse({
         prompt: 'x',
@@ -64,7 +64,9 @@ describe('the small id / message schemas', () => {
   });
 
   it('AgentSteerSchema needs runId + non-empty text', () => {
-    expect(AgentSteerSchema.parse({ runId: 'r1', text: 'try again' })).toMatchObject({ runId: 'r1' });
+    expect(AgentSteerSchema.parse({ runId: 'r1', text: 'try again' })).toMatchObject({
+      runId: 'r1',
+    });
     expect(AgentSteerSchema.safeParse({ runId: 'r1', text: '' }).success).toBe(false);
   });
 
@@ -147,9 +149,9 @@ describe('the agent-skill schemas', () => {
     expect(AgentSkillSaveSchema.parse({ id: UUID, name: 'S', prompt: 'x' })).toMatchObject({
       id: UUID,
     });
-    expect(AgentSkillSaveSchema.safeParse({ id: 'not-a-uuid', name: 'S', prompt: 'x' }).success).toBe(
-      false,
-    );
+    expect(
+      AgentSkillSaveSchema.safeParse({ id: 'not-a-uuid', name: 'S', prompt: 'x' }).success,
+    ).toBe(false);
   });
 
   it('AgentSkillIdSchema is a bare UUID', () => {

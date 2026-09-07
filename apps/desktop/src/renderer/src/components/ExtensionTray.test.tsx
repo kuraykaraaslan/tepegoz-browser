@@ -25,7 +25,11 @@ const bridge = {
   showExtensionContextMenu: vi.fn(),
 };
 
-function wire(id: string, surfaces: ExtensionSurfaceKind[] = [], hasDouble = false): ExtensionManifestWire {
+function wire(
+  id: string,
+  surfaces: ExtensionSurfaceKind[] = [],
+  hasDouble = false,
+): ExtensionManifestWire {
   return {
     id,
     name: id,
@@ -88,7 +92,12 @@ describe('ExtensionTray', () => {
   });
 
   it('omits a pinned-but-disabled extension', () => {
-    renderTray({ extensionStates: [{ id: 'a', status: 'enabled' }, { id: 'b', status: 'disabled' }] });
+    renderTray({
+      extensionStates: [
+        { id: 'a', status: 'enabled' },
+        { id: 'b', status: 'disabled' },
+      ],
+    });
     expect(screen.getByRole('button', { name: 'a' })).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'b' })).toBeNull();
   });

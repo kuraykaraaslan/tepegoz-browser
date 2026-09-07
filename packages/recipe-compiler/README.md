@@ -8,7 +8,7 @@ schema, unit-tested.
 ## Exports
 
 - **`evaluateAssertion(assertion, snapshot)`** — the success oracle for "self-correcting golden
-  assertions". A recipe carries the post-condition its *original* successful run actually satisfied
+  assertions". A recipe carries the post-condition its _original_ successful run actually satisfied
   (captured at distill time, not authored as a wish); this checks it against a `RunSnapshot` — URL,
   page-text, journaled effect types, extracted numerics — and returns `{ passed }` with a reason on
   failure. It exists to catch **penultimate-step abandonment**: an agent that stops one step early

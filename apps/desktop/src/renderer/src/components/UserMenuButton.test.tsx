@@ -38,7 +38,11 @@ describe('UserMenuButton', () => {
     const button = screen.getByRole('button');
 
     fireEvent.click(button);
-    expect(bridge.openPopup).toHaveBeenCalledWith('user-menu', expect.any(Object), expect.any(Object));
+    expect(bridge.openPopup).toHaveBeenCalledWith(
+      'user-menu',
+      expect.any(Object),
+      expect.any(Object),
+    );
     expect(button.getAttribute('aria-expanded')).toBe('true');
 
     fireEvent.click(button);

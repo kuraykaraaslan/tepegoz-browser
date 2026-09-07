@@ -81,9 +81,7 @@ describe('planDownloadSegments', () => {
 
 describe('serverAcceptsRanges', () => {
   it('takes a 206 with Content-Range as proof', () => {
-    expect(
-      serverAcceptsRanges({ status: 206, contentRange: 'bytes 0-1023/4096' }),
-    ).toBe(true);
+    expect(serverAcceptsRanges({ status: 206, contentRange: 'bytes 0-1023/4096' })).toBe(true);
   });
 
   it('accepts the advertisement on its own', () => {
@@ -94,9 +92,9 @@ describe('serverAcceptsRanges', () => {
   it('treats an explicit "none" as a refusal, whatever else is present', () => {
     // A server that says no is the one case where guessing costs a corrupt file rather than a slow
     // one, so the refusal outranks a 206 that came from somewhere else in the chain.
-    expect(serverAcceptsRanges({ status: 206, acceptRanges: 'none', contentRange: 'bytes 0-1/2' })).toBe(
-      false,
-    );
+    expect(
+      serverAcceptsRanges({ status: 206, acceptRanges: 'none', contentRange: 'bytes 0-1/2' }),
+    ).toBe(false);
   });
 
   it('says no when the server said nothing', () => {

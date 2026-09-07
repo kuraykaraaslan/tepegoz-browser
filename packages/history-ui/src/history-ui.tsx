@@ -32,7 +32,9 @@ function HistoryFavicon({ src }: Readonly<{ src: string | null | undefined }>) {
       />
     );
   }
-  return <FontAwesomeIcon icon={faGlobe} className="h-4 w-4 shrink-0 text-text-disabled" aria-hidden />;
+  return (
+    <FontAwesomeIcon icon={faGlobe} className="h-4 w-4 shrink-0 text-text-disabled" aria-hidden />
+  );
 }
 
 export interface HistoryPageProps {

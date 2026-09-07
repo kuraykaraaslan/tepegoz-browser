@@ -156,7 +156,8 @@ export const en = {
   // --- File operations ---
   fileOps: {
     removeTitle: 'Remove folder access',
-    removeBody: 'The assistant loses access to {path}. Nothing on disk is touched, and you can grant it again.',
+    removeBody:
+      'The assistant loses access to {path}. Nothing on disk is touched, and you can grant it again.',
     title: 'File operations',
     subtitle:
       'Folders the AI assistant may read and modify. Everything else on your disk stays off-limits. The default folder is home/tepegoz.',
@@ -245,7 +246,8 @@ export const en = {
   localModels: {
     sizeUnknown: 'size unknown',
     deleteTitle: 'Delete model',
-    deleteBody: 'Deletes {name} ({size}) from this computer. Using it again means downloading it again.',
+    deleteBody:
+      'Deletes {name} ({size}) from this computer. Using it again means downloading it again.',
     title: 'On-device models',
     hint: 'Download a model to run the agent locally. Stored in your profile — not bundled with the app.',
     recommended: 'Recommended',
@@ -353,7 +355,8 @@ export const en = {
     clearing: 'Clearing…',
     // Counts rather than "Done": a clear that reports success with nothing behind it is the one
     // reassurance this dialog must not give.
-    cleared: 'Cleared {history} history entries, {downloads} downloads, {agent} agent conversations.',
+    cleared:
+      'Cleared {history} history entries, {downloads} downloads, {agent} agent conversations.',
     failed: 'Could not clear: {categories}.',
     error: 'Clearing failed. Nothing was reported as removed.',
   },
@@ -380,7 +383,8 @@ export const en = {
   // the agent matrix is a VIEW over the Policy Kernel and is not. `agentReadOnly` says why, because a
   // read-only table with no explanation reads like a table that is broken.
   permissionsCenter: {
-    forgetSiteBody: 'Forgets every decision stored for {origin}. The site will ask again the next time it needs something.',
+    forgetSiteBody:
+      'Forgets every decision stored for {origin}. The site will ask again the next time it needs something.',
     addSite: 'Decide about a site in advance',
     addSiteHint: 'Adds the site so you can set its answers before it ever asks.',
     addSitePlaceholder: 'example.com',
@@ -432,7 +436,8 @@ export const en = {
     sessionNote: 'These answers are never saved to disk — they are forgotten when you quit.',
   },
   clearHistoryDesc: 'Remove the list of pages you have visited on this device.',
-  telemetryNothingSent: 'Nothing is collected or sent in this build — no code reads this setting yet. It is here so the choice is already yours when something does.',
+  telemetryNothingSent:
+    'Nothing is collected or sent in this build — no code reads this setting yet. It is here so the choice is already yours when something does.',
   // Safe Browsing (ADR-0043). The help text is the disclosure: turning this on means the browser
   // contacts Google. The "not active yet" line is removed once an API key ships.
   safeBrowsing: {
@@ -441,7 +446,8 @@ export const en = {
     inactiveNote:
       'Not active in this build yet — the threat list and its key are not wired. The switch is here so the choice is already yours when it is.',
   },
-  clearHistoryConfirm: 'Deletes your whole browsing history on this device. Bookmarks, passwords and site permissions are not affected.',
+  clearHistoryConfirm:
+    'Deletes your whole browsing history on this device. Bookmarks, passwords and site permissions are not affected.',
   clearHistoryButton: 'Clear history',
   historyCleared: 'Browsing history cleared.',
 
@@ -450,7 +456,8 @@ export const en = {
     storedAs: 'Stored as {domain}.',
     update: 'Update',
     removeTitle: 'Remove trust profile',
-    removeBody: '{domain} goes back to the default posture: the agent asks before every gated action there.',
+    removeBody:
+      '{domain} goes back to the default posture: the agent asks before every gated action there.',
     title: 'Site trust',
     subtitle:
       'The standing posture the AI agent uses on a site. A profile can only ever make things stricter — it never unlocks anything.',
@@ -480,7 +487,8 @@ export const en = {
   shortcuts: {
     filterLabel: 'Filter',
     filterPlaceholder: 'Search a command or a key',
-    notRebindable: 'These are fixed in this build — there is no rebinding yet, so nothing here is hidden behind a setting.',
+    notRebindable:
+      'These are fixed in this build — there is no rebinding yet, so nothing here is hidden behind a setting.',
     title: 'Keyboard shortcuts',
     subtitle: 'Every global shortcut, from the one registry the app binds them from.',
     /**
@@ -635,7 +643,8 @@ export const en = {
   downloadLocationBrowse: 'Browse…',
   downloadLocationOpen: 'Open folder',
   downloadLocationOpenFailed: 'That folder could not be opened. It may have been moved or deleted.',
-  clearDownloadsConfirm: 'Removes every finished, cancelled and failed transfer from the list. The files themselves are not deleted.',
+  clearDownloadsConfirm:
+    'Removes every finished, cancelled and failed transfer from the list. The files themselves are not deleted.',
   clearDownloadsResult: '{count} removed from the list.',
   searchEngineEdit: 'Edit',
   searchEngineSave: 'Save',
@@ -673,7 +682,8 @@ export const en = {
     removeTitle: 'Remove server',
     removeBody:
       'Removes {name} and the tools it provides. The program itself is not uninstalled, and you can add it again.',
-    envNote: 'This server carries environment variables, which stay untouched when you edit it here.',
+    envNote:
+      'This server carries environment variables, which stay untouched when you edit it here.',
     envLink: 'Edit them in Developer',
   },
 
@@ -690,7 +700,8 @@ export const en = {
   keyRemoveBody:
     'Removes {name}. The key itself is never shown again, so you would have to paste it in from your provider to restore it.',
 
-  notificationsSiteNote: 'This is the master switch. Individual sites also need their own permission, and turning this off silences them all regardless.',
+  notificationsSiteNote:
+    'This is the master switch. Individual sites also need their own permission, and turning this off silences them all regardless.',
   notificationsSiteLink: 'Per-site notification permissions',
   developerResetRow: 'Reset to default',
 
@@ -768,7 +779,8 @@ export const en = {
   // --- Network privacy (Phase 5): per-tab / per-group routing through a local SOCKS endpoint ---
   network: {
     routesTitle: 'Where traffic is going',
-    routesHint: 'Per-tab and per-group routes are set from the tab and group menus; this is where you can review them.',
+    routesHint:
+      'Per-tab and per-group routes are set from the tab and group menus; this is where you can review them.',
     routesGroups: 'Groups',
     routesTabs: 'Tabs',
     routesNoOverrides: 'No tab is on a route of its own — everything follows the default above.',
@@ -780,7 +792,8 @@ export const en = {
     routeHeld: 'Held — tunnel down',
     removeTitle: 'Remove connection',
     removeBody: 'Removes {name}. Any tab or group bound to it falls back to the profile default.',
-    removeBodyDefault: '{name} is the profile default. Removing it puts ALL unbound traffic back on the direct connection.',
+    removeBodyDefault:
+      '{name} is the profile default. Removing it puts ALL unbound traffic back on the direct connection.',
     title: 'Network privacy',
     intro:
       'Route a tab or a whole tab group through WireGuard, Tor, or a SOCKS5 endpoint you already run. Tepegöz does not provide the tunnel itself, and nothing is routed through one unless you choose it.',

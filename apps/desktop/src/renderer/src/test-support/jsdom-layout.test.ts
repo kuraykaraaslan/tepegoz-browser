@@ -25,11 +25,15 @@ describe('stubJsdomLayout', () => {
     stubJsdomLayout();
     expect('ResizeObserver' in globalThis).toBe(true);
 
-    const observer = new (globalThis as unknown as { ResizeObserver: new (cb: () => void) => {
-      observe: (el: Element) => void;
-      unobserve: (el: Element) => void;
-      disconnect: () => void;
-    } }).ResizeObserver(vi.fn());
+    const observer = new (
+      globalThis as unknown as {
+        ResizeObserver: new (cb: () => void) => {
+          observe: (el: Element) => void;
+          unobserve: (el: Element) => void;
+          disconnect: () => void;
+        };
+      }
+    ).ResizeObserver(vi.fn());
     const el = document.createElement('div');
     expect(() => observer.observe(el)).not.toThrow();
     expect(() => observer.unobserve(el)).not.toThrow();

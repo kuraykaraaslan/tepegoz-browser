@@ -16,9 +16,7 @@ import { handle } from './ipc-helpers';
  * side to open — the set of readable files is fixed by the detector, not by the payload — and no
  * absolute path (which carries the user's account name) is ever handed to the chrome.
  */
-export function registerBookmarkProfileIpc(
-  broadcastBookmarksChanged: () => void,
-): void {
+export function registerBookmarkProfileIpc(broadcastBookmarksChanged: () => void): void {
   handle(IpcChannels.bookmarksDetectProfiles, (): DetectedBrowserProfile[] =>
     detectBrowserProfiles().map(({ id, source, browserLabel, profileName, modifiedAt }) => ({
       id,
@@ -38,7 +36,8 @@ export function registerBookmarkProfileIpc(
     const profile = detectBrowserProfiles().find((candidate) => candidate.id === id);
     // Not an error worth a stack trace: the browser can be uninstalled, or the profile deleted,
     // between the list being shown and the button being pressed.
-    if (profile === undefined) return { ...empty, errors: ['That profile is no longer available.'] };
+    if (profile === undefined)
+      return { ...empty, errors: ['That profile is no longer available.'] };
 
     const result = writeParsedBookmarksToStore(
       db,

@@ -1,4 +1,9 @@
-import { checkUrl, resolveVerdict, type FullHashFetcher, type PrefixDatabase } from './safe-browsing';
+import {
+  checkUrl,
+  resolveVerdict,
+  type FullHashFetcher,
+  type PrefixDatabase,
+} from './safe-browsing';
 
 /**
  * The gating layer between the pure Safe Browsing v5 primitives (`checkUrl` / `resolveVerdict`) and

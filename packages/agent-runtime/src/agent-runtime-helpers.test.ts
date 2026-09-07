@@ -20,7 +20,9 @@ const failure = (over: Partial<AgentFailure> = {}): AgentFailure => ({
 
 describe('terminalMessageFor', () => {
   it('returns the agent summary verbatim when there is one', () => {
-    expect(terminalMessageFor('completed', 'Booked the flight.', undefined)).toBe('Booked the flight.');
+    expect(terminalMessageFor('completed', 'Booked the flight.', undefined)).toBe(
+      'Booked the flight.',
+    );
   });
 
   it('returns the Egress-Firewall failure message for a security stop (no summary)', () => {
@@ -38,7 +40,12 @@ describe('terminalMessageFor', () => {
       terminalMessageFor(
         'tool_error',
         undefined,
-        failure({ kind: 'transient', tool: 'browser_update_page', code: 'RATE_LIMITED', message: 'slow down' }),
+        failure({
+          kind: 'transient',
+          tool: 'browser_update_page',
+          code: 'RATE_LIMITED',
+          message: 'slow down',
+        }),
       ),
     ).toBe('Finished: tool_error — tool=browser_update_page code=RATE_LIMITED slow down');
   });

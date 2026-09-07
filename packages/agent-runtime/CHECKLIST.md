@@ -4,6 +4,7 @@
 > Electron'suz agentic çalışma motoru (L3): user prompt → `ModelRouter` → `Planner` (DAG) → `Executor` (tek `ToolGateway` PEP + HITL) → canlı olaylar + Human Handoff Controller; tüm app/OS bağımlılıkları `AgentRunDeps` ile enjekte edilir.
 
 ## Kesinlikle olmalı
+
 - [ ] Bir agent turn'ünü `runAgent` tek giriş noktası üzerinden yürütmeli
 - [ ] Electron'a bağımlı olmamalı (Electron-free çalışmalı)
 - [ ] Akışı user prompt → `ModelRouter` → `Planner` (DAG) → `Executor` → Reactor sırasıyla sürmeli
@@ -26,6 +27,7 @@
 - [ ] `journal` okumasını enjekte edilen `JournalReader` üzerinden yapmalı
 
 ## Olsa iyi olur
+
 - [ ] `apps/desktop`'un agent-service'inin `runAgent` üzerinde ince bir adaptör kalmasını sağlamalı
 - [ ] Opsiyonel `summary` alanını konuşma hafızasına eklenmek üzere host'a döndürmeli
 - [ ] `ModelRouter` ile turn içinde sağlayıcı/rota seçimini soyutlamalı
@@ -35,6 +37,7 @@
 - [ ] `pnpm typecheck` · `pnpm lint` · `pnpm test` betiklerini sağlamalı
 
 ## Çok niş
+
 - [ ] `requestApproval` reddedildiğinde turn'ü temiz bir `stoppedReason` ile kapatmalı
 - [ ] İptal `signal`'i araç çağrısı ortasında geldiğinde yarım kalan işi tutarlı biçimde sonlandırmalı
 - [ ] `localInference` verili ama yüklenemiyorsa yine buluta düşebilmeli

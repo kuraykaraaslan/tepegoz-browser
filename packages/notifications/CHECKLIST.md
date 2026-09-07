@@ -4,6 +4,7 @@
 > Headless bildirim-merkezi çekirdeği: bellek-içi `NotificationStore` modeli + gelen bildirimler için güven-sınırı şema/factory'si; veri modeli ve enum'lar `@tepegoz/shared-types`'ta, zod şeması bu paketin canonical dizilerden kurduğu katman — framework-agnostik ve Electron-free.
 
 ## Kesinlikle olmalı
+
 - [ ] Bellek-içi NotificationStore modelini sağlamalı
 - [ ] Store en yeni-önce (newest-first) bir ring buffer olmalı, kapasite 200
 - [ ] add(item) yeni öğeyi eklemeli
@@ -28,6 +29,7 @@
 - [ ] AppNotification / NotificationAction / NotificationActionType / NotificationChannel / NotificationKind / NotificationSource / NotificationState tiplerini shared-types'tan re-export etmeli
 
 ## Olsa iyi olur
+
 - [ ] 200 sınırı aşıldığında en eski bildirimi düşürmeli
 - [ ] dedupeKey ile tekilleştirme sırasında öğenin ring'deki konumunu tutarlı yönetmeli
 - [ ] state() değişiklikten sonra abonelere yeni snapshot yayınlamalı
@@ -36,6 +38,7 @@
 - [ ] Veri modelinin zod-free kalması sayesinde preload-güvenli IPC kontratının aynı tipleri yeniden kullanabilmesi
 
 ## Çok niş
+
 - [ ] Geçersiz NotificationActionSchema type'ı gelen bir eylem butonunu reddetmeli, bildirimi sessizce bozmamalı
 - [ ] Aynı dedupeKey ile hızlı ardışık add çağrılarında yalnızca tek öğe kalmalı
 - [ ] subscribe listener'ı içinde store mutasyonu yapıldığında yeniden giriş (reentrancy) güvenli olmalı

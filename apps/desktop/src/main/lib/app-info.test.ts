@@ -18,7 +18,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 const os = vi.hoisted(() => ({ rel: '10.0.26200', cpu: 'x64' }));
 vi.mock('node:os', () => ({ release: () => os.rel, arch: () => os.cpu }));
 
-const electron = vi.hoisted(() => ({ version: '0.1.0', packaged: false, exe: 'C:\\app\\tepegoz.exe' }));
+const electron = vi.hoisted(() => ({
+  version: '0.1.0',
+  packaged: false,
+  exe: 'C:\\app\\tepegoz.exe',
+}));
 vi.mock('electron', () => ({
   app: {
     getVersion: () => electron.version,
@@ -35,9 +39,8 @@ vi.mock('node:fs', async (importOriginal) => {
   return { ...actual, existsSync: () => fs.exists };
 });
 
-const { APP_LICENSE, buildAppInfo, diagnosticsText, thirdPartyNoticesPath } = await import(
-  './app-info'
-);
+const { APP_LICENSE, buildAppInfo, diagnosticsText, thirdPartyNoticesPath } =
+  await import('./app-info');
 
 const realPlatform = process.platform;
 function setPlatform(p: string): void {
@@ -105,7 +108,10 @@ describe('app-info', () => {
     electron.packaged = true;
     const info = buildAppInfo(false);
     const text = diagnosticsText(
-      { ...info, build: { ...info.build, commit: 'abc12345', builtAt: '2026-08-28T09:00:00.000Z' } },
+      {
+        ...info,
+        build: { ...info.build, commit: 'abc12345', builtAt: '2026-08-28T09:00:00.000Z' },
+      },
       'en',
     );
     expect(text.split('\n')[0]).toBe('Tepegöz 0.1.0 (dev, packaged, abc12345)');

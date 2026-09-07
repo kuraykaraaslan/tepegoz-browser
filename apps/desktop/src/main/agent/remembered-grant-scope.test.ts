@@ -87,15 +87,18 @@ describe('rememberedCoverage', () => {
   });
 
   it('is not covered when the action names no target URL', () => {
-    expect(
-      rememberedCoverage(db, { id: SKILL_ID, name: 'n' }, { tier: 'ui-write' }).covered,
-    ).toBe(false);
+    expect(rememberedCoverage(db, { id: SKILL_ID, name: 'n' }, { tier: 'ui-write' }).covered).toBe(
+      false,
+    );
   });
 
   it('is not covered when the target URL has no resolvable registrable domain', () => {
     expect(
-      rememberedCoverage(db, { id: SKILL_ID, name: 'n' }, { tier: 'ui-write', targetUrl: 'not-a-url' })
-        .reason,
+      rememberedCoverage(
+        db,
+        { id: SKILL_ID, name: 'n' },
+        { tier: 'ui-write', targetUrl: 'not-a-url' },
+      ).reason,
     ).toBe('no_target_url');
   });
 
@@ -122,7 +125,8 @@ describe('rememberedCoverage', () => {
       expiresAt: Date.now() + 60_000,
     });
     expect(
-      rememberedCoverage(db, { id: SKILL_ID, name: 'n' }, { ...facts, tier: 'data-egress' }).covered,
+      rememberedCoverage(db, { id: SKILL_ID, name: 'n' }, { ...facts, tier: 'data-egress' })
+        .covered,
     ).toBe(false);
   });
 
@@ -135,10 +139,14 @@ describe('rememberedCoverage', () => {
       tier: 'ui-write',
       expiresAt: Date.now() + 60_000,
     });
-    const cov = rememberedCoverage(db, { id: SKILL_ID, name: 'n' }, {
-      ...facts,
-      policyReason: 'tainted_side_effect',
-    });
+    const cov = rememberedCoverage(
+      db,
+      { id: SKILL_ID, name: 'n' },
+      {
+        ...facts,
+        policyReason: 'tainted_side_effect',
+      },
+    );
     expect(cov.covered).toBe(false);
   });
 });

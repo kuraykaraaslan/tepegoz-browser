@@ -39,7 +39,11 @@ describe('MainMenuButton', () => {
   it('opens the native main-menu popup on click', () => {
     render(<MainMenuButton label="Main menu" />);
     fireEvent.click(screen.getByRole('button'));
-    expect(bridge.openPopup).toHaveBeenCalledWith('main-menu', expect.any(Object), expect.any(Object));
+    expect(bridge.openPopup).toHaveBeenCalledWith(
+      'main-menu',
+      expect.any(Object),
+      expect.any(Object),
+    );
     expect(screen.getByRole('button').getAttribute('aria-expanded')).toBe('true');
   });
 

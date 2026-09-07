@@ -66,14 +66,20 @@ describe('the tab-group ops', () => {
       memberIds: ['t1', 't2'],
     });
     expect(TabGroupCreateSchema.parse({})).toEqual({});
-    expect(TabGroupMoveSchema.parse({ groupId: 'g1', toIndex: 0 })).toMatchObject({ groupId: 'g1' });
-    expect(TabGroupAssignSchema.parse({ tabId: 't1', groupId: 'g1' })).toMatchObject({ tabId: 't1' });
+    expect(TabGroupMoveSchema.parse({ groupId: 'g1', toIndex: 0 })).toMatchObject({
+      groupId: 'g1',
+    });
+    expect(TabGroupAssignSchema.parse({ tabId: 't1', groupId: 'g1' })).toMatchObject({
+      tabId: 't1',
+    });
   });
 
   it('TabGroupSettingValueSchema is a flat JSON-safe union; the settings bag is a bounded record', () => {
     for (const v of ['x', 3, true, null]) expect(TabGroupSettingValueSchema.parse(v)).toBe(v);
     expect(TabGroupSettingValueSchema.safeParse({ nested: 1 }).success).toBe(false);
-    expect(TabGroupSettingsSchema.parse({ agentEnabled: true })).toMatchObject({ agentEnabled: true });
+    expect(TabGroupSettingsSchema.parse({ agentEnabled: true })).toMatchObject({
+      agentEnabled: true,
+    });
   });
 
   it('group-update is a partial patch over name/color/collapsed/settings', () => {
@@ -81,7 +87,9 @@ describe('the tab-group ops', () => {
       groupId: 'g1',
       name: 'X',
     });
-    expect(TabGroupUpdateSchema.safeParse({ groupId: 'g1', color: 'chartreuse' }).success).toBe(false);
+    expect(TabGroupUpdateSchema.safeParse({ groupId: 'g1', color: 'chartreuse' }).success).toBe(
+      false,
+    );
     expect(TabGroupUpdateSchema.safeParse({ name: 'X' }).success).toBe(false); // groupId required
   });
 });
@@ -110,9 +118,9 @@ describe('the tear-off drag schemas', () => {
 
   it('drag-begin describes the item + the preview chip', () => {
     expect(TabDragBeginSchema.parse(dragBegin)).toMatchObject({ item: { kind: 'tab' } });
-    expect(TabDragBeginSchema.safeParse({ ...dragBegin, item: { kind: 'window', id: 't1' } }).success).toBe(
-      false,
-    );
+    expect(
+      TabDragBeginSchema.safeParse({ ...dragBegin, item: { kind: 'window', id: 't1' } }).success,
+    ).toBe(false);
   });
 
   it('drag-move/-end is a screen point + torn flag', () => {
@@ -157,8 +165,12 @@ describe('navigate / create / find / zoom / process-end', () => {
       }),
     ).toMatchObject({ query: 'x' });
     expect(
-      FindInPageQuerySchema.safeParse({ query: '', forward: true, findNext: false, matchCase: false })
-        .success,
+      FindInPageQuerySchema.safeParse({
+        query: '',
+        forward: true,
+        findNext: false,
+        matchCase: false,
+      }).success,
     ).toBe(false);
   });
 

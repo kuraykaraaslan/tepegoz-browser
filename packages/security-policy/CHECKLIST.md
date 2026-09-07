@@ -4,6 +4,7 @@
 > Deterministik Policy Kernel (L8, ADR-0006): güvenlik modelden önce düz kodda uygulanır. Bir tool çağrısının danger class'ı, taint'i ve hedef sitesine bakıp allow/deny/ask + kararlı reason code + biyometrik gereksinimi döndürür; hassas-site listesi, human-handoff dedektörü, taint tracker ve Egress Firewall'ı da sahiplenir.
 
 ## Kesinlikle olmalı
+
 - [ ] `PolicyKernel.evaluate(ctx)` — `PolicyContext` alıp `PolicyResult` (`decision` / `reason` / `biometric`) döndürmeli
 - [ ] Kararı model çalışmadan önce, düz kodda (deterministik) vermeli — model guardrail'lerine devretmemeli
 - [ ] Aynı girdi için her zaman aynı kararı üretmeli (deterministik)
@@ -30,6 +31,7 @@
 - [ ] Hiçbir agent tool'u bir grant oluşturamamalı
 
 ## Olsa iyi olur
+
 - [ ] ADR-0039 uygulandığında `isSensitiveSite` "pre-grant" kontrolüne dönüşmeli: eşleşme, kategoriyi kapsayan aktif user grant yoksa deny
 - [ ] Bir user grant yalnızca tek kategori için deny'i kaldırabilmeli
 - [ ] 2FA otomatik çözülmeli (Credential Broker üzerinden); handoff yalnızca tarayıcının çözemediği challenge için fallback olmalı
@@ -40,6 +42,7 @@
 - [ ] `PolicyContext` şeması trust-boundary'de doğrulanabilir olmalı
 
 ## Çok niş
+
 - [ ] Bilinmeyen bir danger class geldiğinde en katı (deny/ask) tarafa düşmeli (fail-closed)
 - [ ] IDN / punycode ile yazılmış hassas-site alan adları da kategoriyle eşleşmeli
 - [ ] Entropi eşiği kısa ama yüksek-entropili dizelerde yanlış pozitif üretmeyecek şekilde ayarlanabilir olmalı

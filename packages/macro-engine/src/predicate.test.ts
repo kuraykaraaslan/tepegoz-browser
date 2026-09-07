@@ -26,7 +26,9 @@ const vars = (initial?: Record<string, string | number>) => new VariableStore(in
 describe('the host-backed predicates', () => {
   it('elementExists / elementVisible delegate to the host', async () => {
     expect(await evalPredicate({ kind: 'elementExists', target: sel }, host(), vars())).toBe(true);
-    expect(await evalPredicate({ kind: 'elementVisible', target: sel }, host(), vars())).toBe(false);
+    expect(await evalPredicate({ kind: 'elementVisible', target: sel }, host(), vars())).toBe(
+      false,
+    );
   });
 
   it('textPresent interpolates the query; textAbsent negates it', async () => {

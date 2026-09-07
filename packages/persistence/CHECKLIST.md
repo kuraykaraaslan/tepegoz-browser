@@ -4,6 +4,7 @@
 > Local-first persistence (L1): tek doğruluk kaynağı olan append-only Event Journal, içerik-adresli blob store, ileri-yönlü migration'lar ve yerel meta — SQLite (better-sqlite3, WAL).
 
 ## Kesinlikle olmalı
+
 - [ ] Append-only Event Journal'ı tek doğruluk kaynağı (single source of truth) olarak sunmalı
 - [ ] `openDatabase(path)` ile veritabanı açabilmeli; `':memory:'` testler için desteklenmeli
 - [ ] Açılan veritabanı WAL modunda ve `synchronous=NORMAL` ile yapılandırılmalı
@@ -25,6 +26,7 @@
 - [ ] ADR-0003 / ADR-0004 ile hizalı olmalı
 
 ## Olsa iyi olur
+
 - [ ] Native modül CI'da OS başına yeniden derlenmeli (Electron ABI için electron-builder ile)
 - [ ] Testlerde Node prebuilt better-sqlite3 kullanılabilmeli
 - [ ] Migration'lar geri alınamaz olduğu için eski şemayı düşürmeden ilerlemeli
@@ -35,6 +37,7 @@
 - [ ] `deviceId` bir kez üretilip kalıcı olmalı, sonraki açılışlarda değişmemeli
 
 ## Çok niş
+
 - [ ] Bozuk/kısmi yazılmış WAL dosyasından açılışta kurtarma öngörülebilir olmalı
 - [ ] `':memory:'` veritabanında migration ve journal davranışı diskle birebir aynı olmalı
 - [ ] Var olmayan `cas://` hash'i için `BlobStore.get` net biçimde başarısız olmalı

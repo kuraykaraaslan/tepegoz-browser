@@ -56,7 +56,10 @@ describe('toOpenAICompatParams', () => {
       req({ tools: [{ name: 't', description: 'd', inputSchema: { type: 'object' } }] }),
     );
     expect(params.tools).toEqual([
-      { type: 'function', function: { name: 't', description: 'd', parameters: { type: 'object' } } },
+      {
+        type: 'function',
+        function: { name: 't', description: 'd', parameters: { type: 'object' } },
+      },
     ]);
   });
 });

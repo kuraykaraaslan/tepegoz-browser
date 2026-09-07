@@ -112,8 +112,7 @@ export class NovaProvider implements ModelProvider {
   private readonly http: AxiosInstance;
 
   constructor(config: ProviderConfig) {
-    this.http =
-      config.client ?? sharedClient(config.baseURL ?? NOVA_BASE_URL, config.apiKey ?? '');
+    this.http = config.client ?? sharedClient(config.baseURL ?? NOVA_BASE_URL, config.apiKey ?? '');
   }
 
   async complete(req: CanonRequest, signal: AbortSignal): Promise<CanonResponse> {

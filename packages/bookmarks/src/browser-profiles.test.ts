@@ -92,12 +92,12 @@ describe('detectBrowserProfiles', () => {
     write('Library/Application Support/BraveSoftware/Brave-Browser/Default/Bookmarks', '{}');
     write('.config/google-chrome/Default/Bookmarks', '{}');
 
-    expect(detectBrowserProfiles({ platform: 'darwin', home, env: {} }).map((p) => p.source)).toEqual(
-      ['brave'],
-    );
-    expect(detectBrowserProfiles({ platform: 'linux', home, env: {} }).map((p) => p.source)).toEqual([
-      'chrome',
-    ]);
+    expect(
+      detectBrowserProfiles({ platform: 'darwin', home, env: {} }).map((p) => p.source),
+    ).toEqual(['brave']);
+    expect(
+      detectBrowserProfiles({ platform: 'linux', home, env: {} }).map((p) => p.source),
+    ).toEqual(['chrome']);
   });
 
   it('returns nothing — not an error — when no browser is installed', () => {
@@ -130,7 +130,9 @@ describe('detectBrowserProfiles', () => {
 
 describe('parseIniSections', () => {
   it('parses the shape profiles.ini actually has', () => {
-    const sections = parseIniSections('# c\n[Profile0]\nName=A\nIsRelative=1\nPath=p\n\n[Profile1]\nname=B\n');
+    const sections = parseIniSections(
+      '# c\n[Profile0]\nName=A\nIsRelative=1\nPath=p\n\n[Profile1]\nname=B\n',
+    );
     expect(sections.map((s) => s.name)).toEqual(['Profile0', 'Profile1']);
     expect(sections[0]!.values.get('isrelative')).toBe('1');
     // Firefox has written both `Name` and `name` across versions; one lookup has to find both.

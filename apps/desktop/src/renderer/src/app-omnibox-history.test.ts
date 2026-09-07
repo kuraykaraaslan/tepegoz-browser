@@ -124,7 +124,12 @@ describe('onOmniboxSuggest', () => {
 
   it('threads the stored favicon from an open tab and a history row into the suggestions', async () => {
     bridge.searchHistory.mockResolvedValueOnce([
-      { url: 'https://bee.test/blog', title: 'Bee blog', visitCount: 4, favicon: 'data:image/png;base64,HH' },
+      {
+        url: 'https://bee.test/blog',
+        title: 'Bee blog',
+        visitCount: 4,
+        favicon: 'data:image/png;base64,HH',
+      },
     ]);
     const { result } = render();
     const out = await result.current.onOmniboxSuggest('bee');
@@ -144,7 +149,10 @@ describe('the @-command handlers', () => {
     expect(onCloseSurface).toHaveBeenCalled();
     expect(bridge.ensureActiveGroup).toHaveBeenCalled();
     // The console-open signal: the group's `settings` bag gets a panel-open flag before the run.
-    const [gid, patch] = bridge.updateTabGroup.mock.calls[0] as [string, { settings: Record<string, unknown> }];
+    const [gid, patch] = bridge.updateTabGroup.mock.calls[0] as [
+      string,
+      { settings: Record<string, unknown> },
+    ];
     expect(gid).toBe('g1');
     expect(Object.values(patch.settings).some((v) => v === true)).toBe(true);
     expect(bridge.runAgent).toHaveBeenCalledWith(

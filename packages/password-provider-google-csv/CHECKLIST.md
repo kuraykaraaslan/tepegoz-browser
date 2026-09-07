@@ -4,6 +4,7 @@
 > Google Password Manager'ın CSV birlikte-çalışma biçimini uygulayan bir `PasswordProvider`: kendi başına salt-okunur, hiç kimlik-bilgisi tutmaz; `set()`/`export()` kayıtlı `local` sağlayıcıya devreder, yalnızca CSV ayrıştırma/serileştirme veri-düzlemini sahiplenir, şifreleme anahtarlarına hiç dokunmaz.
 
 ## Kesinlikle olmalı
+
 - [ ] `@tepegoz/password-core`'daki `PasswordProvider` arayüzünü uygulamalı
 - [ ] `id: 'google-csv'` olmalı
 - [ ] `displayName: 'Google Password Manager (CSV)'` olmalı
@@ -25,6 +26,7 @@
 - [ ] Local vault'u tek şifreli depolama motoru olarak korumalı
 
 ## Olsa iyi olur
+
 - [ ] Round-trip: `serialize(parse(csv))` geçerli satırları korumalı
 - [ ] Atlanan satır sayısı başlık ile bozuk satırı ayırt etmeli
 - [ ] `errors` dizisi satır başına neden taşımalı
@@ -35,6 +37,7 @@
 - [ ] Boş CSV girişi hata değil boş sonuç üretmeli
 
 ## Çok niş
+
 - [ ] Tırnak içinde gömülü satır sonu (newline) içeren alanları ele almalı
 - [ ] Bir CSV içinde yinelenen satırları (aynı url+username) politikaya göre ele almalı
 - [ ] Çok büyük CSV içe aktarımını sınırlı/akışlı bellek kullanımıyla yapmalı

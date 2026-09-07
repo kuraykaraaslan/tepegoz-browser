@@ -194,7 +194,10 @@ describe('AppContent', () => {
     renderContent({
       registry,
       extSurfaces,
-      tabs: tabsState({ activeId: 't1', tabs: [{ id: 't1', url: 'tepegoz://com.tepegoz.notes' } as never] }),
+      tabs: tabsState({
+        activeId: 't1',
+        tabs: [{ id: 't1', url: 'tepegoz://com.tepegoz.notes' } as never],
+      }),
     });
     expect(screen.getByText('Ext Page')).toBeTruthy();
     fireEvent.click(screen.getByText('Close Ext Page'));
@@ -206,7 +209,10 @@ describe('AppContent', () => {
     registry[0]!.manifest.surfaces = ['page'];
     renderContent({
       registry,
-      tabs: tabsState({ activeId: 't1', tabs: [{ id: 't1', url: 'https://not-internal.example' } as never] }),
+      tabs: tabsState({
+        activeId: 't1',
+        tabs: [{ id: 't1', url: 'https://not-internal.example' } as never],
+      }),
     });
     expect(screen.queryByText('Ext Page')).toBeNull();
   });
@@ -216,12 +222,15 @@ describe('AppContent', () => {
     registry[0]!.manifest.surfaces = ['page'];
     renderContent({
       registry,
-      tabs: tabsState({ activeId: 't1', tabs: [{ id: 't1', url: 'tepegoz://com.tepegoz.notes' } as never] }),
+      tabs: tabsState({
+        activeId: 't1',
+        tabs: [{ id: 't1', url: 'tepegoz://com.tepegoz.notes' } as never],
+      }),
     });
     expect(screen.queryByRole('dialog')).toBeNull();
   });
 
-  it('renders the extension surfaces controller\'s active surface and sidebar', () => {
+  it("renders the extension surfaces controller's active surface and sidebar", () => {
     const extSurfaces = extSurfacesFixture({
       renderActiveSurface: () => <div>Active surface</div>,
       renderSidebar: () => <div>Sidebar dock</div>,

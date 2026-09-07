@@ -181,9 +181,9 @@ describe('extractArticle', () => {
       const many = one.repeat(READER_LIMITS.maxBlocks + 200);
       const out = extractArticle(doc(`<article class="post">${many}</article>`));
       expect((out?.blocks ?? []).length).toBe(READER_LIMITS.maxBlocks);
-    }, // Still legitimately heavy — a 2 200-element DOM parsed and walked — so the budget is stated
-    // rather than left to the default.
-    15_000);
+      // Still legitimately heavy — a 2 200-element DOM parsed and walked — so the budget is
+      // stated rather than left to the default.
+    }, 15_000);
 
     it('caps list items', () => {
       const items = '<li>item</li>'.repeat(READER_LIMITS.maxListItems + 50);

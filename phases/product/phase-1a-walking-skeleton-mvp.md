@@ -66,13 +66,13 @@ the "everything at once" immaturity trap.
 - [x] **Command Palette** (Ctrl+K, 4 modes: Chat/Do/Make/Tasks) — KUIreact Modal+Input+virtualized _(`ext-agent/command-palette.tsx` on the shared `Modal`; the list is windowed by hand — one fixed-height row repeated is the single case where virtualization is a few lines of arithmetic, and a dependency here would be carried by every surface that imports the palette. 5000 commands put fewer than 40 rows in the DOM while the scrollbar still reflects all of them. Filtering goes through `foldForSearch`, so it behaves like the omnibox and works in Turkish. Every decision that can be silently wrong lives in `command-palette-core.ts` and is tested as data — including the one that bites: after typing re-filters the list, Enter must run the TOP result, not whatever the old index now points at. 26 unit tests + an e2e that launches the real app, presses Ctrl+K and filters, because a palette that passes every unit test and is never MOUNTED looks identical in CI.)_ — _owed: Ctrl+K currently binds in the renderer, so it fires while the chrome has focus but not while a PAGE does. The main-process path is the same one-line addition `Ctrl+F` already makes in `keyboard-shortcuts.ts`, deferred only because it touches `channels.ts` and the preload tab API, which carry in-flight work._
 - [x] Deterministic **smart address bar / omnibox** (does NOT start an AI thread): unified suggestions (history + bookmark + open tabs + default search engine) + **inline calculation** (`2+2`, unit convert) + `tab:`/`history:`/`bookmark:`/`settings:` filter prefixes + **quick-settings** access (theme/language/privacy toggle); suggestion source zod-validated, no raw-HTML render _(inline calculation live: safe recursive-descent evaluator (no eval) shows `= result` in the omnibox and copies on Enter; fixed-ratio unit conversion lives in the same inline result path, intentionally excluding currency/live rates. **Unified suggestions dropdown live**: navigate/search primary action + quick-settings entries (Appearance, Language & region, Privacy) + matching open tabs (switch-to-tab) + **bookmarks** (curated, ranked above history) + browsing history (most-visited-first) + `tab:`/`history:`/`bookmark:`/`settings:` scope prefixes, cross-source URL dedup — pure `buildOmniboxSuggestions`/unit helpers in `@tepegoz/omnibox` (32 tests), full keyboard nav (↑/↓/Enter/Esc) + ARIA combobox/listbox, plain-text render (no raw HTML), en/tr hints.)_
   - [~] ⚠️ **This row is marked `[x]`, but a competitive sweep found 11 verified defects in the shipped
-        code** — recorded here so the tick is not read as "finished". Full write-up, with the reproducing
-        detail for each, in
-        [`../tracks/omnibox-competitive-parity.md`](../../docs/parities/omnibox-competitive-parity.md) §A.
-        **All eleven §A defects are now fixed (A4 closed 2026-09-02).** This row stays `[~]` only for the
-        **proposal half** of that track — a real unified relevance score, favicons, matched-substring
-        emphasis, inline autocomplete, keyword search engines — which is owner-gated, not a defect. The
-        three defects that were user-visible breakage rather than polish are all closed:
+    code** — recorded here so the tick is not read as "finished". Full write-up, with the reproducing
+    detail for each, in
+    [`../tracks/omnibox-competitive-parity.md`](../../docs/parities/omnibox-competitive-parity.md) §A.
+    **All eleven §A defects are now fixed (A4 closed 2026-09-02).** This row stays `[~]` only for the
+    **proposal half** of that track — a real unified relevance score, favicons, matched-substring
+    emphasis, inline autocomplete, keyword search engines — which is owner-gated, not a defect. The
+    three defects that were user-visible breakage rather than polish are all closed:
     - [x] **A1 — typing arithmetic hangs the renderer.** ~~The inline-calculation path runs an unbounded
           synchronous render loop.~~ _Fixed 2026-09-01: the effect depends on a boolean (`isCalc`) rather
           than on an object minted fresh each render, and the clear is identity-preserving. The per-test
@@ -96,7 +96,7 @@ the "everything at once" immaturity trap.
   - [x] **A4 fixed 2026-09-02.** The candidate window was recency-shaped (`ORDER BY ts DESC LIMIT 50`)
         while the ranker that consumes it is frequency-shaped, so a heavily-visited page outside the 50
         most recent matches could never be scored. `HistoryStore.searchForOmnibox(db, query, nowTs,
-        limit)` — a single new query beside `search` (which keeps its recency + `offset` shape for the
+limit)` — a single new query beside `search` (which keeps its recency + `offset` shape for the
         History page) — orders by `visit_count` plus a bounded, decaying freshness bonus, so a
         frequently-visited old page and a just-seen new one are both always in the 50. `nowTs` injected
         (pure; future-`ts` clamped). One channel: `HistorySearchParamsSchema.forOmnibox` routes it. 5

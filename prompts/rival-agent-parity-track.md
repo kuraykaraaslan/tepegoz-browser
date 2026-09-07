@@ -2,18 +2,19 @@
 
 Run this **once per rival** (fresh session or a subagent). It reads an existing
 `docs/versus/tepegoz-vs-<rival>.md` comparison + the rival's checkout under `.junk/<rival>/`
-+ Tepegöz's AI surface, and produces a `docs/parities/<rival>-agent-parity.md` proposal
-track that maps the rival's genuinely-good-but-missing capabilities to a Tepegöz-conformant
-approach + a suggested phase/ADR home + a draft DoD — the same shape as the already-written
-`docs/parities/webbrain-agent-parity.md`.
+
+- Tepegöz's AI surface, and produces a `docs/parities/<rival>-agent-parity.md` proposal
+  track that maps the rival's genuinely-good-but-missing capabilities to a Tepegöz-conformant
+  approach + a suggested phase/ADR home + a draft DoD — the same shape as the already-written
+  `docs/parities/webbrain-agent-parity.md`.
 
 ## Placeholders — fill before running
 
-| Token          | Meaning                | Values                                                    |
-| -------------- | ---------------------- | -------------------------------------------------------- |
-| `{RAKİP}`      | slug (files)           | `nanobrowser` · `kilocode` · `aipex` · `webbrain`        |
-| `{RAKİP_ADI}`  | human-readable name    | `Nanobrowser` · `Kilo Code` · `AIPex` · `WebBrain`       |
-| `{TARİH}`      | today's date           | e.g. `2026-09-01`                                        |
+| Token         | Meaning             | Values                                             |
+| ------------- | ------------------- | -------------------------------------------------- |
+| `{RAKİP}`     | slug (files)        | `nanobrowser` · `kilocode` · `aipex` · `webbrain`  |
+| `{RAKİP_ADI}` | human-readable name | `Nanobrowser` · `Kilo Code` · `AIPex` · `WebBrain` |
+| `{TARİH}`     | today's date        | e.g. `2026-09-01`                                  |
 
 ## Preconditions
 

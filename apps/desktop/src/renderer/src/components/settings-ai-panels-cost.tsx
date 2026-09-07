@@ -188,9 +188,7 @@ export function TokenBudgetSection({
             {capped && (
               <>
                 {' / '}
-                <span className="font-mono">
-                  {prefs.agentTokenQuota.toLocaleString(locale)}
-                </span>
+                <span className="font-mono">{prefs.agentTokenQuota.toLocaleString(locale)}</span>
                 {` (${String(pct)}%)`}
               </>
             )}

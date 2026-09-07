@@ -264,7 +264,10 @@ describe('the injected hooks', () => {
     expect(journal.append).toHaveBeenCalledWith(
       { __db: true },
       expect.objectContaining({
-        payload: expect.objectContaining({ origin: 'https://site.test', decision: 'preapproved' }) as object,
+        payload: expect.objectContaining({
+          origin: 'https://site.test',
+          decision: 'preapproved',
+        }) as object,
       }),
     );
   });

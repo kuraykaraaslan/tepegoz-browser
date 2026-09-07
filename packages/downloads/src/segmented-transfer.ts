@@ -42,12 +42,7 @@ export interface SegmentedTransferResult {
   ok: boolean;
   bytesWritten: number;
   /** Present when `ok` is false. Named so a caller can log a cause without inventing prose. */
-  error?:
-    | 'not-ranged'
-    | 'segment-failed'
-    | 'segment-short'
-    | 'segment-overrun'
-    | 'aborted';
+  error?: 'not-ranged' | 'segment-failed' | 'segment-short' | 'segment-overrun' | 'aborted';
 }
 
 export interface SegmentedTransferInput {
@@ -125,6 +120,7 @@ export async function runSegmentedTransfer(
   if (failure !== null) return { ok: false, bytesWritten: written, error: failure };
   // Belt and braces: every segment reported complete AND the totals agree. Either alone has been
   // enough to ship a truncated file in somebody's downloader.
-  if (written !== input.totalBytes) return { ok: false, bytesWritten: written, error: 'segment-short' };
+  if (written !== input.totalBytes)
+    return { ok: false, bytesWritten: written, error: 'segment-short' };
   return { ok: true, bytesWritten: written };
 }

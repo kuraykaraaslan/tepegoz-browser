@@ -168,9 +168,9 @@ describe('collectAgentExportBundleFiles', () => {
       throw new Error('db locked');
     });
     const files = await collectAgentExportBundleFiles(INPUT, 0);
-    const mem = JSON.parse(
-      files.find((f) => f.relPath === 'memory.json')?.content ?? '{}',
-    ) as { conversation: unknown };
+    const mem = JSON.parse(files.find((f) => f.relPath === 'memory.json')?.content ?? '{}') as {
+      conversation: unknown;
+    };
     expect(mem.conversation).toBeNull();
   });
 

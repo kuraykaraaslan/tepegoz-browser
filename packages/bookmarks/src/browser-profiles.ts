@@ -224,7 +224,10 @@ export function parseIniSections(text: string): IniSection[] {
     if (eq <= 0 || current === null) continue;
     current.values.set(
       trimmed.slice(0, eq).trim().toLowerCase(),
-      trimmed.slice(eq + 1).trim().slice(0, 4096),
+      trimmed
+        .slice(eq + 1)
+        .trim()
+        .slice(0, 4096),
     );
   }
   return sections;

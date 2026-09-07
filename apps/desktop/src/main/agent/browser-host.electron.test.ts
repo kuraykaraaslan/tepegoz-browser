@@ -525,7 +525,9 @@ describe('readArticleText', () => {
 
   it('returns the extractor text + source when well-formed', async () => {
     h.tabs.webContentsForTab.mockReturnValue(
-      richWc({ executeJavaScript: () => Promise.resolve({ text: 'Body copy', source: 'article' }) }),
+      richWc({
+        executeJavaScript: () => Promise.resolve({ text: 'Body copy', source: 'article' }),
+      }),
     );
 
     const res = await browserHost.readArticleText!('tab-1');
@@ -682,7 +684,7 @@ describe('cursor overlay wiring', () => {
     expect(onScreen()).toBe(true);
   });
 
-  it("the on-screen predicate is false for a minimized window", async () => {
+  it('the on-screen predicate is false for a minimized window', async () => {
     const wc = richWc();
     h.tabs.webContentsForTab.mockReturnValue(wc);
     h.tabs.activeWebContents.mockReturnValue(wc);

@@ -119,9 +119,7 @@ describe('the typo / translate action payloads', () => {
     expect(
       TranslateCloudFallbackResponseSchema.parse({ requestId: 'r1', allow: true, remember: false }),
     ).toMatchObject({ allow: true });
-    expect(
-      TranslateGlossaryAddSchema.safeParse({ source: 'a', target: 'b' }).success,
-    ).toBe(false); // caseSensitive required
+    expect(TranslateGlossaryAddSchema.safeParse({ source: 'a', target: 'b' }).success).toBe(false); // caseSensitive required
   });
 });
 

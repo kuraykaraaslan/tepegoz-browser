@@ -4,6 +4,7 @@
 > Parola yöneticisi için sağlayıcıdan bağımsız tipler ve kayıt defteri: her kimlik-bilgisi kaynağının uyguladığı `PasswordProvider` arayüzünü ve tüm sağlayıcılar arası toplama yapan merkezi registry'yi tanımlar; tek bağımlılığı `@tepegoz/credential-vault`'tur.
 
 ## Kesinlikle olmalı
+
 - [ ] Her kimlik-bilgisi kaynağının uyguladığı `PasswordProvider` arayüzünü tanımlamalı
 - [ ] `PasswordProviderRegistry.register(provider)` sunmalı
 - [ ] `PasswordProviderRegistry.get(id)` sunmalı
@@ -27,6 +28,7 @@
 - [ ] Yalnızca `@tepegoz/credential-vault`'a bağımlı olmalı
 
 ## Olsa iyi olur
+
 - [ ] `findByUrl` origin normalizasyonu path/query/fragment'i yok saymalı
 - [ ] Registry aynı `id` ile ikinci `register`'ı öngörülebilir şekilde ele almalı (değiştir veya reddet)
 - [ ] Bilinmeyen bir `id` için `get(id)` fırlatmadan `undefined` döndürmeli
@@ -36,6 +38,7 @@
 - [ ] Autofill ve ayarlar UI'sı için tek import noktası registry olmalı
 
 ## Çok niş
+
 - [ ] `findByUrl`'de alt-alan adı ile kayıt edilebilir alan adı eşleştirme politikası tanımlı olmalı
 - [ ] Aynı kimlik-bilgisi `id`'sini iddia eden iki sağlayıcı deterministik ele alınmalı
 - [ ] `list()` içinde hata fırlatan bir sağlayıcı tüm toplamayı bozmamalı

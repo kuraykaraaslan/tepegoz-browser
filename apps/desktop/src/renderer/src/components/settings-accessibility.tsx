@@ -37,8 +37,7 @@ export function AccessibilitySection({
   const locale = useLocale();
 
   const perSiteCount = Object.keys(prefs.siteZoomFactors).length;
-  const percent = (factor: number): string =>
-    `${Math.round(factor * 100).toLocaleString(locale)}%`;
+  const percent = (factor: number): string => `${Math.round(factor * 100).toLocaleString(locale)}%`;
 
   return (
     <div className="space-y-6">

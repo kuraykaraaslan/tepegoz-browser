@@ -137,7 +137,11 @@ describe('TransferActivityButton', () => {
     const button = screen.getByRole('button');
 
     fireEvent.click(button);
-    expect(bridge.openPopup).toHaveBeenCalledWith('transfers', expect.any(Object), expect.any(Object));
+    expect(bridge.openPopup).toHaveBeenCalledWith(
+      'transfers',
+      expect.any(Object),
+      expect.any(Object),
+    );
     expect(button.getAttribute('aria-expanded')).toBe('true');
 
     fireEvent.click(button);
@@ -166,7 +170,11 @@ describe('TransferActivityButton', () => {
     await flush();
 
     expect(bridge.getPreferences).toHaveBeenCalled();
-    expect(bridge.openPopup).toHaveBeenCalledWith('transfers', expect.any(Object), expect.any(Object));
+    expect(bridge.openPopup).toHaveBeenCalledWith(
+      'transfers',
+      expect.any(Object),
+      expect.any(Object),
+    );
   });
 
   it('does NOT open the panel for a download that was already finished on mount', async () => {

@@ -4,6 +4,7 @@
 > İndirilebilir GGUF modellerinin veri odaklı kataloğu (models.catalog.json) ile indirme, doğrulama ve kurulum-durumu takibinin saf orkestrasyonu; bir model yüklenmeden önce sha256 bütünlüğü zorunlu, tüm disk/ağ I/O'su enjekte.
 
 ## Kesinlikle olmalı
+
 - [ ] İndirilebilir GGUF modellerini veri odaklı bir listeden (models.catalog.json) okuyabilmeli — model eklemek/ayarlamak kod değil veri değişikliği olmalı
 - [ ] ModelEntrySchema ile her katalog girdisini (id, name, url, sizeBytes, sha256, quant, ctx, paramsB, recommended/firstParty, license, minRamBytes) doğrulamalı
 - [ ] loadCatalog(raw) ile ayrıştırılmış katalog dosyasını güven sınırında doğrulamalı
@@ -24,6 +25,7 @@
 - [ ] Kurulum-durumu dosyasını hoşgörülü yüklemeli: bozuk kayıtları atıp gerisini korumalı
 
 ## Olsa iyi olur
+
 - [ ] recommended / firstParty bayraklarını UI'ın öne çıkarması için taşımalı
 - [ ] minRamBytes ile bir modelin cihazda çalışıp çalışamayacağını belirtebilmeli
 - [ ] license alanını her girdi için taşımalı
@@ -34,6 +36,7 @@
 - [ ] Aynı id'ye tekrar upsert edildiğinde kaydı yerinde güncellemeli, çoğaltmamalı
 
 ## Çok niş
+
 - [ ] Katalog dosyasında CATALOG_VERSION uyuşmazlığında güvenli davranmalı
 - [ ] İndirme tamamlandıktan sonra sha256 tutmuyorsa dosyayı installed işaretlememeli
 - [ ] Kısmi indirilmiş dosya diskte varken sha256OfStream yeniden hesaplayıp doğrulayabilmeli

@@ -178,7 +178,10 @@ describe('McpConnection', () => {
   });
 
   it('skips a single tool whose input schema exceeds the byte cap, keeping the rest', async () => {
-    const huge = { type: 'object', properties: { blob: { enum: Array.from({ length: 20000 }, (_, i) => `v${i}`) } } };
+    const huge = {
+      type: 'object',
+      properties: { blob: { enum: Array.from({ length: 20000 }, (_, i) => `v${i}`) } },
+    };
     const conn = new McpConnection(CONFIG, {
       client: new FlexClient(() => ({
         tools: [
@@ -198,7 +201,16 @@ describe('McpConnection', () => {
   it('wraps a server-side tools/call throw as a redacted AppError(502)', async () => {
     const conn = new McpConnection(CONFIG, {
       client: new FlexClient(
-        () => ({ tools: [{ name: 'read_file', description: 'x', inputSchema: { type: 'object' }, annotations: { readOnlyHint: true } }] }),
+        () => ({
+          tools: [
+            {
+              name: 'read_file',
+              description: 'x',
+              inputSchema: { type: 'object' },
+              annotations: { readOnlyHint: true },
+            },
+          ],
+        }),
         () => {
           throw new Error('/secret/path leaked in the message');
         },
@@ -234,8 +246,18 @@ describe('McpConnection', () => {
     const conn = new McpConnection(CONFIG, {
       client: new FlexClient(() => ({
         tools: [
-          { name: 'read_file', description: 'x', inputSchema: { type: 'object' }, annotations: { readOnlyHint: true } },
-          { name: 'delete_file', description: 'x', inputSchema: { type: 'object' }, annotations: { destructiveHint: true } },
+          {
+            name: 'read_file',
+            description: 'x',
+            inputSchema: { type: 'object' },
+            annotations: { readOnlyHint: true },
+          },
+          {
+            name: 'delete_file',
+            description: 'x',
+            inputSchema: { type: 'object' },
+            annotations: { destructiveHint: true },
+          },
         ],
       })),
       transport: stubTransport,
@@ -247,10 +269,21 @@ describe('McpConnection', () => {
 
   it('exposes toolCount and swallows a close() that rejects on disconnect', async () => {
     const client = new FlexClient(() => ({
-      tools: [{ name: 'read_file', description: 'x', inputSchema: { type: 'object' }, annotations: { readOnlyHint: true } }],
+      tools: [
+        {
+          name: 'read_file',
+          description: 'x',
+          inputSchema: { type: 'object' },
+          annotations: { readOnlyHint: true },
+        },
+      ],
     }));
     client.close = () => Promise.reject(new Error('transport already gone'));
-    const conn = new McpConnection(CONFIG, { client, transport: stubTransport, mapper: new NameMapper() });
+    const conn = new McpConnection(CONFIG, {
+      client,
+      transport: stubTransport,
+      mapper: new NameMapper(),
+    });
     await conn.connect();
     expect(conn.toolCount).toBe(1);
     await expect(conn.disconnect()).resolves.toBeUndefined();
@@ -259,7 +292,16 @@ describe('McpConnection', () => {
   it('carries structuredContent through on a successful call', async () => {
     const conn = new McpConnection(CONFIG, {
       client: new FlexClient(
-        () => ({ tools: [{ name: 'read_file', description: 'x', inputSchema: { type: 'object' }, annotations: { readOnlyHint: true } }] }),
+        () => ({
+          tools: [
+            {
+              name: 'read_file',
+              description: 'x',
+              inputSchema: { type: 'object' },
+              annotations: { readOnlyHint: true },
+            },
+          ],
+        }),
         () => ({ content: [{ type: 'text', text: 'body' }], structuredContent: { rows: 3 } }),
       ),
       transport: stubTransport,

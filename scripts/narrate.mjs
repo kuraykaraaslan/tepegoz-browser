@@ -48,7 +48,9 @@ const has = (name) => args.includes(`--${name}`);
 
 const scriptPath = args.find((a) => !a.startsWith('--') && a.endsWith('.json'));
 if (!scriptPath) {
-  console.error('usage: node scripts/narrate.mjs <script.json> [--lang en|tr] [--video f.webm] [--out dir] [--check]');
+  console.error(
+    'usage: node scripts/narrate.mjs <script.json> [--lang en|tr] [--video f.webm] [--out dir] [--check]',
+  );
   process.exit(1);
 }
 
@@ -123,7 +125,11 @@ function cuesFor(text, starts, ends, offset, maxChars = 64) {
     let to = Math.min(from + maxChars, text.length);
     if (to < text.length) {
       const window = text.slice(from, to);
-      const sentence = Math.max(window.lastIndexOf('. '), window.lastIndexOf('? '), window.lastIndexOf('! '));
+      const sentence = Math.max(
+        window.lastIndexOf('. '),
+        window.lastIndexOf('? '),
+        window.lastIndexOf('! '),
+      );
       const space = window.lastIndexOf(' ');
       if (sentence > maxChars * 0.5) to = from + sentence + 1;
       else if (space > 0) to = from + space;
@@ -143,8 +149,12 @@ function cuesFor(text, starts, ends, offset, maxChars = 64) {
 }
 
 const duration = existsSync(VIDEO) ? videoDurationSeconds(VIDEO) : 0;
-console.log(`script  : ${basename(scriptPath)}  (${spec.lines.length} lines, lang ${LANG}, voice ${VOICE})`);
-console.log(`video   : ${existsSync(VIDEO) ? `${VIDEO} — ${duration.toFixed(1)}s` : `${VIDEO} — MISSING`}`);
+console.log(
+  `script  : ${basename(scriptPath)}  (${spec.lines.length} lines, lang ${LANG}, voice ${VOICE})`,
+);
+console.log(
+  `video   : ${existsSync(VIDEO) ? `${VIDEO} — ${duration.toFixed(1)}s` : `${VIDEO} — MISSING`}`,
+);
 
 // Read the pairing before anything is published: every line against the second
 // it speaks over, and any line that runs past the end of the picture.
@@ -160,7 +170,9 @@ for (const [i, l] of spec.lines.entries()) {
   cursor = l.at;
 }
 if (CHECK_ONLY) {
-  console.log(bad ? `\n${bad} line(s) need attention.` : '\nAll lines are ordered and inside the picture.');
+  console.log(
+    bad ? `\n${bad} line(s) need attention.` : '\nAll lines are ordered and inside the picture.',
+  );
   process.exit(bad ? 1 : 0);
 }
 if (!existsSync(VIDEO)) {
@@ -182,12 +194,20 @@ for (const [i, line] of spec.lines.entries()) {
       body: JSON.stringify({
         text: line.text,
         model_id: MODEL_ID,
-        voice_settings: { stability: 0.5, similarity_boost: 0.75, style: 0, use_speaker_boost: true },
+        voice_settings: {
+          stability: 0.5,
+          similarity_boost: 0.75,
+          style: 0,
+          use_speaker_boost: true,
+        },
       }),
     },
   );
   if (!res.ok) {
-    console.error(`TTS failed on line ${i} (HTTP ${res.status}):`, (await res.text()).slice(0, 300));
+    console.error(
+      `TTS failed on line ${i} (HTTP ${res.status}):`,
+      (await res.text()).slice(0, 300),
+    );
     process.exit(1);
   }
   const j = await res.json();
@@ -199,7 +219,12 @@ for (const [i, line] of spec.lines.entries()) {
   const end = a?.character_end_times_seconds?.at(-1) ?? 0;
   clips.push({ file, at: line.at, length: end });
   cues.push(
-    ...cuesFor(spoken, a?.character_start_times_seconds ?? [], a?.character_end_times_seconds ?? [], line.at),
+    ...cuesFor(
+      spoken,
+      a?.character_start_times_seconds ?? [],
+      a?.character_end_times_seconds ?? [],
+      line.at,
+    ),
   );
   spokenChars += line.text.length;
   console.log(`  ✓ line ${i}  ${end.toFixed(2)}s  @${line.at}s`);
@@ -212,7 +237,9 @@ for (let i = 0; i < clips.length - 1; i += 1) {
 }
 const last = clips.at(-1);
 if (last && duration > 0 && last.at + last.length > duration) {
-  console.log(`  ! last line ends ${(last.at + last.length - duration).toFixed(2)}s after the video does`);
+  console.log(
+    `  ! last line ends ${(last.at + last.length - duration).toFixed(2)}s after the video does`,
+  );
 }
 
 // One silent bed of exactly the video's length, each clip delayed onto it. The
@@ -226,8 +253,18 @@ const delays = clips
   .join(';');
 const mixIn = `[0]${clips.map((_, i) => `[d${i}]`).join('')}`;
 ff(
-  [...inputs, '-filter_complex', `${delays};${mixIn}amix=inputs=${clips.length + 1}:normalize=0[a]`,
-   '-map', '[a]', '-c:a', 'libopus', '-b:a', '96k', narration],
+  [
+    ...inputs,
+    '-filter_complex',
+    `${delays};${mixIn}amix=inputs=${clips.length + 1}:normalize=0[a]`,
+    '-map',
+    '[a]',
+    '-c:a',
+    'libopus',
+    '-b:a',
+    '96k',
+    narration,
+  ],
   'narration bed',
 );
 
@@ -240,13 +277,33 @@ writeFileSync(
 
 // Mux without touching the picture: the video stream is copied, not re-encoded.
 const narrated = join(OUT, `agent-run.narrated.${LANG}.webm`);
-ff(['-i', VIDEO, '-i', narration, '-c:v', 'copy', '-c:a', 'copy', '-shortest', narrated], 'mux webm');
+ff(
+  ['-i', VIDEO, '-i', narration, '-c:v', 'copy', '-c:a', 'copy', '-shortest', narrated],
+  'mux webm',
+);
 
 // H.264/AAC fallback for players that will not take VP9/Opus.
 const mp4 = join(OUT, `agent-run.narrated.${LANG}.mp4`);
 ff(
-  ['-i', narrated, '-c:v', 'libx264', '-crf', '21', '-preset', 'slow', '-pix_fmt', 'yuv420p',
-   '-c:a', 'aac', '-b:a', '128k', '-movflags', '+faststart', mp4],
+  [
+    '-i',
+    narrated,
+    '-c:v',
+    'libx264',
+    '-crf',
+    '21',
+    '-preset',
+    'slow',
+    '-pix_fmt',
+    'yuv420p',
+    '-c:a',
+    'aac',
+    '-b:a',
+    '128k',
+    '-movflags',
+    '+faststart',
+    mp4,
+  ],
   'mp4 fallback',
 );
 

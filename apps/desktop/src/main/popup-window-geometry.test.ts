@@ -51,7 +51,13 @@ describe('anchorToBounds', () => {
   });
 
   it('clamps a popup that would overflow the right edge back inside the work area', () => {
-    const b = anchorToBounds(parentAt(rect(0, 0, 1920, 1000)), rect(1900, 10, 0, 0), 360, 200, 'start');
+    const b = anchorToBounds(
+      parentAt(rect(0, 0, 1920, 1000)),
+      rect(1900, 10, 0, 0),
+      360,
+      200,
+      'start',
+    );
     expect(b.x).toBe(workArea.width - 360); // 1560
   });
 

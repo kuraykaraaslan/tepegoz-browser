@@ -4,6 +4,7 @@
 > Agent'ın alabileceği her eylemi tek bir normalize `ToolDescriptor` olarak kaydeden registry ile tüm çağrıları sabit sırayla (lookup → idempotency → zod → policy → HITL → execute → audit) geçiren tek gateway PEP'i (ADR-0007).
 
 ## Kesinlikle olmalı
+
 - [ ] `CapabilityRegistry` tüm kayıtlı araçların tek haritası olmalı (`register`/`unregister`/`get`/`list`)
 - [ ] Registry kayıt anında `{domain}_{verb}_{noun}` isimlendirme kuralını (`ToolNameSchema`) zorlamalı
 - [ ] `ToolGateway.invoke(toolName, rawArgs, ctx)` tam pipeline'ı çalıştırmalı
@@ -27,6 +28,7 @@
 - [ ] `InputValidator` sözleşmesi araç başına zod şeması bağlamalı
 
 ## Olsa iyi olur
+
 - [ ] `list` kayıtlı araçları keşif/UI için döndürebilmeli
 - [ ] `unregister` ile bir araç çalışma zamanında kaldırılabilmeli (extension unload)
 - [ ] `ToolError` envelope'u makine-okunur kod + insan-okunur mesaj içermeli
@@ -37,6 +39,7 @@
 - [ ] Aynı registry farklı araç kaynaklarınca paylaşılabilmeli
 
 ## Çok niş
+
 - [ ] Idempotency anahtarı çakışması eşzamanlı çağrılarda güvenli çözülmeli
 - [ ] Audit handler hata fırlatırsa invocation sonucu yine de dönmeli
 - [ ] Confirm handler timeout / iptal durumunda karar denied olmalı

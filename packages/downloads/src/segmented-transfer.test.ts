@@ -48,7 +48,10 @@ function goodTransport(file: Uint8Array, chunkSize = 64 * 1024): SegmentTranspor
     fetchRange({ start, end }): Promise<SegmentResponse> {
       return Promise.resolve({
         status: 206,
-        headers: { acceptRanges: 'bytes', contentRange: `bytes ${start}-${end}/${file.byteLength}` },
+        headers: {
+          acceptRanges: 'bytes',
+          contentRange: `bytes ${start}-${end}/${file.byteLength}`,
+        },
         body: chunked(file.subarray(start, end + 1), chunkSize),
       });
     },

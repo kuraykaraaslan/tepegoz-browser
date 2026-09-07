@@ -17,7 +17,10 @@ import type { SettingsSectionsCtx } from './SettingsPage-sections';
 
 const s = settingsDict.en;
 
-function ctx(over: Partial<Preferences> = {}): { ctx: SettingsSectionsCtx; setPref: ReturnType<typeof vi.fn> } {
+function ctx(over: Partial<Preferences> = {}): {
+  ctx: SettingsSectionsCtx;
+  setPref: ReturnType<typeof vi.fn>;
+} {
   const setPref = vi.fn();
   return {
     setPref,

@@ -148,8 +148,7 @@ export class HistoryStore {
    */
   static faviconFor(db: Db, url: string): string | null {
     const row = db.prepare('SELECT favicon FROM history WHERE url = ?').get(url) as
-      | { favicon: string | null }
-      | undefined;
+      { favicon: string | null } | undefined;
     return row?.favicon ?? null;
   }
 

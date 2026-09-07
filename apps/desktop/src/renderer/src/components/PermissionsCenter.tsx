@@ -69,9 +69,7 @@ function SiteRow({
           const value: SitePermissionState = perms?.[c] ?? 'prompt';
           return (
             <div key={c} className="flex items-center justify-between gap-2 text-xs">
-              <span className="min-w-0 truncate text-text-secondary">
-                {capabilityLabel(c, s)}
-              </span>
+              <span className="min-w-0 truncate text-text-secondary">{capabilityLabel(c, s)}</span>
               <div className="w-28 shrink-0">
                 <Select
                   id={`perm-${origin}-${c}`}

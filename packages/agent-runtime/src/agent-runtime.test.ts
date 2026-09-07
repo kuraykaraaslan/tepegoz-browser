@@ -208,7 +208,11 @@ describe('runAgent — plan phase, approval, and egress-during-planning', () => 
     });
     expect(res.stoppedReason).toBe('plan_rejected');
     expect(res.ok).toBe(false);
-    expect(h.onEvent).toHaveBeenCalledWith('plan', expect.stringContaining('1 step'), expect.any(String));
+    expect(h.onEvent).toHaveBeenCalledWith(
+      'plan',
+      expect.stringContaining('1 step'),
+      expect.any(String),
+    );
   });
 
   it('stops "aborted" when the signal is already tripped after the plan is ready', async () => {
@@ -247,12 +251,19 @@ describe('runAgent — plan phase, approval, and egress-during-planning', () => 
     };
     const script = [
       JSON.stringify(validPlan),
-      JSON.stringify({ action: 'act', tool: 'browser_get_elements', args: { url: 'https://x.test/a' }, rationale: 'r' }),
+      JSON.stringify({
+        action: 'act',
+        tool: 'browser_get_elements',
+        args: { url: 'https://x.test/a' },
+        rationale: 'r',
+      }),
       JSON.stringify({ action: 'act', tool: 'browser_get_elements', args: {}, rationale: 'r' }),
       JSON.stringify({ action: 'finish', summary: 'read both' }),
       JSON.stringify({ done: true, final_answer: 'the page said hello' }),
     ];
-    const provider = new ScriptedProvider((t) => resp(script[t] ?? JSON.stringify({ action: 'finish', summary: 'fallback' })));
+    const provider = new ScriptedProvider((t) =>
+      resp(script[t] ?? JSON.stringify({ action: 'finish', summary: 'fallback' })),
+    );
 
     const res = await runAgent('do it', h, inject(provider));
 
@@ -264,11 +275,18 @@ describe('runAgent — plan phase, approval, and egress-during-planning', () => 
     // navTargetOf pulls the { url } arg through onto the first step, and leaves it off the second.
     expect(res.steps?.[0]?.targetUrl).toBe('https://x.test/a');
     expect(res.steps?.[1]?.targetUrl).toBeUndefined();
-    expect(h.onEvent).toHaveBeenCalledWith('done', expect.any(String), expect.stringContaining('tokens'));
+    expect(h.onEvent).toHaveBeenCalledWith(
+      'done',
+      expect.any(String),
+      expect.stringContaining('tokens'),
+    );
   });
 
   it('takes the "fail" terminal phase and reports an error when the reactive loop errors out', async () => {
-    const h: AgentRunHooks = { ...hooks(), requestPlanApproval: () => Promise.resolve({ approved: true }) };
+    const h: AgentRunHooks = {
+      ...hooks(),
+      requestPlanApproval: () => Promise.resolve({ approved: true }),
+    };
     let turn = 0;
     const provider = new ScriptedProvider(() =>
       turn++ === 0 ? resp(JSON.stringify(validPlan)) : new Error('upstream socket reset'),
@@ -276,13 +294,21 @@ describe('runAgent — plan phase, approval, and egress-during-planning', () => 
     const res = await runAgent('do it', h, inject(provider));
     expect(res.ok).toBe(false);
     expect(res.stoppedReason).not.toBe('completed');
-    expect(h.onEvent).toHaveBeenCalledWith('error', expect.any(String), expect.stringContaining('tokens'));
+    expect(h.onEvent).toHaveBeenCalledWith(
+      'error',
+      expect.any(String),
+      expect.stringContaining('tokens'),
+    );
   });
 
   it('surfaces an Egress WARNING to the Console when the prompt carries PII (email), then still sends', async () => {
     const h = hooks(); // default plan approval → { approved: false }
     const provider = new ScriptedProvider(() => resp(JSON.stringify(validPlan)));
-    const res = await runAgent('mail the report to alice@example.com when done', h, inject(provider));
+    const res = await runAgent(
+      'mail the report to alice@example.com when done',
+      h,
+      inject(provider),
+    );
     expect(res.stoppedReason).toBe('plan_rejected'); // the warn is advisory — the request went out
     expect(h.onEvent).toHaveBeenCalledWith(
       'decision',
@@ -306,12 +332,20 @@ describe('runAgent — plan phase, approval, and egress-during-planning', () => 
 
   it('hands off (terminal) when a perceived page is a CAPTCHA wall', async () => {
     readResult = { content: 'Please verify you are human to continue', url: 'https://x.test/gate' };
-    const h: AgentRunHooks = { ...hooks(), requestPlanApproval: () => Promise.resolve({ approved: true }) };
+    const h: AgentRunHooks = {
+      ...hooks(),
+      requestPlanApproval: () => Promise.resolve({ approved: true }),
+    };
     const provider = new ScriptedProvider((t) =>
       resp(
         t === 0
           ? JSON.stringify(validPlan)
-          : JSON.stringify({ action: 'act', tool: 'browser_get_elements', args: {}, rationale: 'r' }),
+          : JSON.stringify({
+              action: 'act',
+              tool: 'browser_get_elements',
+              args: {},
+              rationale: 'r',
+            }),
       ),
     );
     const res = await runAgent('do it', h, inject(provider));
@@ -320,7 +354,10 @@ describe('runAgent — plan phase, approval, and egress-during-planning', () => 
   });
 
   it('pauses (not terminal) on a LOGIN wall when a run-control gate is present', async () => {
-    readResult = { content: 'Please sign in to continue to your account', url: 'https://x.test/login' };
+    readResult = {
+      content: 'Please sign in to continue to your account',
+      url: 'https://x.test/login',
+    };
     const state = { aborted: false, gateCalls: 0 };
     const control = {
       get aborted() {
@@ -346,7 +383,12 @@ describe('runAgent — plan phase, approval, and egress-during-planning', () => 
       resp(
         t === 0
           ? JSON.stringify(validPlan)
-          : JSON.stringify({ action: 'act', tool: 'browser_get_elements', args: {}, rationale: 'r' }),
+          : JSON.stringify({
+              action: 'act',
+              tool: 'browser_get_elements',
+              args: {},
+              rationale: 'r',
+            }),
       ),
     );
     const res = await runAgent('do it', h, inject(provider));
@@ -373,9 +415,14 @@ describe('runAgent — plan phase, approval, and egress-during-planning', () => 
     ToolGateway.setConfirmHandler(() => Promise.resolve(true));
     const planNav = {
       goal: 'go elsewhere',
-      steps: [{ id: 's1', tool: 'browser_update_location', args: {}, rationale: 'r', dependsOn: [] }],
+      steps: [
+        { id: 's1', tool: 'browser_update_location', args: {}, rationale: 'r', dependsOn: [] },
+      ],
     };
-    const h: AgentRunHooks = { ...hooks(), requestPlanApproval: () => Promise.resolve({ approved: true }) };
+    const h: AgentRunHooks = {
+      ...hooks(),
+      requestPlanApproval: () => Promise.resolve({ approved: true }),
+    };
     const deps: AgentRunDeps = {
       ...DEPS,
       activeTabUrl: () => 'https://origin.test/here',
@@ -419,14 +466,20 @@ describe('runAgent — plan phase, approval, and egress-during-planning', () => 
         inputSchema: objSchema,
         // browser_update_location returns NO `content` (only a url) → exercises contentFromResult's
         // undefined fall-through in onOutcome; web_search returns content.
-        handler: () => (id === 'browser_update_location' ? { url: 'https://elsewhere.test/' } : { content: 'ok' }),
+        handler: () =>
+          id === 'browser_update_location' ? { url: 'https://elsewhere.test/' } : { content: 'ok' },
       });
     }
     const plan = {
       goal: 'wander off',
-      steps: [{ id: 's1', tool: 'browser_update_location', args: {}, rationale: 'r', dependsOn: [] }],
+      steps: [
+        { id: 's1', tool: 'browser_update_location', args: {}, rationale: 'r', dependsOn: [] },
+      ],
     };
-    const h: AgentRunHooks = { ...hooks(), requestPlanApproval: () => Promise.resolve({ approved: true }) };
+    const h: AgentRunHooks = {
+      ...hooks(),
+      requestPlanApproval: () => Promise.resolve({ approved: true }),
+    };
     const deps: AgentRunDeps = {
       ...DEPS,
       activeTabUrl: () => 'https://origin.test/here',
@@ -438,13 +491,28 @@ describe('runAgent — plan phase, approval, and egress-during-planning', () => 
               ? JSON.stringify(plan)
               : t === 1
                 ? // an OFF-ORIGIN navigation → isEscapeTool runs its full url-compare arm
-                  JSON.stringify({ action: 'act', tool: 'browser_update_location', args: { url: 'https://elsewhere.test/' }, rationale: 'r' })
+                  JSON.stringify({
+                    action: 'act',
+                    tool: 'browser_update_location',
+                    args: { url: 'https://elsewhere.test/' },
+                    rationale: 'r',
+                  })
                 : t === 2
                   ? // a malformed target → isEscapeTool's `new URL()` catch → false
-                    JSON.stringify({ action: 'act', tool: 'browser_update_location', args: { url: 'http://[' }, rationale: 'r' })
+                    JSON.stringify({
+                      action: 'act',
+                      tool: 'browser_update_location',
+                      args: { url: 'http://[' },
+                      rationale: 'r',
+                    })
                   : t === 3
                     ? // web_search_items → the immediate `return true` arm
-                      JSON.stringify({ action: 'act', tool: 'web_search_items', args: { query: 'x' }, rationale: 'r' })
+                      JSON.stringify({
+                        action: 'act',
+                        tool: 'web_search_items',
+                        args: { query: 'x' },
+                        rationale: 'r',
+                      })
                     : JSON.stringify({ action: 'finish', summary: 'wandered' }),
           ),
         ),
@@ -478,18 +546,30 @@ describe('runAgent — plan phase, approval, and egress-during-planning', () => 
       goal: 'act on the page',
       steps: [{ id: 's1', tool: 'browser_update_page', args: {}, rationale: 'r', dependsOn: [] }],
     };
-    const h: AgentRunHooks = { ...hooks(), requestPlanApproval: () => Promise.resolve({ approved: true }) };
+    const h: AgentRunHooks = {
+      ...hooks(),
+      requestPlanApproval: () => Promise.resolve({ approved: true }),
+    };
     const provider = new ScriptedProvider((t) =>
       resp(
         t === 0
           ? JSON.stringify(planWithAct)
           : t === 1
-            ? JSON.stringify({ action: 'act', tool: 'browser_update_page', args: {}, rationale: 'r' })
+            ? JSON.stringify({
+                action: 'act',
+                tool: 'browser_update_page',
+                args: {},
+                rationale: 'r',
+              })
             : JSON.stringify({ action: 'finish', summary: 'gave up' }),
       ),
     );
     const res = await runAgent('do it', h, inject(provider));
-    expect(h.onEvent).toHaveBeenCalledWith('step_error', expect.stringContaining('browser_update_page'), expect.any(String));
+    expect(h.onEvent).toHaveBeenCalledWith(
+      'step_error',
+      expect.stringContaining('browser_update_page'),
+      expect.any(String),
+    );
     expect(res.stoppedReason).not.toBe('completed');
   });
 
@@ -515,7 +595,9 @@ describe('runAgent — plan phase, approval, and egress-during-planning', () => 
       control,
     };
     const provider = new ScriptedProvider((t) =>
-      resp(t === 0 ? JSON.stringify(validPlan) : JSON.stringify({ action: 'finish', summary: 'x' })),
+      resp(
+        t === 0 ? JSON.stringify(validPlan) : JSON.stringify({ action: 'finish', summary: 'x' }),
+      ),
     );
     const res = await runAgent('do it', h, inject(provider));
     expect(res.stoppedReason).toBe('aborted');

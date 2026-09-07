@@ -98,7 +98,9 @@ describe('readProfileBookmarks', () => {
     writePlaces(path).close();
     const before = readdirSync(tmpdir()).filter((n) => n.startsWith('tepegoz-import-')).length;
     readProfileBookmarks(profile({ format: 'firefox-places', path }));
-    expect(readdirSync(tmpdir()).filter((n) => n.startsWith('tepegoz-import-')).length).toBe(before);
+    expect(readdirSync(tmpdir()).filter((n) => n.startsWith('tepegoz-import-')).length).toBe(
+      before,
+    );
   });
 
   it('returns null rather than throwing for a missing or unreadable file', () => {

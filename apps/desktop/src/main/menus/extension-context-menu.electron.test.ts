@@ -31,19 +31,21 @@ vi.mock('../lib/i18n-main', () => ({
 interface ManifestStub {
   surfaces: string[];
 }
-const state = vi.hoisted((): {
-  manifest: ManifestStub | undefined;
-  pinned: string[];
-  destroyed: boolean;
-  sent: unknown[];
-  sameWindow: boolean;
-} => ({
-  manifest: { surfaces: ['page'] },
-  pinned: [],
-  destroyed: false,
-  sent: [],
-  sameWindow: true,
-}));
+const state = vi.hoisted(
+  (): {
+    manifest: ManifestStub | undefined;
+    pinned: string[];
+    destroyed: boolean;
+    sent: unknown[];
+    sameWindow: boolean;
+  } => ({
+    manifest: { surfaces: ['page'] },
+    pinned: [],
+    destroyed: false,
+    sent: [],
+    sameWindow: true,
+  }),
+);
 vi.mock('@tepegoz/preferences', () => ({
   default: { getAll: () => ({ pinnedExtensions: state.pinned }) },
 }));

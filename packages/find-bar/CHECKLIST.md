@@ -4,6 +4,7 @@
 > Presentational leaf: Ctrl+F sayfa-içi arama çubuğu; Electron-free, host `webContents.findInPage` çalıştırıp sayıları prop olarak besler, çubuk kendi dict'inden self-localize olur.
 
 ## Kesinlikle olmalı
+
 - [ ] `FindBar` bir sorgu girişi, `n/m` sayaç, match-case toggle, prev/next stepper ve kapatma düğmesi sunmalı
 - [ ] Mount'ta input'a odaklanıp içeriğini seçmeli — tekrar Ctrl+F önceki sorgunun üzerine yazsın
 - [ ] Enter / Shift+Enter eşleşmeler arasında ileri/geri ilerlemeli
@@ -21,6 +22,7 @@
 - [ ] `findBarDict`'i dışa aktarmalı
 
 ## Olsa iyi olur
+
 - [ ] `matchCase` durumunu controlled prop olarak yansıtmalı
 - [ ] Toplam eşleşme 0 iken prev/next stepper'ları etkisiz/disabled göstermeli
 - [ ] Boş sorguda sayaç ve stepper'ları nötr durumda tutmalı
@@ -30,6 +32,7 @@
 - [ ] Kapatıldıktan sonra yeniden açıldığında input yeniden odaklanıp seçilmeli
 
 ## Çok niş
+
 - [ ] Çok büyük `totalMatches` değerini sayaçta okunur biçimde biçimlendirmeli
 - [ ] `activeMatch > totalMatches` gibi tutarsız prop kombinasyonlarında çökmemeli
 - [ ] Hızlı ardışık Enter basışlarında adım isteklerini kaybetmeden iletmeli

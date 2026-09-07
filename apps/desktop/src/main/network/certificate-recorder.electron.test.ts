@@ -2,7 +2,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Certificate } from 'electron';
 
 const h = vi.hoisted(() => ({
-  register: vi.fn<(id: string, attacher: (ses: { setCertificateVerifyProc: unknown }) => void) => void>(),
+  register:
+    vi.fn<(id: string, attacher: (ses: { setCertificateVerifyProc: unknown }) => void) => void>(),
 }));
 vi.mock('./browsing-sessions.electron', () => ({ default: { register: h.register } }));
 
@@ -18,9 +19,23 @@ const {
 function makeCert(over: Partial<Certificate> = {}): Certificate {
   return {
     data: '-----BEGIN CERTIFICATE-----\n...\n-----END CERTIFICATE-----',
-    issuer: { commonName: 'Issuer CA', organizations: [], organizationUnits: [], locality: '', state: '', country: '' },
+    issuer: {
+      commonName: 'Issuer CA',
+      organizations: [],
+      organizationUnits: [],
+      locality: '',
+      state: '',
+      country: '',
+    },
     issuerName: 'Issuer CA',
-    subject: { commonName: 'example.com', organizations: [], organizationUnits: [], locality: '', state: '', country: '' },
+    subject: {
+      commonName: 'example.com',
+      organizations: [],
+      organizationUnits: [],
+      locality: '',
+      state: '',
+      country: '',
+    },
     subjectName: 'example.com',
     serialNumber: '0A1B2C3D',
     validStart: Math.floor(Date.parse('2026-01-01T00:00:00Z') / 1000),
@@ -39,7 +54,12 @@ describe('the verify proc never decides', () => {
   it('always calls callback(-3) — Chromium keeps the verdict — on a clean handshake', () => {
     const cb = vi.fn();
     certificateVerifyProc(
-      { hostname: 'example.com', certificate: makeCert(), verificationResult: 'net::OK', errorCode: 0 },
+      {
+        hostname: 'example.com',
+        certificate: makeCert(),
+        verificationResult: 'net::OK',
+        errorCode: 0,
+      },
       cb,
     );
     expect(cb).toHaveBeenCalledExactlyOnceWith(-3);
@@ -63,7 +83,12 @@ describe('the verify proc never decides', () => {
     const cb = vi.fn();
     certificateVerifyProc(
       // a non-string hostname makes `request.hostname.toLowerCase()` throw
-      { hostname: undefined as never, certificate: makeCert(), verificationResult: 'net::OK', errorCode: 0 },
+      {
+        hostname: undefined as never,
+        certificate: makeCert(),
+        verificationResult: 'net::OK',
+        errorCode: 0,
+      },
       cb,
     );
     expect(cb).toHaveBeenCalledExactlyOnceWith(-3);
@@ -84,7 +109,11 @@ describe('registerCertificateRecorder', () => {
 
 describe('recording + summary', () => {
   it('keeps the most recent certificate per host and flattens the issuer chain', () => {
-    const root = makeCert({ subjectName: 'Root CA', issuerName: 'Root CA', fingerprint: 'sha256/root' });
+    const root = makeCert({
+      subjectName: 'Root CA',
+      issuerName: 'Root CA',
+      fingerprint: 'sha256/root',
+    });
     root.issuerCert = root; // a self-issued root must not loop
     const intermediate = makeCert({
       subjectName: 'Intermediate CA',
@@ -111,14 +140,24 @@ describe('recording + summary', () => {
   it('evicts the least-recently-seen host past the cap', () => {
     for (let i = 0; i < 256; i++) {
       certificateVerifyProc(
-        { hostname: `h${i}.example`, certificate: makeCert(), verificationResult: 'net::OK', errorCode: 0 },
+        {
+          hostname: `h${i}.example`,
+          certificate: makeCert(),
+          verificationResult: 'net::OK',
+          errorCode: 0,
+        },
         vi.fn(),
       );
     }
     expect(getRecordedCert('h0.example')).toBeDefined();
     // One more host tips it over 256 → the oldest (h1, since the h0 lookup above refreshed it) goes.
     certificateVerifyProc(
-      { hostname: 'h256.example', certificate: makeCert(), verificationResult: 'net::OK', errorCode: 0 },
+      {
+        hostname: 'h256.example',
+        certificate: makeCert(),
+        verificationResult: 'net::OK',
+        errorCode: 0,
+      },
       vi.fn(),
     );
     expect(getRecordedCert('h1.example')).toBeUndefined();

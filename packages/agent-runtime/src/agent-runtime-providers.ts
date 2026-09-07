@@ -145,7 +145,10 @@ export function registerRunProvider(
       resolved.apiKey,
       effort,
       deps.localInference,
-      resolveProviderBaseURL(resolved.provider, CredentialVault.regionForProvider(resolved.provider)),
+      resolveProviderBaseURL(
+        resolved.provider,
+        CredentialVault.regionForProvider(resolved.provider),
+      ),
     ),
   );
   if (resolved.provider !== 'local' && localAvailable && deps.localInference !== undefined) {

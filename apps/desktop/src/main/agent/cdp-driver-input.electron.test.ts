@@ -334,10 +334,7 @@ describe('the human-input adapter path', () => {
     parseChords.mockReturnValue({ steps: [{ key: 'Enter', modifiers: 0 }], malformed: [] });
     const res = await sendKeys(cast(wc), 'Enter', cast(adapter), cast(core));
     expect(adapter.idle).toHaveBeenCalled();
-    expect(adapter.pressKey).toHaveBeenCalledWith(
-      { key: 'Enter', code: 'Enter', keyCode: 13 },
-      0,
-    );
+    expect(adapter.pressKey).toHaveBeenCalledWith({ key: 'Enter', code: 'Enter', keyCode: 13 }, 0);
     expect(calls('Input.dispatchKeyEvent')).toHaveLength(0);
     expect(res).toEqual({ sent: 1, unsupported: [] });
   });
@@ -356,7 +353,12 @@ describe('specForStep — printable-key synthesis (via sendKeys, raw CDP)', () =
     parseChords.mockReturnValue({ steps: [{ key: '5', modifiers: 0 }], malformed: [] });
     const res = await sendKeys(cast(wc), '5', undefined, cast(core));
     const down = calls('Input.dispatchKeyEvent')[0] as Record<string, unknown>;
-    expect(down).toMatchObject({ type: 'keyDown', code: 'Digit5', text: '5', windowsVirtualKeyCode: 53 });
+    expect(down).toMatchObject({
+      type: 'keyDown',
+      code: 'Digit5',
+      text: '5',
+      windowsVirtualKeyCode: 53,
+    });
     expect(res).toEqual({ sent: 1, unsupported: [] });
   });
 

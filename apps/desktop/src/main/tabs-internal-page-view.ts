@@ -102,7 +102,11 @@ const contextMenuHandlers = new WeakMap<
   (event: Electron.Event, params: ContextMenuParams) => void
 >();
 
-function wireContextMenu(win: BrowserWindow, view: WebContentsView, getBounds: () => Rectangle): void {
+function wireContextMenu(
+  win: BrowserWindow,
+  view: WebContentsView,
+  getBounds: () => Rectangle,
+): void {
   const wc = view.webContents;
   // ONLY the context-menu is wired. This is trusted, bundled content, not a browsed page — none of the
   // browsed-tab wiring in `tabs-view-wiring.ts` applies (popup blocker, history recording, favicon
@@ -169,7 +173,11 @@ export function navigateInternalPageView(view: WebContentsView, url: string): vo
 }
 
 /** Attach (if detached) and size the view to the current content bounds. */
-export function showInternalPageView(win: BrowserWindow, view: WebContentsView, bounds: Rectangle): void {
+export function showInternalPageView(
+  win: BrowserWindow,
+  view: WebContentsView,
+  bounds: Rectangle,
+): void {
   if (!win.contentView.children.includes(view)) win.contentView.addChildView(view);
   view.setBounds(bounds);
 }

@@ -26,9 +26,13 @@ function renderSection(over: Partial<Preferences> = {}) {
 }
 
 const autonomyRadios = () =>
-  screen.getAllByRole<HTMLInputElement>('radio').filter((r) => r.getAttribute('name') === 'agent-autonomy');
+  screen
+    .getAllByRole<HTMLInputElement>('radio')
+    .filter((r) => r.getAttribute('name') === 'agent-autonomy');
 const effortRadios = () =>
-  screen.getAllByRole<HTMLInputElement>('radio').filter((r) => r.getAttribute('name') === 'agent-effort');
+  screen
+    .getAllByRole<HTMLInputElement>('radio')
+    .filter((r) => r.getAttribute('name') === 'agent-effort');
 
 afterEach(cleanup);
 
@@ -56,7 +60,9 @@ describe('AgentControlsSection', () => {
     const radios = effortRadios();
     expect(radios).toHaveLength(AGENT_EFFORT_LEVELS.length);
     fireEvent.click(radios[radios.length - 1]!);
-    expect(setPref).toHaveBeenCalledWith({ agentEffort: AGENT_EFFORT_LEVELS[AGENT_EFFORT_LEVELS.length - 1] });
+    expect(setPref).toHaveBeenCalledWith({
+      agentEffort: AGENT_EFFORT_LEVELS[AGENT_EFFORT_LEVELS.length - 1],
+    });
   });
 
   it('writes the strict-guard toggle', () => {

@@ -212,7 +212,8 @@ export class WindowTabsNav extends WindowTabsMoves {
         this.win.contentView.addChildView(view);
         view.setBounds(this.effectiveBounds());
       }
-      if (internalView !== undefined) showInternalPageView(this.win, internalView, this.effectiveBounds());
+      if (internalView !== undefined)
+        showInternalPageView(this.win, internalView, this.effectiveBounds());
     } else {
       if (view !== undefined) this.win.contentView.removeChildView(view);
       if (internalView !== undefined) hideInternalPageView(this.win, internalView);

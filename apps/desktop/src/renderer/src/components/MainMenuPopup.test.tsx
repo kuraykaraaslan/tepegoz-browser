@@ -82,7 +82,9 @@ describe('MainMenuPopup', () => {
   it('resolves the stored tr locale', async () => {
     bridge.getPreferences.mockResolvedValueOnce({ ...DEFAULT_PREFERENCES, locale: 'tr' });
     render(<MainMenuPopup />);
-    expect(await screen.findByRole('menuitem', { name: new RegExp(browserDict.tr.newTab) })).toBeTruthy();
+    expect(
+      await screen.findByRole('menuitem', { name: new RegExp(browserDict.tr.newTab) }),
+    ).toBeTruthy();
   });
 
   it('closes on Escape', async () => {
@@ -167,6 +169,10 @@ describe('MainMenuPopup', () => {
     bridge.listRecentlyClosedTabs.mockResolvedValueOnce([]);
     render(<MainMenuPopup />);
     fireEvent.mouseEnter(await screen.findByRole('menuitem', { name: /History/ }));
-    expect(bridge.openSubmenu).toHaveBeenCalledWith('history', expect.anything(), expect.anything());
+    expect(bridge.openSubmenu).toHaveBeenCalledWith(
+      'history',
+      expect.anything(),
+      expect.anything(),
+    );
   });
 });

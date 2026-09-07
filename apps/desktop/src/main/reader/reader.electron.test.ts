@@ -18,10 +18,7 @@ vi.mock('../tabs', () => ({ default: { focused: mockFocused } }));
 const { readActiveTabArticle } = await import('./reader.electron');
 
 /** A focused tab whose active web contents runs the (stubbed) extractor and returns `payload`. */
-function tabReturning(
-  run: () => Promise<unknown>,
-  opts: { destroyed?: boolean } = {},
-): unknown {
+function tabReturning(run: () => Promise<unknown>, opts: { destroyed?: boolean } = {}): unknown {
   return {
     activeWebContents: () => ({
       isDestroyed: () => opts.destroyed ?? false,
@@ -62,10 +59,14 @@ describe('readActiveTabArticle', () => {
   });
 
   it('passes an image block through only for http(s) / data:image sources', async () => {
-    withPayload(article({ blocks: [{ kind: 'image', src: 'https://cdn.example/a.png', alt: 'a' }] }));
+    withPayload(
+      article({ blocks: [{ kind: 'image', src: 'https://cdn.example/a.png', alt: 'a' }] }),
+    );
     expect(await readActiveTabArticle()).not.toBeNull();
 
-    withPayload(article({ blocks: [{ kind: 'image', src: 'data:image/png;base64,iVBOR', alt: '' }] }));
+    withPayload(
+      article({ blocks: [{ kind: 'image', src: 'data:image/png;base64,iVBOR', alt: '' }] }),
+    );
     expect(await readActiveTabArticle()).not.toBeNull();
   });
 
@@ -103,7 +104,9 @@ describe('readActiveTabArticle', () => {
     expect(await readActiveTabArticle()).toBeNull();
 
     // an item is not a string
-    withPayload(article({ blocks: [{ kind: 'list', ordered: false, items: ['ok', 42] } as never] }));
+    withPayload(
+      article({ blocks: [{ kind: 'list', ordered: false, items: ['ok', 42] } as never] }),
+    );
     expect(await readActiveTabArticle()).toBeNull();
   });
 
@@ -122,9 +125,7 @@ describe('readActiveTabArticle', () => {
     withPayload('not an object');
     expect(await readActiveTabArticle()).toBeNull();
 
-    mockFocused.mockReturnValue(
-      tabReturning(() => Promise.reject(new Error('page blew up'))),
-    );
+    mockFocused.mockReturnValue(tabReturning(() => Promise.reject(new Error('page blew up'))));
     expect(await readActiveTabArticle()).toBeNull();
   });
 

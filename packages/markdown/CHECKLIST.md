@@ -4,6 +4,7 @@
 > Ajan/asistan çıktısı için Markdown renderer'ı, bağımlı olduğu remark plugin'i ve URL sanitizer'ı: yalnızca React elemanına render eder (asla `dangerouslySetInnerHTML`), XSS- ve CSP-güvenlidir.
 
 ## Kesinlikle olmalı
+
 - [ ] `Markdown` bileşeni yalnızca React elemanlarına render etmeli
 - [ ] `dangerouslySetInnerHTML` asla kullanmamalı
 - [ ] XSS- ve CSP-güvenli olmalı (ham HTML yok, `eval` yok)
@@ -22,6 +23,7 @@
 - [ ] `FILE_LINK_SCHEME` `tepegoz-file:` şemasını dışa vermeli
 
 ## Olsa iyi olur
+
 - [ ] Link renderer `FILE_LINK_SCHEME`'i tanıyıp DOM'a navigable `href` olarak koymamalı (`#` render edip yolu click closure'ında taşımalı)
 - [ ] `fileUrlTransform(url)` `ReactMarkdown`'a `urlTransform` olarak verilmeli ve yalnızca `tepegoz-file:` şemasını korumalı
 - [ ] `fileUrlTransform` diğer her şeyi react-markdown'ın varsayılan transform'una devretmeli
@@ -31,6 +33,7 @@
 - [ ] Paket string-free bir leaf olmalı (tek lokalize parça `copyLabel` prop'u)
 
 ## Çok niş
+
 - [ ] Windows tarzı yollar (`C:\Users\…\notes.txt`) prose içinde tanınmalı
 - [ ] React `^18 || ^19` peer dependency olmalı; başka framework bağı olmamalı
 - [ ] `remarkFileLinks` bir mdast (remark) plugin factory olarak yapılandırılabilmeli

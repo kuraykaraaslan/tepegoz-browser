@@ -4,6 +4,7 @@
 > Sunumsal yaprak: genel ayarlar kabuğu — opsiyonel grup başlıklı bir bölüm sidebar'ı, her bölümün `searchText`'i üzerinde filtreleyen bir arama kutusu, opsiyonel `banner` slotlu kaydırılabilir içerik alanı; kendi aktif-bölüm/arama durumunu ve i18n sözlüğünü sahiplenir, bölüm içeriği host tarafından sağlanır.
 
 ## Kesinlikle olmalı
+
 - [ ] `SettingsLayout` — sidebar + arama + içerik kabuğunu sunmalı
 - [ ] Sidebar bölümleri listelemeli, opsiyonel Chrome/Edge tarzı grup başlıklarıyla
 - [ ] Arama kutusu her bölümün `searchText`'i üzerinde filtrelemeli
@@ -20,6 +21,7 @@
 - [ ] `settingsDict` / `SettingsStrings` — paketin kendi i18n sözlüğünü dışa aktarmalı
 
 ## Olsa iyi olur
+
 - [ ] `group` verilen bölümleri sidebar'da başlık altında gruplamalı
 - [ ] Arama sonucu boşsa "sonuç yok" kopyasını göstermeli
 - [ ] Aktif bölüm seçildiğinde içerik alanını en üste kaydırmalı
@@ -29,6 +31,7 @@
 - [ ] `banner` slotu verilmediğinde içerik alanı ekstra boşluk bırakmamalı
 
 ## Çok niş
+
 - [ ] Hiç bölüm verilmediğinde makul bir boş durum göstermeli
 - [ ] Aktif bölüm arama filtresiyle gizlendiğinde seçim tutarlı biçimde ilk görünür bölüme düşmeli
 - [ ] Locale değişiminde sidebar etiketleri ve arama placeholder'ı anında güncellemeli

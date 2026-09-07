@@ -4,6 +4,7 @@
 > Tepegöz iç eklentileri için geliştirici API'si: zod manifest şeması + agent-çağrılabilir capability sözleşmesi + senkron action interceptor'lar (ADR-0021/0024).
 
 ## Kesinlikle olmalı
+
 - [ ] `ExtensionManifestSchema` ile web-extension manifestini yansıtan bildirimsel, sürümlü bir sözleşme tanımlamalı
 - [ ] Manifest `id`'sini reverse-DNS `EXTENSION_ID_RE` desenine göre doğrulamalı
 - [ ] `name`/`version`/`description` ve bir icon slug alanlarını zorunlu kılmalı
@@ -30,6 +31,7 @@
 - [ ] Yalnızca `@tepegoz/shared-types` ve zod'a bağımlı olmalı
 
 ## Olsa iyi olur
+
 - [ ] `ExtensionSurfaceKindSchema`/`ExtensionSurfaceKind` enum ve tipini ayrı dışa aktarmalı
 - [ ] `McpServerDecl` tipini dışa aktarmalı
 - [ ] `ExtensionCapabilityDef`/`ExtensionCapability`/`ExtensionCapabilitySet` üçlüsünü (yazar-yüzü, normalize, per-extension set) ayırmalı
@@ -40,6 +42,7 @@
 - [ ] Bildirilmemiş bir surface'e action bağlayan manifesti reddetmeli
 
 ## Çok niş
+
 - [ ] Rezerve/boş segmentli ama desene uyan reverse-DNS id'leri reddetmeli
 - [ ] `http_sse` MCP transport'u bildirildiğinde bugün "rezerve/desteklenmiyor" biçiminde net davranmalı
 - [ ] `ActionType` birleşimine yeni bir aksiyon eklendiğinde tek dosyada değişiklikle yayılmalı

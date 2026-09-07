@@ -11,9 +11,8 @@ vi.mock('electron', () => electron);
 const logger = vi.hoisted(() => ({ info: vi.fn(), warn: vi.fn(), error: vi.fn() }));
 vi.mock('@tepegoz/libs', () => ({ Logger: logger }));
 
-const { crashReportingEnabledFromPrefs, applyCrashReporterPreference } = await import(
-  './crash-reporter-boot'
-);
+const { crashReportingEnabledFromPrefs, applyCrashReporterPreference } =
+  await import('./crash-reporter-boot');
 
 let dir = '';
 beforeEach(() => {

@@ -21,11 +21,7 @@ import type { BrowsingDataClearRequest, BrowsingDataClearResult } from './contra
 import type { BookmarkEntry, BookmarkNodeType, BookmarkTreeNode } from './contract';
 import type { ReaderArticle } from '@tepegoz/reader';
 import type { StoredScreenshot } from '@tepegoz/screenshots';
-import type {
-  BookmarkImportInput,
-  BookmarkImportResult,
-  DetectedBrowserProfile,
-} from './contract';
+import type { BookmarkImportInput, BookmarkImportResult, DetectedBrowserProfile } from './contract';
 import type { BookmarkMenuAction } from './contract';
 import type { AppNotification, NotificationState } from './contract';
 import type { NotificationPermissionRequest, NotificationPermissionResponse } from './contract';

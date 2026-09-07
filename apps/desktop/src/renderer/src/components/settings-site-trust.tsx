@@ -75,8 +75,7 @@ export function SiteTrustSection() {
   // The exact host that would be stored, shown while typing — so `köşe.com.tr` visibly becomes the
   // punycode the store keeps, rather than the user finding a row they do not recognise afterwards.
   const preview = normalizeHostInput(domain);
-  const alreadyListed =
-    preview !== null && profiles.some((profile) => profile.domain === preview);
+  const alreadyListed = preview !== null && profiles.some((profile) => profile.domain === preview);
 
   return (
     <Card title={t.title} subtitle={t.subtitle}>

@@ -16,7 +16,14 @@ import { ReaderSurface } from './ReaderSurface';
 const t = readerDict.en;
 
 function article(over: Partial<ReaderArticle> = {}): ReaderArticle {
-  return { title: 'A long-form piece', byline: '', siteName: '', blocks: [], wordCount: 400, ...over };
+  return {
+    title: 'A long-form piece',
+    byline: '',
+    siteName: '',
+    blocks: [],
+    wordCount: 400,
+    ...over,
+  };
 }
 
 function renderSurface(reader: ReaderState, onClose = vi.fn()) {

@@ -3,7 +3,11 @@ import { settingsDict } from '@tepegoz/settings-ui';
 import { Button, Card, Input } from '@tepegoz/ui';
 import { useT } from '@tepegoz/i18n/react';
 import { DEFAULT_SEARCH_ENGINE_ID, SEARCH_ENGINES } from '@tepegoz/shared-types/search-engines';
-import { isNavigableWebUrl, isSafeSearchTemplate, normalizeWebUrlInput } from '@tepegoz/shared-types';
+import {
+  isNavigableWebUrl,
+  isSafeSearchTemplate,
+  normalizeWebUrlInput,
+} from '@tepegoz/shared-types';
 import type { Preferences } from '@tepegoz/desktop-ipc';
 import { useCommitOnPause } from '../lib/use-commit-on-pause';
 import { Select } from './settings-shared';

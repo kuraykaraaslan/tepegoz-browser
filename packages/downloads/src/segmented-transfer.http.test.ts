@@ -61,7 +61,10 @@ interface RunningServer {
 }
 
 /** Serve `file` with honest range semantics (or honest refusal). One per test; closed in afterEach. */
-async function startRangeServer(file: Buffer, options: RangeServerOptions = {}): Promise<RunningServer> {
+async function startRangeServer(
+  file: Buffer,
+  options: RangeServerOptions = {},
+): Promise<RunningServer> {
   let ranged = 0;
   const server: Server = createServer((req, res) => {
     const rangeHeader = req.headers.range;
@@ -83,9 +86,7 @@ async function startRangeServer(file: Buffer, options: RangeServerOptions = {}):
         'content-type': 'application/octet-stream',
         'content-length': String(slice.byteLength),
         'accept-ranges': (options.refuseRanges ?? false) ? 'none' : 'bytes',
-        ...(status === 206
-          ? { 'content-range': `bytes ${start}-${end}/${file.byteLength}` }
-          : {}),
+        ...(status === 206 ? { 'content-range': `bytes ${start}-${end}/${file.byteLength}` } : {}),
       });
       const throttle = options.throttleBytesPerSec;
       if (throttle === undefined) {
@@ -307,7 +308,7 @@ describe('runSegmentedTransfer over real HTTP', () => {
       expect(sha256(engineBytes)).toBe(sha256(file));
       expect(engineResult).toEqual({ ok: true, segmented: true });
 
-      const mbps = (ms: number): number => Number(((total / (ms / 1000)) / (1024 * 1024)).toFixed(2));
+      const mbps = (ms: number): number => Number((total / (ms / 1000) / (1024 * 1024)).toFixed(2));
       rows.push({
         size: `${(total / MB).toFixed(0)} MiB`,
         segments: planDownloadSegments(total).length,

@@ -126,11 +126,18 @@ describe('AppOverlays', () => {
   });
 
   it('shows the basic-auth prompt, submits credentials, and cancels on Escape', () => {
-    basicAuth.request = { requestId: 'r1', origin: 'https://site.example', realm: 'Realm', isProxy: false };
+    basicAuth.request = {
+      requestId: 'r1',
+      origin: 'https://site.example',
+      realm: 'Realm',
+      isProxy: false,
+    };
     renderOverlays();
     const dialog = screen.getByRole('dialog');
     fireEvent.change(screen.getAllByRole('textbox')[0]!, { target: { value: 'alice' } });
-    fireEvent.change(dialog.querySelector('input[type="password"]')!, { target: { value: 'hunter2' } });
+    fireEvent.change(dialog.querySelector('input[type="password"]')!, {
+      target: { value: 'hunter2' },
+    });
     fireEvent.submit(dialog.querySelector('form')!);
     expect(basicAuth.submit).toHaveBeenCalledWith('alice', 'hunter2');
 
@@ -171,8 +178,12 @@ describe('AppOverlays', () => {
 
   it('shows the "open all" bookmark confirmation and cancels without opening tabs', () => {
     const setOpenAllUrls = vi.fn();
-    renderOverlays({ bookmarks: bookmarksFixture({ openAllUrls: ['https://a.example'], setOpenAllUrls }) });
-    expect(screen.getByText(new RegExp(`${browserT.openAllConfirm.replace(/[()]/g, '\\$&')}`))).toBeTruthy();
+    renderOverlays({
+      bookmarks: bookmarksFixture({ openAllUrls: ['https://a.example'], setOpenAllUrls }),
+    });
+    expect(
+      screen.getByText(new RegExp(`${browserT.openAllConfirm.replace(/[()]/g, '\\$&')}`)),
+    ).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: browserT.cancel }));
     expect(setOpenAllUrls).toHaveBeenCalledWith(null);
     expect(bridge.createTabInBackground).not.toHaveBeenCalled();
@@ -180,7 +191,9 @@ describe('AppOverlays', () => {
 
   it('closes the "open all" confirmation on Escape without opening tabs', () => {
     const setOpenAllUrls = vi.fn();
-    renderOverlays({ bookmarks: bookmarksFixture({ openAllUrls: ['https://a.example'], setOpenAllUrls }) });
+    renderOverlays({
+      bookmarks: bookmarksFixture({ openAllUrls: ['https://a.example'], setOpenAllUrls }),
+    });
     fireEvent.keyDown(window, { key: 'Escape' });
     expect(setOpenAllUrls).toHaveBeenCalledWith(null);
     expect(bridge.createTabInBackground).not.toHaveBeenCalled();
@@ -189,7 +202,10 @@ describe('AppOverlays', () => {
   it('opens every url in the folder in the background when the "open all" confirmation is confirmed', () => {
     const setOpenAllUrls = vi.fn();
     renderOverlays({
-      bookmarks: bookmarksFixture({ openAllUrls: ['https://a.example', 'https://b.example'], setOpenAllUrls }),
+      bookmarks: bookmarksFixture({
+        openAllUrls: ['https://a.example', 'https://b.example'],
+        setOpenAllUrls,
+      }),
     });
     fireEvent.click(screen.getByRole('button', { name: browserT.bookmarkMenu.openAll }));
     expect(bridge.createTabInBackground).toHaveBeenCalledWith('https://a.example');

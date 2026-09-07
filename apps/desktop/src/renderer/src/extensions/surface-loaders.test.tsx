@@ -114,7 +114,10 @@ vi.mock('@tepegoz/ext-adblock/panel', () => ({
   AdblockPopup: mocks.AdblockPopup,
   AdblockPage: mocks.AdblockPage,
 }));
-vi.mock('@tepegoz/ext-typo/panel', () => ({ TypoPopup: mocks.TypoPopup, TypoPage: mocks.TypoPage }));
+vi.mock('@tepegoz/ext-typo/panel', () => ({
+  TypoPopup: mocks.TypoPopup,
+  TypoPage: mocks.TypoPage,
+}));
 vi.mock('@tepegoz/ext-translate/panel', () => ({
   TranslatePopup: mocks.TranslatePopup,
   TranslatePage: mocks.TranslatePage,
@@ -165,23 +168,22 @@ describe('SURFACE_LOADERS', () => {
     expect(actual.sort()).toEqual(expected.sort());
   });
 
-  it.each(cases)('$id/$kind resolves and forwards the bridge + onClose to $exportName', async ({
-    id,
-    kind,
-    exportName,
-  }) => {
-    const loader = SURFACE_LOADERS[id]![kind]!;
-    const Component = await loader();
-    const onClose = vi.fn();
-    render(<Component onClose={onClose} />);
+  it.each(cases)(
+    '$id/$kind resolves and forwards the bridge + onClose to $exportName',
+    async ({ id, kind, exportName }) => {
+      const loader = SURFACE_LOADERS[id]![kind]!;
+      const Component = await loader();
+      const onClose = vi.fn();
+      render(<Component onClose={onClose} />);
 
-    const mock = mocks[exportName];
-    expect(mock).toHaveBeenCalledTimes(1);
-    expect(mock.mock.calls[0]![0].api).toBe(window.tepegoz);
+      const mock = mocks[exportName];
+      expect(mock).toHaveBeenCalledTimes(1);
+      expect(mock.mock.calls[0]![0].api).toBe(window.tepegoz);
 
-    const node = screen.getByTestId(exportName);
-    expect(node.textContent).toBe('true');
-    node.click();
-    expect(onClose).toHaveBeenCalledTimes(1);
-  });
+      const node = screen.getByTestId(exportName);
+      expect(node.textContent).toBe('true');
+      node.click();
+      expect(onClose).toHaveBeenCalledTimes(1);
+    },
+  );
 });

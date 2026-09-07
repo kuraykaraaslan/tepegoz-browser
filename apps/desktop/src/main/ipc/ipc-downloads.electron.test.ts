@@ -43,7 +43,9 @@ vi.mock('@tepegoz/preferences', () => ({
 
 const TRUSTED = 'app://tepegoz/chrome.html';
 vi.mock('../lib/trusted-origin', () => ({ isTrustedAppUrl: (u: string) => u === TRUSTED }));
-vi.mock('../lib/i18n-main', () => ({ mainStrings: () => ({ errors: { forbidden: 'forbidden' } }) }));
+vi.mock('../lib/i18n-main', () => ({
+  mainStrings: () => ({ errors: { forbidden: 'forbidden' } }),
+}));
 
 const svc = vi.hoisted(() => ({
   list: vi.fn(() => ['rec']),
@@ -105,15 +107,15 @@ describe('registerDownloadsIpc', () => {
 
   it('returns an empty path when the directory picker is cancelled', async () => {
     dialogMock.result = { canceled: true, filePaths: ['C:/picked'] };
-    await expect(h.handlers.get(IpcChannels.downloadsPickDirectory)?.(ev, undefined)).resolves.toEqual(
-      { path: '', cancelled: true },
-    );
+    await expect(
+      h.handlers.get(IpcChannels.downloadsPickDirectory)?.(ev, undefined),
+    ).resolves.toEqual({ path: '', cancelled: true });
   });
 
   it('returns the chosen directory when the picker is confirmed', async () => {
-    await expect(h.handlers.get(IpcChannels.downloadsPickDirectory)?.(ev, undefined)).resolves.toEqual(
-      { path: 'C:/picked', cancelled: false },
-    );
+    await expect(
+      h.handlers.get(IpcChannels.downloadsPickDirectory)?.(ev, undefined),
+    ).resolves.toEqual({ path: 'C:/picked', cancelled: false });
   });
 
   it('opens a window-less picker when the sender has no owning BrowserWindow', async () => {

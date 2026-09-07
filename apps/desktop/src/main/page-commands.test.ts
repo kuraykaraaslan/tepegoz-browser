@@ -5,9 +5,8 @@ vi.mock('electron', () => ({}));
 const downloadURL = vi.fn();
 vi.mock('./downloads/download-service.electron', () => ({ default: { downloadURL } }));
 
-const { toggleDevToolsGated, printPage, savePage, viewSourcePage, reloadPage } = await import(
-  './page-commands'
-);
+const { toggleDevToolsGated, printPage, savePage, viewSourcePage, reloadPage } =
+  await import('./page-commands');
 
 /**
  * The sensitive-site DevTools gate, at the place a keypress reaches it.
@@ -41,7 +40,9 @@ function fakePage(
     },
     loadURL: (u: string) => {
       calls.push(`load:${u}`);
-      return opts.loadRejects === true ? Promise.reject(new Error('nav blew up')) : Promise.resolve();
+      return opts.loadRejects === true
+        ? Promise.reject(new Error('nav blew up'))
+        : Promise.resolve();
     },
   };
   return wc as unknown as WebContents & { calls: string[] };
@@ -97,12 +98,21 @@ describe('the other page commands', () => {
   });
 
   it('print swallows a user-cancelled dialog and a real failure alike (neither throws)', () => {
-    expect(() => printPage(fakePage('https://a/', { printOutcome: [false, 'cancelled'] }))).not.toThrow();
-    expect(() => printPage(fakePage('https://a/', { printOutcome: [false, 'printerError'] }))).not.toThrow();
+    expect(() =>
+      printPage(fakePage('https://a/', { printOutcome: [false, 'cancelled'] })),
+    ).not.toThrow();
+    expect(() =>
+      printPage(fakePage('https://a/', { printOutcome: [false, 'printerError'] })),
+    ).not.toThrow();
   });
 
   it('print / save / view-source / reload are no-ops on a null or destroyed page', () => {
-    for (const fn of [printPage, savePage, viewSourcePage, (w: WebContents | null) => reloadPage(w)]) {
+    for (const fn of [
+      printPage,
+      savePage,
+      viewSourcePage,
+      (w: WebContents | null) => reloadPage(w),
+    ]) {
       expect(() => fn(null)).not.toThrow();
     }
     expect(downloadURL).not.toHaveBeenCalled();
@@ -111,7 +121,9 @@ describe('the other page commands', () => {
   it('save routes the current URL through DownloadService as a user-actor download', () => {
     const wc = fakePage('https://example.com/report.html');
     savePage(wc);
-    expect(downloadURL).toHaveBeenCalledWith(wc, 'https://example.com/report.html', { actor: 'user' });
+    expect(downloadURL).toHaveBeenCalledWith(wc, 'https://example.com/report.html', {
+      actor: 'user',
+    });
   });
 
   it('view-source refuses an internal page, which has no source to show', () => {

@@ -4,6 +4,7 @@
 > In-process, agent-kontrollü eklentiler: etkin eklentilerin capability araçlarını CapabilityRegistry'ye senkronlayan supervisor'lar (ADR-0021/0024).
 
 ## Kesinlikle olmalı
+
 - [ ] `ExtensionCapabilitySupervisor` etkin bir eklentinin `defineCapabilities` araçlarını tek `CapabilityRegistry`'ye kaydetmeli
 - [ ] Eklenti devre dışı bırakıldığında bu araçları registry'den kaldırmalı
 - [ ] `reconcile()` idempotent olmalı — başlangıçta ve her prefs/enable değişiminde çağrılabilmeli
@@ -22,6 +23,7 @@
 - [ ] `ExtensionManagementHost` app tarafından `PreferenceStore` + `BUILTIN_MANIFESTS` üzerinden implemente edilebilecek şekilde enjekte edilmeli
 
 ## Olsa iyi olur
+
 - [ ] `reconcile()` yalnızca değişen eklentilerin kayıtlarına dokunmalı (gereksiz register/unregister yapmamalı)
 - [ ] Bir eklentinin devre dışı → etkin geçişinde araçlarını yeniden kaydedebilmeli
 - [ ] `McpSupervisor` ile simetrik bir API yüzeyi sunmalı (in-process analog)
@@ -32,6 +34,7 @@
 - [ ] Meta araçlar üzerinden yapılan `setEnabled` çağrısı ardından `reconcile()` etkisini görmeli
 
 ## Çok niş
+
 - [ ] Kayıt sırasında host nesnesi `H` enjeksiyonu başarısız olursa eklentiyi atlayıp diğerlerini kaydetmeli
 - [ ] Registry'de zaten var olan bir araç id'si için `has` kontrolüyle çakışmayı önlemeli
 - [ ] `ActionType` birleşimi genişlediğinde yeni aksiyon tipini kod değişikliği olmadan değerlendirebilmeli

@@ -128,7 +128,12 @@ describe('McpSupervisor', () => {
     await sup.reconcile([config('a'), config('b')]);
     await vi.advanceTimersByTimeAsync(0);
 
-    expect(sup.status().map((s) => s.id).sort()).toEqual(['a', 'b']);
+    expect(
+      sup
+        .status()
+        .map((s) => s.id)
+        .sort(),
+    ).toEqual(['a', 'b']);
     expect(sup.status().every((s) => s.state === 'ready')).toBe(true);
   });
 

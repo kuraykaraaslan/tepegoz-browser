@@ -20,9 +20,8 @@ vi.mock('./clear-browsing-data.electron', () => ({
   },
 }));
 
-const { settleClearOnExit, clearOnExitNow, pendingCategories } = await import(
-  './clear-on-exit.electron'
-);
+const { settleClearOnExit, clearOnExitNow, pendingCategories } =
+  await import('./clear-on-exit.electron');
 
 const PENDING_KEY = 'clear_on_exit_pending';
 

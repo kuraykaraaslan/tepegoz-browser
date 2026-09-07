@@ -4,6 +4,7 @@
 > Salt sunum leaf'i: frameless pencere için native tarzı caption düğmeleri (minimize / maximize·restore / close), chrome başlık satırının sonunda render edilir. Kendi state'i yoktur; maximized bayrağı ve tüm eylemler enjekte edilir; React ve FontAwesome dışında bağımlılığı yoktur.
 
 ## Kesinlikle olmalı
+
 - [ ] Üç caption düğmesini (minimize / maximize·restore / close) render edebilmeli
 - [ ] `WindowControls`'u frameless pencere için chrome başlık satırının sonunda render etmeli
 - [ ] `isMaximized` değerine göre maximize/restore ikonunu değiştirmeli
@@ -16,6 +17,7 @@
 - [ ] React ve FontAwesome dışında bağımlılık taşımamalı
 
 ## Olsa iyi olur
+
 - [ ] Caption düğmelerini native pencere kontrollerine benzer görünümde sunmalı
 - [ ] Her düğme için erişilebilir bir aria-label sağlamalı (etiketler `WindowControlsLabels`'tan)
 - [ ] Klavye ile odaklanılabilir ve tetiklenebilir düğmeler sunmalı
@@ -24,6 +26,7 @@
 - [ ] Düğme boyutlarını başlık satırı yüksekliğine uyumlu tutmalı
 
 ## Çok niş
+
 - [ ] Platforma göre düğme sırası/hizası farkını (ör. sol/sağ) prop üzerinden karşılayabilmeli
 - [ ] RTL yerleşimde düğme grubunun başlık satırındaki konumunu doğru yerleştirmeli
 - [ ] `isMaximized` prop'u güncellenmeden gelen hızlı toggle'larda ikon/label tutarsızlığına düşmemeli

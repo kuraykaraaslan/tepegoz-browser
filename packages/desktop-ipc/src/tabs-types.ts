@@ -98,13 +98,7 @@ export interface TabsState {
    * (`classifyPageSecurity`); spelled inline here so this file keeps its "no external type deps"
    * property. `'unknown'` for no active tab.
    */
-  activeSecurityLevel:
-    | 'secure'
-    | 'not-secure'
-    | 'dangerous'
-    | 'internal'
-    | 'file'
-    | 'unknown';
+  activeSecurityLevel: 'secure' | 'not-secure' | 'dangerous' | 'internal' | 'file' | 'unknown';
 }
 
 /** Which way the omnibox zoom indicator (or a Ctrl +/-/0 shortcut) moves the active tab's zoom. */

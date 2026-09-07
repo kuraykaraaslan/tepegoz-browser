@@ -90,10 +90,7 @@ export class SafeBrowsingRefreshScheduler {
       this.arm(this.intervalMs);
     } catch {
       this.failures += 1;
-      const backoff = Math.min(
-        this.maxBackoffMs,
-        this.minBackoffMs * 2 ** (this.failures - 1),
-      );
+      const backoff = Math.min(this.maxBackoffMs, this.minBackoffMs * 2 ** (this.failures - 1));
       this.arm(backoff);
     } finally {
       this.running = false;

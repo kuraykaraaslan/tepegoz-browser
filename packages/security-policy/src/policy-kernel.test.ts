@@ -110,7 +110,9 @@ describe('PolicyKernel.evaluate — egress-blocked tab (Phase 5 kill-switch / DN
     ).toBe('tab_egress_blocked');
   });
   it('leaves an ordinary (non-blocked) tab completely unaffected', () => {
-    expect(evaluate('state_changing', { egressBlocked: false }).reason).toBe('state_change_confirm');
+    expect(evaluate('state_changing', { egressBlocked: false }).reason).toBe(
+      'state_change_confirm',
+    );
     expect(evaluate('state_changing').reason).toBe('state_change_confirm');
   });
 });

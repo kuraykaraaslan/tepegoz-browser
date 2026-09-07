@@ -95,11 +95,11 @@ Legend: **C** Chrome · **B** Brave · **S** Safari · **F** Firefox · _all_ = 
 
 ## 6. Clearing browsing data
 
-| Gap                                                                                                                                       | Ships in | Today                                                             | Home |
-| ----------------------------------------------------------------------------------------------------------------------------------------- | -------- | ----------------------------------------------------------------- | ---- |
-| ~~**Unified "Clear browsing data" dialog with a time range** (last hour / 24 h / 7 days / 4 weeks / all time)~~ **Built 2026-09-02**                                    | all      | Settings → Privacy, one dialog                                                     | 2c ✅ |
-| ~~One place with the full category list~~ **Built 2026-09-02** — history, downloads, cookies/site data, cache, agent conversations. Passwords deliberately excluded (see the phase note); form data / site settings / hosted-app data are not stored separately yet | C/B/F    | one place                                                                          | 2c ✅ |
-| ~~**On-exit category-based clearing**~~ **Built 2026-09-02** — and it survives a kill, which the Firefox/Brave versions do not: a marker armed at startup is retired only by a clear that finished | B/F      | Settings → Privacy | 2c ✅ |
+| Gap                                                                                                                                                                                                                                                                 | Ships in | Today                          | Home  |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- | ------------------------------ | ----- |
+| ~~**Unified "Clear browsing data" dialog with a time range** (last hour / 24 h / 7 days / 4 weeks / all time)~~ **Built 2026-09-02**                                                                                                                                | all      | Settings → Privacy, one dialog | 2c ✅ |
+| ~~One place with the full category list~~ **Built 2026-09-02** — history, downloads, cookies/site data, cache, agent conversations. Passwords deliberately excluded (see the phase note); form data / site settings / hosted-app data are not stored separately yet | C/B/F    | one place                      | 2c ✅ |
+| ~~**On-exit category-based clearing**~~ **Built 2026-09-02** — and it survives a kill, which the Firefox/Brave versions do not: a marker armed at startup is retired only by a clear that finished                                                                  | B/F      | Settings → Privacy             | 2c ✅ |
 
 ## 7. Security
 
@@ -206,10 +206,10 @@ unbuilt tail). The File System Access row is already tracked open in phase-2c.
 
 ## 15. Downloads & file handling
 
-| Gap                                                                                        | Ships in                                  | Today    | Home |
-| ------------------------------------------------------------------------------------------ | ----------------------------------------- | -------- | ---- |
-| **File-type / MIME handler actions**: "Open in app / Always ask / Save / Open in browser"  | F ("Applications"); C ("auto-open types") | **none** — blocked on an owner call, see below | 2c   |
-| "**Automatically open safe files after downloading**"                                      | S                                         | **none** — blocked on the same call            | 2c   |
+| Gap                                                                                       | Ships in                                  | Today                                          | Home |
+| ----------------------------------------------------------------------------------------- | ----------------------------------------- | ---------------------------------------------- | ---- |
+| **File-type / MIME handler actions**: "Open in app / Always ask / Save / Open in browser" | F ("Applications"); C ("auto-open types") | **none** — blocked on an owner call, see below | 2c   |
+| "**Automatically open safe files after downloading**"                                     | S                                         | **none** — blocked on the same call            | 2c   |
 
 > **Why those two are blocked (2026-09-02).** [ADR-0040](../adr/0040-download-trust-model.md) §3 forces
 > a human confirm before opening anything that is not both `normal` risk and `safe` verdict, and with
@@ -217,8 +217,8 @@ unbuilt tail). The File System Access row is already tracked open in phase-2c.
 > not fire even once — it would be a capability shipped inert, waiting on the same missing Safe Browsing
 > key. Making it fire means letting a standing per-type consent substitute for the per-download HITL,
 > which weakens an accepted security ADR and is an owner decision rather than a coding task.
-| ~~Download-history auto-removal policy~~ **Built 2026-09-02** (`downloadHistoryRetention`: manually / after one day / on successful download; rows only, never files) | S                                         | Settings → Downloads | 2c ✅ |
-| ~~"**Show downloads when they're done**"~~ **Built 2026-09-02** (`showDownloadsWhenDone`, on by default; opens once on a transition into an ended state)              | C                                         | Settings → Downloads | 2c ✅ |
+> | ~~Download-history auto-removal policy~~ **Built 2026-09-02** (`downloadHistoryRetention`: manually / after one day / on successful download; rows only, never files) | S | Settings → Downloads | 2c ✅ |
+> | ~~"**Show downloads when they're done**"~~ **Built 2026-09-02** (`showDownloadsWhenDone`, on by default; opens once on a transition into an ended state) | C | Settings → Downloads | 2c ✅ |
 
 ## 16. Performance
 

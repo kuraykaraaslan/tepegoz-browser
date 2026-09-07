@@ -93,7 +93,17 @@ describe('sweep', () => {
     const discardTab = vi.fn();
     const wt = {
       getState: () => ({
-        tabs: [{ id: 'a', title: '', url: '', isLoading: false, faviconUrl: null, pinned: false, groupId: null }],
+        tabs: [
+          {
+            id: 'a',
+            title: '',
+            url: '',
+            isLoading: false,
+            faviconUrl: null,
+            pinned: false,
+            groupId: null,
+          },
+        ],
         groups: [],
         activeId: null,
         canGoBack: false,

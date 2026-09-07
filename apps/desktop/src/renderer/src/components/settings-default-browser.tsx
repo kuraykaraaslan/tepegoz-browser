@@ -72,7 +72,9 @@ export function DefaultBrowserSection() {
           </div>
         )}
         {isDefault !== null && (
-          <p className="text-sm text-text-secondary">{isDefault ? s.isDefaultDesc : s.notDefaultDesc}</p>
+          <p className="text-sm text-text-secondary">
+            {isDefault ? s.isDefaultDesc : s.notDefaultDesc}
+          </p>
         )}
         <div className="flex flex-wrap gap-2">
           {isDefault === false && (

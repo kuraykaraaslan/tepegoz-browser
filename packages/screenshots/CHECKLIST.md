@@ -4,6 +4,7 @@
 > Tarayıcı görsel geri-dönüşü için Electron'suz screenshot alan paketi: herkese açık screenshot tiplerini, yalnızca ana süreçte kullanılan zod şemalarını, model-güvenli metadata sarmalamasını ve `browser_get_screenshot` Capability Plane tool kaydını sahiplenir; somut `webContents.capturePage` adapter'ı masaüstü uygulamasına aittir.
 
 ## Kesinlikle olmalı
+
 - [ ] Herkese açık screenshot tiplerini (public types) sahiplenip dışa aktarmalı
 - [ ] Yalnızca ana süreçte kullanılacak zod şemalarını (main-only) barındırmalı
 - [ ] Model-güvenli (model-safe) metadata sarmalaması sağlamalı — modele ham görüntü yerine metadata dönmeli
@@ -15,6 +16,7 @@
 - [ ] Tarayıcı görsel geri-dönüşü (visual fallback) senaryosu için bir alan (domain) paketi olarak durmalı
 
 ## Olsa iyi olur
+
 - [ ] Screenshot metadata'sını (boyut, format, zaman, kaynak URL vb.) tipli biçimde tanımlamalı
 - [ ] `browser_get_screenshot` argümanlarını zod ile trust-boundary'de doğrulamalı
 - [ ] Capture adapter'ını enjeksiyonla alıp domain mantığından ayıran bir arayüz sunmalı
@@ -24,6 +26,7 @@
 - [ ] Metadata görüntünün nasıl saklandığına (ör. `cas://` blob referansı) dair alan taşıyabilmeli
 
 ## Çok niş
+
 - [ ] Capture adapter'ı yoksa/başarısızsa tool kaydı net bir hata döndürmeli
 - [ ] Çok büyük ekran görüntülerinde metadata sarmalaması boyut sınırı uygulamalı
 - [ ] Aynı tool'un iki kez kaydına karşı korunmalı (idempotent registration)

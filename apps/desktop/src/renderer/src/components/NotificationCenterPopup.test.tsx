@@ -117,7 +117,10 @@ describe('NotificationCenterPopup', () => {
   });
 
   it('marks a notification read, marks all read, and clears all through the header/row controls', async () => {
-    bridge.listNotifications.mockResolvedValue({ items: [notif({ id: 'n1', read: false })], unread: 1 });
+    bridge.listNotifications.mockResolvedValue({
+      items: [notif({ id: 'n1', read: false })],
+      unread: 1,
+    });
     render(<NotificationCenterPopup />);
 
     fireEvent.click(await screen.findByText('Update'));
@@ -153,7 +156,9 @@ describe('NotificationCenterPopup', () => {
 
   it('closes the popup after a navigation notification action runs', async () => {
     bridge.listNotifications.mockResolvedValue({
-      items: [notif({ id: 'n9', actions: [{ id: 'a', label: 'Open settings', type: 'open_settings' }] })],
+      items: [
+        notif({ id: 'n9', actions: [{ id: 'a', label: 'Open settings', type: 'open_settings' }] }),
+      ],
       unread: 1,
     });
     render(<NotificationCenterPopup />);

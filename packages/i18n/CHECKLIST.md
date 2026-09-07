@@ -4,6 +4,7 @@
 > i18n çekirdeği + runtime: İngilizce birincil/kaynak locale, Türkçe first-class; paylaşılan cross-cutting core (`common`/`window`/`errors`) ve her sahibin kullandığı makine.
 
 ## Kesinlikle olmalı
+
 - [ ] `resources` (`Record<Locale, Resources>`) nesnesini dışa vermeli
 - [ ] Paylaşılan çekirdek `coreDict`'i (`common` / `window` / `errors`) dışa vermeli
 - [ ] `Resources = typeof en` ile eksik/uyumsuz çekirdek anahtarını build hatası yapmalı
@@ -22,6 +23,7 @@
 - [ ] `@tepegoz/i18n/testing` girişinde `keyPaths(obj)` yardımcı fonksiyonunu sağlamalı
 
 ## Olsa iyi olur
+
 - [ ] `useT(dict)` çeviri eksikse `en` fallback'e düşmeli
 - [ ] Yalnızca cross-cutting `common`/`window`/`errors` string'lerini barındırmalı; feature string'leri paketlere bırakmalı
 - [ ] `I18nProvider` kök yakınında bir kez mount edilebilmeli (`App` ve `PopupApp`)
@@ -31,6 +33,7 @@
 - [ ] Hardcoded UI string'lerini yasaklayan lint kuralına zemin sağlamalı (Phase 1a)
 
 ## Çok niş
+
 - [ ] Bilinmeyen/boş dil etiketinde `resolveLocale` `DEFAULT_LOCALE`'e düşmeli
 - [ ] `defineDict` yalnızca `en` ve `tr` anahtarlarını kabul edecek şekilde tiplenebilmeli
 - [ ] `pick` ana süreçte React runtime'ı yüklemeden çalışmalı

@@ -62,19 +62,17 @@ test('viewport and full-page screenshots store a cas:// blob tied to the page', 
   });
 
   const capture = (mode: 'viewport' | 'fullPage'): Promise<StoredScreenshot | null> =>
-    app
-      .firstWindow()
-      .then((w) =>
-        w.evaluate(
-          (m) =>
-            (
-              window as unknown as {
-                tepegoz: { captureScreenshot: (mode: string) => Promise<unknown> };
-              }
-            ).tepegoz.captureScreenshot(m),
-          mode,
-        ),
-      ) as Promise<StoredScreenshot | null>;
+    app.firstWindow().then((w) =>
+      w.evaluate(
+        (m) =>
+          (
+            window as unknown as {
+              tepegoz: { captureScreenshot: (mode: string) => Promise<unknown> };
+            }
+          ).tepegoz.captureScreenshot(m),
+        mode,
+      ),
+    ) as Promise<StoredScreenshot | null>;
 
   try {
     const window = await app.firstWindow();

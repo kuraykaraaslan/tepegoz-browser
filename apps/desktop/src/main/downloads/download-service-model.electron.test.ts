@@ -119,14 +119,20 @@ describe('publicRecord', () => {
   it('drops the rate for a paused or terminal row even when one is passed', () => {
     const rate = { bytesPerSecond: 1_048_576, etaSeconds: 42 };
     for (const status of ['paused', 'quarantined', 'completed', 'failed'] as const) {
-      const out = publicRecord(activeRecord({ status }), rate) as unknown as Record<string, unknown>;
+      const out = publicRecord(activeRecord({ status }), rate) as unknown as Record<
+        string,
+        unknown
+      >;
       expect(out).not.toHaveProperty('bytesPerSecond');
       expect(out).not.toHaveProperty('etaSeconds');
     }
   });
 
   it('omits the rate for an in-progress row when none is available', () => {
-    const noRate = publicRecord(activeRecord({ status: 'in_progress' })) as unknown as Record<string, unknown>;
+    const noRate = publicRecord(activeRecord({ status: 'in_progress' })) as unknown as Record<
+      string,
+      unknown
+    >;
     expect(noRate).not.toHaveProperty('bytesPerSecond');
     const nullRate = publicRecord(
       activeRecord({ status: 'in_progress' }),

@@ -56,10 +56,11 @@ describe('beginLaunch', () => {
     m.beginLaunch();
     expect(m.isSafeMode()).toBe(false);
     expect(m.safeModeReason()).toBeNull();
-    expect(counter.writeRecord).toHaveBeenCalledWith(
-      RECOVERY_PATH,
-      { strikes: 1, pending: true, lastLaunch: 1 },
-    );
+    expect(counter.writeRecord).toHaveBeenCalledWith(RECOVERY_PATH, {
+      strikes: 1,
+      pending: true,
+      lastLaunch: 1,
+    });
   });
 
   it('enters safe mode with reason "flag" when --safe-mode is on the command line', async () => {

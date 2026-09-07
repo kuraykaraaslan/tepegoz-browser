@@ -4,6 +4,7 @@
 > Dış MCP sunucularına bağlanıp onların araçlarını tek CapabilityRegistry/ToolGateway PEP'ine sıradan ToolDescriptor olarak sunan, her SDK yanıtını zod ile yeniden doğrulayan Electron-free L5 MCP istemcisi.
 
 ## Kesinlikle olmalı
+
 - [ ] Yapılandırılmış her MCP sunucusuna başlangıçta bağlanabilmeli (McpSupervisor)
 - [ ] Bağlantı hatası/kopması durumunda üstel geri çekilme (exponential backoff) ile yeniden bağlanmayı denemeli
 - [ ] Bir sunucu koptuğunda o sunucunun tüm araçlarını CapabilityRegistry'den geri çekmeli (unregister)
@@ -27,6 +28,7 @@
 - [ ] McpToolSchema / McpToolListSchema / McpToolResultSchema / McpToolAnnotationsSchema zod şemalarını sağlamalı
 
 ## Olsa iyi olur
+
 - [ ] serverSlug ile sunucu adından kararlı, kısa bir slug üretmeli
 - [ ] tokenize ile araç adlarını anlamlı parçalara ayırabilmeli
 - [ ] verbFor ile bir araç adından uygun fiil bileşeni seçmeli
@@ -37,6 +39,7 @@
 - [ ] McpClientLike arayüzü ile gerçek SDK Client yerine sahte bir istemci enjekte edilebilmeli
 
 ## Çok niş
+
 - [ ] Düşman bir sunucu aşırı büyük şema göndererek planner prompt'unu şişirmeye çalıştığında MAX_SCHEMA_BYTES ile kesmeli
 - [ ] Aynı anda çok sayıda sunucu koptuğunda geri çekilme zamanlayıcılarının birbirini boğmasını önlemeli
 - [ ] Bir sunucu tools/list'te yinelenen araç adları döndürdüğünde NameMapper bunları benzersizleştirmeli

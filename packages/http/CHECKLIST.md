@@ -4,6 +4,7 @@
 > Tüm outbound HTTP için merkezi axios seam'i: timeout, redaction ve error mapping tek yerde (framework-agnostic, Electron importsuz).
 
 ## Kesinlikle olmalı
+
 - [ ] `createHttpClient(options)` yapılandırılmış bir `AxiosInstance` döndürmeli
 - [ ] Varsayılan JSON content type ayarlamalı
 - [ ] Per-request timeout uygulamalı (varsayılan 30s, çağrı başına override edilebilir)
@@ -21,6 +22,7 @@
 - [ ] Çağrı başına `signal` (iptal) ve `timeout` geçişini desteklemeli
 
 ## Olsa iyi olur
+
 - [ ] Aynı redaction/timeout/error-mapping davranışını her provider client'ına otomatik taşımalı
 - [ ] `normalizeHttpError`'ı interceptor dışında da ayrı ayrı çağrılabilir tutmalı
 - [ ] Timeout'u per-call override ederken instance varsayılanını bozmamalı
@@ -29,6 +31,7 @@
 - [ ] `HttpMessages` mesajları tutarlılık için tek yerde tutulmalı
 
 ## Çok niş
+
 - [ ] Yanıtsız ağ hatası (DNS/bağlantı reddi) durumunu da 503'e normalize etmeli
 - [ ] Interceptor zincirine ek interceptor eklenmesine (genişletme) izin vermeli
 - [ ] Çok büyük hata gövdelerinde redaction'ı makul sürede tamamlamalı

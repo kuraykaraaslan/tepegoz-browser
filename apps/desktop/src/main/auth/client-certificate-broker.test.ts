@@ -262,9 +262,12 @@ describe('the "send nothing" edges', () => {
       const decision = decideClientCertificate('https://intranet.example.com/', CERTS);
       await vi.advanceTimersByTimeAsync(120_000);
       await expect(decision).resolves.toBeNull();
-      expect(logger.info).toHaveBeenCalledWith('Client-certificate prompt timed out; sent nothing', {
-        origin: 'https://intranet.example.com',
-      });
+      expect(logger.info).toHaveBeenCalledWith(
+        'Client-certificate prompt timed out; sent nothing',
+        {
+          origin: 'https://intranet.example.com',
+        },
+      );
     } finally {
       vi.useRealTimers();
     }

@@ -25,20 +25,25 @@ import { patch, type DownloadState } from './download-service-store.electron';
  *    on Direct. Resuming a Tor-routed download over the clear path would be the leak the tab model
  *    exists to prevent, and it would happen silently.
  */
-export function resumeInterrupted(state: DownloadState, record: ActiveDownload): DownloadResumePlan {
+export function resumeInterrupted(
+  state: DownloadState,
+  record: ActiveDownload,
+): DownloadResumePlan {
   const plan = planDownloadResume(record, bytesOnDisk(record));
   if (plan.action !== 'resume') {
     Logger.info('Download cannot be resumed as-is', { id: record.id, reason: plan.reason });
     return plan;
   }
-  if (record.quarantinePath === undefined) return { action: 'restart', offset: 0, reason: 'no-partial-file' };
+  if (record.quarantinePath === undefined)
+    return { action: 'restart', offset: 0, reason: 'no-partial-file' };
 
   const partition = record.partition ?? DIRECT_PARTITION;
   const ses = BrowsingSessions.ensure(partition);
   ses.createInterruptedDownload({
     path: record.quarantinePath,
     // The full chain, redirects included: resuming the first URL can land somewhere else entirely.
-    urlChain: record.urlChain !== undefined && record.urlChain.length > 0 ? record.urlChain : [record.url],
+    urlChain:
+      record.urlChain !== undefined && record.urlChain.length > 0 ? record.urlChain : [record.url],
     offset: plan.offset,
     length: record.totalBytes ?? 0,
     ...(record.lastModified !== undefined ? { lastModified: record.lastModified } : {}),

@@ -626,7 +626,9 @@ describe('journal + history + token-ledger projections', () => {
     expect(() => hooksArg().onCheckpoint({ step: 9 })).not.toThrow();
     expect(Logger.warn).toHaveBeenCalledWith(
       'Journal checkpoint append failed',
-      expect.objectContaining({ err: expect.stringContaining('checkpoint write failed') as string }),
+      expect.objectContaining({
+        err: expect.stringContaining('checkpoint write failed') as string,
+      }),
     );
   });
 

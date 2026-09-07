@@ -153,7 +153,11 @@ describe('saveTask', () => {
   });
 
   it('takes sourceConversationId straight from the input, over any existing row value', () => {
-    store.get.mockReturnValue({ status: 'enabled', createdAt: 42, sourceConversationId: 'conv-old' });
+    store.get.mockReturnValue({
+      status: 'enabled',
+      createdAt: 42,
+      sourceConversationId: 'conv-old',
+    });
     m.saveTask(saveInput({ id: 't1', sourceConversationId: 'conv-new' }));
     expect(store.upsert.mock.calls[0]![1]).toMatchObject({ sourceConversationId: 'conv-new' });
   });

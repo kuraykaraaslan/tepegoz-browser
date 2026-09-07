@@ -61,9 +61,9 @@ describe('chromium flag allowlist', () => {
 describe('ChromiumFlagOverridesSchema', () => {
   it('accepts an empty object and a subset of known ids', () => {
     expect(ChromiumFlagOverridesSchema.parse({})).toEqual({});
-    expect(ChromiumFlagOverridesSchema.parse({ 'force-dark-mode': true, 'disable-gpu': false })).toEqual(
-      { 'force-dark-mode': true, 'disable-gpu': false },
-    );
+    expect(
+      ChromiumFlagOverridesSchema.parse({ 'force-dark-mode': true, 'disable-gpu': false }),
+    ).toEqual({ 'force-dark-mode': true, 'disable-gpu': false });
   });
 
   it('rejects an unknown key — a hand-edited preferences.json cannot smuggle a flag', () => {
@@ -78,7 +78,11 @@ describe('ChromiumFlagOverridesSchema', () => {
 describe('enabledChromiumFlagIds', () => {
   it('returns only the on flags, in allowlist order', () => {
     expect(
-      enabledChromiumFlagIds({ 'disable-gpu': true, 'force-dark-mode': true, 'show-fps-counter': false }),
+      enabledChromiumFlagIds({
+        'disable-gpu': true,
+        'force-dark-mode': true,
+        'show-fps-counter': false,
+      }),
     ).toEqual(['force-dark-mode', 'disable-gpu']);
   });
 });

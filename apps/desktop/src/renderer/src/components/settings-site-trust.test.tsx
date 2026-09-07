@@ -67,9 +67,7 @@ describe('SiteTrustSection', () => {
   it('falls back to the generic upstream message when the failure has none', async () => {
     listTrustProfiles.mockRejectedValue(new Error(''));
     renderSection();
-    await waitFor(() =>
-      expect(screen.getByText(coreDict.en.errors.upstreamDown)).toBeTruthy(),
-    );
+    await waitFor(() => expect(screen.getByText(coreDict.en.errors.upstreamDown)).toBeTruthy());
   });
 
   it('refuses an un-parseable domain without calling the bridge', () => {
@@ -114,7 +112,7 @@ describe('SiteTrustSection', () => {
     await waitFor(() => expect(setTrustProfile).toHaveBeenCalledWith('foo.com', 'restricted'));
   });
 
-  it('changes an existing profile\'s level in place', async () => {
+  it("changes an existing profile's level in place", async () => {
     listTrustProfiles.mockResolvedValue([profile({ domain: 'example.com', level: 'trusted' })]);
     renderSection();
     const row = (await screen.findByText('example.com')).closest('li') as HTMLElement;

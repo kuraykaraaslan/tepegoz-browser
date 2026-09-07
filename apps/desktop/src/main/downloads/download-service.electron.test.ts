@@ -61,20 +61,19 @@ describe('init', () => {
     const byId = Object.fromEntries(DownloadService.list().map((r) => [r.id, r.status]));
     expect(byId).toMatchObject({ a: 'paused', b: 'quarantined' });
 
-    expect(sessions.register).toHaveBeenCalledWith(
-      'downloads',
-      expect.any(Function),
-      { critical: true },
-    );
+    expect(sessions.register).toHaveBeenCalledWith('downloads', expect.any(Function), {
+      critical: true,
+    });
 
     // The registration callback subscribes `will-download` on the session and routes it to the
     // lifecycle's quarantine handler with the shared context.
-    const attach = sessions.register.mock.calls[0]![1] as (ses: { on: ReturnType<typeof vi.fn> }) => void;
+    const attach = sessions.register.mock.calls[0]![1] as (ses: {
+      on: ReturnType<typeof vi.fn>;
+    }) => void;
     const on = vi.fn();
     attach({ on });
     const willDownload = on.mock.calls.find((c) => c[0] === 'will-download')?.[1] as
-      | ((e: unknown, item: unknown, wc: unknown) => void)
-      | undefined;
+      ((e: unknown, item: unknown, wc: unknown) => void) | undefined;
     willDownload?.({}, { __item: true }, { __wc: true });
     expect(lifecycle.handleWillDownload).toHaveBeenCalledWith(
       expect.any(Object),
@@ -94,7 +93,9 @@ describe('downloadURL', () => {
   it('is a no-op for an empty url', () => {
     const wc = fakeWc();
     DownloadService.downloadURL(wc, '');
-    expect((wc as unknown as { downloadURL: ReturnType<typeof vi.fn> }).downloadURL).not.toHaveBeenCalled();
+    expect(
+      (wc as unknown as { downloadURL: ReturnType<typeof vi.fn> }).downloadURL,
+    ).not.toHaveBeenCalled();
   });
 
   it('asks Electron for the file once the url is non-empty', () => {
@@ -129,10 +130,12 @@ describe('create', () => {
   it('starts the download (actor defaults to agent) and echoes an idempotency key only when given', () => {
     const wc = fakeWc();
     expect(DownloadService.create({ url: 'https://x/f.bin' }, wc)).toEqual({});
+    expect(DownloadService.create({ url: 'https://x/g.bin', idempotencyKey: 'k1' }, wc)).toEqual({
+      idempotencyKey: 'k1',
+    });
     expect(
-      DownloadService.create({ url: 'https://x/g.bin', idempotencyKey: 'k1' }, wc),
-    ).toEqual({ idempotencyKey: 'k1' });
-    expect((wc as unknown as { downloadURL: ReturnType<typeof vi.fn> }).downloadURL).toHaveBeenCalledTimes(2);
+      (wc as unknown as { downloadURL: ReturnType<typeof vi.fn> }).downloadURL,
+    ).toHaveBeenCalledTimes(2);
   });
 });
 

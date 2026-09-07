@@ -69,7 +69,13 @@ describe('PasswordStore', () => {
 
     const all = PasswordStore.list(db);
     expect(all).toHaveLength(1);
-    expect(all[0]).toMatchObject({ id: 'c1', title: 'Renamed', notes: 'n', createdAt: 1_000, updatedAt: 2_000 });
+    expect(all[0]).toMatchObject({
+      id: 'c1',
+      title: 'Renamed',
+      notes: 'n',
+      createdAt: 1_000,
+      updatedAt: 2_000,
+    });
     expect(PasswordStore.findById(db, 'c1')).toMatchObject({ encryptedPassword: 'enc-2' });
   });
 

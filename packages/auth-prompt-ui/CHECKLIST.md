@@ -4,6 +4,7 @@
 > 401 (site) veya 407 (proxy) challenge'ı için HTTP basic/digest kimlik doğrulama dialog'u; sunum amaçlı yaprak, Electron'suz, hiçbir şey saklamaz, kimlik bilgileri yalnızca `onSubmit` ile dışarı çıkar.
 
 ## Kesinlikle olmalı
+
 - [ ] 401 (site) ve 407 (proxy) kimlik doğrulama challenge'ları için bir dialog sunmalı
 - [ ] Kullanıcı adı ve maskelenmiş parola alanları sunmalı
 - [ ] Submit ve cancel eylemleri sağlamalı
@@ -19,6 +20,7 @@
 - [ ] `AuthPrompt`, `AuthPromptProps` ve `authPromptDict`'i dışa aktarmalı
 
 ## Olsa iyi olur
+
 - [ ] Parola alanı varsayılan olarak maskeli kalmalı
 - [ ] Uzun hostname'in dialog'u taşırmamasını / origin'i görünürde tutmasını sağlamalı
 - [ ] Cancel edildiğinde challenge'ı kimlik bilgisi olmadan iptal ettiğini iletmeli
@@ -27,6 +29,7 @@
 - [ ] `pnpm typecheck` · `pnpm lint` · `pnpm test` betiklerini sağlamalı
 
 ## Çok niş
+
 - [ ] `realm` boş geldiğinde dialog yine anlamlı bir başlık göstermeli
 - [ ] Çok uzun `realm` metnini kırpmalı/sarmalı, layout'u bozmamalı
 - [ ] Digest ve basic şemaları için UI farkı gerektirmeden aynı dialog'u kullanabilmeli

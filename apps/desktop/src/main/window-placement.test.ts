@@ -1,16 +1,17 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const scr = vi.hoisted(() => ({
-  getAllDisplays: vi.fn((): { workArea: { x: number; y: number; width: number; height: number } }[] => [
-    { workArea: { x: 0, y: 0, width: 1920, height: 1050 } },
-  ]),
+  getAllDisplays: vi.fn(
+    (): { workArea: { x: number; y: number; width: number; height: number } }[] => [
+      { workArea: { x: 0, y: 0, width: 1920, height: 1050 } },
+    ],
+  ),
   getPrimaryDisplay: vi.fn(() => ({ workArea: { x: 0, y: 0, width: 1920, height: 1050 } })),
 }));
 vi.mock('electron', () => ({ screen: scr }));
 
-const { isRectOnDisplays, placeRectOnDisplays, isBoundsOnScreen, ensureOnScreen } = await import(
-  './window-placement'
-);
+const { isRectOnDisplays, placeRectOnDisplays, isBoundsOnScreen, ensureOnScreen } =
+  await import('./window-placement');
 
 /** The single 1920×1080 laptop screen, 30px of taskbar taken off the work area. */
 const primary = { workArea: { x: 0, y: 0, width: 1920, height: 1050 } };

@@ -179,14 +179,26 @@ const SENDS: Row[] = [
 
 type SubRow = [name: string, run: (cb: (p: unknown) => void) => () => void, channel: string];
 const SUBSCRIPTIONS: SubRow[] = [
-  ['onAgentConversationsState', (cb) => api.onAgentConversationsState(cb), IpcChannels.agentConversationsState],
+  [
+    'onAgentConversationsState',
+    (cb) => api.onAgentConversationsState(cb),
+    IpcChannels.agentConversationsState,
+  ],
   ['onAgentEvent', (cb) => api.onAgentEvent(cb), IpcChannels.agentEvent],
-  ['onAgentApprovalRequest', (cb) => api.onAgentApprovalRequest(cb), IpcChannels.agentApprovalRequest],
+  [
+    'onAgentApprovalRequest',
+    (cb) => api.onAgentApprovalRequest(cb),
+    IpcChannels.agentApprovalRequest,
+  ],
   ['onAgentPlanPreview', (cb) => api.onAgentPlanPreview(cb), IpcChannels.agentPlanPreview],
   ['onTokenUsage', (cb) => api.onTokenUsage(cb), IpcChannels.tokenUsage],
   ['onLocalModelsState', (cb) => api.onLocalModelsState(cb), IpcChannels.modelsState],
   ['onOpenExtension', (cb) => api.onOpenExtension(cb), IpcChannels.extensionOpen],
-  ['onExtensionContextMenuAction', (cb) => api.onExtensionContextMenuAction(cb), IpcChannels.extensionContextMenuAction],
+  [
+    'onExtensionContextMenuAction',
+    (cb) => api.onExtensionContextMenuAction(cb),
+    IpcChannels.extensionContextMenuAction,
+  ],
 ];
 
 describe('invoke methods', () => {

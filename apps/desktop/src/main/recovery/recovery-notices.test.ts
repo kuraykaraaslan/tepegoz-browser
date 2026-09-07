@@ -15,17 +15,19 @@ import type { BrowserWindow } from 'electron';
 const push = vi.hoisted(() => vi.fn());
 vi.mock('../notifications/notification-host', () => ({ default: { push } }));
 
-const state = vi.hoisted((): {
-  safeMode: boolean;
-  safeModeReason: 'crash' | 'flag';
-  profileKept: string | null;
-  restoredTabs: number;
-} => ({
-  safeMode: false,
-  safeModeReason: 'crash',
-  profileKept: null,
-  restoredTabs: 0,
-}));
+const state = vi.hoisted(
+  (): {
+    safeMode: boolean;
+    safeModeReason: 'crash' | 'flag';
+    profileKept: string | null;
+    restoredTabs: number;
+  } => ({
+    safeMode: false,
+    safeModeReason: 'crash',
+    profileKept: null,
+    restoredTabs: 0,
+  }),
+);
 vi.mock('./safe-mode', () => ({
   isSafeMode: () => state.safeMode,
   safeModeReason: () => state.safeModeReason,
@@ -49,9 +51,8 @@ vi.mock('../lib/i18n-main', () => ({
   }),
 }));
 
-const { notifySafeMode, notifyProfileReset, notifySessionRestored } = await import(
-  './recovery-notices'
-);
+const { notifySafeMode, notifyProfileReset, notifySessionRestored } =
+  await import('./recovery-notices');
 
 const firstNotice = (): Record<string, unknown> => {
   const c = push.mock.calls[0]?.[0] as Record<string, unknown> | undefined;

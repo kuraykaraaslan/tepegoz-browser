@@ -222,7 +222,9 @@ describe('buildOmniboxSuggestions', () => {
 describe('inlineFaviconOnly', () => {
   it('passes an inline data:image URL through unchanged', () => {
     expect(inlineFaviconOnly(PNG_DATA_URL)).toBe(PNG_DATA_URL);
-    expect(inlineFaviconOnly('data:image/svg+xml;base64,PHN2Zz48L3N2Zz4=')).toMatch(/^data:image\//);
+    expect(inlineFaviconOnly('data:image/svg+xml;base64,PHN2Zz48L3N2Zz4=')).toMatch(
+      /^data:image\//,
+    );
   });
 
   it('rejects a remote icon — the omnibox renders in the chrome and must not fetch one', () => {

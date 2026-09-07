@@ -339,7 +339,13 @@ describe('buildNavigationGroundingHook', () => {
       url: 'https://example.com/',
       elements: [
         { ref: 1, role: 'link', name: 'Blog', href: 'https://example.com/blog.html', tag: 'a' },
-        { ref: 2, role: 'link', name: 'Pricing', href: 'https://example.com/pricing.html', tag: 'a' },
+        {
+          ref: 2,
+          role: 'link',
+          name: 'Pricing',
+          href: 'https://example.com/pricing.html',
+          tag: 'a',
+        },
       ],
     },
     ...over,

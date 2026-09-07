@@ -195,7 +195,10 @@ describe('release + discardPrivate', () => {
     await flush();
     expect(logger.error).toHaveBeenCalledWith(
       'Could not blackhole a new tunnel partition',
-      expect.objectContaining({ partition: part, err: expect.stringContaining('proxy down') as string }),
+      expect.objectContaining({
+        partition: part,
+        err: expect.stringContaining('proxy down') as string,
+      }),
     );
   });
 

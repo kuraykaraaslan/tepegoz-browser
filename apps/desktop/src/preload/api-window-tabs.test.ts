@@ -94,18 +94,8 @@ const SENDS: Row[] = [
     'https://bg.test/',
   ],
   ['showTabContextMenu', () => api.showTabContextMenu('t1'), IpcChannels.tabsContextMenu, 't1'],
-  [
-    'showNavHistoryMenu',
-    () => api.showNavHistoryMenu('back'),
-    IpcChannels.tabsHistoryMenu,
-    'back',
-  ],
-  [
-    'removeTabFromGroup',
-    () => api.removeTabFromGroup('t1'),
-    IpcChannels.tabsGroupRemove,
-    't1',
-  ],
+  ['showNavHistoryMenu', () => api.showNavHistoryMenu('back'), IpcChannels.tabsHistoryMenu, 'back'],
+  ['removeTabFromGroup', () => api.removeTabFromGroup('t1'), IpcChannels.tabsGroupRemove, 't1'],
   [
     'showTabGroupContextMenu',
     () => api.showTabGroupContextMenu('g1'),
@@ -130,12 +120,7 @@ const SENDS: Row[] = [
     IpcChannels.tabsSetBounds,
     { x: 0, y: 0, width: 10, height: 20 },
   ],
-  [
-    'setContentVisible',
-    () => api.setContentVisible(true),
-    IpcChannels.tabsSetContentVisible,
-    true,
-  ],
+  ['setContentVisible', () => api.setContentVisible(true), IpcChannels.tabsSetContentVisible, true],
   [
     'findInPage',
     () => api.findInPage({ text: 'q', forward: true } as never),
@@ -175,11 +160,15 @@ const SENDS: Row[] = [
   [
     'openPopup (with opts)',
     () =>
-      api.openPopup('surf', { x: 1, y: 2, width: 3, height: 4 }, {
-        id: 'p1',
-        height: 150,
-        align: 'end',
-      }),
+      api.openPopup(
+        'surf',
+        { x: 1, y: 2, width: 3, height: 4 },
+        {
+          id: 'p1',
+          height: 150,
+          align: 'end',
+        },
+      ),
     IpcChannels.popupOpen,
     {
       surface: 'surf',
@@ -277,12 +266,32 @@ describe('bare-signal subscriptions forward nothing and unsubscribe cleanly', ()
   });
 });
 
-type SubRow = [name: string, run: (cb: (p: unknown) => void) => () => void, channel: string, sample: unknown];
+type SubRow = [
+  name: string,
+  run: (cb: (p: unknown) => void) => () => void,
+  channel: string,
+  sample: unknown,
+];
 const SUBSCRIPTIONS: SubRow[] = [
-  ['onWindowMaximizedChange', (cb) => api.onWindowMaximizedChange(cb), IpcChannels.windowMaximizedChanged, true],
-  ['onTabGroupStartRename', (cb) => api.onTabGroupStartRename(cb), IpcChannels.tabsGroupStartRename, 'g1'],
+  [
+    'onWindowMaximizedChange',
+    (cb) => api.onWindowMaximizedChange(cb),
+    IpcChannels.windowMaximizedChanged,
+    true,
+  ],
+  [
+    'onTabGroupStartRename',
+    (cb) => api.onTabGroupStartRename(cb),
+    IpcChannels.tabsGroupStartRename,
+    'g1',
+  ],
   ['onTabsState', (cb) => api.onTabsState(cb), IpcChannels.tabsState, { activeId: 't1', tabs: [] }],
-  ['onFindResult', (cb) => api.onFindResult(cb), IpcChannels.findResult, { matches: 3, activeMatchOrdinal: 1 }],
+  [
+    'onFindResult',
+    (cb) => api.onFindResult(cb),
+    IpcChannels.findResult,
+    { matches: 3, activeMatchOrdinal: 1 },
+  ],
   ['onPopupClosed', (cb) => api.onPopupClosed(cb), IpcChannels.popupClosed, 'surface-a'],
 ];
 

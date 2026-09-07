@@ -61,7 +61,11 @@ describe('PasswordsSection', () => {
     fireEvent.click(screen.getByRole('button', { name: /^save$|^kaydet$/i }));
     await waitFor(() =>
       expect(props.onAdd).toHaveBeenCalledWith(
-        expect.objectContaining({ url: 'https://site.example', username: 'alice', password: 'hunter2' }),
+        expect.objectContaining({
+          url: 'https://site.example',
+          username: 'alice',
+          password: 'hunter2',
+        }),
       ),
     );
   });

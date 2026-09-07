@@ -29,7 +29,11 @@ type Row = [name: string, run: () => unknown, channel: string, payload?: unknown
 const INVOKES: Row[] = [
   ['getAppInfo', () => api.getAppInfo(), IpcChannels.appGetInfo],
   ['copyDiagnostics', () => api.copyDiagnostics(), IpcChannels.appCopyDiagnostics],
-  ['openThirdPartyNotices', () => api.openThirdPartyNotices(), IpcChannels.appOpenThirdPartyNotices],
+  [
+    'openThirdPartyNotices',
+    () => api.openThirdPartyNotices(),
+    IpcChannels.appOpenThirdPartyNotices,
+  ],
   ['openDataFolder', () => api.openDataFolder(), IpcChannels.appOpenDataFolder],
   ['getDefaultBrowserStatus', () => api.getDefaultBrowserStatus(), IpcChannels.defaultBrowserGet],
   ['setAsDefaultBrowser', () => api.setAsDefaultBrowser(), IpcChannels.defaultBrowserSet],
@@ -240,13 +244,43 @@ describe('ipcRenderer.send methods', () => {
   });
 });
 
-type SubRow = [name: string, run: (cb: (p: unknown) => void) => () => void, channel: string, sample: unknown];
+type SubRow = [
+  name: string,
+  run: (cb: (p: unknown) => void) => () => void,
+  channel: string,
+  sample: unknown,
+];
 const SUBSCRIPTIONS: SubRow[] = [
-  ['onPublicSettingsChanged', (cb) => api.onPublicSettingsChanged(cb), IpcChannels.publicSettingsChanged, { theme: 'dark' }],
-  ['onTypoDictionariesState', (cb) => api.onTypoDictionariesState(cb), IpcChannels.typoDictionariesState, [{ id: 'en-US' }]],
-  ['onTranslatePageState', (cb) => api.onTranslatePageState(cb), IpcChannels.translatePageState, { status: 'translated' }],
-  ['onTranslateCloudFallbackRequest', (cb) => api.onTranslateCloudFallbackRequest(cb), IpcChannels.translateCloudFallbackRequest, { requestId: 'r1' }],
-  ['onVideoPlayerPageState', (cb) => api.onVideoPlayerPageState(cb), IpcChannels.videoPlayerPageState, { playing: true }],
+  [
+    'onPublicSettingsChanged',
+    (cb) => api.onPublicSettingsChanged(cb),
+    IpcChannels.publicSettingsChanged,
+    { theme: 'dark' },
+  ],
+  [
+    'onTypoDictionariesState',
+    (cb) => api.onTypoDictionariesState(cb),
+    IpcChannels.typoDictionariesState,
+    [{ id: 'en-US' }],
+  ],
+  [
+    'onTranslatePageState',
+    (cb) => api.onTranslatePageState(cb),
+    IpcChannels.translatePageState,
+    { status: 'translated' },
+  ],
+  [
+    'onTranslateCloudFallbackRequest',
+    (cb) => api.onTranslateCloudFallbackRequest(cb),
+    IpcChannels.translateCloudFallbackRequest,
+    { requestId: 'r1' },
+  ],
+  [
+    'onVideoPlayerPageState',
+    (cb) => api.onVideoPlayerPageState(cb),
+    IpcChannels.videoPlayerPageState,
+    { playing: true },
+  ],
 ];
 
 describe('subscriptions: subscribe, forward only the payload, unsubscribe the exact listener', () => {

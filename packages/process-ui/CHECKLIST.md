@@ -4,6 +4,7 @@
 > Sunumsal `tepegoz://process` yüzeyi: tarayıcı süreç ağacını (browser / GPU / utility / sekme renderer'ları) CPU, bellek ve PID ile listeleyen, bir sekme için "end process" sunan Chrome tarzı Görev Yöneticisi; host poll ve end-process callback'lerini enjekte eder.
 
 ## Kesinlikle olmalı
+
 - [ ] `tepegoz://process` yüzeyini Chrome tarzı bir Görev Yöneticisi olarak sunmalı
 - [ ] Tarayıcı süreç ağacını listelemeli: browser / GPU / utility / sekme başına renderer'lar
 - [ ] Her satır için CPU, bellek ve PID göstermeli
@@ -15,6 +16,7 @@
 - [ ] İngilizce ve Türkçe stringleri barındırmalı (hardcode UI string yok)
 
 ## Olsa iyi olur
+
 - [ ] Poll sonuçlarını periyodik yenileyip tabloyu güncellemeli
 - [ ] Süreçleri türe göre (browser/GPU/utility/renderer) etiketleyip/gruplayıp gösterebilmeli
 - [ ] CPU ve bellek değerlerini okunabilir biçimde biçimlendirmeli (ör. MB, %)
@@ -23,6 +25,7 @@
 - [ ] Süreç sonlandırıldıktan sonra satırı listeden düşürmeli/güncellemeli
 
 ## Çok niş
+
 - [ ] Poll verisi boş/gecikmeli geldiğinde iskelet veya "veri yok" durumu göstermeli
 - [ ] Aynı PID'nin iki yoklama arasında kaybolması durumunda satır tutarlı kaldırılmalı
 - [ ] Çok sayıda sekme/renderer olduğunda tablo performanslı kalmalı

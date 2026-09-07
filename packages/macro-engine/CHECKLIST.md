@@ -4,6 +4,7 @@
 > Deterministik, model-free makro yorumlayıcısı (modern iMacros ardılı): iç içe kontrol akışı, sınırsız değişken/dizi, CSV `forEachRow`, sandbox'lı ifade dili ve her element adımında host içinde auto-wait.
 
 ## Kesinlikle olmalı
+
 - [ ] `runMacro` bir `Macro`'yu bir `MacroHost`'a karşı çalıştırmalı
 - [ ] Yorumlayıcı deterministik ve model-free olmalı
 - [ ] `if` / `repeat` kontrol akışını (iç içe dahil) desteklemeli
@@ -29,6 +30,7 @@
 - [ ] `MacroValue` tipini ve `toStr` / `toNum` / `toBool` coercion'larını dışa vermeli
 
 ## Olsa iyi olur
+
 - [ ] `Macro` tipini `@tepegoz/shared-types`'tan almalı (kendi şemasını tanımlamamalı)
 - [ ] `onProgress` `step` olaylarıyla UI ilerleme gösterebilmeli
 - [ ] Cancellation signal koşan macro'yu ortada temiz durdurup `RunResult.aborted` vermeli
@@ -39,6 +41,7 @@
 - [ ] Sandbox ifade dili değişken/dizi/aritmetik/karşılaştırma operatörlerini desteklemeli
 
 ## Çok niş
+
 - [ ] Verilen `pacing` override'ı floor'un altındaysa floor'a clamp edilmeli
 - [ ] İç içe yapı path'i okunur biçimde raporlanmalı (ör. `repeat[2] > if > click`)
 - [ ] `maxSteps` aşıldığında runaway olarak durup net hata vermeli

@@ -297,8 +297,7 @@ export function McpServersSection({
                 </p>
                 {server.env !== undefined && Object.keys(server.env).length > 0 && (
                   <p className="mt-1 text-xs text-text-secondary">
-                    {s.mcp.envNote}{' '}
-                    <CrossLink sectionId="developer">{s.mcp.envLink}</CrossLink>
+                    {s.mcp.envNote} <CrossLink sectionId="developer">{s.mcp.envLink}</CrossLink>
                   </p>
                 )}
               </li>

@@ -3,7 +3,9 @@ import { buildFirefoxBookmarkTree, type FirefoxBookmarkRow } from './bookmark-im
 import { MAX_NODES, type ImportedBookmarkNode } from './bookmark-import-limits';
 
 /** A `moz_bookmarks` row with the columns this importer reads; everything else defaulted. */
-function row(over: Partial<FirefoxBookmarkRow> & { id: number; parent: number }): FirefoxBookmarkRow {
+function row(
+  over: Partial<FirefoxBookmarkRow> & { id: number; parent: number },
+): FirefoxBookmarkRow {
   return {
     type: 2,
     title: null,

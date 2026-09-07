@@ -281,7 +281,10 @@ describe('a full scripted run', () => {
     });
     await maybeRunEval();
     const [, json] = fs.writeFileSync.mock.calls[0]! as [string, string];
-    expect(JSON.parse(json)).toMatchObject({ completionOutcome: 'confirmed', visionEscalations: 2 });
+    expect(JSON.parse(json)).toMatchObject({
+      completionOutcome: 'confirmed',
+      visionEscalations: 2,
+    });
   });
 
   it('self-heals a not-ready entry page by retrying the readiness barrier', async () => {

@@ -43,7 +43,10 @@ describe('SafeBrowsingNavGuard', () => {
     const onBlock = vi.fn<(url: string) => void>();
     let release: (v: NavigationVerdict) => void = () => undefined;
     const checkNavigation = vi.fn(
-      () => new Promise<NavigationVerdict>((r) => { release = r; }),
+      () =>
+        new Promise<NavigationVerdict>((r) => {
+          release = r;
+        }),
     );
     const g = new SafeBrowsingNavGuard({ checkNavigation, onBlock });
 

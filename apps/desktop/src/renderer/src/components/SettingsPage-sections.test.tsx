@@ -67,7 +67,9 @@ describe.each([['en'], ['tr']] as const)('the settings search index (%s)', (loca
 
   it('lets every section be found by its own name', () => {
     const unfindable = sections
-      .filter((section) => !foldForSearch(section.searchText).includes(foldForSearch(section.label)))
+      .filter(
+        (section) => !foldForSearch(section.searchText).includes(foldForSearch(section.label)),
+      )
       .map((section) => section.id);
     expect(unfindable).toEqual([]);
   });

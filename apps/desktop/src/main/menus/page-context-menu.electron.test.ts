@@ -49,8 +49,12 @@ vi.mock('../print/print-to-pdf.electron', () => ({ savePageAsPdf }));
 const captureAndNotify = vi.hoisted(() => vi.fn());
 vi.mock('../screenshots/screenshot-notify.electron', () => ({ captureAndNotify }));
 
-const { openPageContextMenu, getPageMenuContext, runPageMenuAction, runPageMenuContributionAction } =
-  await import('./page-context-menu');
+const {
+  openPageContextMenu,
+  getPageMenuContext,
+  runPageMenuAction,
+  runPageMenuContributionAction,
+} = await import('./page-context-menu');
 
 const params = (over: Record<string, unknown> = {}) => ({
   pageURL: 'https://example.com/page',

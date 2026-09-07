@@ -42,7 +42,9 @@ await resolveModelFile(entry.uri, {
     const pct = Math.floor((downloadedSize / totalSize) * 100);
     if (pct >= lastPct + 5) {
       lastPct = pct;
-      console.log(`  ${pct}%  ${(downloadedSize / 1e9).toFixed(2)}/${(totalSize / 1e9).toFixed(2)} GB`);
+      console.log(
+        `  ${pct}%  ${(downloadedSize / 1e9).toFixed(2)}/${(totalSize / 1e9).toFixed(2)} GB`,
+      );
     }
   },
 });

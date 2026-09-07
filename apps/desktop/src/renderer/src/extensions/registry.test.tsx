@@ -15,11 +15,7 @@ import { buildExtensionRegistry, extensionDefById } from './registry';
 
 afterEach(cleanup);
 
-function wire(
-  id: string,
-  surfaces: ExtensionSurfaceKind[],
-  icon = 'robot',
-): ExtensionManifestWire {
+function wire(id: string, surfaces: ExtensionSurfaceKind[], icon = 'robot'): ExtensionManifestWire {
   return {
     id,
     name: 'Test',

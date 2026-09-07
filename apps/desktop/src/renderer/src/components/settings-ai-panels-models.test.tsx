@@ -79,7 +79,7 @@ describe('LocalModelsSection', () => {
     expect(bridge.downloadLocalModel).toHaveBeenCalledWith('m1');
   });
 
-  it('surfaces main\'s error message when an action rejects', async () => {
+  it("surfaces main's error message when an action rejects", async () => {
     bridge.listLocalModels.mockResolvedValue([model()]);
     bridge.downloadLocalModel.mockRejectedValueOnce(new Error('model link is dead'));
     renderSection();
@@ -133,10 +133,20 @@ describe('LocalModelsSection', () => {
 
   it('an installed non-selected row offers Use (which reselects and relists) and a confirmed Delete', async () => {
     bridge.listLocalModels.mockResolvedValue([
-      model({ installed: true, selected: false, recommended: true, installedBytes: 3.9 * 1024 * 1024 * 1024 }),
+      model({
+        installed: true,
+        selected: false,
+        recommended: true,
+        installedBytes: 3.9 * 1024 * 1024 * 1024,
+      }),
     ]);
     bridge.listLocalModels.mockResolvedValueOnce([
-      model({ installed: true, selected: false, recommended: true, installedBytes: 3.9 * 1024 * 1024 * 1024 }),
+      model({
+        installed: true,
+        selected: false,
+        recommended: true,
+        installedBytes: 3.9 * 1024 * 1024 * 1024,
+      }),
     ]);
     renderSection();
     await screen.findByText('Qwen 7B');

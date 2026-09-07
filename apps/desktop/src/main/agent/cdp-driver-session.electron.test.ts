@@ -222,7 +222,9 @@ describe('waitForPageSettled', () => {
     S.FrameTreeSchema.safeParse.mockReturnValue(ok({ frameTree: { frame: { id: 'F' } } }));
     S.IsolatedWorldSchema.safeParse.mockReturnValue(ok({ executionContextId: 1 }));
     S.NetworkRequestSchema.safeParse.mockReturnValue(ok({ requestId: 'r1', type: 'Document' }));
-    S.NetworkCompleteSchema.safeParse.mockReturnValueOnce(bad).mockReturnValue(ok({ requestId: 'r1' }));
+    S.NetworkCompleteSchema.safeParse
+      .mockReturnValueOnce(bad)
+      .mockReturnValue(ok({ requestId: 'r1' }));
 
     const done = session.waitForPageSettled(cast(wc), ensure, 1000);
     await vi.advanceTimersByTimeAsync(1);

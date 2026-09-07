@@ -4,6 +4,7 @@
 > Agent'ın kullandığı built-in `browser_*` yetenek tanımlarını (sayfa oku, gez, snapshot, tıkla/doldur/tuşla/kaydır) capability-plane'e kaydeden, Electron'suz perception katmanını da barındıran paket.
 
 ## Kesinlikle olmalı
+
 - [ ] `registerBrowserTools({ host })` her `browser_*` aracını `CapabilityRegistry`'ye kaydedebilmeli
 - [ ] Araçlar yalnızca ToolGateway PEP üzerinden çağrılabilmeli; doğrudan erişim olmamalı
 - [ ] `browser_*` araçları `source: 'builtin'` always-on yetenek olarak kaydedilmeli (Agent uzantısına scoped olmamalı)
@@ -28,6 +29,7 @@
 - [ ] `browser_validate_page` `waitForLoad` + `readPage` ile hafif post-action doğrulama yapmalı
 
 ## Olsa iyi olur
+
 - [ ] Tab tools (`tab_*`) bu pakette bulunmamalı — `@tepegoz/tab-engine`'e ait
 - [ ] Journal tool (`journal_search_events`) bu pakette bulunmamalı — `@tepegoz/journal-tools`'a ait
 - [ ] `BrowserHost` mock'lanarak araçlar Electron runtime'ı olmadan test edilebilmeli
@@ -39,6 +41,7 @@
 - [ ] `PageSnapshot` / `ElementsSnapshot` tipleri dışa aktarılmalı
 
 ## Çok niş
+
 - [ ] Legacy Agent-extension-scoped kayıt yolundan builtin'e geçiş sorunsuz olmalı
 - [ ] Vision fallback yalnızca DOM snapshot yetersiz kaldığında devreye girmeli
 - [ ] Eski bir `ref` yeni snapshot'tan sonra kullanılırsa net hata dönmeli

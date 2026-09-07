@@ -4,6 +4,7 @@
 > Presentational leaf: `tepegoz://history` yöneticisi — arama kutusu + newest-first, lazily-paginated ziyaret listesi; her giriş kaldırılabilir, "Clear all" aksiyonu var.
 
 ## Kesinlikle olmalı
+
 - [ ] `HistoryPage` bir arama kutusu + ziyaret edilen sayfalar listesi render etmeli
 - [ ] Liste newest-first (en yeni önce) sıralanmalı
 - [ ] Liste lazily-paginated olmalı — bir kerede 50 öğe yüklemeli
@@ -20,6 +21,7 @@
 - [ ] Arama sorgusunu `list(query, offset)` çağrısına geçirmeli
 
 ## Olsa iyi olur
+
 - [ ] Arama sorgusu değiştiğinde pagination'ı sıfırdan başlatmalı
 - [ ] Sonuç boşken anlamlı bir boş durum göstermeli
 - [ ] Bir öğe kaldırıldığında listeyi tam yeniden yüklemeden güncellemeli
@@ -30,6 +32,7 @@
 - [ ] en/tr sözlük anahtarları birebir eşleşmeli
 
 ## Çok niş
+
 - [ ] Aynı URL'nin birden çok ziyareti listede öngörülebilir biçimde ele alınmalı
 - [ ] Çok uzun başlık/URL satır düzenini bozmadan kırpılmalı
 - [ ] `IntersectionObserver` desteklenmeyen ortamda makul biçimde bozulmamalı (veya fallback)

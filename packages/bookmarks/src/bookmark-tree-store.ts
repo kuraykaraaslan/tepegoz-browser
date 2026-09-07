@@ -104,8 +104,7 @@ function toNode(row: NodeRow): BookmarkNode {
  */
 function readFoldVersion(db: Db): string | undefined {
   const row = db.prepare('SELECT value FROM meta WHERE key = ?').get(FOLD_VERSION_META_KEY) as
-    | { value: string }
-    | undefined;
+    { value: string } | undefined;
   return row?.value;
 }
 

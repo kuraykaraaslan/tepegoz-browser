@@ -46,7 +46,8 @@ function repoRoot(): string {
 function workspaceGroups(root: string): string[] {
   const yaml = readFileSync(join(root, 'pnpm-workspace.yaml'), 'utf8');
   const groups = [...yaml.matchAll(/^\s*-\s*'?([A-Za-z0-9_-]+)\/\*'?\s*$/gm)].map((m) => m[1]!);
-  if (groups.length === 0) throw new Error('no workspace groups parsed — the sweep would cover nothing');
+  if (groups.length === 0)
+    throw new Error('no workspace groups parsed — the sweep would cover nothing');
   return groups;
 }
 

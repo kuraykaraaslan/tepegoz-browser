@@ -65,7 +65,11 @@ describe('planConnectionCount', () => {
 
   it('re-clamps a stored ceiling from an older build to the hard cap', () => {
     // A persisted override of 50 cannot lift MAX_DOWNLOAD_SEGMENTS.
-    const plan = planConnectionCount({ previous: MAX_DOWNLOAD_SEGMENTS, observed: 'scaled', hostCeiling: 50 });
+    const plan = planConnectionCount({
+      previous: MAX_DOWNLOAD_SEGMENTS,
+      observed: 'scaled',
+      hostCeiling: 50,
+    });
     expect(plan.count).toBe(MAX_DOWNLOAD_SEGMENTS);
     expect(plan.reason).toBe('held-at-ceiling');
   });

@@ -54,8 +54,7 @@ export function beginLaunch(): void {
   previousCrashed = prev !== null && prev.pending;
   // The flag is checked with BOTH accessors on purpose: Electron strips switches it recognises out of
   // `process.argv` in some launch paths, and passes unknown ones through in others.
-  const flagged =
-    app.commandLine.hasSwitch('safe-mode') || process.argv.includes('--safe-mode');
+  const flagged = app.commandLine.hasSwitch('safe-mode') || process.argv.includes('--safe-mode');
   reason = flagged ? 'flag' : trippedSafeMode(record.strikes) ? 'crash-loop' : null;
   writeRecord(recordFile, record);
   if (reason !== null) {

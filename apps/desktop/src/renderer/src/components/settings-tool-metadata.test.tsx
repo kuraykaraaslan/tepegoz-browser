@@ -32,7 +32,12 @@ describe('ToolMetadataBadges', () => {
   });
 
   it('falls back to the source when there is no category', () => {
-    render(<ToolMetadataBadges action={action({ category: undefined, source: 'files' as never })} labels={labels} />);
+    render(
+      <ToolMetadataBadges
+        action={action({ category: undefined, source: 'files' as never })}
+        labels={labels}
+      />,
+    );
     expect(screen.getByText('files')).toBeTruthy();
   });
 

@@ -15,7 +15,10 @@ export function safeBrowsingApiKey(): string {
   const fromEnv = process.env['TEPEGOZ_SAFE_BROWSING_KEY'];
   if (fromEnv !== undefined && fromEnv.trim().length > 0) return fromEnv.trim();
   // Not present under vitest (no vite pass); guard `typeof` before touching the identifier.
-  if (typeof __TEPEGOZ_SAFE_BROWSING_KEY__ === 'string' && __TEPEGOZ_SAFE_BROWSING_KEY__.length > 0) {
+  if (
+    typeof __TEPEGOZ_SAFE_BROWSING_KEY__ === 'string' &&
+    __TEPEGOZ_SAFE_BROWSING_KEY__.length > 0
+  ) {
     return __TEPEGOZ_SAFE_BROWSING_KEY__;
   }
   return '';

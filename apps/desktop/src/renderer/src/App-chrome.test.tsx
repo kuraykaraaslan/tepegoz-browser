@@ -141,7 +141,9 @@ beforeEach(() => {
   bridge.onFindOpen.mockImplementation(() => () => undefined);
   bridge.onFindResult.mockImplementation(() => () => undefined);
   bridge.onOmniboxFocus.mockImplementation(() => () => undefined);
-  bridge.getNetworkState.mockImplementation(() => Promise.resolve(undefined) as unknown as Promise<never>);
+  bridge.getNetworkState.mockImplementation(
+    () => Promise.resolve(undefined) as unknown as Promise<never>,
+  );
   bridge.onNetworkState.mockImplementation(() => () => undefined);
   Object.defineProperty(window, 'tepegoz', { configurable: true, value: bridge });
 });
@@ -344,16 +346,24 @@ describe('AppChrome', () => {
         popupOpenId: 'popup-ext',
       }),
     });
-    const tray = (lastChromeProps().toolbarActions as { props: { children: unknown[] } }).props.children[1] as {
+    const tray = (lastChromeProps().toolbarActions as { props: { children: unknown[] } }).props
+      .children[1] as {
       props: { activeExtensionId: string | null };
     };
     expect(tray.props.activeExtensionId).toBe('surface-ext');
   });
 
   it('the active-extension-id fallback is null when nothing is active', () => {
-    renderChrome({ extSurfaces: extSurfacesFixture({ activeSurface: null, sidebarExtId: null, popupOpenId: null }) });
+    renderChrome({
+      extSurfaces: extSurfacesFixture({
+        activeSurface: null,
+        sidebarExtId: null,
+        popupOpenId: null,
+      }),
+    });
     // toolbarActions is a constructed element tree; walk to the ExtensionTray to read its resolved prop.
-    const tray = (lastChromeProps().toolbarActions as { props: { children: unknown[] } }).props.children[1] as {
+    const tray = (lastChromeProps().toolbarActions as { props: { children: unknown[] } }).props
+      .children[1] as {
       props: { activeExtensionId: string | null };
     };
     expect(tray.props.activeExtensionId).toBeNull();
@@ -361,13 +371,15 @@ describe('AppChrome', () => {
 
   it('falls back through sidebar then popup when there is no active surface', () => {
     renderChrome({ extSurfaces: extSurfacesFixture({ sidebarExtId: 'dock-ext' }) });
-    const trayA = (lastChromeProps().toolbarActions as { props: { children: unknown[] } }).props.children[1] as {
+    const trayA = (lastChromeProps().toolbarActions as { props: { children: unknown[] } }).props
+      .children[1] as {
       props: { activeExtensionId: string | null };
     };
     expect(trayA.props.activeExtensionId).toBe('dock-ext');
 
     renderChrome({ extSurfaces: extSurfacesFixture({ popupOpenId: 'popup-ext' }) });
-    const trayB = (lastChromeProps().toolbarActions as { props: { children: unknown[] } }).props.children[1] as {
+    const trayB = (lastChromeProps().toolbarActions as { props: { children: unknown[] } }).props
+      .children[1] as {
       props: { activeExtensionId: string | null };
     };
     expect(trayB.props.activeExtensionId).toBe('popup-ext');
@@ -375,7 +387,8 @@ describe('AppChrome', () => {
 
   it('defaults enabled-extension state/pinned lists to empty when prefs have not loaded', () => {
     renderChrome({ prefs: null });
-    const tray = (lastChromeProps().toolbarActions as { props: { children: unknown[] } }).props.children[1] as {
+    const tray = (lastChromeProps().toolbarActions as { props: { children: unknown[] } }).props
+      .children[1] as {
       props: { extensionStates: unknown[]; pinnedIds: unknown[] };
     };
     expect(tray.props.extensionStates).toEqual([]);
@@ -417,12 +430,18 @@ describe('AppChrome', () => {
     renderChrome({ bookmarks });
     const anchor: ContentBounds = { x: 0, y: 0, width: 0, height: 0 };
     lastBookmarksBarProps()!.onOpenFolder('f1', anchor);
-    expect(bridge.openPopup).toHaveBeenCalledWith('bookmark-folder', anchor, { id: 'f1', height: 3 * 32 + 12 });
+    expect(bridge.openPopup).toHaveBeenCalledWith('bookmark-folder', anchor, {
+      id: 'f1',
+      height: 3 * 32 + 12,
+    });
 
     const emptyBookmarks = bookmarksFixture({ findBarNode: vi.fn(() => null) });
     renderChrome({ bookmarks: emptyBookmarks });
     lastBookmarksBarProps()!.onOpenFolder('f2', anchor);
-    expect(bridge.openPopup).toHaveBeenLastCalledWith('bookmark-folder', anchor, { id: 'f2', height: 1 * 32 + 12 });
+    expect(bridge.openPopup).toHaveBeenLastCalledWith('bookmark-folder', anchor, {
+      id: 'f2',
+      height: 1 * 32 + 12,
+    });
   });
 
   it('opens the find bar once main reports Ctrl+F, and renders nothing while it is closed', () => {

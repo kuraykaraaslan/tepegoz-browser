@@ -17,7 +17,9 @@ stubJsdomLayout();
 
 let getPrefsResult: 'ok' | 'reject';
 let settingsChangedCb: () => void = () => {};
-const updatePreferences = vi.fn((patch: object) => Promise.resolve({ ...DEFAULT_PREFERENCES, ...patch }));
+const updatePreferences = vi.fn((patch: object) =>
+  Promise.resolve({ ...DEFAULT_PREFERENCES, ...patch }),
+);
 
 beforeEach(() => {
   getPrefsResult = 'ok';
@@ -57,7 +59,9 @@ describe('DeveloperPageSurface (tepegoz://developer)', () => {
     await waitFor(() => {
       expect(screen.getAllByRole('switch').length).toBe(CHROMIUM_FLAG_ALLOWLIST.length);
     });
-    expect(screen.getByPlaceholderText(/Search settings keys|Settings keylerinde ara/i)).toBeTruthy();
+    expect(
+      screen.getByPlaceholderText(/Search settings keys|Settings keylerinde ara/i),
+    ).toBeTruthy();
   });
 
   it('shows the retry card when the first fetch fails, then recovers on retry', async () => {

@@ -118,7 +118,10 @@ describe('main.tsx routing', () => {
       './components/MenuSubPopup',
       'MenuSubPopup',
     );
-    expect(vi.mocked(mocked)).toHaveBeenCalledWith(expect.objectContaining({ kind: '' }), expect.anything());
+    expect(vi.mocked(mocked)).toHaveBeenCalledWith(
+      expect.objectContaining({ kind: '' }),
+      expect.anything(),
+    );
   });
 
   it('routes ?surface=site-info with its url param', async () => {
@@ -139,7 +142,10 @@ describe('main.tsx routing', () => {
       './components/SiteInfoPopup',
       'SiteInfoPopup',
     );
-    expect(vi.mocked(mocked)).toHaveBeenCalledWith(expect.objectContaining({ url: '' }), expect.anything());
+    expect(vi.mocked(mocked)).toHaveBeenCalledWith(
+      expect.objectContaining({ url: '' }),
+      expect.anything(),
+    );
   });
 
   it('routes ?surface=bookmark-folder only once an id is present', async () => {
@@ -155,7 +161,10 @@ describe('main.tsx routing', () => {
       './components/BookmarkFolderPopup',
       'BookmarkFolderPopup',
     );
-    expect(vi.mocked(mocked)).toHaveBeenCalledWith(expect.objectContaining({ folderId: 'f1' }), expect.anything());
+    expect(vi.mocked(mocked)).toHaveBeenCalledWith(
+      expect.objectContaining({ folderId: 'f1' }),
+      expect.anything(),
+    );
   });
 
   it('routes bookmark-rename and bookmark-add-folder to BookmarkDialogPopup with the right mode', async () => {
@@ -189,7 +198,10 @@ describe('main.tsx routing', () => {
       './components/PopupApp',
       'PopupApp',
     );
-    expect(vi.mocked(popupApp2)).toHaveBeenCalledWith(expect.objectContaining({ id: 'ext.a' }), expect.anything());
+    expect(vi.mocked(popupApp2)).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'ext.a' }),
+      expect.anything(),
+    );
   });
 
   it('routes ?surface=drag-preview with every query param threaded through', async () => {
@@ -277,10 +289,16 @@ describe('main.tsx routing', () => {
     ['bookmarks', './components/BookmarksPageSurface', 'BookmarksPageSurface'],
     ['process', './components/ProcessPageSurface', 'ProcessPageSurface'],
     ['developer', './components/DeveloperPageSurface', 'DeveloperPageSurface'],
-  ])('routes the tepegoz:// host "%s" to its internal page surface', async (host, path, exportName) => {
-    const mocked = await boot<() => null>('', path, exportName, { protocol: 'tepegoz:', hostname: host });
-    expect(vi.mocked(mocked)).toHaveBeenCalled();
-  });
+  ])(
+    'routes the tepegoz:// host "%s" to its internal page surface',
+    async (host, path, exportName) => {
+      const mocked = await boot<() => null>('', path, exportName, {
+        protocol: 'tepegoz:',
+        hostname: host,
+      });
+      expect(vi.mocked(mocked)).toHaveBeenCalled();
+    },
+  );
 
   it('routes a dev-server ?page= param the same way a tepegoz:// host would', async () => {
     const mocked = await boot<() => null>(
@@ -298,7 +316,11 @@ describe('main.tsx routing', () => {
 
   it('never mounts anything when the #root container is missing', async () => {
     document.body.innerHTML = '';
-    const mocked = await boot<() => null>('?surface=main-menu', './components/MainMenuPopup', 'MainMenuPopup');
+    const mocked = await boot<() => null>(
+      '?surface=main-menu',
+      './components/MainMenuPopup',
+      'MainMenuPopup',
+    );
     expect(vi.mocked(mocked)).not.toHaveBeenCalled();
   });
 });

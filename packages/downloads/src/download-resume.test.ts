@@ -45,14 +45,16 @@ describe('planDownloadResume', () => {
 
   it('accepts either validator on its own', () => {
     expect(planDownloadResume({ ...RESUMABLE, etag: undefined }, 500).action).toBe('resume');
-    expect(planDownloadResume({ ...RESUMABLE, lastModified: undefined }, 500).action).toBe('resume');
+    expect(planDownloadResume({ ...RESUMABLE, lastModified: undefined }, 500).action).toBe(
+      'resume',
+    );
   });
 
   it('treats an empty-string validator as no validator', () => {
     // A stored `''` is what "the server sent no header" looks like after a round trip through SQLite.
-    expect(
-      planDownloadResume({ ...RESUMABLE, etag: '', lastModified: '' }, 500).reason,
-    ).toBe('no-validator');
+    expect(planDownloadResume({ ...RESUMABLE, etag: '', lastModified: '' }, 500).reason).toBe(
+      'no-validator',
+    );
   });
 
   it('restarts when nothing is on disk, including an unreadable file', () => {
