@@ -78,6 +78,62 @@ describe('registerBrowserTools', () => {
     expect(JSON.stringify(result)).not.toContain('/');
   });
 
+  it('does NOT register browser_get_console when the host cannot observe the console', () => {
+    // Honest absence: a host that does not record the console gets no tool rather than one that can
+    // only ever answer "nothing", which would read as "the page is error-free".
+    registerBrowserTools({ host: fakeHost() });
+    expect(CapabilityRegistry.get('browser_get_console')).toBeUndefined();
+  });
+
+  it('registers browser_get_console as a read tool and shapes the console into a fenced report', async () => {
+    const consoleSince = vi.fn(() =>
+      Promise.resolve([
+        { level: 'info' as const, text: 'chatty', source: 'https://x/a.js', line: 1, ts: 1 },
+        { level: 'error' as const, text: 'boom', source: 'https://x/a.js', line: 9, ts: 2 },
+      ]),
+    );
+    registerBrowserTools({ host: fakeHost({ consoleSince }) });
+
+    const descriptor = CapabilityRegistry.list().find((d) => d.id === 'browser_get_console');
+    expect(descriptor?.dangerClass).toBe('read');
+
+    const result = (await CapabilityRegistry.get('browser_get_console')!.handler({
+      tabId: 't1',
+    })) as { count: number; levels: Record<string, number>; content: string };
+    // sinceMs 0 = "the whole retained log"; the tab id is threaded through.
+    expect(consoleSince).toHaveBeenCalledWith(0, 't1');
+    expect(result.count).toBe(2);
+    expect(result.levels).toMatchObject({ info: 1, error: 1 });
+    expect(result.content).toContain('boom');
+  });
+
+  it('browser_get_console applies the minimum-severity filter', async () => {
+    const consoleSince = vi.fn(() =>
+      Promise.resolve([
+        { level: 'info' as const, text: 'chatty', source: '', line: 0, ts: 1 },
+        { level: 'error' as const, text: 'boom', source: '', line: 0, ts: 2 },
+      ]),
+    );
+    registerBrowserTools({ host: fakeHost({ consoleSince }) });
+    const result = (await CapabilityRegistry.get('browser_get_console')!.handler({
+      level: 'warning',
+    })) as { content: string; totalObserved: number };
+    expect(result.content).toContain('boom');
+    expect(result.content).not.toContain('chatty');
+    expect(result.totalObserved).toBe(1);
+  });
+
+  it('browser_get_console degrades to an empty report when the host read throws', async () => {
+    const consoleSince = vi.fn(() => Promise.reject(new Error('tab gone')));
+    registerBrowserTools({ host: fakeHost({ consoleSince }) });
+    const result = (await CapabilityRegistry.get('browser_get_console')!.handler({})) as {
+      count: number;
+      content: string;
+    };
+    expect(result.count).toBe(0);
+    expect(result.content).toContain('no console messages observed');
+  });
+
   it('registers the browser_* tools as always-on builtins', () => {
     registerBrowserTools({ host: fakeHost() });
     const ids = CapabilityRegistry.list()

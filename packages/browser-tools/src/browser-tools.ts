@@ -12,6 +12,7 @@ import {
 import { CredentialFillIntentSchema, type ToolDescriptor } from '@tepegoz/shared-types';
 import { buildElementsSnapshot, buildPageSnapshot, type ElementsDiffMemory } from './perception';
 import { describeNetworkFailures, selectActionFailures } from './network-verify';
+import { levelsAtOrAbove, summarizeConsole } from './console-log';
 import type { BrowserHost } from './host';
 
 /**
@@ -34,6 +35,10 @@ const ValidatePageArgs = TargetTabArgs.extend({
   timeoutMs: z.number().int().positive().max(60_000).optional(),
 });
 const HistoryArgs = TargetTabArgs.extend({ direction: z.enum(['back', 'forward', 'reload']) });
+const GetConsoleArgs = TargetTabArgs.extend({
+  // Minimum severity to list — 'warning' lists warnings AND errors. Omitted ⇒ every level.
+  level: z.enum(['debug', 'info', 'warning', 'error']).optional(),
+});
 const WaitConditionArgs = TargetTabArgs.extend({
   condition: z.enum(['text', 'selector', 'network_idle']),
   value: z.string().min(1).max(500).optional(),
@@ -651,6 +656,41 @@ export function registerBrowserTools(deps: { host: BrowserHost }): void {
       ),
       inputSchema: TargetTabArgs,
       handler: async (args) => savePdf(args.tabId),
+    });
+  }
+
+  // P3-d read-only diagnostics — the console half. Registered ONLY when the host observes the page's
+  // console; a host that does not gets no tool rather than a claim that the page logged nothing. This
+  // reads the page's OWN console output as it happened — it is not DevTools and not script execution
+  // (ADR-0029 is untouched).
+  if (host.consoleSince !== undefined) {
+    const consoleSince = host.consoleSince.bind(host);
+    CapabilityRegistry.register({
+      descriptor: descriptor(
+        'browser_get_console',
+        'read',
+        "Read the page's own console output (console.log/warn/error) for debugging. args: " +
+          "{ tabId?: string, level?: 'debug'|'info'|'warning'|'error' } — omit tabId for the active " +
+          "tab; `level` is the MINIMUM severity to list ('warning' lists warnings and errors). Returns " +
+          '{ url, title, count, totalObserved, truncated, levels, content }. `levels` counts every ' +
+          'observed message by severity even when older lines were trimmed from `content`. An empty ' +
+          'result means nothing was observed (the tab may not have been attached long) — NOT that the ' +
+          'page is error-free. This does not run any code on the page.',
+        { aiTask: 'read_understand' },
+      ),
+      inputSchema: GetConsoleArgs,
+      handler: async (args) => {
+        // Tolerant like the network signal: a host/tab that cannot answer yields an empty log, never an
+        // error that fails an otherwise-fine step.
+        const messages = await consoleSince(0, args.tabId).catch(() => []);
+        const page = await host.readPage(args.tabId).catch(() => ({ url: '', title: '' }));
+        return summarizeConsole(
+          messages,
+          page.url,
+          page.title,
+          args.level === undefined ? undefined : levelsAtOrAbove(args.level),
+        );
+      },
     });
   }
 

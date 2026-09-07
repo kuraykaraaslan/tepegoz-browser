@@ -1,5 +1,6 @@
 import type { RawInteractable } from '@tepegoz/tool-executor';
 import type { NetworkObservation } from './network-verify';
+import type { ConsoleMessage } from './console-log';
 
 /**
  * A JS dialog auto-declined, or a `beforeunload` prompt suppressed, on a tab (S3 PR4). Never a
@@ -232,4 +233,17 @@ export interface BrowserHost {
    * happened".
    */
   interceptionsSince?(sinceMs: number, tabId?: string): Promise<InterceptedDialog[]>;
+  /**
+   * The page's own `console.*` output observed on `tabId` at or after `sinceMs` (host clock,
+   * `Date.now()`) — P3-d read-only diagnostics. Omit `sinceMs` semantics: a caller wanting the whole
+   * retained log passes `0`.
+   *
+   * This is the page's console, recorded as it happens — NOT DevTools access and NOT script execution
+   * (ADR-0029 is untouched). Everything here is page-controlled and untrusted.
+   *
+   * OPTIONAL, and its absence is honest silence: a host that does not observe the console simply omits
+   * it, `browser_get_console` is then not registered, and no run is ever told "the page logged
+   * nothing". An empty array means the same — "nothing observed", never "nothing happened".
+   */
+  consoleSince?(sinceMs: number, tabId?: string): Promise<ConsoleMessage[]>;
 }

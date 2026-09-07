@@ -23,3 +23,12 @@ export {
   MAX_REPORTED_FAILURES,
   type NetworkObservation,
 } from './network-verify';
+export {
+  summarizeConsole,
+  safeConsoleSource,
+  levelsAtOrAbove,
+  MAX_REPORTED_CONSOLE,
+  type ConsoleLevel,
+  type ConsoleMessage,
+  type ConsoleReport,
+} from './console-log';

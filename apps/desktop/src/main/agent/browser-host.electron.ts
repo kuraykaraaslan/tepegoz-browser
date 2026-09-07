@@ -747,6 +747,14 @@ export const browserHost: BrowserHost & TabHost & ScreenshotToolsHost = {
     if (wc === null || wc.isDestroyed()) return Promise.resolve([]);
     return Promise.resolve(CdpDriver.interceptionsSince(wc, sinceMs));
   },
+  consoleSince: (sinceMs, tabId) => {
+    // P3-d read-only diagnostics: tolerant like the network/interception signals — a missing or
+    // destroyed tab is "nothing observed", never an error that fails an otherwise-fine read.
+    const wc =
+      tabId === undefined ? TabManager.activeWebContents() : TabManager.webContentsForTab(tabId);
+    if (wc === null || wc.isDestroyed()) return Promise.resolve([]);
+    return Promise.resolve(CdpDriver.consoleSince(wc, sinceMs));
+  },
   captureScreenshot,
   clickElement: async (ref, tabId) => {
     resetForAgentAction();

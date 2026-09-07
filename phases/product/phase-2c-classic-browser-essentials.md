@@ -515,6 +515,18 @@ permissions reuse the single Policy/PermissionGuard (no parallel permission flow
         also precisely what makes the print row's "respects sensitive-site rules" line non-vacuous. Sources:
         [`../tracks/webbrain-agent-parity.md`](../../docs/parities/webbrain-agent-parity.md) P3-a and
         [`../tracks/playwright-mcp-agent-parity.md`](../../docs/parities/playwright-mcp-agent-parity.md) P4.
+  - [~] **Read-only Dev diagnostics for the agent — console half shipped.** _`browser_get_console`
+        (`read` is not an approved `ToolNameSchema` verb; `get` is): a per-tab recorder
+        (`console-recorder.electron.ts`) subscribes to the ordinary `webContents` `console-message`
+        event — NOT the `debugger`/DevTools protocol, so **ADR-0029 is untouched** — and keeps a bounded
+        ring (200/tab). `@tepegoz/browser-tools`'s pure `summarizeConsole` shapes it into a sanitized,
+        injection-fenced report (`dangerClass: 'read'`, through the one `CapabilityRegistry`, registered
+        only when the host observes the console). `level` filters by minimum severity; `levels` tallies
+        every observed message even when the reported tail is trimmed; an empty result reads as "nothing
+        observed", never "the page is error-free". Network-request summaries and the DOM/style inspector
+        stay open (the network half is already recorded internally as `NetworkObservation`s, needing
+        only exposure; the DOM half overlaps `browser_get_elements`). Box kept `[~]`. Captured:
+        [`../tracks/webbrain-agent-parity.md`](../../docs/parities/webbrain-agent-parity.md) P3-d._
 - [x] **Reader mode** (Readability extraction → clean, localized reading view; opt-in per page)
       — _`@tepegoz/reader`: Readability-style scoring (paragraph density, discounted by link density,
       penalised on the class/id names that mark boilerplate), the reading view, en+tr. Page right-click

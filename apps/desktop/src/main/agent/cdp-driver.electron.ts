@@ -1,7 +1,7 @@
 import type { WebContents } from 'electron';
 import { AppError, Logger } from '@tepegoz/libs';
 import { HumanInputAdapter } from '@tepegoz/human-input';
-import type { InterceptedDialog, NetworkObservation } from '@tepegoz/browser-tools';
+import type { ConsoleMessage, InterceptedDialog, NetworkObservation } from '@tepegoz/browser-tools';
 import {
   LOAD_TIMEOUT_MS,
   type DriverCore,
@@ -19,6 +19,7 @@ import {
 import { locatorsToObjectId, pathToObjectId, readValue } from './cdp-driver-dom.electron.js';
 import { attachDialogInterceptor, interceptionsSince } from './cdp-driver-dialogs.electron.js';
 import { attachNetworkRecorder, networkSince } from './cdp-driver-network.electron.js';
+import { attachConsoleRecorder, consoleSince } from './console-recorder.electron.js';
 import { waitForPageSettled } from './cdp-driver-session.electron.js';
 import { snapshotElements as snapshotElementsImpl } from './cdp-driver-snapshot.electron.js';
 import {
@@ -125,6 +126,9 @@ export default class CdpDriver {
     // Subscribe BEFORE Network.enable so the first navigation's responses are not missed (AI-8B).
     // Idempotent per WebContents, so re-attaching on a tab switch cannot double-subscribe.
     attachNetworkRecorder(wc);
+    // P3-d: record the page's own console output for `browser_get_console`. Same idempotent-per-tab
+    // shape; a plain `webContents` event, so it does not touch the DevTools boundary (ADR-0029).
+    attachConsoleRecorder(wc);
     // S3 PR4: same idempotent-per-tab shape — auto-decline any JS dialog and suppress `beforeunload`
     // (see cdp-driver-dialogs.electron.ts for why, and the spike that cleared the DevTools-conflict risk).
     attachDialogInterceptor(wc);
@@ -327,6 +331,15 @@ export default class CdpDriver {
    */
   static interceptionsSince(wc: WebContents, sinceMs: number): InterceptedDialog[] {
     return interceptionsSince(wc, sinceMs);
+  }
+
+  /**
+   * The page's own `console.*` output observed on `wc` at or after `sinceMs` (host clock) — P3-d
+   * read-only diagnostics. Empty means "nothing observed" (e.g. a tab never attached), NOT "the page
+   * logged nothing".
+   */
+  static consoleSince(wc: WebContents, sinceMs: number): ConsoleMessage[] {
+    return consoleSince(wc, sinceMs);
   }
 
   /** Wait for a load triggered by an interaction to settle, then network and DOM quiescence. */

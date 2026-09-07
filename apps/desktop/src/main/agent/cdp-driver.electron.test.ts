@@ -44,6 +44,11 @@ const net = vi.hoisted(() => ({
   networkSince: vi.fn(() => ['obs']),
 }));
 vi.mock('./cdp-driver-network.electron.js', () => net);
+const consoleRec = vi.hoisted(() => ({
+  attachConsoleRecorder: vi.fn(),
+  consoleSince: vi.fn(() => ['log']),
+}));
+vi.mock('./console-recorder.electron.js', () => consoleRec);
 const sessionMod = vi.hoisted(() => ({ waitForPageSettled: vi.fn(() => Promise.resolve()) }));
 vi.mock('./cdp-driver-session.electron.js', () => sessionMod);
 
@@ -134,6 +139,7 @@ describe('ensureAttached', () => {
     await CdpDriver.snapshotElements(cast(wc));
     expect(dbg(wc).attach).toHaveBeenCalledWith('1.3');
     expect(net.attachNetworkRecorder).toHaveBeenCalledWith(wc);
+    expect(consoleRec.attachConsoleRecorder).toHaveBeenCalledWith(wc);
     expect(dialogs.attachDialogInterceptor).toHaveBeenCalledWith(wc);
     const sent = dbg(wc).sendCommand.mock.calls.map((c: unknown[]): unknown => c[0]);
     expect(sent).toEqual(
@@ -328,6 +334,7 @@ describe('pass-through observers', () => {
     const wc = mkWc();
     expect(CdpDriver.networkSince(cast(wc), 0)).toEqual(['obs']);
     expect(CdpDriver.interceptionsSince(cast(wc), 0)).toEqual(['dialog']);
+    expect(CdpDriver.consoleSince(cast(wc), 0)).toEqual(['log']);
     await CdpDriver.waitForPageSettled(cast(wc));
     expect(sessionMod.waitForPageSettled).toHaveBeenCalled();
   });
