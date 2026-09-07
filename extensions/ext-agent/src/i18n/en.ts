@@ -263,6 +263,7 @@ export const en = {
     allowed: 'You allowed {tool}',
     allowedRemembered: 'remembered',
     allowedScoped: 'for this run',
+    retry: 'Retry',
   },
   // Composer attachment chips (selected text / file / screenshot).
   attach: {

@@ -30,6 +30,8 @@ interface PanelThreadProps {
   openSteps: Set<string>;
   onToggleReasoning: (turnId: string) => void;
   onToggleSteps: (turnId: string) => void;
+  /** Re-run a failed turn's prompt (S8). */
+  onRetry: (prompt: string) => void;
 }
 
 /**
@@ -53,6 +55,7 @@ export function PanelThread({
   openSteps,
   onToggleReasoning,
   onToggleSteps,
+  onRetry,
 }: PanelThreadProps) {
   return (
     <div
@@ -78,6 +81,9 @@ export function PanelThread({
             const stepsOpen = openSteps.has(turn.id);
             const latestStep = steps.at(-1);
             const isLast = ti === turns.length - 1;
+            // A turn whose last event is `error` failed outright (S8 "failure gets a reason" → the
+            // next action). A graceful `done`-with-stop-reason is softer and gets no button.
+            const failed = turn.events.at(-1)?.kind === 'error';
             const working =
               isLast &&
               running &&
@@ -244,6 +250,17 @@ export function PanelThread({
                     >
                       {a.evidence[turn.completionOutcome]}
                     </span>
+                  </div>
+                )}
+                {failed && !running && (
+                  <div className="px-1 pt-0.5">
+                    <button
+                      type="button"
+                      onClick={() => onRetry(turn.prompt)}
+                      className="rounded-md border border-border px-2 py-1 text-xs text-text-secondary hover:bg-surface-overlay hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus"
+                    >
+                      {a.thread.retry}
+                    </button>
                   </div>
                 )}
                 {working && (

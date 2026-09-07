@@ -161,10 +161,13 @@ Six UI-scoped PRs, each ≤250 lines, sequenced behind their substrate phases. N
   `navigation_timeout` / `page_changed` / `model_malformed` / `transient_error` — to a plain sentence
   that says what happened ("The run reached its step limit before finishing …"); the agent's own summary
   still wins when there is one, and dev still appends the tool/code detail. Helper tests cover the
-  mapping, the dev-detail append, and the fallback for an unknown reason. **Still owed for `[x]`:** the
-  "single next action" affordance (retry step / resume from step / hand to me — resume is gated on Phase
-  1b checkpoints), and the tr localization (this module has no localizer injected — an English-only
-  change, tracked with S8 "localized to the same bar")._
+  mapping, the dev-detail append, and the fallback for an unknown reason. **Retry landed 2026-09-08:** a
+  turn whose last event is `error` gets a **Retry** button under it (`onRetry` → `onRun(promptOverride)`
+  re-runs that turn's bare prompt without touching the composer's own text/attachments and without a
+  skill binding). 3 render tests (offered on an error turn, hidden mid-run, hidden on a clean turn).
+  **Still owed for `[x]`:** "resume from step" (gated on Phase 1b checkpoints) and the tr localization of
+  the terminal-message sentences (this module has no localizer injected — tracked with S8 "localized to
+  the same bar"; the Retry button label itself IS en + tr)._
 - [ ] **Resume from a step**, not only re-run from zero — the durable half is Phase 1b's checkpoint work; this
       is the surface that exposes it.
 - [ ] **Cost forecast before the run, refund after a tool-side failure.** Show an estimated token/cost range

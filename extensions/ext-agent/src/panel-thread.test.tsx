@@ -16,6 +16,7 @@ import type { Turn } from './panel-state';
 
 const a = agentDict.en;
 const api = { createTab: vi.fn(), openAgentFile: vi.fn() } as unknown as AgentHostApi;
+const onRetry = vi.fn();
 
 function turn(over: Partial<Turn> = {}): Turn {
   return {
@@ -48,11 +49,15 @@ function renderThread(turns: Turn[] = [turn()]) {
       openSteps={new Set()}
       onToggleReasoning={vi.fn()}
       onToggleSteps={vi.fn()}
+      onRetry={onRetry}
     />,
   );
 }
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  onRetry.mockClear();
+});
 
 describe('PanelThread — message-level copy', () => {
   it('copies the user prompt, and shows a brief confirmation', async () => {
@@ -179,5 +184,43 @@ describe('PanelThread — approval history cards (B3)', () => {
   it('renders nothing for a turn with no approvals', () => {
     renderThread([turn({ approvals: [] })]);
     expect(screen.queryByText(a.thread.allowed.replace('{tool}', 'browser_export_pdf'))).toBeNull();
+  });
+});
+
+describe('PanelThread — Retry a failed turn (S8)', () => {
+  const errorTurn = () =>
+    turn({
+      prompt: 'Summarise this page',
+      events: [{ runId: 'r1', groupId: 'g1', kind: 'error', message: 'Something broke', ts: 1 }],
+    });
+
+  it('offers Retry on a turn whose last event is an error, and re-runs its prompt', () => {
+    renderThread([errorTurn()]);
+    fireEvent.click(screen.getByRole('button', { name: a.thread.retry }));
+    expect(onRetry).toHaveBeenCalledWith('Summarise this page');
+  });
+
+  it('offers no Retry while a run is in progress', () => {
+    render(
+      <PanelThread
+        a={a}
+        api={api}
+        listRef={createRef()}
+        turns={[errorTurn()]}
+        running
+        liveDelta=""
+        openReasoning={new Set()}
+        openSteps={new Set()}
+        onToggleReasoning={vi.fn()}
+        onToggleSteps={vi.fn()}
+        onRetry={onRetry}
+      />,
+    );
+    expect(screen.queryByRole('button', { name: a.thread.retry })).toBeNull();
+  });
+
+  it('offers no Retry on a turn that ended cleanly', () => {
+    renderThread([turn()]); // last event is a `done`
+    expect(screen.queryByRole('button', { name: a.thread.retry })).toBeNull();
   });
 });

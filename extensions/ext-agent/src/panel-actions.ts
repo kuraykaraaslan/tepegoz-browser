@@ -53,11 +53,19 @@ export function useAgentActions(deps: AgentActionsDeps) {
     setExportError,
   } = deps;
 
-  function onRun(): void {
-    const text = activeState.prompt.trim();
+  /** Start a run. `promptOverride` is set by Retry (S8) — re-run a failed turn's prompt without the
+   *  user re-typing it; the composer's own text and attachments are untouched. */
+  function onRun(promptOverride?: string): void {
+    const isRetry = promptOverride !== undefined;
+    const text = (promptOverride ?? activeState.prompt).trim();
     if (text.length === 0 || activeState.running || activeGroupId === null) return;
     const groupId = activeGroupId;
-    const fullPrompt = serializeAttachments(activeState.attachments, text);
+    // A retry re-runs the failed turn's bare prompt: it does NOT consume whatever the user has since
+    // typed or staged in the composer, and it carries no skill (that was a plain re-run).
+    const attachments = isRetry ? [] : activeState.attachments;
+    const skillId = isRetry ? null : activeState.skillId;
+    const skillName = isRetry ? null : activeState.skillName;
+    const fullPrompt = serializeAttachments(attachments, text);
     const id = `turn-${String(Date.now())}-${String(activeState.turns.length)}`;
     const newTurn: Turn = {
       id,
@@ -78,8 +86,8 @@ export function useAgentActions(deps: AgentActionsDeps) {
         : {}),
       // Which skill produced this turn, if any (S8 B2) — visibility only, the same honesty logic as
       // the evidence chip.
-      ...(activeState.skillId !== null && activeState.skillName !== null
-        ? { skill: { id: activeState.skillId, name: activeState.skillName } }
+      ...(skillId !== null && skillName !== null
+        ? { skill: { id: skillId, name: skillName } }
         : {}),
     };
     mutateGroup(groupId, (s) => ({
@@ -90,21 +98,26 @@ export function useAgentActions(deps: AgentActionsDeps) {
       // (guards against a stale id/paused left when a prior run was Stopped before its terminal arrived).
       paused: false,
       runId: null,
-      prompt: '',
-      attachments: [],
-      expandedFiles: new Set(),
-      skillId: null,
-      skillName: null,
+      // A retry leaves the composer exactly as the user left it.
+      ...(isRetry
+        ? {}
+        : {
+            prompt: '',
+            attachments: [],
+            expandedFiles: new Set(),
+            skillId: null,
+            skillName: null,
+          }),
     }));
     void api
       .runAgent({
         prompt: fullPrompt,
         groupId,
         displayPrompt: text,
-        attachmentMeta: attachmentMeta(activeState.attachments),
+        attachmentMeta: attachmentMeta(attachments),
         // Attachments change the task, so `fullPrompt` stops matching the stored skill and main simply
         // refuses the binding — the run is asked about normally. That is the intended direction.
-        ...(activeState.skillId !== null ? { skillId: activeState.skillId } : {}),
+        ...(skillId !== null ? { skillId } : {}),
       })
       .then((result) => {
         // The evidence verdict belongs to THIS turn, matched by its own id rather than by position:
@@ -363,6 +376,8 @@ export function useAgentActions(deps: AgentActionsDeps) {
 
   return {
     onRun,
+    /** S8: re-run a failed turn's prompt without the user re-typing it. */
+    onRetry: (prompt: string) => onRun(prompt),
     onCancel,
     onSubmit,
     onPauseResume,

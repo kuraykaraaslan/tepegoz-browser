@@ -244,6 +244,7 @@ export const tr: AgentStrings = {
     allowed: '{tool} işlemine izin verdiniz',
     allowedRemembered: 'hatırlandı',
     allowedScoped: 'bu çalıştırma için',
+    retry: 'Yeniden dene',
   },
   // Besteci ek chip'leri (seçili metin / dosya / ekran görüntüsü).
   attach: {

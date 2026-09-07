@@ -144,6 +144,7 @@ export function AgentPanel({ api, onClose }: AgentPanelProps) {
         openSteps={openSteps}
         onToggleReasoning={actions.toggleReasoning}
         onToggleSteps={actions.toggleSteps}
+        onRetry={actions.onRetry}
       />
 
       <PanelComposer
