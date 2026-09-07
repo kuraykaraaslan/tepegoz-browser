@@ -11,7 +11,7 @@ import {
 } from '@tepegoz/tool-executor';
 import { CredentialFillIntentSchema, type ToolDescriptor } from '@tepegoz/shared-types';
 import { buildElementsSnapshot, buildPageSnapshot, type ElementsDiffMemory } from './perception';
-import { describeNetworkFailures, selectActionFailures } from './network-verify';
+import { describeNetworkFailures, selectActionFailures, summarizeNetwork } from './network-verify';
 import { levelsAtOrAbove, summarizeConsole } from './console-log';
 import type { BrowserHost } from './host';
 
@@ -690,6 +690,33 @@ export function registerBrowserTools(deps: { host: BrowserHost }): void {
           page.title,
           args.level === undefined ? undefined : levelsAtOrAbove(args.level),
         );
+      },
+    });
+  }
+
+  // P3-d read-only diagnostics — the network half. Registered ONLY when the host observes the page's
+  // XHR/fetch/document traffic. Shows method/status/timing, never bodies or headers — a narrow
+  // read-only carve-out, not DevTools (ADR-0029 is untouched).
+  if (host.networkRequestsSince !== undefined) {
+    const networkRequestsSince = host.networkRequestsSince.bind(host);
+    CapabilityRegistry.register({
+      descriptor: descriptor(
+        'browser_get_network',
+        'read',
+        "List the page's recent XHR/fetch/document requests for debugging. args: { tabId?: string } " +
+          '— omit tabId for the active tab. Returns { url, count, totalObserved, truncated, failed, ' +
+          'content }; each line is `METHOD path → status (Nms)`. Only XHR/fetch/document requests are ' +
+          'shown (not images/scripts/fonts), and never request or response BODIES or headers. An ' +
+          'empty result means nothing was observed (the tab may not have been attached long) — NOT ' +
+          'that the page made no requests. Use this to check whether a form submit or save actually ' +
+          'reached the server and what it returned.',
+        { aiTask: 'read_understand' },
+      ),
+      inputSchema: TargetTabArgs,
+      handler: async (args) => {
+        const observations = await networkRequestsSince(0, args.tabId).catch(() => []);
+        const page = await host.readPage(args.tabId).catch(() => ({ url: '' }));
+        return summarizeNetwork(observations, page.url);
       },
     });
   }

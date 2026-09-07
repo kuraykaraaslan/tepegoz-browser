@@ -34,6 +34,8 @@ export interface NetworkObservation {
   redirects: number;
   /** Transport error text when `status === 0` (e.g. `net::ERR_CONNECTION_REFUSED`). */
   errorText?: string;
+  /** Wall-clock ms from request start to this response/failure, when the request start was observed. */
+  durationMs?: number;
 }
 
 /**
@@ -61,6 +63,17 @@ function isFailure(o: NetworkObservation): boolean {
  */
 export function isActionBearingFailure(o: NetworkObservation): boolean {
   return ACTION_BEARING_TYPES.has(o.type) && isFailure(o);
+}
+
+/**
+ * Is this resource type one the agent cares to SEE (XHR / Fetch / Document), regardless of outcome?
+ *
+ * The failure recorder rings only {@link isActionBearingFailure}; the read-only `browser_get_network`
+ * diagnostics tool wants the successes too, but still only for these types — a page's images/scripts/
+ * fonts are noise a debugging read does not want and cannot afford to let evict the rest.
+ */
+export function isActionBearingType(type: string): boolean {
+  return ACTION_BEARING_TYPES.has(type);
 }
 
 /**
@@ -167,4 +180,63 @@ export function describeNetworkFailures(
     'confirm the result (re-read the page, or look for the saved value), and if it really failed, say so ' +
     'instead of retrying blindly.'
   );
+}
+
+/** Most requests rendered by `browser_get_network` — enough to debug a page, not enough to flood context. */
+export const MAX_REPORTED_REQUESTS = 40;
+
+/** The report `browser_get_network` returns. */
+export interface NetworkReport {
+  url: string;
+  /** Requests included in {@link NetworkReport.content} (after the cap). */
+  count: number;
+  /** Action-bearing requests observed in the window, before the cap. */
+  totalObserved: number;
+  /** True when older requests were dropped to fit {@link MAX_REPORTED_REQUESTS}. */
+  truncated: boolean;
+  /** How many of the reported requests did not succeed (status 0 or ≥ 400). */
+  failed: number;
+  /** Sanitized, XML-fenced listing of the reported requests — safe to hand to the model. */
+  content: string;
+}
+
+/** One request as a single line: `POST /api/save → 500 (123ms)`, `GET https://cdn/x → 200`. */
+function requestLine(o: NetworkObservation, pageUrl: string): string {
+  const base = failureLine(o, pageUrl); // method + url + outcome + redirects — shared with the failure path
+  const timing =
+    o.durationMs !== undefined && Number.isFinite(o.durationMs) && o.durationMs >= 0
+      ? ` (${String(Math.round(o.durationMs))}ms)`
+      : '';
+  return `${base}${timing}`;
+}
+
+/**
+ * Shape recently observed XHR/Fetch/Document requests into a model-safe {@link NetworkReport}.
+ *
+ * Only these types are recorded (a page's images/scripts/fonts are debugging noise); bodies and headers
+ * are never captured. The listing is oldest-first for reading order and keeps the most recent
+ * {@link MAX_REPORTED_REQUESTS}. Absence is silence: an empty report means "nothing observed" (the tab
+ * may not have been attached), never "the page made no requests".
+ */
+export function summarizeNetwork(
+  observations: readonly NetworkObservation[],
+  pageUrl: string,
+): NetworkReport {
+  const ordered = observations.slice().sort((a, b) => a.ts - b.ts);
+  const totalObserved = ordered.length;
+  const truncated = totalObserved > MAX_REPORTED_REQUESTS;
+  const reported = truncated ? ordered.slice(ordered.length - MAX_REPORTED_REQUESTS) : ordered;
+  const body =
+    reported.length === 0
+      ? '(no XHR/fetch/document requests observed)'
+      : reported.map((o) => requestLine(o, pageUrl)).join('\n');
+  const { text } = sanitizeContent(body);
+  return {
+    url: pageUrl,
+    count: reported.length,
+    totalObserved,
+    truncated,
+    failed: reported.filter(isFailure).length,
+    content: wrapUntrustedContent(text, pageUrl),
+  };
 }

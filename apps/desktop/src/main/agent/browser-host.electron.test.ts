@@ -62,7 +62,9 @@ const h = vi.hoisted(() => {
         Promise.resolve('v'),
       ),
       networkSince: vi.fn<(wc: WebContents, since: number) => unknown[]>(() => []),
+      networkRequestsSince: vi.fn<(wc: WebContents, since: number) => unknown[]>(() => []),
       interceptionsSince: vi.fn<(wc: WebContents, since: number) => unknown[]>(() => []),
+      consoleSince: vi.fn<(wc: WebContents, since: number) => unknown[]>(() => []),
       selectOption: vi.fn<(wc: WebContents, ref: number, value: string) => Promise<unknown>>(() =>
         Promise.resolve({ ok: true }),
       ),
@@ -103,7 +105,9 @@ vi.mock('./cdp-driver.electron', () => ({
     snapshotElements: h.cdp.snapshotElements,
     readElementValue: h.cdp.readElementValue,
     networkSince: h.cdp.networkSince,
+    networkRequestsSince: h.cdp.networkRequestsSince,
     interceptionsSince: h.cdp.interceptionsSince,
+    consoleSince: h.cdp.consoleSince,
     selectOption: h.cdp.selectOption,
   },
 }));
@@ -703,7 +707,7 @@ describe('cursor overlay wiring', () => {
   });
 });
 
-describe('networkSince / interceptionsSince tolerance', () => {
+describe('networkSince / interceptionsSince / consoleSince / networkRequestsSince tolerance', () => {
   beforeEach(() => vi.clearAllMocks());
 
   it('a destroyed target tab yields nothing observed, never an error', async () => {
@@ -711,12 +715,20 @@ describe('networkSince / interceptionsSince tolerance', () => {
 
     await expect(browserHost.networkSince(0, 'gone')).resolves.toEqual([]);
     await expect(browserHost.interceptionsSince!(0, 'gone')).resolves.toEqual([]);
+    await expect(browserHost.consoleSince!(0, 'gone')).resolves.toEqual([]);
+    await expect(browserHost.networkRequestsSince!(0, 'gone')).resolves.toEqual([]);
   });
 
   it('an undefined tabId reads the active tab', async () => {
     h.tabs.activeWebContents.mockReturnValue(richWc());
     h.cdp.networkSince.mockReturnValue([{ url: 'x' }]);
+    h.cdp.consoleSince.mockReturnValue([{ level: 'error', text: 'boom' }]);
+    h.cdp.networkRequestsSince.mockReturnValue([{ url: 'y', status: 200 }]);
 
     await expect(browserHost.networkSince(0)).resolves.toEqual([{ url: 'x' }]);
+    await expect(browserHost.consoleSince!(0)).resolves.toEqual([{ level: 'error', text: 'boom' }]);
+    await expect(browserHost.networkRequestsSince!(0)).resolves.toEqual([
+      { url: 'y', status: 200 },
+    ]);
   });
 });

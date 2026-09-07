@@ -134,6 +134,43 @@ describe('registerBrowserTools', () => {
     expect(result.content).toContain('no console messages observed');
   });
 
+  it('does NOT register browser_get_network when the host cannot observe the network', () => {
+    registerBrowserTools({ host: fakeHost() });
+    expect(CapabilityRegistry.get('browser_get_network')).toBeUndefined();
+  });
+
+  it('registers browser_get_network as a read tool that shapes requests into a fenced report', async () => {
+    const networkRequestsSince = vi.fn(() =>
+      Promise.resolve([
+        response({ url: 'https://x/api/a', status: 200, ts: 1, durationMs: 30 }),
+        response({ url: 'https://x/api/b', status: 500, ts: 2, durationMs: 90 }),
+      ]),
+    );
+    registerBrowserTools({ host: fakeHost({ networkRequestsSince }) });
+
+    const descriptor = CapabilityRegistry.list().find((d) => d.id === 'browser_get_network');
+    expect(descriptor?.dangerClass).toBe('read');
+
+    const result = (await CapabilityRegistry.get('browser_get_network')!.handler({
+      tabId: 't1',
+    })) as { count: number; failed: number; content: string };
+    expect(networkRequestsSince).toHaveBeenCalledWith(0, 't1');
+    expect(result.count).toBe(2);
+    expect(result.failed).toBe(1);
+    expect(result.content).toContain('/api/b → 500 (90ms)');
+  });
+
+  it('browser_get_network degrades to an empty report when the host read throws', async () => {
+    const networkRequestsSince = vi.fn(() => Promise.reject(new Error('tab gone')));
+    registerBrowserTools({ host: fakeHost({ networkRequestsSince }) });
+    const result = (await CapabilityRegistry.get('browser_get_network')!.handler({})) as {
+      count: number;
+      content: string;
+    };
+    expect(result.count).toBe(0);
+    expect(result.content).toContain('no XHR/fetch/document requests observed');
+  });
+
   it('registers the browser_* tools as always-on builtins', () => {
     registerBrowserTools({ host: fakeHost() });
     const ids = CapabilityRegistry.list()

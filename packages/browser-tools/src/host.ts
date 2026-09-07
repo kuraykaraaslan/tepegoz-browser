@@ -246,4 +246,18 @@ export interface BrowserHost {
    * nothing". An empty array means the same — "nothing observed", never "nothing happened".
    */
   consoleSince?(sinceMs: number, tabId?: string): Promise<ConsoleMessage[]>;
+  /**
+   * XHR/fetch/document requests observed on `tabId` at or after `sinceMs` (host clock) — P3-d
+   * read-only diagnostics, the network half. A caller wanting the whole retained log passes `0`.
+   *
+   * Distinct from {@link networkSince}, which rings only action-bearing FAILURES for post-action
+   * verification: this keeps successes too (still XHR/fetch/document only — a page's image/script/font
+   * traffic is debugging noise), so `browser_get_network` can answer "what did this page request, and
+   * how did each one come back". Bodies and headers are never captured.
+   *
+   * OPTIONAL, and its absence is honest silence: a host that does not observe the network omits it,
+   * `browser_get_network` is then not registered, and an empty array always means "nothing observed",
+   * never "the page made no requests".
+   */
+  networkRequestsSince?(sinceMs: number, tabId?: string): Promise<NetworkObservation[]>;
 }

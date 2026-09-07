@@ -42,6 +42,7 @@ vi.mock('./cdp-driver-dialogs.electron.js', () => dialogs);
 const net = vi.hoisted(() => ({
   attachNetworkRecorder: vi.fn(),
   networkSince: vi.fn(() => ['obs']),
+  networkRequestsSince: vi.fn(() => ['req']),
 }));
 vi.mock('./cdp-driver-network.electron.js', () => net);
 const consoleRec = vi.hoisted(() => ({
@@ -333,6 +334,7 @@ describe('pass-through observers', () => {
   it('networkSince / interceptionsSince / waitForPageSettled delegate', async () => {
     const wc = mkWc();
     expect(CdpDriver.networkSince(cast(wc), 0)).toEqual(['obs']);
+    expect(CdpDriver.networkRequestsSince(cast(wc), 0)).toEqual(['req']);
     expect(CdpDriver.interceptionsSince(cast(wc), 0)).toEqual(['dialog']);
     expect(CdpDriver.consoleSince(cast(wc), 0)).toEqual(['log']);
     await CdpDriver.waitForPageSettled(cast(wc));

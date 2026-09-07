@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import type { WebContents } from 'electron';
-import { attachNetworkRecorder, networkSince } from './cdp-driver-network.electron';
+import {
+  attachNetworkRecorder,
+  networkRequestsSince,
+  networkSince,
+} from './cdp-driver-network.electron';
 
 /**
  * Locks the CDP contract the AI-8B recorder depends on: the payload SHAPES Chromium actually sends for
@@ -328,5 +332,82 @@ describe('AI-8B CDP network recorder', () => {
     // The first request's response can no longer be joined (its pending entry was evicted).
     emit('Network.responseReceived', responseReceived({ requestId: 'p0' }));
     expect(() => networkSince(wc, 0)).not.toThrow();
+  });
+});
+
+describe('P3-d network diagnostics ring (browser_get_network)', () => {
+  it('records SUCCESSES too, with a measured duration — not just failures', () => {
+    const { wc, emit } = fakeWebContents();
+    attachNetworkRecorder(wc);
+    emit('Network.requestWillBeSent', requestWillBeSent({ requestId: 'ok' }));
+    emit(
+      'Network.responseReceived',
+      responseReceived({
+        requestId: 'ok',
+        response: { url: 'http://127.0.0.1:5000/api', status: 200 },
+      }),
+    );
+    // The failure ring stays failure-only...
+    expect(networkSince(wc, 0)).toEqual([]);
+    // ...while the diagnostics ring keeps the 200.
+    const seen = networkRequestsSince(wc, 0);
+    expect(seen).toHaveLength(1);
+    expect(seen[0]).toMatchObject({ method: 'POST', status: 200, type: 'Fetch' });
+    expect(typeof seen[0]?.durationMs).toBe('number');
+  });
+
+  it("keeps only XHR/fetch/document — a page's image/script traffic stays out", () => {
+    const { wc, emit } = fakeWebContents();
+    attachNetworkRecorder(wc);
+    emit('Network.requestWillBeSent', requestWillBeSent({ requestId: 'img', type: 'Image' }));
+    emit(
+      'Network.responseReceived',
+      responseReceived({
+        requestId: 'img',
+        type: 'Image',
+        response: { url: 'http://127.0.0.1:5000/x.png', status: 200 },
+      }),
+    );
+    expect(networkRequestsSince(wc, 0)).toEqual([]);
+  });
+
+  it('records a transport failure in the diagnostics ring as well', () => {
+    const { wc, emit } = fakeWebContents();
+    attachNetworkRecorder(wc);
+    emit('Network.requestWillBeSent', requestWillBeSent({ requestId: 'x' }));
+    emit('Network.loadingFailed', {
+      requestId: 'x',
+      type: 'Fetch',
+      errorText: 'net::ERR_CONNECTION_REFUSED',
+      canceled: false,
+    });
+    expect(networkRequestsSince(wc, 0)).toHaveLength(1);
+    expect(networkRequestsSince(wc, 0)[0]?.status).toBe(0);
+  });
+
+  it('caps the diagnostics ring at 60, dropping the oldest', () => {
+    const { wc, emit } = fakeWebContents();
+    attachNetworkRecorder(wc);
+    for (let i = 0; i < 65; i++) {
+      const id = `r${String(i)}`;
+      emit('Network.requestWillBeSent', requestWillBeSent({ requestId: id }));
+      emit(
+        'Network.responseReceived',
+        responseReceived({
+          requestId: id,
+          response: { url: `http://127.0.0.1:5000/api/${String(i)}`, status: 200 },
+        }),
+      );
+    }
+    expect(networkRequestsSince(wc, 0)).toHaveLength(60);
+  });
+
+  it('filters the diagnostics ring by the requested window and is empty for an unattached tab', () => {
+    const { wc, emit } = fakeWebContents();
+    expect(networkRequestsSince(wc, 0)).toEqual([]); // never attached
+    attachNetworkRecorder(wc);
+    emit('Network.requestWillBeSent', requestWillBeSent({ requestId: 'ok' }));
+    emit('Network.responseReceived', responseReceived({ requestId: 'ok' }));
+    expect(networkRequestsSince(wc, Date.now() + 1_000)).toEqual([]);
   });
 });

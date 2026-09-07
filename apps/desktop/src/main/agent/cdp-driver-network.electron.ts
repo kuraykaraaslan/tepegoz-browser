@@ -2,6 +2,7 @@ import type { WebContents } from 'electron';
 import { Logger } from '@tepegoz/libs';
 import {
   isActionBearingFailure,
+  isActionBearingType,
   isReportableFailure,
   type NetworkObservation,
 } from '@tepegoz/browser-tools';
@@ -31,6 +32,15 @@ import {
 
 /** Completed observations kept per tab. A single action window sees far fewer; the rest is slack. */
 const MAX_OBSERVATIONS = 100;
+/**
+ * XHR/fetch/document requests (success AND failure) kept per tab for `browser_get_network` (P3-d).
+ *
+ * A SEPARATE ring from {@link MAX_OBSERVATIONS} on purpose: that one rings only action-bearing
+ * FAILURES so page noise can never evict the one failure post-action verification exists to catch.
+ * This one keeps successes too, but still only XHR/fetch/document — image/script/font traffic stays
+ * out — so a debugging read is not drowned and cannot be used to flush the failure ring.
+ */
+const MAX_REQUESTS = 60;
 /** In-flight requests tracked per tab, awaiting their response. */
 const MAX_PENDING = 300;
 /** Longest url stored. Full urls can be enormous (data: / query-encoded payloads). */
@@ -69,12 +79,28 @@ interface Pending {
 
 interface TabNetwork {
   observations: NetworkObservation[];
+  /** All XHR/fetch/document requests (success + failure) for `browser_get_network` — see MAX_REQUESTS. */
+  requests: NetworkObservation[];
   pending: Map<string, Pending>;
 }
 
 const state = new WeakMap<WebContents, TabNetwork>();
 /** WebContents whose permanent listener is already installed (guards re-attach on tab switch). */
 const wired = new WeakSet<WebContents>();
+
+/** Ring a completed XHR/fetch/document request (any status) into the diagnostics buffer (P3-d). */
+function pushRequest(net: TabNetwork, observation: NetworkObservation): void {
+  if (!isActionBearingType(observation.type)) return;
+  net.requests.push(observation);
+  if (net.requests.length > MAX_REQUESTS) {
+    net.requests.splice(0, net.requests.length - MAX_REQUESTS);
+  }
+}
+
+/** Wall-clock ms from request start to now, or `undefined` when the request start was not observed. */
+function durationSince(startedAt: number | undefined): number | undefined {
+  return startedAt === undefined ? undefined : Math.max(0, Date.now() - startedAt);
+}
 
 function push(net: TabNetwork, observation: NetworkObservation, pageUrl: string): void {
   // Ring ONLY what could ever be reported. A normal page load issues dozens of images/scripts/fonts; if
@@ -137,18 +163,18 @@ function trackResponse(net: TabNetwork, params: unknown, pageUrl: string): void 
   const { requestId, type, response } = parsed.data;
   const pending = net.pending.get(requestId);
   net.pending.delete(requestId);
-  push(
-    net,
-    {
-      method: pending?.method ?? '',
-      url: safeUrl(response.url),
-      status: Math.trunc(response.status),
-      type: type ?? pending?.type ?? '',
-      ts: pending?.startedAt ?? Date.now(),
-      redirects: pending?.redirects ?? 0,
-    },
-    pageUrl,
-  );
+  const durationMs = durationSince(pending?.startedAt);
+  const observation: NetworkObservation = {
+    method: pending?.method ?? '',
+    url: safeUrl(response.url),
+    status: Math.trunc(response.status),
+    type: type ?? pending?.type ?? '',
+    ts: pending?.startedAt ?? Date.now(),
+    redirects: pending?.redirects ?? 0,
+    ...(durationMs !== undefined ? { durationMs } : {}),
+  };
+  push(net, observation, pageUrl);
+  pushRequest(net, observation);
 }
 
 function trackFailure(net: TabNetwork, params: unknown, pageUrl: string): void {
@@ -172,19 +198,19 @@ function trackFailure(net: TabNetwork, params: unknown, pageUrl: string): void {
   }
   const url = pending?.url ?? '';
   if (url.length === 0) return; // nothing identifiable to report
-  push(
-    net,
-    {
-      method: pending?.method ?? '',
-      url,
-      status: 0,
-      type: type ?? pending?.type ?? '',
-      ts: pending?.startedAt ?? Date.now(),
-      redirects: pending?.redirects ?? 0,
-      ...(errorText !== undefined ? { errorText: errorText.slice(0, MAX_ERROR_CHARS) } : {}),
-    },
-    pageUrl,
-  );
+  const durationMs = durationSince(pending?.startedAt);
+  const observation: NetworkObservation = {
+    method: pending?.method ?? '',
+    url,
+    status: 0,
+    type: type ?? pending?.type ?? '',
+    ts: pending?.startedAt ?? Date.now(),
+    redirects: pending?.redirects ?? 0,
+    ...(errorText !== undefined ? { errorText: errorText.slice(0, MAX_ERROR_CHARS) } : {}),
+    ...(durationMs !== undefined ? { durationMs } : {}),
+  };
+  push(net, observation, pageUrl);
+  pushRequest(net, observation);
 }
 
 /**
@@ -194,7 +220,7 @@ function trackFailure(net: TabNetwork, params: unknown, pageUrl: string): void {
 export function attachNetworkRecorder(wc: WebContents): void {
   if (wired.has(wc)) return;
   wired.add(wc);
-  const net: TabNetwork = { observations: [], pending: new Map() };
+  const net: TabNetwork = { observations: [], requests: [], pending: new Map() };
   state.set(wc, net);
   wc.debugger.on('message', (_event: unknown, method: string, params?: unknown) => {
     if (method === 'Network.requestWillBeSent') {
@@ -227,4 +253,17 @@ export function networkSince(wc: WebContents, sinceMs: number): NetworkObservati
   const net = state.get(wc);
   if (net === undefined) return [];
   return net.observations.filter((o) => o.ts >= sinceMs);
+}
+
+/**
+ * The XHR/fetch/document requests observed on `wc` at or after `sinceMs` (host clock) — successes AND
+ * failures, for the read-only `browser_get_network` diagnostics tool (P3-d).
+ *
+ * An empty array means **nothing was observed** — the tab may never have been attached — never "the
+ * page made no requests".
+ */
+export function networkRequestsSince(wc: WebContents, sinceMs: number): NetworkObservation[] {
+  const net = state.get(wc);
+  if (net === undefined) return [];
+  return net.requests.filter((o) => o.ts >= sinceMs);
 }

@@ -755,6 +755,13 @@ export const browserHost: BrowserHost & TabHost & ScreenshotToolsHost = {
     if (wc === null || wc.isDestroyed()) return Promise.resolve([]);
     return Promise.resolve(CdpDriver.consoleSince(wc, sinceMs));
   },
+  networkRequestsSince: (sinceMs, tabId) => {
+    // P3-d network half — same tolerant shape: a missing/destroyed tab yields "nothing observed".
+    const wc =
+      tabId === undefined ? TabManager.activeWebContents() : TabManager.webContentsForTab(tabId);
+    if (wc === null || wc.isDestroyed()) return Promise.resolve([]);
+    return Promise.resolve(CdpDriver.networkRequestsSince(wc, sinceMs));
+  },
   captureScreenshot,
   clickElement: async (ref, tabId) => {
     resetForAgentAction();

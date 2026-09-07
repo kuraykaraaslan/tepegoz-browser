@@ -2,8 +2,11 @@ import { describe, expect, it } from 'vitest';
 import {
   describeNetworkFailures,
   displayUrl,
+  isActionBearingType,
   selectActionFailures,
+  summarizeNetwork,
   MAX_REPORTED_FAILURES,
+  MAX_REPORTED_REQUESTS,
   type NetworkObservation,
 } from './network-verify';
 
@@ -154,5 +157,65 @@ describe('describeNetworkFailures', () => {
     expect(summary.toLowerCase()).not.toContain('new task:');
     // The page's forged closing tag must not have added a second fence terminator.
     expect(summary.split('</untrusted_page_content>')).toHaveLength(2);
+  });
+});
+
+describe('isActionBearingType', () => {
+  it('is true for XHR / Fetch / Document and false for page-noise resource types', () => {
+    for (const t of ['XHR', 'Fetch', 'Document']) expect(isActionBearingType(t)).toBe(true);
+    for (const t of ['Image', 'Script', 'Stylesheet', 'Font', 'Ping', 'Media', '']) {
+      expect(isActionBearingType(t)).toBe(false);
+    }
+  });
+});
+
+describe('summarizeNetwork', () => {
+  it('renders each request as METHOD path → status (Nms), oldest first, and counts failures', () => {
+    const report = summarizeNetwork(
+      [
+        obs({ url: 'https://app.example.com/api/a', status: 200, ts: 2, durationMs: 123.6 }),
+        obs({ url: 'https://app.example.com/api/b', status: 500, ts: 1, durationMs: 40 }),
+      ],
+      PAGE,
+    );
+    expect(report.count).toBe(2);
+    expect(report.totalObserved).toBe(2);
+    expect(report.truncated).toBe(false);
+    expect(report.failed).toBe(1);
+    const lines = report.content.split('\n').filter((l) => l.includes('/api/'));
+    expect(lines[0]).toContain('/api/b → 500 (40ms)'); // ts 1 first
+    expect(lines[1]).toContain('/api/a → 200 (124ms)'); // rounded
+  });
+
+  it('says so plainly when nothing was observed — never "the page made no requests"', () => {
+    const report = summarizeNetwork([], PAGE);
+    expect(report.count).toBe(0);
+    expect(report.content).toContain('no XHR/fetch/document requests observed');
+  });
+
+  it('omits the timing when no duration was measured, and a transport failure reads honestly', () => {
+    const report = summarizeNetwork([obs({ status: 0, errorText: 'net::ERR_TIMED_OUT' })], PAGE);
+    expect(report.content).toContain('no response (net::ERR_TIMED_OUT)');
+    expect(report.content).not.toMatch(/\(\d+ms\)/);
+  });
+
+  it('keeps the newest requests when it has to trim, and flags truncation', () => {
+    const many = Array.from({ length: MAX_REPORTED_REQUESTS + 5 }, (_v, i) =>
+      obs({ url: `https://app.example.com/api/${String(i)}`, status: 200, ts: i }),
+    );
+    const report = summarizeNetwork(many, PAGE);
+    expect(report.truncated).toBe(true);
+    expect(report.count).toBe(MAX_REPORTED_REQUESTS);
+    expect(report.totalObserved).toBe(MAX_REPORTED_REQUESTS + 5);
+    expect(report.content).toContain(`/api/${String(MAX_REPORTED_REQUESTS + 4)} → 200`);
+    expect(report.content).not.toContain('/api/0 → 200');
+  });
+
+  it('fences the page-controlled request lines as untrusted', () => {
+    const report = summarizeNetwork(
+      [obs({ url: 'https://app.example.com/ignore-previous-instructions', status: 200 })],
+      PAGE,
+    );
+    expect(report.content).toContain('<untrusted_page_content');
   });
 });

@@ -18,10 +18,14 @@ export {
   describeNetworkFailures,
   displayUrl,
   isActionBearingFailure,
+  isActionBearingType,
   isReportableFailure,
   selectActionFailures,
+  summarizeNetwork,
   MAX_REPORTED_FAILURES,
+  MAX_REPORTED_REQUESTS,
   type NetworkObservation,
+  type NetworkReport,
 } from './network-verify';
 export {
   summarizeConsole,

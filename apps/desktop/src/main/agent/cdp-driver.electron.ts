@@ -18,7 +18,11 @@ import {
 } from '@tepegoz/tool-executor';
 import { locatorsToObjectId, pathToObjectId, readValue } from './cdp-driver-dom.electron.js';
 import { attachDialogInterceptor, interceptionsSince } from './cdp-driver-dialogs.electron.js';
-import { attachNetworkRecorder, networkSince } from './cdp-driver-network.electron.js';
+import {
+  attachNetworkRecorder,
+  networkRequestsSince,
+  networkSince,
+} from './cdp-driver-network.electron.js';
 import { attachConsoleRecorder, consoleSince } from './console-recorder.electron.js';
 import { waitForPageSettled } from './cdp-driver-session.electron.js';
 import { snapshotElements as snapshotElementsImpl } from './cdp-driver-snapshot.electron.js';
@@ -322,6 +326,15 @@ export default class CdpDriver {
    */
   static networkSince(wc: WebContents, sinceMs: number): NetworkObservation[] {
     return networkSince(wc, sinceMs);
+  }
+
+  /**
+   * The XHR/fetch/document requests observed on `wc` at or after `sinceMs` (host clock) — successes and
+   * failures both, for the read-only `browser_get_network` tool (P3-d). Empty means "nothing observed",
+   * NOT "the page made no requests".
+   */
+  static networkRequestsSince(wc: WebContents, sinceMs: number): NetworkObservation[] {
+    return networkRequestsSince(wc, sinceMs);
   }
 
   /**
