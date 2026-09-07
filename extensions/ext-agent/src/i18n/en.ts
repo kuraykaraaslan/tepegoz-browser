@@ -264,6 +264,7 @@ export const en = {
     allowedRemembered: 'remembered',
     allowedScoped: 'for this run',
     retry: 'Retry',
+    stepBudget: 'step {n} of {max}',
   },
   // Composer attachment chips (selected text / file / screenshot).
   attach: {

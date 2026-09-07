@@ -2,6 +2,7 @@ import { Logger } from '@tepegoz/libs';
 import { ModelGateway, type CanonMessage } from '@tepegoz/model-gateway';
 import { ToolGateway } from '@tepegoz/capability-plane';
 import { wrapUserRequest } from '@tepegoz/tool-executor';
+import { DEFAULT_AGENT_MAX_STEPS } from '@tepegoz/shared-types';
 import type { AgentWorkingState, CompletionOutcome, VisionEscalation } from '@tepegoz/shared-types';
 import type { StepOutcome } from './executor';
 import {
@@ -156,7 +157,7 @@ export function createReadStreakGuard(
 
 export default class Reactor {
   static async run(req: ReactRequest, options: ReactOptions = {}): Promise<ReactResult> {
-    const maxSteps = options.maxSteps ?? 25;
+    const maxSteps = options.maxSteps ?? DEFAULT_AGENT_MAX_STEPS;
     const loopThreshold = options.loopThreshold ?? 3;
     const known = new Set(req.tools.map((t) => t.id));
     // Idempotent read-only tools (perception/verification, dangerClass 'read') are EXEMPT from the loop

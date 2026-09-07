@@ -372,10 +372,19 @@ run` when those boxes were also ticked. The blocking modal is untouched. en + tr
       Narrow schema on purpose (a single question, fixed intent), and the answer is trusted user input — the
       multi-question form is [PR8](#pr8--agent-console-readability-librechat-ui-extraction)'s B1, which is the
       same primitive widened. [`../tracks/notte-agent-parity.md`](../../docs/parities/notte-agent-parity.md) P3.
-- [ ] **A visible, adjustable step budget.** The Reactor hard-caps a run at `maxSteps` (default 25) but the
-      number is invisible and unchangeable, so a run that hits the cap looks like an unexplained stop. Surface
-      it as a setting with a live "N steps left" affordance.
-      [`../tracks/ui-tars-desktop-agent-parity.md`](../../docs/parities/ui-tars-desktop-agent-parity.md) P2-a.
+- [~] **A visible, adjustable step budget.** The Reactor hard-caps a run at `maxSteps` (default 25) but the
+  number is invisible and unchangeable, so a run that hits the cap looks like an unexplained stop. Surface
+  it as a setting with a live "N steps left" affordance.
+  [`../tracks/ui-tars-desktop-agent-parity.md`](../../docs/parities/ui-tars-desktop-agent-parity.md) P2-a.
+  _Visible half landed 2026-09-08: the `?? 25` literals in `Reactor.run` / `Executor.run` now read
+  `?? DEFAULT_AGENT_MAX_STEPS`, a single named export from `@tepegoz/shared-types` (`agent-prompt.ts`),
+  so the panel shows the same number the orchestrator enforces. `StepFeed` header now carries
+  `· step N of 25`, N counted from `step_start` events (one per acting step — the reactor's own
+  per-iteration audit hook), turning amber once N reaches the cap so hitting it reads as "used its
+  budget" rather than an unexplained halt. `thread.stepBudget` en/tr, 4 new `panel-step-feed.test.tsx`
+  cases (10 total). **Still owed for `[x]`:** the "adjustable" half — a real setting that overrides
+  `maxSteps` per run is spend-shaped (a higher cap is a bigger bill) and belongs with the run-config
+  surface, so it stays a deliberate owner decision, not an autonomous change._
 - [ ] **Per-tool-call timing on the replay timeline.** The audit journal already timestamps every call; the
       timeline shows steps and evidence badges but no latency. One column, no new data path — and it is what
       turns "the agent felt slow" into a specific slow call.

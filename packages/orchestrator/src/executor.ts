@@ -1,4 +1,5 @@
 import { ToolGateway, type InvokeContext } from '@tepegoz/capability-plane';
+import { DEFAULT_AGENT_MAX_STEPS } from '@tepegoz/shared-types';
 import type { Plan, PlanStep, ToolError } from '@tepegoz/shared-types';
 
 /**
@@ -87,7 +88,7 @@ function stableStringify(v: unknown): string {
 
 export default class Executor {
   static async run(plan: Plan, options: RunOptions = {}): Promise<RunResult> {
-    const maxSteps = options.maxSteps ?? 25;
+    const maxSteps = options.maxSteps ?? DEFAULT_AGENT_MAX_STEPS;
     const loopThreshold = options.loopThreshold ?? 3;
     const ctx = options.ctx ?? {};
     const outcomes: StepOutcome[] = [];

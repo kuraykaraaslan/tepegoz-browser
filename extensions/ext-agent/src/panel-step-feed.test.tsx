@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { DEFAULT_AGENT_MAX_STEPS } from '@tepegoz/shared-types';
 import { StepFeed } from './panel-step-feed';
 import { agentDict } from './i18n';
 import type { AgentEvent } from './types';
@@ -104,6 +105,70 @@ describe('StepFeed', () => {
       />,
     );
     expect(container.querySelectorAll('.animate-pulse')).toHaveLength(0);
+  });
+
+  it('shows the step budget against the default cap', () => {
+    render(
+      <StepFeed
+        steps={steps}
+        open
+        working={false}
+        latestMessage={undefined}
+        onToggle={vi.fn()}
+        a={a}
+      />,
+    );
+    // One `step_start` in the fixture → "step 1 of 25", visible whether the feed is open or collapsed.
+    expect(screen.getByText(`· step 1 of ${DEFAULT_AGENT_MAX_STEPS}`)).toBeTruthy();
+  });
+
+  it('counts one acting step per step_start, not per event', () => {
+    const many = [
+      step('step_start', 'a', 1),
+      step('step_ok', 'a ✓', 2),
+      step('step_start', 'b', 3),
+      step('step_ok', 'b ✓', 4),
+      step('step_start', 'c', 5),
+    ];
+    render(
+      <StepFeed steps={many} open working latestMessage={undefined} onToggle={vi.fn()} a={a} />,
+    );
+    expect(screen.getByText(`· step 3 of ${DEFAULT_AGENT_MAX_STEPS}`)).toBeTruthy();
+  });
+
+  it('flags the budget when the run has reached the cap', () => {
+    const capped = Array.from({ length: DEFAULT_AGENT_MAX_STEPS }, (_, i) =>
+      step('step_start', `s${String(i)}`, i + 1),
+    );
+    render(
+      <StepFeed
+        steps={capped}
+        open
+        working={false}
+        latestMessage={undefined}
+        onToggle={vi.fn()}
+        a={a}
+      />,
+    );
+    const budget = screen.getByText(
+      `· step ${DEFAULT_AGENT_MAX_STEPS} of ${DEFAULT_AGENT_MAX_STEPS}`,
+    );
+    expect(budget.className).toContain('text-amber-600');
+  });
+
+  it('falls back to terminal step events when no step_start was emitted', () => {
+    const terminalOnly = [step('step_ok', 'a ✓', 1), step('step_error', 'b ✗', 2)];
+    render(
+      <StepFeed
+        steps={terminalOnly}
+        open
+        working={false}
+        latestMessage={undefined}
+        onToggle={vi.fn()}
+        a={a}
+      />,
+    );
+    expect(screen.getByText(`· step 2 of ${DEFAULT_AGENT_MAX_STEPS}`)).toBeTruthy();
   });
 
   it('toggles on header click', () => {

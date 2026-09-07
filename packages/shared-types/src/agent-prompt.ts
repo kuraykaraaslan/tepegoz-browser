@@ -37,3 +37,11 @@ const ATTACHMENT_FRAMING_CHARS = MAX_ATTACHMENT_LABEL_CHARS + 32;
  */
 export const MAX_AGENT_PROMPT_CHARS =
   MAX_USER_PROMPT_CHARS + MAX_ATTACHMENTS * (MAX_ATTACHMENT_CHARS + ATTACHMENT_FRAMING_CHARS);
+
+/**
+ * Hard cap on how many steps one reactive run may take before it stops itself (`stoppedReason:
+ * 'max_steps'`). Shared so the Agent panel can show the budget ("step N of …") next to the same
+ * number the orchestrator's `Reactor` / `Executor` enforce — a run that hits the cap should not look
+ * like an unexplained stop. A caller may still pass its own `maxSteps`; this is only the default.
+ */
+export const DEFAULT_AGENT_MAX_STEPS = 25;

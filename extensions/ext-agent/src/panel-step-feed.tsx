@@ -1,4 +1,5 @@
 import { cn } from '@tepegoz/ui';
+import { DEFAULT_AGENT_MAX_STEPS } from '@tepegoz/shared-types';
 import type { AgentStrings } from './i18n';
 import type { AgentEvent } from './types';
 import { GaugeIcon, KIND_DOT } from './panel-icons';
@@ -25,6 +26,17 @@ export function StepFeed({
   a: AgentStrings;
 }) {
   if (steps.length === 0) return null;
+  // One `step_start` is emitted per acting step (the reactor's own per-iteration audit hook), so
+  // counting them is counting the same steps the `Reactor` charges against `maxSteps`. Shown against
+  // {@link DEFAULT_AGENT_MAX_STEPS} so a run that stops at the cap reads as "used its budget", not as
+  // an unexplained halt (S8 PR9). A run may be launched with a custom `maxSteps`; this is the default
+  // the panel has no other way to know, and the overwhelmingly common case.
+  const stepsTaken = steps.filter((e) => e.kind === 'step_start').length;
+  const stepNumber =
+    stepsTaken || steps.filter((e) => e.kind === 'step_ok' || e.kind === 'step_error').length;
+  const budget = a.thread.stepBudget
+    .replace('{n}', String(stepNumber))
+    .replace('{max}', String(DEFAULT_AGENT_MAX_STEPS));
   return (
     <div className="rounded-md border border-border bg-surface-raised">
       <button
@@ -36,6 +48,16 @@ export function StepFeed({
           <GaugeIcon className="h-3.5 w-3.5 shrink-0 text-text-secondary" />
           <span className="shrink-0">
             {a.progress} ({steps.length})
+          </span>
+          <span
+            className={cn(
+              'shrink-0 tabular-nums',
+              stepNumber >= DEFAULT_AGENT_MAX_STEPS
+                ? 'text-amber-600 dark:text-amber-500'
+                : 'text-text-disabled',
+            )}
+          >
+            · {budget}
           </span>
           {working && !open && latestMessage !== undefined && (
             <span className="truncate text-text-disabled">· {latestMessage}</span>
