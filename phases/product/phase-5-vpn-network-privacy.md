@@ -184,12 +184,16 @@ endpoint** (one loopback port per active connection), never an OS-level system p
       site state. Here the two halves already exist separately (a connection can be rebuilt; per-site data
       clearing shipped in Phase 2), so the work is one honest action that does **both** and says which tabs
       it will disturb.
-- [ ] **Write down what per-connection `DataDirectory` costs in entry guards.** Tor deliberately pins ~3
+- [x] **Write down what per-connection `DataDirectory` costs in entry guards.** Tor deliberately pins ~3
       long-lived **guard** nodes per client, because rotating the entry point raises the chance of eventually
       picking a hostile one. One `tor` process per connection, each with its own `DataDirectory`, means each
       connection keeps its **own** guard set — and every connection a user deletes and recreates is a guard
       rotation. That is a real anonymity consequence of a design chosen for isolation; ADR-0011 should state
-      the trade rather than leave it implicit.
+      the trade rather than leave it implicit. _Done 2026-09-08: [ADR-0011](../../docs/adr/0011-vpn-network-privacy.md)
+      §7's "One Tor process per connection" paragraph now spells out the trade — N connections is N guard
+      selections not one, `release()` wiping a partition makes delete-and-recreate a guard rotation the user
+      did not choose, and the honest guidance (keep one Tor connection for guard stability; create several
+      only when path separation is worth more) with a pointer to the connections-overview disclosure._
 - [x] **⚠️ Two shipped/planned behaviours contradict the Tor research and must be disclosed, not quietly
       kept.** Both are defensible product choices; neither is defensible if the UI implies otherwise.
       _Both disclosures landed in the connections overview (`settings-network-privacy.tsx`), en+tr, 2026-09-08._

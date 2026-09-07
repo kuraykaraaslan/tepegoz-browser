@@ -334,6 +334,19 @@ guard refuses a config that chains back to itself instead of recursing until the
 but two connections would then share guards and possibly circuits — and "these two groups take different
 paths through Tor" is the entire reason a user would create two Tor connections rather than one.
 
+_The anonymity cost of that isolation, stated rather than left implicit._ Tor deliberately pins a small
+set of long-lived **entry guards** (≈3, rotated on a timescale of months) per client, because _rotating_
+the entry point is what raises a client's cumulative probability of eventually picking a hostile first
+hop. A per-connection `DataDirectory` means each connection keeps its **own** guard set, chosen
+independently — so N Tor connections is N guard selections rather than one, and **deleting and recreating
+a connection is a guard rotation** the user did not make as an anonymity decision (it is a side effect of
+`release()` wiping the partition, see Amendment §5). The trade this ADR accepts: provable path
+separation between connections is bought with a weaker per-connection entry-guard posture than a single
+shared Tor would give the same user, and churn in the connections list is guard churn. A user who wants
+Tor's default guard stability keeps **one** Tor connection and does not recreate it; a user who creates
+several for isolation is choosing separation over guard longevity, and the connections overview's
+"a Tor-routed tab is not a Tor Browser session" disclosure (Phase 5) is where that expectation is set.
+
 **Secrets.** A WireGuard profile is a private key, so it is stored encrypted through `safeStorage` and
 referenced by connection id; `networkConnections` in preferences keeps only what is safe to show in a
 list. Import is **refused outright when the OS keychain is unavailable** — falling back to plaintext "so
