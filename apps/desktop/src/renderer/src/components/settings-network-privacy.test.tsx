@@ -84,10 +84,12 @@ describe('NetworkPrivacySection', () => {
     await waitFor(() => expect(screen.getByText(s.network.noConnections)).toBeTruthy());
   });
 
-  it('echoes the exit note as the user\'s own claim and shows a verbatim error while down', async () => {
+  it("echoes the exit note as the user's own claim and shows a verbatim error while down", async () => {
     bridge.getNetworkState.mockResolvedValue(
       netState({
-        connections: [conn({ note: 'Mullvad SE', lastError: 'wireproxy not found', status: 'down' })],
+        connections: [
+          conn({ note: 'Mullvad SE', lastError: 'wireproxy not found', status: 'down' }),
+        ],
       }),
     );
     render1();
@@ -155,23 +157,30 @@ describe('NetworkPrivacySection', () => {
     bridge.getNetworkState.mockResolvedValue(
       netState({
         binaries: {
-          wireproxy: { found: true, path: '/usr/bin/wireproxy', isOverride: false, dropInDir: '/opt/bin' },
+          wireproxy: {
+            found: true,
+            path: '/usr/bin/wireproxy',
+            isOverride: false,
+            dropInDir: '/opt/bin',
+          },
           tor: { found: false, path: '', isOverride: false, dropInDir: '/opt/bin' },
         },
       }),
     );
     render1();
-    await waitFor(() =>
-      expect(screen.getByText(s.network.binaryAutoDetected)).toBeTruthy(),
-    );
+    await waitFor(() => expect(screen.getByText(s.network.binaryAutoDetected)).toBeTruthy());
   });
 
   it('adds a new connection through the embedded form and refetches', async () => {
     render1();
     await waitFor(() => expect(bridge.getNetworkState).toHaveBeenCalledTimes(1));
 
-    fireEvent.change(screen.getByLabelText(s.network.kindLabel), { target: { value: 'byo-socks' } });
-    fireEvent.change(screen.getByLabelText(s.network.nameLabel), { target: { value: 'Local SOCKS' } });
+    fireEvent.change(screen.getByLabelText(s.network.kindLabel), {
+      target: { value: 'byo-socks' },
+    });
+    fireEvent.change(screen.getByLabelText(s.network.nameLabel), {
+      target: { value: 'Local SOCKS' },
+    });
     fireEvent.change(screen.getByLabelText(s.network.portLabel), { target: { value: '1080' } });
     fireEvent.click(screen.getByRole('button', { name: s.network.add }));
 
@@ -222,6 +231,19 @@ describe('NetworkPrivacySection', () => {
     await waitFor(() => expect(screen.getByText('searched /wrong/parent')).toBeTruthy());
   });
 
+  it('shows a helper-folder rejection that is not an Error', async () => {
+    // The message names the folder that was searched, and the usual mistake is picking the parent of
+    // the right one — so an empty line here is the difference between a fixable mistake and a dialog
+    // that just refuses. A rejection crossing the bridge need not arrive as an Error.
+    render1();
+    const wpRow = await rowFor('wireproxy');
+
+    bridge.pickBinaryFolder.mockRejectedValueOnce('EACCES reading /opt/bin');
+    fireEvent.click(within(wpRow).getByRole('button', { name: s.network.binaryBrowse }));
+
+    await waitFor(() => expect(screen.getByText('EACCES reading /opt/bin')).toBeTruthy());
+  });
+
   it('a missing helper binary offers Browse; an overridden one offers Clear', async () => {
     bridge.getNetworkState.mockResolvedValue(
       netState({
@@ -235,7 +257,7 @@ describe('NetworkPrivacySection', () => {
     const wpRow = await rowFor('wireproxy');
     expect(within(wpRow).getByRole('button', { name: s.network.binaryBrowse })).toBeTruthy();
 
-    const torRow = (screen.getByText('/usr/bin/tor').closest('li')) as HTMLElement;
+    const torRow = screen.getByText('/usr/bin/tor').closest('li') as HTMLElement;
     fireEvent.click(within(torRow).getByRole('button', { name: s.network.binaryClear }));
     expect(bridge.setNetworkBinaryPath).toHaveBeenCalledWith('tor', '');
   });
