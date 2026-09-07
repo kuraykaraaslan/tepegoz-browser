@@ -132,6 +132,30 @@ endpoint** (one loopback port per active connection), never an OS-level system p
 - [x] `WireGuardConfigProvider`: import/parse `.conf` at the trust boundary; userspace WireGuard ↔ local SOCKS; **multiple instances coexist** (distinct ports) — _delivered as the userspace provider above; no native crate needed, and no binary bundled (helper binaries are **located**, not installed: override → `userData/bin` → PATH, with the drop-in directory shown when one is missing). The plan's pinned-hash auto-download is **not built** — inventing a hash to satisfy a design would be worse than telling the user where to put a file._
 - [ ] Account-based providers (Mullvad/Proton-style): credentials + config **only in main via `safeStorage`**; never bundled/logged (redaction); per-connection isolation (multiple regions live at once)
 - [ ] `ExecutionRouter`-style selection: deterministic provider/region pick when a tab requests a **new** connection; decision + reason → Event Journal
+- [~] **App-issued HTTP follows the General binding.** _`session.setProxy` governs only the stack Chromium
+  owns. Axios runs on Node's, so model-provider calls, the agent's `web_fetch` + sitemap reads and MCP
+  HTTP transports left on the **clear path** regardless of what the user bound._
+  - [x] _**Policy wired 2026-09-07.** `@tepegoz/http`'s `egress-route.ts` was written for exactly this
+        and `setEgressPolicy` had never been called, so the module sat inert with `policy = () => DIRECT`.
+        Its own docblock gave the reason — "nothing produces a port yet, since the connection pool is
+        unbuilt" — which expired when the pool landed and was never revisited. Found by auditing for
+        exports that are tested but have no production caller, the same shape as the WebRTC lock._
+  - [x] _`BindingService.installAppEgressRoute()` installs it at startup, next to the new-tab and
+        group-exit installers. **General scope only**, per that module's recorded decision: tab and group
+        bindings answer "where does THIS page's traffic go", and a main-process request has no tab to
+        inherit from. Read at SEND time, so a later rebind takes effect without re-installing._
+  - [x] _**Fail-closed, deliberately, and it has a visible cost.** A General binding pointing at a
+        connection that is not up resolves to a tunnel route with no usable port → `resolveEgressAgents`
+        throws 503 instead of sending the request direct. 8 tests + mutation-checked (returning `direct`
+        on the not-up branch turns one red)._
+  - [ ] _**Owed: the transport.** `setTunnelAgentFactory` is still uninstalled because no SOCKS agent
+        dependency ships (`socks-proxy-agent` or equivalent — a new dependency, deliberately not added
+        unilaterally). Until it lands, **any tunneled General binding makes app HTTP fail rather than
+        leak**: model calls and MCP return 503 while the user is on Tor/VPN. That is this phase's stated
+        rule ("silently downgrading to the clear path is the leak, and it is worse here than in a tab,
+        because there is no address bar showing the user what happened") — but it is a real behaviour
+        change and the owner may prefer to land the agent first. One line to revert: drop the
+        `installAppEgressRoute()` call._
 
 ### Tor integration (5a)
 

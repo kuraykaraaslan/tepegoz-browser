@@ -286,6 +286,10 @@ if (!app.requestSingleInstanceLock()) {
       ConnectionPool.init();
       BindingService.installNewTabRoute();
       BindingService.installGroupExitGuard();
+      // App-issued HTTP (model providers, the agent's web_fetch/sitemap reads, MCP) runs on Node's
+      // stack, which `session.setProxy` does not govern — so it needs to be told the General route
+      // explicitly or it leaves on the clear path regardless of what the user bound.
+      BindingService.installAppEgressRoute();
       ConnectionPool.onStatusChange(() => {
         broadcastNetworkState();
       });

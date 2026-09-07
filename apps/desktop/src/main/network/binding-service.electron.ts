@@ -13,6 +13,7 @@ import {
   type ScopedBinding,
 } from '@tepegoz/tab-engine';
 import { killSwitchVerdicts } from '@tepegoz/security-policy';
+import { setEgressPolicy } from '@tepegoz/http';
 import TabManager from '../tabs';
 import BrowsingSessions from './browsing-sessions.electron';
 import ConnectionPool from './connection-pool.electron';
@@ -274,6 +275,44 @@ const BindingService = {
   installGroupExitGuard(): void {
     TabManager.onInvoluntaryGroupExit((tabId, groupId) => {
       BindingService.preserveRouteOnGroupExit(tabId, groupId);
+    });
+  },
+
+  /**
+   * Tell `@tepegoz/http` where APP-ISSUED requests go — model-provider calls, the agent's `web_fetch`
+   * and sitemap reads, MCP HTTP transports.
+   *
+   * `session.setProxy` governs only the network stack Chromium owns. Axios runs on Node's own stack, so
+   * without this every main-process request leaves on the clear path no matter what the user bound.
+   * `egress-route.ts` was written for exactly this and its installer had never been called, which made
+   * the whole module inert — its own docblock said so, giving the reason "nothing produces a port yet,
+   * since the connection pool is unbuilt". That reason expired when the pool landed; this connects it.
+   *
+   * **General only**, per that module's recorded decision: tab and group bindings answer "where does
+   * THIS page's traffic go", and a main-process request has no tab to inherit from.
+   *
+   * **Fail-closed, and this is the part with teeth.** A General binding pointing at a connection that is
+   * not currently up resolves to a tunnel route with NO usable port, which makes `resolveEgressAgents`
+   * throw a 503 rather than send the request direct. Until a SOCKS transport is installed
+   * (`setTunnelAgentFactory`, still owed — no agent dependency ships yet), that is true of every tunneled
+   * General binding: app HTTP fails loudly instead of leaking quietly. That trade is this phase's stated
+   * rule — "silently downgrading to the clear path is the leak, and it is worse here than in a tab,
+   * because there is no address bar showing the user what happened."
+   */
+  installAppEgressRoute(): void {
+    setEgressPolicy(() => {
+      const general = generalBinding();
+      if (general.kind === 'direct') return { mode: 'direct' };
+      const socksPort = ConnectionPool.socksPortFor(general.connectionId);
+      if (socksPort === null) {
+        // Deliberately NOT `direct`. The user asked for a tunnel; not being able to provide one is a
+        // refusal, not permission to send it in the clear. Port 0 is the module's "cannot honour" value.
+        Logger.warn('App egress refused: the General connection is not up', {
+          connectionId: general.connectionId,
+        });
+        return { mode: 'tunnel', socksPort: 0 };
+      }
+      return { mode: 'tunnel', socksPort };
     });
   },
 

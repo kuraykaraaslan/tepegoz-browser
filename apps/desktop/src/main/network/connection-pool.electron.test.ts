@@ -134,6 +134,22 @@ describe('bringing a connection up', () => {
     expect(ConnectionPool.statusMap().get('tor')).toBe('up');
   });
 
+  it('socksPortFor reports the live port once up — the app-egress policy reads it synchronously', async () => {
+    expect(ConnectionPool.socksPortFor('tor')).toBeNull();
+    await ConnectionPool.ensureUp('tor');
+    expect(ConnectionPool.socksPortFor('tor')).toBe(9050);
+  });
+
+  it('socksPortFor is null for a DOWN connection — "no port" must not read as "no tunnel wanted"', async () => {
+    h.connect.mockRejectedValue(new Error('nothing listening'));
+    await expect(ConnectionPool.ensureUp('tor')).rejects.toThrow();
+    expect(ConnectionPool.socksPortFor('tor')).toBeNull();
+  });
+
+  it('socksPortFor is null for a connection the pool has never heard of', () => {
+    expect(ConnectionPool.socksPortFor('no-such-connection')).toBeNull();
+  });
+
   it('stays DOWN when the endpoint is not answering', async () => {
     h.connect.mockRejectedValue(new Error('nothing listening'));
     await expect(ConnectionPool.ensureUp('tor')).rejects.toThrow(/nothing listening/);

@@ -183,6 +183,23 @@ const ConnectionPool = {
   },
 
   /**
+   * The loopback SOCKS port a connection is answering on RIGHT NOW, or `null` if it is not up.
+   *
+   * Deliberately not on {@link PoolConnectionView}: the port is an internal transport detail and has no
+   * business on a view that is projected to the renderer. This exists for the app-egress policy
+   * (`@tepegoz/http`), which has to answer "where does a main-process request go" synchronously, at send
+   * time, and cannot await `ensureUp`.
+   *
+   * `null` for a configured-but-not-up connection is the answer that matters: the caller must treat it as
+   * "tunnel in force, cannot honour it" and refuse, never as "no tunnel, send it direct".
+   */
+  socksPortFor(id: string): number | null {
+    const entry = entries.get(id);
+    if (entry === undefined || entry.status !== 'up') return null;
+    return entry.socksPort;
+  },
+
+  /**
    * Health as the kill-switch consumes it: `up` or `down`, never anything softer.
    *
    * A connection that is configured but has never been brought up simply has no entry here, and

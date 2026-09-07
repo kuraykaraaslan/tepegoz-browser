@@ -19,6 +19,8 @@ const h = vi.hoisted(() => ({
   onGroupExit: vi.fn(),
   setNewTabProvider: vi.fn(),
   setPrivateProvider: vi.fn(),
+  socksPortFor: vi.fn<(id: string) => number | null>(() => null),
+  setEgressPolicy: vi.fn<(p: () => unknown) => void>(),
 }));
 
 vi.mock('electron', () => ({ session: { fromPartition: (p: string) => ({ partition: p }) } }));
@@ -53,8 +55,9 @@ vi.mock('./browsing-sessions.electron', () => ({
   },
 }));
 vi.mock('./connection-pool.electron', () => ({
-  default: { ensureUp: h.ensureUp, statusMap: h.statusMap },
+  default: { ensureUp: h.ensureUp, statusMap: h.statusMap, socksPortFor: h.socksPortFor },
 }));
+vi.mock('@tepegoz/http', () => ({ setEgressPolicy: h.setEgressPolicy }));
 
 const { default: BindingService } = await import('./binding-service.electron');
 
@@ -394,5 +397,59 @@ describe('startup wiring', () => {
     expect(() => providePrivate()).not.toThrow();
     await new Promise((r) => setTimeout(r, 0));
     expect(h.ensureUp).toHaveBeenCalledWith('tor');
+  });
+});
+
+/**
+ * App-issued HTTP (model providers, the agent's `web_fetch`/sitemap reads, MCP transports) runs on
+ * Node's stack, which `session.setProxy` never touches. `@tepegoz/http` was built to be told the route
+ * and its installer had never been called, so every one of those requests left on the clear path no
+ * matter what the user bound. These pin the policy this installs — and above all that "cannot honour
+ * the tunnel" resolves to a REFUSAL, never to Direct.
+ */
+describe('installAppEgressRoute', () => {
+  const installedPolicy = () =>
+    h.setEgressPolicy.mock.calls[0]?.[0] as () => { mode: string; socksPort?: number };
+
+  it('installs exactly one policy', () => {
+    BindingService.installAppEgressRoute();
+    expect(h.setEgressPolicy).toHaveBeenCalledTimes(1);
+  });
+
+  it('routes app HTTP direct when General is Direct', () => {
+    h.prefs.networkGeneralBinding = { kind: 'direct', connectionId: '' };
+    BindingService.installAppEgressRoute();
+    expect(installedPolicy()()).toEqual({ mode: 'direct' });
+  });
+
+  it('routes app HTTP through the live port when General is bound and up', () => {
+    h.prefs.networkGeneralBinding = { kind: 'connection', connectionId: 'tor-1' };
+    h.socksPortFor.mockReturnValue(9150);
+    BindingService.installAppEgressRoute();
+    expect(installedPolicy()()).toEqual({ mode: 'tunnel', socksPort: 9150 });
+    expect(h.socksPortFor).toHaveBeenCalledWith('tor-1');
+  });
+
+  it('REFUSES rather than falling back to Direct when the bound connection is not up', () => {
+    // The whole point. Port 0 is the module's "tunnel in force, cannot honour it" value, which makes
+    // `resolveEgressAgents` throw a 503. Answering `direct` here would be the leak.
+    h.prefs.networkGeneralBinding = { kind: 'connection', connectionId: 'tor-1' };
+    h.socksPortFor.mockReturnValue(null);
+    BindingService.installAppEgressRoute();
+    const route = installedPolicy()();
+    expect(route.mode).toBe('tunnel');
+    expect(route.socksPort).toBe(0);
+    expect(route).not.toEqual({ mode: 'direct' });
+  });
+
+  it('is read at SEND time, not captured at install time — a later rebind takes effect', () => {
+    h.prefs.networkGeneralBinding = { kind: 'direct', connectionId: '' };
+    BindingService.installAppEgressRoute();
+    const policy = installedPolicy();
+    expect(policy()).toEqual({ mode: 'direct' });
+
+    h.prefs.networkGeneralBinding = { kind: 'connection', connectionId: 'tor-1' };
+    h.socksPortFor.mockReturnValue(9150);
+    expect(policy()).toEqual({ mode: 'tunnel', socksPort: 9150 });
   });
 });
