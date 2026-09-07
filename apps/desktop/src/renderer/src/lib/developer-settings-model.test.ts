@@ -49,4 +49,21 @@ describe('developer settings model', () => {
       error: 'Invalid JSON',
     });
   });
+
+  it('classifies a preference with no visibility entry as private, not public', () => {
+    // `SETTINGS_VISIBILITY` is maintained by hand, so a preference can land in the model before
+    // anyone classifies it. That gap has to fail CLOSED: reading as public would put a brand-new
+    // preference in front of `tepegoz://` pages through the public-settings surface before anyone
+    // decided it should be readable at all. Every key in DEFAULT_PREFERENCES is classified today,
+    // which is exactly why this fallback needs a test of its own.
+    const rows = listDeveloperPreferenceRows({
+      ...PREFS,
+      brandNewUnclassifiedPreference: 'x',
+    } as unknown as typeof PREFS);
+
+    const row = rows.find((r) => (r.key as string) === 'brandNewUnclassifiedPreference');
+    expect(row?.visibility).toBe('private');
+    // and it is findable by that word, since the search index carries the classification
+    expect(row?.searchText).toContain('private');
+  });
 });
