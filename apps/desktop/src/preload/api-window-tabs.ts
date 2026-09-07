@@ -71,6 +71,7 @@ export const windowTabsApi: Pick<
   | 'onFindResult'
   | 'onFindOpen'
   | 'onOmniboxFocus'
+  | 'onCommandPaletteOpen'
   | 'setPageZoom'
   | 'getPageZoom'
   | 'newWindow'
@@ -245,6 +246,15 @@ export const windowTabsApi: Pick<
     ipcRenderer.on(IpcChannels.omniboxFocus, listener);
     return () => {
       ipcRenderer.removeListener(IpcChannels.omniboxFocus, listener);
+    };
+  },
+  onCommandPaletteOpen: (callback: () => void) => {
+    const listener = (): void => {
+      callback();
+    };
+    ipcRenderer.on(IpcChannels.commandPaletteOpen, listener);
+    return () => {
+      ipcRenderer.removeListener(IpcChannels.commandPaletteOpen, listener);
     };
   },
   setPageZoom: (direction: ZoomDirection) => {

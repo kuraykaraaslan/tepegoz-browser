@@ -5,7 +5,6 @@ import { coreDict } from '@tepegoz/i18n';
 import { useT } from '@tepegoz/i18n/react';
 import { browserDict } from '../../i18n';
 import { INTERNAL_SETTINGS_URL } from '@tepegoz/desktop-ipc';
-import { pressFromEvent, shortcutFor } from '@tepegoz/shortcuts';
 
 /**
  * Wires the Command Palette (Ctrl+K) to the app.
@@ -14,11 +13,10 @@ import { pressFromEvent, shortcutFor } from '@tepegoz/shortcuts';
  * and runs them. This is the only place that knows what a command IS, which keeps the palette testable
  * without an Electron bridge and keeps the app free to change what it offers.
  *
- * Ctrl+K is bound here rather than in the main process because the main-process shortcut path
- * (`keyboard-shortcuts.ts` → a new IPC channel) runs through `channels.ts` and the preload tab API,
- * both of which currently carry in-flight work. Binding in the renderer covers the case where the chrome
- * has focus, which is where a palette is normally summoned; extending it to fire while a PAGE has focus
- * is the same one-line addition Ctrl+F already makes, and is listed as owed in the phase file.
+ * Ctrl+K is caught in the MAIN process (`@tepegoz/shortcuts` `commandPalette`, `main` scope) and
+ * forwarded here over `commandPaletteOpen` — the same shape as `find` and `focusAddressBar`. A renderer
+ * `keydown` binding only fired while the chrome had focus, which is a minority of a browser's life; the
+ * main path works whether a PAGE or the chrome has focus. The chrome still owns the toggle.
  */
 export function CommandPaletteHost({ open, onClose }: { open: boolean; onClose: () => void }) {
   const t = useT(browserDict);
@@ -64,22 +62,17 @@ export function CommandPaletteHost({ open, onClose }: { open: boolean; onClose: 
   return <CommandPalette open={open} onClose={onClose} sources={sources} />;
 }
 
-/** Ctrl/Cmd+K opens the palette; the palette closes itself. */
+/** Ctrl/Cmd+K toggles the palette (main forwards the key); the palette also closes itself. */
 export function useCommandPalette(): { open: boolean; setOpen: (open: boolean) => void } {
   const [open, setOpen] = useState(false);
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent): void => {
-      // The combination lives in `@tepegoz/shortcuts` with every other one, so a second binding on
-      // Ctrl+K anywhere in the app becomes a failing test rather than two handlers firing in mount
-      // order. The palette still owns the toggle — only the key comes from the registry.
-      if (shortcutFor(pressFromEvent(e), 'renderer') !== 'commandPalette') return;
-      e.preventDefault();
-      setOpen((cur) => !cur);
-    };
-    window.addEventListener('keydown', onKey);
-    return () => {
-      window.removeEventListener('keydown', onKey);
-    };
-  }, []);
+  useEffect(
+    () =>
+      window.tepegoz.onCommandPaletteOpen(() => {
+        // A toggle, not just an open: `before-input-event` fires in every focus context, so a second
+        // Ctrl+K while the palette is up closes it — the behaviour the old renderer binding had.
+        setOpen((cur) => !cur);
+      }),
+    [],
+  );
   return { open, setOpen };
 }

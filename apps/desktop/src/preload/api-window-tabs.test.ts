@@ -254,6 +254,11 @@ describe('bare-signal subscriptions forward nothing and unsubscribe cleanly', ()
   it.each([
     ['onOmniboxFocus', (cb: () => void) => api.onOmniboxFocus(cb), IpcChannels.omniboxFocus],
     ['onFindOpen', (cb: () => void) => api.onFindOpen(cb), IpcChannels.findOpen],
+    [
+      'onCommandPaletteOpen',
+      (cb: () => void) => api.onCommandPaletteOpen(cb),
+      IpcChannels.commandPaletteOpen,
+    ],
   ])('%s', (_n, run, channel) => {
     const cb = vi.fn();
     const off = run(cb);

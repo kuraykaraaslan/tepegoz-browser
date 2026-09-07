@@ -115,6 +115,8 @@ export interface TabsApi {
   onFindOpen(callback: () => void): () => void;
   /** main → chrome: Ctrl+L / Alt+D was pressed while a page had focus; focus + select the address bar. */
   onOmniboxFocus(callback: () => void): () => void;
+  /** main → chrome: Ctrl/Cmd+K was pressed (any focus context) — toggle the Command Palette. */
+  onCommandPaletteOpen(callback: () => void): () => void;
   /** Step / reset the active tab's zoom (the omnibox zoom indicator's −, +, Reset). Fire-and-forget;
    *  the new level arrives on the next `onTabsState` as `activeZoomFactor`. */
   setPageZoom(direction: ZoomDirection): void;

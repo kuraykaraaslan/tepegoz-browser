@@ -17,6 +17,7 @@ import {
  * every web view. Returns true when handled (caller should `preventDefault`).
  *   • Ctrl/Cmd+F — open the chrome's find bar. Handled here rather than in the renderer because
  *     the key usually arrives while the PAGE has focus, where the chrome never sees it.
+ *   • Ctrl/Cmd+K — toggle the Command Palette, for the same focus reason as find.
  *   • F11 — toggle fullscreen (ignored while in kiosk).
  *   • Ctrl/Cmd+Shift+Q — leave kiosk: the ONLY escape from a chromeless kiosk. Un-kiosk + reload the
  *     normal chrome (the kiosk tab persists as a normal tab).
@@ -65,6 +66,11 @@ export function handleWindowShortcut(
       // Same shape as `find`: main owns the KEY (the page has focus, so the chrome never sees it) and
       // the chrome owns what focusing means. Both ids land here — one command, two bindings.
       win.webContents.send(IpcChannels.omniboxFocus);
+      return true;
+    case 'commandPalette':
+      // Same shape again: the key usually arrives while a PAGE has focus. Main forwards it; the chrome
+      // owns the toggle (open ⇆ close), so a second press closes the palette it just opened.
+      win.webContents.send(IpcChannels.commandPaletteOpen);
       return true;
     case 'newPrivateWindow':
       // Opened through the injected target rather than by importing `browser-windows` here: that

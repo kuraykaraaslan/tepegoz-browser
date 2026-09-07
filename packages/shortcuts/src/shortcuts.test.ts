@@ -95,8 +95,10 @@ describe('both input shapes reduce to the same press', () => {
       shiftKey: false,
       altKey: false,
     });
-    expect(shortcutFor(withCmd, 'renderer')).toBe('commandPalette');
-    expect(shortcutFor(withCtrl, 'renderer')).toBe('commandPalette');
+    // `commandPalette` is `main` scope (the key usually arrives while a page has focus, like `find`).
+    expect(shortcutFor(withCmd, 'main')).toBe('commandPalette');
+    expect(shortcutFor(withCtrl, 'main')).toBe('commandPalette');
+    expect(shortcutFor(withCtrl, 'renderer')).toBeNull();
   });
 
   it('reduces an Electron Input the same way', () => {

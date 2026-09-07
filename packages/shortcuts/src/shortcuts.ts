@@ -54,7 +54,11 @@ export const SHORTCUTS = [
   // so reload has to be ours or it is nobody's.
   { id: 'reload', key: 'r', ctrlOrCmd: true, scope: 'main' },
   { id: 'settings', key: ',', ctrlOrCmd: true, scope: 'renderer' },
-  { id: 'commandPalette', key: 'k', ctrlOrCmd: true, scope: 'renderer' },
+  // `main`, not `renderer`, for the same reason as `find`/`focusAddressBar`: Ctrl/Cmd+K almost always
+  // arrives while a browsed PAGE has focus, and the chrome renderer never sees the key there — so a
+  // renderer binding left the palette unreachable during most of a browser's life. Main sends
+  // `commandPaletteOpen` and the chrome owns the toggle (see `command-palette-host.tsx`).
+  { id: 'commandPalette', key: 'k', ctrlOrCmd: true, scope: 'main' },
   { id: 'find', key: 'f', ctrlOrCmd: true, scope: 'main' },
   // Focus the address bar. `main` scope for the reason `find` is: the key arrives while the PAGE has
   // focus — that is the entire situation the shortcut exists for — and the chrome renderer never sees

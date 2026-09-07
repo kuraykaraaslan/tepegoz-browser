@@ -193,8 +193,18 @@ describe('the window-level shortcuts', () => {
     expect(handleWindowShortcut(win, press('w', { control: true }), { page })).toBe(false);
   });
 
+  it('Ctrl+K asks the chrome to toggle the command palette (page has focus, chrome never sees the key)', () => {
+    expect(handleWindowShortcut(win, press('k', { control: true }), { page })).toBe(true);
+    expect(sent).toEqual(['command-palette:open']);
+  });
+
+  it('Cmd+K does the same, so macOS is not left out', () => {
+    expect(handleWindowShortcut(win, press('k', { meta: true }), { page })).toBe(true);
+    expect(sent).toEqual(['command-palette:open']);
+  });
+
   it('an unrecognised combination is left for the page', () => {
-    expect(handleWindowShortcut(win, press('k', { control: true }), { page })).toBe(false);
+    expect(handleWindowShortcut(win, press('j', { control: true }), { page })).toBe(false);
   });
 
   it('reload / hard-reload / view-source / devtools report NOT handled with no page', () => {

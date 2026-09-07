@@ -238,7 +238,9 @@ export function useAppEffects(params: AppEffectsParams): void {
       // Alt, so Ctrl+Alt+T (a terminal on Linux, and AltGr territory on a Turkish-Q keyboard) opened a
       // tab, and Ctrl+Shift+R did a plain reload instead of leaving the hard-reload combination alone.
       const id = shortcutFor(pressFromEvent(e), 'renderer');
-      if (id === null || id === 'commandPalette') return;
+      // `commandPalette` used to be excluded here (it was renderer-scope and owned its own listener);
+      // it is now `main` scope, so this renderer lookup can no longer return it.
+      if (id === null) return;
       e.preventDefault();
       if (id === 'reopenClosedTab') {
         extSurfaces.closeSurface();

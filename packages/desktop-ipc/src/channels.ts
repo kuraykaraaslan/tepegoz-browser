@@ -284,6 +284,9 @@ export const IpcChannels = {
   /** The unified "Clear browsing data" action (range + categories). Per-site forget is separate. */
   browsingDataClear: 'privacy:clear-browsing-data',
   omniboxFocus: 'omnibox:focus',
+  /** main → chrome: Ctrl/Cmd+K arrived (any focus context) — toggle the Command Palette. `main` scope
+   *  like `find`/`omniboxFocus`, so it works while a browsed PAGE has focus, not only the chrome. */
+  commandPaletteOpen: 'command-palette:open',
   bookmarksDetectProfiles: 'bookmarks:detect-profiles',
   bookmarksImportProfile: 'bookmarks:import-profile',
   /** The whole collection as Netscape bookmarks HTML — the format every other browser reads. */

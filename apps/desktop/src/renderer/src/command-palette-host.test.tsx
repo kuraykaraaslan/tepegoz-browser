@@ -7,52 +7,57 @@ import { CommandPaletteHost, useCommandPalette } from './command-palette-host';
 
 /**
  * The only place that knows what a palette command IS (the palette itself is presentational). Under
- * test: Ctrl/Cmd+K toggles the host open through the shared shortcut registry (not a second local
- * binding), and each chat command drives the matching browser bridge call.
+ * test: Ctrl/Cmd+K (caught in main, forwarded over `onCommandPaletteOpen`) toggles the host open, and
+ * each chat command drives the matching browser bridge call.
  */
+
+/** The last callback handed to `onCommandPaletteOpen`, so a test can fire the "key pressed" signal. */
+let paletteCb: (() => void) | null = null;
+let paletteUnsub: ReturnType<typeof vi.fn>;
 
 const bridge = {
   createTab: vi.fn(),
   reopenClosedTab: vi.fn(),
   tabReload: vi.fn(),
   navigateTab: vi.fn(),
+  onCommandPaletteOpen: vi.fn((cb: () => void) => {
+    paletteCb = cb;
+    return paletteUnsub;
+  }),
 };
 
 beforeEach(() => {
   vi.clearAllMocks();
+  paletteCb = null;
+  paletteUnsub = vi.fn();
   Object.defineProperty(window, 'tepegoz', { configurable: true, value: bridge });
 });
 afterEach(cleanup);
 
 describe('useCommandPalette', () => {
-  it('toggles open on Ctrl+K', () => {
+  it('toggles open each time main forwards Ctrl+K', () => {
     const { result } = renderHook(() => useCommandPalette());
     expect(result.current.open).toBe(false);
-    act(() => {
-      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', ctrlKey: true }));
-    });
+    act(() => paletteCb?.());
     expect(result.current.open).toBe(true);
+    act(() => paletteCb?.());
+    expect(result.current.open).toBe(false);
+  });
+
+  it('subscribes through the shared bridge, not a local keydown listener', () => {
+    renderHook(() => useCommandPalette());
+    expect(bridge.onCommandPaletteOpen).toHaveBeenCalledTimes(1);
+    // A raw Ctrl+K on the window does nothing here — the key is main's now.
     act(() => {
       window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', ctrlKey: true }));
     });
-    expect(result.current.open).toBe(false);
+    // still only the one subscription, no toggle from the DOM event
   });
 
-  it('ignores keys that are not the palette shortcut', () => {
-    const { result } = renderHook(() => useCommandPalette());
-    act(() => {
-      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'j', ctrlKey: true }));
-    });
-    expect(result.current.open).toBe(false);
-  });
-
-  it('removes the key listener on unmount', () => {
-    const { unmount, result } = renderHook(() => useCommandPalette());
+  it('unsubscribes on unmount', () => {
+    const { unmount } = renderHook(() => useCommandPalette());
     unmount();
-    act(() => {
-      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', ctrlKey: true }));
-    });
-    expect(result.current.open).toBe(false);
+    expect(paletteUnsub).toHaveBeenCalledTimes(1);
   });
 });
 
