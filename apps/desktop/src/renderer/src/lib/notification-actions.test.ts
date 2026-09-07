@@ -1,6 +1,10 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { INTERNAL_SETTINGS_URL, type AppNotification, type NotificationAction } from '@tepegoz/desktop-ipc';
+import {
+  INTERNAL_SETTINGS_URL,
+  type AppNotification,
+  type NotificationAction,
+} from '@tepegoz/desktop-ipc';
 import { runNotificationAction } from './notification-actions';
 
 /**
@@ -44,9 +48,9 @@ describe('runNotificationAction', () => {
   });
 
   it('navigate_current → navigate the active tab, returns true', () => {
-    expect(runNotificationAction(item(), act({ type: 'navigate_current', url: 'https://a/' }))).toBe(
-      true,
-    );
+    expect(
+      runNotificationAction(item(), act({ type: 'navigate_current', url: 'https://a/' })),
+    ).toBe(true);
     expect(bridge.navigateTab).toHaveBeenCalledWith('https://a/');
   });
 
@@ -75,7 +79,22 @@ describe('runNotificationAction', () => {
 
   it('trust_origin with no item origin skips trusting anything', () => {
     expect(
-      runNotificationAction(item({ origin: '' }), act({ type: 'trust_origin', url: 'https://popup/' })),
+      runNotificationAction(
+        item({ origin: '' }),
+        act({ type: 'trust_origin', url: 'https://popup/' }),
+      ),
+    ).toBe(true);
+    expect(bridge.trustPopupOrigin).not.toHaveBeenCalled();
+    expect(bridge.createTab).toHaveBeenCalledWith('https://popup/');
+  });
+
+  it('trust_origin with the origin field absent trusts nothing either', () => {
+    // The case above passes an EMPTY origin, which never reaches the `?? ''` at all. A notification
+    // can also arrive with no `origin` key — `origin` is optional on `AppNotification` — and that is
+    // the shape the fallback exists for. Trusting '' would put an empty rule in the popup-trust list.
+    const noOrigin = { id: 'n1' } as AppNotification;
+    expect(
+      runNotificationAction(noOrigin, act({ type: 'trust_origin', url: 'https://popup/' })),
     ).toBe(true);
     expect(bridge.trustPopupOrigin).not.toHaveBeenCalled();
     expect(bridge.createTab).toHaveBeenCalledWith('https://popup/');
