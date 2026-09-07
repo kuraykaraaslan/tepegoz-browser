@@ -224,6 +224,12 @@ export const tr: AppStrings = {
       'Bu sitenin sertifikasına güvenilmiyor. Birileri siteyi taklit ediyor olabilir — hassas hiçbir şey girmeyin.',
     connectionInternalNote: 'Bu güvenli bir Tepegöz sayfasıdır.',
     connectionFileNote: 'Bu dosya bilgisayarınızda.',
+    cleartextOverTor:
+      'Bu sekme bir Tor çıkış düğümünden geçiyor ve bu sayfa şifreli değil. Çıkış operatörü sayfadaki her şeyi okuyabilir ve değiştirebilir — https:// adresi kullanın.',
+    cleartextOverVpn:
+      'Bu sekme VPN’inizden geçiyor ve bu sayfa şifreli değil. VPN’in çıkışı sayfadaki her şeyi okuyabilir ve değiştirebilir — https:// adresi kullanın.',
+    cleartextOverProxy:
+      'Bu sekme bir proxy’den geçiyor ve bu sayfa şifreli değil. Proxy operatörü sayfadaki her şeyi okuyabilir ve değiştirebilir — https:// adresi kullanın.',
     learnMore: 'Daha fazla bilgi',
     certificate: 'Sertifika',
     securityTitle: 'Güvenlik',

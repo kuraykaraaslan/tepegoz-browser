@@ -243,6 +243,12 @@ export const en = {
       'The certificate for this site is not trusted. Someone may be trying to impersonate it — do not enter anything sensitive.',
     connectionInternalNote: 'This is a secure Tepegöz page.',
     connectionFileNote: 'This file is on your computer.',
+    cleartextOverTor:
+      'This tab goes through a Tor exit node and this page is not encrypted. The exit operator can read and change everything on it — use an https:// address.',
+    cleartextOverVpn:
+      'This tab goes through your VPN and this page is not encrypted. The VPN’s exit can read and change everything on it — use an https:// address.',
+    cleartextOverProxy:
+      'This tab goes through a proxy and this page is not encrypted. The proxy’s operator can read and change everything on it — use an https:// address.',
     learnMore: 'Learn more',
     // Security sub-page (Chrome's "Connection is secure" drill-down) and its certificate viewer.
     securityTitle: 'Security',

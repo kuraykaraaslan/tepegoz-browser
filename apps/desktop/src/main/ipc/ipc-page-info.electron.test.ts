@@ -10,6 +10,10 @@ interface Bag {
   recordedCert: { verificationResult: string; errorCode: number } | undefined;
   certException: boolean;
   trustProfiles: { domain: string; level: string; tombstone: boolean }[];
+  /** Active tab id the window reports, the binding it resolves to, and the pool's kind for it. */
+  activeId: string | null;
+  resolvedConnectionId: string | null;
+  poolKind: string | undefined;
 }
 const h = vi.hoisted<Bag>(() => ({
   sitePermissions: {},
@@ -19,6 +23,9 @@ const h = vi.hoisted<Bag>(() => ({
   recordedCert: undefined,
   certException: false,
   trustProfiles: [],
+  activeId: null,
+  resolvedConnectionId: null,
+  poolKind: undefined,
 }));
 
 const handlers = vi.hoisted(() => new Map<string, (e: unknown, p: unknown) => unknown>());
@@ -35,7 +42,17 @@ vi.mock('@tepegoz/desktop-ipc/schemas', () => ({ PageInfoGetSchema: {} }));
 vi.mock('@tepegoz/preferences', () => ({
   default: { getAll: () => ({ sitePermissions: h.sitePermissions }) },
 }));
-vi.mock('../tabs', () => ({ default: { forSenderWindow: () => ({ isPrivate: false }) } }));
+vi.mock('../tabs', () => ({
+  default: {
+    forSenderWindow: () => ({ isPrivate: false, getState: () => ({ activeId: h.activeId }) }),
+  },
+}));
+vi.mock('../network/binding-service.electron', () => ({
+  default: { resolveFor: () => ({ resolved: { connectionId: h.resolvedConnectionId } }) },
+}));
+vi.mock('../network/connection-pool.electron', () => ({
+  default: { get: () => (h.poolKind === undefined ? undefined : { kind: h.poolKind }) },
+}));
 vi.mock('../network/browsing-sessions.electron', () => ({
   default: {
     all: () => [
@@ -74,7 +91,7 @@ vi.mock('../web-permissions/permission-broker', () => ({
   requestedCapabilities: (origin: string) => h.requested[origin] ?? [],
 }));
 
-const { buildPageInfo, registerPageInfoIpc } = await import('./ipc-page-info');
+const { activeTabTunnelExit, buildPageInfo, registerPageInfoIpc } = await import('./ipc-page-info');
 
 beforeEach(() => {
   h.sitePermissions = {};
@@ -84,6 +101,9 @@ beforeEach(() => {
   h.recordedCert = undefined;
   h.certException = false;
   h.trustProfiles = [];
+  h.activeId = null;
+  h.resolvedConnectionId = null;
+  h.poolKind = undefined;
   handlers.clear();
 });
 
@@ -169,6 +189,37 @@ describe('buildPageInfo', () => {
     const info = await buildPageInfo('https://clicked-through.example/', false);
     expect(info.certErrorCode).toBe('net::ERR_CERT_INVALID');
     expect(info.level).toBe('dangerous');
+  });
+
+  it('carries the tunnel kind for a web page and nulls it for an internal one', async () => {
+    expect((await buildPageInfo('http://x/', false, 'tor')).tunnelExit).toBe('tor');
+    expect((await buildPageInfo('tepegoz://settings', false, 'tor')).tunnelExit).toBeNull();
+    expect((await buildPageInfo('https://x/', false)).tunnelExit).toBeNull();
+  });
+});
+
+describe('activeTabTunnelExit', () => {
+  it("maps the active tab's resolved connection kind, tolerating a missing tab or pool entry", () => {
+    // No active tab → null.
+    expect(activeTabTunnelExit({} as never)).toBeNull();
+
+    h.activeId = 't1';
+    // Direct (no connection) → null.
+    expect(activeTabTunnelExit({} as never)).toBeNull();
+
+    h.resolvedConnectionId = 'c1';
+    // Connection resolved but the pool has forgotten it → null, not a throw.
+    h.poolKind = undefined;
+    expect(activeTabTunnelExit({} as never)).toBeNull();
+
+    for (const [kind, exit] of [
+      ['tor', 'tor'],
+      ['wireguard', 'vpn'],
+      ['byo-socks', 'socks'],
+    ] as const) {
+      h.poolKind = kind;
+      expect(activeTabTunnelExit({} as never)).toBe(exit);
+    }
   });
 });
 

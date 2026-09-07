@@ -87,6 +87,39 @@ describe('PageInfoSchema', () => {
     expect(parsed.success).toBe(true);
   });
 
+  it("carries the active tab's tunnel kind, and defaults it to null when absent", () => {
+    const withTor = PageInfoSchema.safeParse({
+      url: 'http://legacy.example/',
+      origin: 'http://legacy.example',
+      host: 'legacy.example',
+      scheme: 'http:',
+      level: 'not-secure',
+      isPrivateWindow: false,
+      certificate: null,
+      certErrorCode: null,
+      cookieCount: 0,
+      permissions: [],
+      trustLevel: null,
+      tunnelExit: 'tor',
+    });
+    expect(withTor.success && withTor.data.tunnelExit).toBe('tor');
+    // Omitted entirely (a payload from before the field) — defaults to null rather than failing.
+    const without = PageInfoSchema.safeParse({
+      url: 'https://x/',
+      origin: 'https://x',
+      host: 'x',
+      scheme: 'https:',
+      level: 'secure',
+      isPrivateWindow: false,
+      certificate: null,
+      certErrorCode: null,
+      cookieCount: 0,
+      permissions: [],
+      trustLevel: null,
+    });
+    expect(without.success && without.data.tunnelExit).toBe(null);
+  });
+
   it('accepts the null-heavy shape an internal page produces', () => {
     const parsed = PageInfoSchema.safeParse({
       url: 'tepegoz://settings',

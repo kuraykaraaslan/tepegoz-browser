@@ -44,6 +44,7 @@ const info = (over: Partial<PageInfo> = {}): PageInfo => ({
   cookieCount: 3,
   permissions: [],
   trustLevel: null,
+  tunnelExit: null,
   ...over,
 });
 
@@ -218,6 +219,36 @@ describe('SiteInfoPopup', () => {
     bridge.getPreferences.mockResolvedValue({ ...DEFAULT_PREFERENCES, locale: 'tr' });
     renderPopup();
     expect(await screen.findByText(siteInfoDict.tr.connectionSecureTitle)).toBeTruthy();
+  });
+
+  it('warns that a tunnel exit can read a cleartext page, matched to the tunnel kind', async () => {
+    bridge.getPageInfo.mockResolvedValue(
+      info({
+        url: 'http://legacy.example/',
+        scheme: 'http:',
+        level: 'not-secure',
+        tunnelExit: 'tor',
+      }),
+    );
+    renderPopup('http://legacy.example/');
+    expect(await screen.findByText(t.cleartextOverTor)).toBeTruthy();
+    expect(screen.queryByText(t.cleartextOverVpn)).toBeNull();
+  });
+
+  it('does NOT warn about the exit on an https page even when the tab is tunnelled', async () => {
+    bridge.getPageInfo.mockResolvedValue(info({ scheme: 'https:', tunnelExit: 'tor' }));
+    renderPopup();
+    await screen.findByText(t.connectionSecureTitle);
+    expect(screen.queryByText(t.cleartextOverTor)).toBeNull();
+  });
+
+  it('does NOT warn on a cleartext page when the tab is on the Direct route', async () => {
+    bridge.getPageInfo.mockResolvedValue(
+      info({ url: 'http://x/', scheme: 'http:', level: 'not-secure', tunnelExit: null }),
+    );
+    renderPopup('http://x/');
+    await screen.findByText(t.connectionNotSecureTitle);
+    expect(screen.queryByText(t.cleartextOverTor)).toBeNull();
   });
 
   it('falls back to the internal treatment for an unclassified security level', async () => {

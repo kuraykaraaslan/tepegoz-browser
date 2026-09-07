@@ -129,5 +129,12 @@ export const PageInfoSchema = z.object({
   cookieCount: z.number().int().nonnegative(),
   permissions: z.array(PageSitePermissionSchema).max(32),
   trustLevel: TrustLevelEnum.nullable(),
+  /**
+   * The kind of tunnel the ACTIVE tab is bound to (Phase 5), or `null` for Direct / a non-web page.
+   * `'tor'` / `'vpn'` (WireGuard) / `'socks'` (BYO). The bubble warns when this is set AND the page is
+   * cleartext `http:` — the exit operator can read and change everything on it. Defaults to `null` so a
+   * payload from before this field still parses.
+   */
+  tunnelExit: z.enum(['tor', 'vpn', 'socks']).nullable().default(null),
 });
 export type PageInfo = z.infer<typeof PageInfoSchema>;

@@ -300,6 +300,24 @@ function SiteInfoBody({ url }: { url: string }) {
           titleClass={alarm ? 'text-error' : ''}
           onClick={() => setView('security')}
         />
+        {info.tunnelExit !== null && info.scheme === 'http:' && (
+          // Phase 5: a tunnel exit (Tor especially) is untrusted, and on a cleartext page it can read
+          // and rewrite everything. The connection row already says "not secure"; this says who sees it.
+          <p className="mx-4 mb-2 flex gap-2 rounded-lg border border-error/40 bg-error/5 px-3 py-2 text-xs text-error">
+            <FontAwesomeIcon
+              icon={faTriangleExclamation}
+              className="mt-0.5 h-3.5 w-3.5 shrink-0"
+              aria-hidden
+            />
+            <span>
+              {info.tunnelExit === 'tor'
+                ? t.cleartextOverTor
+                : info.tunnelExit === 'vpn'
+                  ? t.cleartextOverVpn
+                  : t.cleartextOverProxy}
+            </span>
+          </p>
+        )}
         {isWeb && (
           <Row
             icon={faCookieBite}

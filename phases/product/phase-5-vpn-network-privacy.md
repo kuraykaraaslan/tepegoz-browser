@@ -162,7 +162,16 @@ endpoint** (one loopback port per active connection), never an OS-level system p
 - [x] `TorProvider`: a managed `tor` process exposing a local SOCKS port; same connection-pool + per-tab binding seam as VPN; a Tor connection is just another entry in the pool ([tor-provider.electron.ts](../../apps/desktop/src/main/network/tor-provider.electron.ts))
 - [x] **Isolated circuits per connection** — one `tor` process per connection, each with its own `DataDirectory`, so two Tor connections take different paths by construction rather than by configuration. _New-circuit / rotation controls are not surfaced; `.onion` works because it is just a hostname the Tor SOCKS endpoint resolves._
 - [x] **Chained routes — "this group is on the VPN AND on Tor".** A group resolves to exactly one route, so the combination is Tor with the VPN's loopback SOCKS as its `Socks5Proxy`, exposing its own port for the group. The kill-switch composes for free: the upstream dropping kills Tor's outbound and cuts the group, with nothing coordinating the two. The upstream is resolved **lazily at connect time** (a restarted tunnel lands on a new port), and a cycle guard refuses a chain that loops back on itself.
-- [ ] **Exit-node = untrusted** assumption documented (ADR-0011 + threat model); force HTTPS-only / warn on cleartext over a Tor exit
+- [~] **Exit-node = untrusted** assumption documented (ADR-0011 + threat model); force HTTPS-only / warn on cleartext over a Tor exit - [x] _Documented: `threat-model.md` § "Exit-node / operator is untrusted" + the residual-risk list;
+  ADR-0011 §7 and "Still not decided here"; the user-facing `network-privacy-guide.md`._ - [x] _**Warn on cleartext shipped 2026-09-08.** `PageInfo` gained `tunnelExit` (`tor` / `vpn` /
+  `socks` / null), resolved in `ipc-page-info.ts` from the active tab's live binding + pool
+  (`activeTabTunnelExit`, tolerant of a missing tab or a forgotten connection). The Site Info
+  bubble renders a kind-specific error line — "a Tor exit node / your VPN / a proxy can read and
+  change everything on it" — when `tunnelExit !== null && scheme === 'http:'`, en+tr. Tests:
+  page-info schema (`tunnelExit` + its default), `activeTabTunnelExit` mapping, and the bubble
+  (warns on http+tunnel, silent on https or Direct)._ - [ ] _**force HTTPS-only** for tunnel-bound tabs is still open — that is the enforcement half (an
+  upgrade-or-interstitial on `http://`), a heavier change than the warning and one that needs its
+  own decision (upgrade vs block)._
 - [ ] **Bridges + pluggable transports (obfs4 / meek / Snowflake) — absent today, and this is the one Tor
       gap that matters most for the primary market.** `TorProvider` already manages a `tor` process, so
       bridge support is a config surface on something that ships, not new machinery: a bridge line is

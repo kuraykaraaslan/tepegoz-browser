@@ -11,6 +11,8 @@ import {
 } from '@tepegoz/shared-types';
 import TabManager from '../tabs';
 import BrowsingSessions from '../network/browsing-sessions.electron';
+import BindingService from '../network/binding-service.electron';
+import ConnectionPool from '../network/connection-pool.electron';
 import { getRecordedCert, toCertificateSummary } from '../network/certificate-recorder.electron';
 import { hasCertificateException } from '../auth/certificate-broker';
 import { listTrustProfiles } from '../security/trust-profile-host.electron';
@@ -69,8 +71,33 @@ function trustLevelFor(host: string): PageInfo['trustLevel'] {
   return match?.level ?? null;
 }
 
+/**
+ * The kind of tunnel the given window's ACTIVE tab is routed through right now (Phase 5), or `null`
+ * for Direct. Resolved from the live binding + pool so it reflects a group/General change without the
+ * bubble knowing anything about the pool. Never throws — a window with no tab model, or a connection
+ * the pool has forgotten, both resolve to `null`.
+ */
+export function activeTabTunnelExit(win: BrowserWindow | null): PageInfo['tunnelExit'] {
+  const tabId = TabManager.forSenderWindow(win)?.getState().activeId ?? null;
+  if (tabId === null) return null;
+  const connectionId = BindingService.resolveFor(tabId).resolved.connectionId;
+  if (connectionId === null) return null;
+  const kind = ConnectionPool.get(connectionId)?.kind;
+  return kind === 'tor'
+    ? 'tor'
+    : kind === 'wireguard'
+      ? 'vpn'
+      : kind === 'byo-socks'
+        ? 'socks'
+        : null;
+}
+
 /** Split from the handler so the assembly is testable without an `ipcMain`. */
-export async function buildPageInfo(rawUrl: string, isPrivateWindow: boolean): Promise<PageInfo> {
+export async function buildPageInfo(
+  rawUrl: string,
+  isPrivateWindow: boolean,
+  tunnelExit: PageInfo['tunnelExit'] = null,
+): Promise<PageInfo> {
   let parsed: URL | null = null;
   try {
     parsed = new URL(rawUrl);
@@ -107,6 +134,7 @@ export async function buildPageInfo(rawUrl: string, isPrivateWindow: boolean): P
     cookieCount: isWeb ? await cookieCount(origin) : 0,
     permissions: isWeb ? permissionsFor(origin) : [],
     trustLevel: isWeb ? trustLevelFor(host) : null,
+    tunnelExit: isWeb ? tunnelExit : null,
   };
 }
 
@@ -115,6 +143,6 @@ export function registerPageInfoIpc(): void {
     const { url } = parsePayload(PageInfoGetSchema, payload);
     const senderWindow = BrowserWindow.fromWebContents(event.sender);
     const isPrivateWindow = TabManager.forSenderWindow(senderWindow)?.isPrivate ?? false;
-    return buildPageInfo(url, isPrivateWindow);
+    return buildPageInfo(url, isPrivateWindow, activeTabTunnelExit(senderWindow));
   });
 }
