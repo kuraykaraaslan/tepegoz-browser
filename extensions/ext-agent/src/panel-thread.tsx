@@ -6,7 +6,7 @@ import type { CompletionOutcome } from '@tepegoz/shared-types';
 import type { AgentHostApi } from './types';
 import { GaugeIcon, KIND_DOT, SparkIcon } from './panel-icons';
 import { MessageCopyButton } from './panel-copy-button';
-import { TurnConfigLine } from './panel-turn-config-line';
+import { TurnMeta } from './panel-turn-meta';
 import { PROSE_KINDS, STEP_KINDS, type Turn } from './panel-state';
 
 /**
@@ -98,7 +98,7 @@ export function PanelThread({
                   </div>
                 </div>
 
-                {turn.config !== undefined && <TurnConfigLine config={turn.config} a={a} />}
+                <TurnMeta turn={turn} a={a} />
 
                 {reasoning.length > 0 && (
                   <div className="rounded-md border border-border bg-surface-raised">

@@ -134,3 +134,27 @@ describe('PanelThread — run-config read-back (B4)', () => {
     expect(screen.queryByLabelText(a.thread.runConfig)).toBeNull();
   });
 });
+
+describe('PanelThread — skill pill (B2)', () => {
+  it('shows the name of the skill that produced a turn', () => {
+    renderThread([turn({ skill: { id: 'sk1', name: 'Weekly invoice export' } })]);
+    const pill = screen.getByLabelText(a.thread.skillUsed);
+    expect(pill.textContent).toBe('Weekly invoice export');
+  });
+
+  it('shows the skill pill next to the run-config line when both are present', () => {
+    renderThread([
+      turn({
+        skill: { id: 'sk1', name: 'Book a flight' },
+        config: { provider: 'anthropic', model: '', autonomy: 'ask', effort: 'high' },
+      }),
+    ]);
+    expect(screen.getByLabelText(a.thread.skillUsed)).toBeTruthy();
+    expect(screen.getByLabelText(a.thread.runConfig)).toBeTruthy();
+  });
+
+  it('renders no pill for a plain turn', () => {
+    renderThread([turn()]);
+    expect(screen.queryByLabelText(a.thread.skillUsed)).toBeNull();
+  });
+});

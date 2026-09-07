@@ -305,12 +305,17 @@ Six UI-scoped PRs, each ≤250 lines, sequenced behind their substrate phases. N
       regression. What is missing is the _record_: once approved, the modal closes and the only trace is in
       the journal. Leave a card saying "at this step you allowed X." Shares plumbing with the pending-argument
       edit in [`../tracks/librechat-agent-parity.md`](../../docs/parities/librechat-agent-parity.md) P5.
-- [ ] **B2 — Skill pills in the transcript (visibility only).** Which skill produced an answer is not shown.
+- [x] **B2 — Skill pills in the transcript (visibility only).** Which skill produced an answer is not shown.
       A pill makes "this reply was generated with that instruction pack" visible — the same honesty logic as
       the evidence chips. **Only the display half is in scope:** LibreChat's `automatic` / `always-on` skill
       modes are a new authority surface (they let the model decide what enters the prompt) and belong to
       [`../tracks/webbrain-agent-parity.md`](../../docs/parities/webbrain-agent-parity.md) P5 and
       [S9](phase-s9-memory-skills.md), not here. S9's rule — a skill can never start a run — is untouched.
+      _Landed 2026-09-08: `useSkill` records `skillName` alongside `skillId` in group state; `onRun`
+      snapshots `{ id, name }` onto the `Turn`; `TurnMeta` (`panel-turn-meta.tsx`, which also holds the
+      B4 config read-back) renders the skill name as an indigo pill in the per-turn meta row.
+      Display-only — S9's "a skill can never start a run" is untouched; a restored turn carries no
+      `skill` and shows no pill. en + tr (`thread.skillUsed` aria-label). 3 render tests._
 - [ ] **B1 — Multi-question `clarify` (the most expensive and the most careful).** `clarify` asks one question
       per turn; allowing up to four related questions with 2–4 options each turns four round-trips into one.
       Requires a schema change (`@tepegoz/shared-types`) and its own security pass: questions are

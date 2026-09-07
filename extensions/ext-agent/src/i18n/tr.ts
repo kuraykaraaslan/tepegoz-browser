@@ -240,6 +240,7 @@ export const tr: AgentStrings = {
     copyMessage: 'Mesajı kopyala',
     copied: 'Kopyalandı',
     runConfig: 'Çalıştırma ayarları',
+    skillUsed: 'Kullanılan beceri',
   },
   // Besteci ek chip'leri (seçili metin / dosya / ekran görüntüsü).
   attach: {

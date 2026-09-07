@@ -93,6 +93,8 @@ export interface Turn {
   events: AgentEvent[];
   /** The provider / model / autonomy / effort this turn ran with (S8 B4). Absent on a restored turn. */
   config?: TurnConfig;
+  /** The skill that produced this turn (S8 B2), when one was used. Absent on a restored turn. */
+  skill?: { id: string; name: string };
   /**
    * What this run’s evidence supported (S4). Absent when the run never reached a completion verdict —
    * deliberately not defaulted, because "we do not know" and "we could not confirm" are different
@@ -129,6 +131,9 @@ export interface GroupState {
    * skill, so this field cannot be used to claim someone else's permissions.
    */
   skillId: string | null;
+  /** The name of {@link GroupState.skillId}, kept so the transcript can show which skill produced a
+   *  turn (S8 B2) without a second lookup. Cleared alongside `skillId`. */
+  skillName: string | null;
 }
 
 /** How much of the streaming tail to keep. A long turn would otherwise grow the indicator without end. */
@@ -157,6 +162,7 @@ export function emptyGroupState(): GroupState {
     expandedFiles: new Set(),
     liveDelta: '',
     skillId: null,
+    skillName: null,
   };
 }
 

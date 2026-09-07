@@ -76,6 +76,11 @@ export function useAgentActions(deps: AgentActionsDeps) {
             },
           }
         : {}),
+      // Which skill produced this turn, if any (S8 B2) — visibility only, the same honesty logic as
+      // the evidence chip.
+      ...(activeState.skillId !== null && activeState.skillName !== null
+        ? { skill: { id: activeState.skillId, name: activeState.skillName } }
+        : {}),
     };
     mutateGroup(groupId, (s) => ({
       ...s,
@@ -89,6 +94,7 @@ export function useAgentActions(deps: AgentActionsDeps) {
       attachments: [],
       expandedFiles: new Set(),
       skillId: null,
+      skillName: null,
     }));
     void api
       .runAgent({
@@ -331,7 +337,7 @@ export function useAgentActions(deps: AgentActionsDeps) {
 
   function useSkill(skill: AgentSkill): void {
     const use = skillUse(skill);
-    mutateActive((s) => ({ ...s, prompt: use.prompt, skillId: skill.id }));
+    mutateActive((s) => ({ ...s, prompt: use.prompt, skillId: skill.id, skillName: skill.name }));
     if (use.openUrl !== null) api.createTab(use.openUrl);
   }
 

@@ -259,6 +259,7 @@ export const en = {
     copyMessage: 'Copy message',
     copied: 'Copied',
     runConfig: 'Run settings',
+    skillUsed: 'Skill used',
   },
   // Composer attachment chips (selected text / file / screenshot).
   attach: {
