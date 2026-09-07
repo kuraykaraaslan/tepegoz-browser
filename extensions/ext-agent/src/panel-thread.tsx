@@ -7,6 +7,7 @@ import type { AgentHostApi } from './types';
 import { KIND_DOT, SparkIcon } from './panel-icons';
 import { MessageCopyButton } from './panel-copy-button';
 import { StepFeed } from './panel-step-feed';
+import { toolIntent } from './panel-tool-intent';
 import { TurnApprovals, TurnMeta } from './panel-turn-meta';
 import { PROSE_KINDS, STEP_KINDS, type Turn } from './panel-state';
 
@@ -127,7 +128,14 @@ export function PanelThread({
                             key={`r-${String(e.ts)}-${String(i)}`}
                             className="[overflow-wrap:anywhere]"
                           >
-                            <span className="text-text-primary">{e.message}</span>
+                            {/* A `decision` event's message is the bare tool id — show what the
+                                call is FOR, raw id on hover. `plan` text is left as written. */}
+                            <span
+                              className="text-text-primary"
+                              title={e.kind === 'decision' ? e.message : undefined}
+                            >
+                              {e.kind === 'decision' ? toolIntent(e.message, a) : e.message}
+                            </span>
                             {e.detail !== undefined && e.detail.length > 0 && (
                               <span className="ml-1">— {e.detail}</span>
                             )}

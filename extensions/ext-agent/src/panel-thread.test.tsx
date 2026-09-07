@@ -187,6 +187,74 @@ describe('PanelThread — approval history cards (B3)', () => {
   });
 });
 
+describe('PanelThread — humanized tool intent in the reasoning transcript (A3)', () => {
+  const reasoningTurn = () =>
+    turn({
+      events: [
+        {
+          runId: 'r1',
+          groupId: 'g1',
+          kind: 'plan',
+          message: 'Goal: find the cheapest fare',
+          ts: 1,
+        },
+        {
+          runId: 'r1',
+          groupId: 'g1',
+          kind: 'decision',
+          message: 'browser_get_page',
+          detail: 'need the fare table',
+          ts: 2,
+        },
+        {
+          runId: 'r1',
+          groupId: 'g1',
+          kind: 'decision',
+          message: 'mcp_frobnicate_widget',
+          detail: 'custom tool',
+          ts: 3,
+        },
+        { runId: 'r1', groupId: 'g1', kind: 'done', message: 'done', ts: 4 },
+      ],
+    });
+
+  function renderOpen() {
+    return render(
+      <PanelThread
+        a={a}
+        api={api}
+        listRef={createRef()}
+        turns={[reasoningTurn()]}
+        running={false}
+        liveDelta=""
+        openReasoning={new Set(['t1'])}
+        openSteps={new Set()}
+        onToggleReasoning={vi.fn()}
+        onToggleSteps={vi.fn()}
+        onRetry={onRetry}
+      />,
+    );
+  }
+
+  it('shows a decision as its intent, with the raw tool id on hover', () => {
+    renderOpen();
+    const line = screen.getByText('Reading the page');
+    expect(line.getAttribute('title')).toBe('browser_get_page');
+    // The bare id is not shown as the visible label.
+    expect(screen.queryByText('browser_get_page')).toBeNull();
+  });
+
+  it('de-snakes an unrecognised tool id rather than inventing a label', () => {
+    renderOpen();
+    expect(screen.getByText('mcp frobnicate widget')).toBeTruthy();
+  });
+
+  it('leaves plan text untouched', () => {
+    renderOpen();
+    expect(screen.getByText('Goal: find the cheapest fare')).toBeTruthy();
+  });
+});
+
 describe('PanelThread — Retry a failed turn (S8)', () => {
   const errorTurn = () =>
     turn({

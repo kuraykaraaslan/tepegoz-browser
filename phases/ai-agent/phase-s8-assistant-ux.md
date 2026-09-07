@@ -278,12 +278,22 @@ Six UI-scoped PRs, each ≤250 lines, sequenced behind their substrate phases. N
       of a long run. The data already exists on the `cache-window` / `TokenLedger` side. Showing it answers
       "why did it suddenly summarize?" _before_ it happens — pair it with the visible compaction marker in
       [Phase 1b](../product/phase-1b-agentic-deepening.md) / `webbrain` P9-a.
-- [ ] **A3 — Activity-phase grouping + a live tool-intent label.** A 40-step run is a flat
-      `step_start`/`step_ok`/`step_error` list today. **Tepegöz can do this more cheaply and more honestly
-      than LibreChat does:** LibreChat has the _model_ generate group headers, but the plan here is already a
-      DAG — so the phase header is **derived deterministically from the plan step**, no model call,
-      determinism-first intact. The live intent label ("Reading the price…" instead of `browser_get_page`)
-      comes from the tool descriptor's own `description`.
+- [~] **A3 — Activity-phase grouping + a live tool-intent label.** A 40-step run is a flat
+  `step_start`/`step_ok`/`step_error` list today. **Tepegöz can do this more cheaply and more honestly
+  than LibreChat does:** LibreChat has the _model_ generate group headers, but the plan here is already a
+  DAG — so the phase header is **derived deterministically from the plan step**, no model call,
+  determinism-first intact. The live intent label ("Reading the price…" instead of `browser_get_page`)
+  comes from the tool descriptor's own `description`.
+  _Intent label landed 2026-09-08: `toolIntent(id, a)` (`panel-tool-intent.ts`) maps a bare tool id
+  to a localized intent from the `reasoning.toolIntent` dict (26 `browser_*` / `tab_*` / `web_*`
+  entries, en + tr), deterministic and model-free. The reasoning transcript now renders a `decision`
+  event as its intent with the raw id on hover; a `plan` line is left verbatim; an unmapped id (a new
+  tool, an MCP tool) de-snakes rather than getting an invented label — so the feed never shows a bare
+  `snake_case` identifier and never lies about one. `panel-tool-intent.test.ts` (4) + 3 in
+  `panel-thread.test.tsx`. **Still owed for `[x]`:** the activity-phase grouping (deterministic
+  headers keyed off the plan-DAG step) and the same label in the `StepFeed` rows — the StepFeed
+  `step_start` / `step_ok` messages embed the id in prose, so applying it there is a parse, not a
+  lookup._
 - [ ] **A1 — Steer queue: pending chips + a receipt when applied.** `steer` today is one-shot — you send it,
       it joins the run, and there is no visible queue, no undo. Queue them, show pending steers as chips the
       user can **withdraw, edit or escalate**, and show a receipt once one is actually applied. This is a

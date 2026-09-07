@@ -250,6 +250,38 @@ export const en = {
     show: 'Show',
     hide: 'Hide',
   },
+  // What each tool call is *for*, shown in place of the raw `browser_get_page`-style id in the
+  // reasoning transcript (S8 PR8 A3). Derived from the id alone — no model call. An id with no entry
+  // here falls back to a plain de-snaked phrase, and the raw id is always on hover.
+  toolIntent: {
+    browser_get_page: 'Reading the page',
+    browser_get_page_text: 'Reading the page text',
+    browser_get_elements: 'Scanning the page',
+    browser_get_article: 'Extracting the article',
+    browser_get_screenshot: 'Taking a screenshot',
+    browser_get_console: 'Reading the console log',
+    browser_get_network: 'Checking network activity',
+    browser_analyze_page: 'Analysing the page',
+    browser_click: 'Clicking',
+    browser_type: 'Typing',
+    browser_update_page: 'Filling the form',
+    browser_update_location: 'Navigating',
+    browser_update_history: 'Going back',
+    browser_export_pdf: 'Saving as PDF',
+    browser_save_pdf: 'Saving the PDF',
+    browser_validate_page: 'Checking the result',
+    browser_validate_form: 'Checking the form',
+    browser_validate_condition: 'Checking a condition',
+    tab_create_item: 'Opening a tab',
+    tab_list_items: 'Listing open tabs',
+    tab_get_item: 'Reading a tab',
+    tab_update_item: 'Switching tabs',
+    tab_delete_item: 'Closing a tab',
+    web_search_items: 'Searching the web',
+    web_get_page: 'Fetching a page',
+    web_fetch: 'Fetching a URL',
+    web_send_form: 'Submitting a web form',
+  },
   // Copy button on markdown code blocks.
   copy: 'Copy',
   // Chat thread — each turn is the user's message followed by the agent's response.

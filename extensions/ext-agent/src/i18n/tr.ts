@@ -231,6 +231,38 @@ export const tr: AgentStrings = {
     show: 'Göster',
     hide: 'Gizle',
   },
+  // Her araç çağrısının ne için olduğu — akıl yürütme akışında ham `browser_get_page` kimliği yerine
+  // gösterilir (S8 PR8 A3). Yalnızca kimlikten türetilir, model çağrısı yok. Girişi olmayan bir kimlik
+  // sade bir ifadeye düşer; ham kimlik her zaman üzerine gelince görünür.
+  toolIntent: {
+    browser_get_page: 'Sayfa okunuyor',
+    browser_get_page_text: 'Sayfa metni okunuyor',
+    browser_get_elements: 'Sayfa taranıyor',
+    browser_get_article: 'Makale çıkarılıyor',
+    browser_get_screenshot: 'Ekran görüntüsü alınıyor',
+    browser_get_console: 'Konsol günlüğü okunuyor',
+    browser_get_network: 'Ağ etkinliği kontrol ediliyor',
+    browser_analyze_page: 'Sayfa çözümleniyor',
+    browser_click: 'Tıklanıyor',
+    browser_type: 'Yazılıyor',
+    browser_update_page: 'Form dolduruluyor',
+    browser_update_location: 'Gezinme yapılıyor',
+    browser_update_history: 'Geri gidiliyor',
+    browser_export_pdf: 'PDF olarak kaydediliyor',
+    browser_save_pdf: 'PDF kaydediliyor',
+    browser_validate_page: 'Sonuç kontrol ediliyor',
+    browser_validate_form: 'Form kontrol ediliyor',
+    browser_validate_condition: 'Bir koşul kontrol ediliyor',
+    tab_create_item: 'Sekme açılıyor',
+    tab_list_items: 'Açık sekmeler listeleniyor',
+    tab_get_item: 'Sekme okunuyor',
+    tab_update_item: 'Sekme değiştiriliyor',
+    tab_delete_item: 'Sekme kapatılıyor',
+    web_search_items: "Web'de aranıyor",
+    web_get_page: 'Sayfa getiriliyor',
+    web_fetch: 'URL getiriliyor',
+    web_send_form: 'Web formu gönderiliyor',
+  },
   // Markdown kod bloklarındaki kopyala düğmesi.
   copy: 'Kopyala',
   // Sohbet akışı — her tur, kullanıcının mesajı ve ardından ajanın yanıtı.
