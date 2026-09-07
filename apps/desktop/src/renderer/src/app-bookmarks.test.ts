@@ -3,7 +3,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, renderHook, waitFor } from '@testing-library/react';
 import type { MutableRefObject } from 'react';
 import { BOOKMARK_ROOT_BAR } from '@tepegoz/bookmarks';
-import { INTERNAL_BOOKMARKS_URL, type BookmarkTreeNode, type TabsState } from '@tepegoz/desktop-ipc';
+import {
+  INTERNAL_BOOKMARKS_URL,
+  type BookmarkTreeNode,
+  type TabsState,
+} from '@tepegoz/desktop-ipc';
 import { bookmarkDialogAnchor, useBookmarksBar } from './app-bookmarks';
 
 /**
@@ -14,7 +18,13 @@ import { bookmarkDialogAnchor, useBookmarksBar } from './app-bookmarks';
  */
 
 const bar = (children: BookmarkTreeNode[]): BookmarkTreeNode =>
-  ({ id: BOOKMARK_ROOT_BAR, type: 'folder', title: 'Bar', url: null, children }) as unknown as BookmarkTreeNode;
+  ({
+    id: BOOKMARK_ROOT_BAR,
+    type: 'folder',
+    title: 'Bar',
+    url: null,
+    children,
+  }) as unknown as BookmarkTreeNode;
 const bm = (id: string, url: string): BookmarkTreeNode =>
   ({ id, type: 'bookmark', title: id, url, children: [] }) as unknown as BookmarkTreeNode;
 const folder = (id: string, children: BookmarkTreeNode[]): BookmarkTreeNode =>
@@ -48,10 +58,18 @@ const bridge = {
 };
 
 const tabsRef = {
-  current: { tabs: [{ id: 't1', title: 'Doc', url: 'https://a.test/', faviconUrl: null }], activeId: 't1' },
+  current: {
+    tabs: [{ id: 't1', title: 'Doc', url: 'https://a.test/', faviconUrl: null }],
+    activeId: 't1',
+  },
 } as unknown as MutableRefObject<TabsState>;
 
 const render = (url = 'https://a.test/') => renderHook(() => useBookmarksBar(tabsRef, url));
+
+const renderWith = (state: unknown, url = 'https://a.test/') =>
+  renderHook(() =>
+    useBookmarksBar({ current: state } as unknown as MutableRefObject<TabsState>, url),
+  );
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -110,6 +128,31 @@ describe('useBookmarksBar', () => {
     });
     expect(bridge.toggleBookmark).toHaveBeenCalledWith('https://a.test/', 'Doc', null);
     expect(bridge.getBookmarkTree).toHaveBeenCalled(); // refetched
+  });
+
+  it('does nothing when there is no active tab to bookmark', async () => {
+    // The star is in the chrome, which outlives the last tab. With no tab the url reads as '', and
+    // '' is not bookmarkable — so this must not write an empty bookmark.
+    const { result } = renderWith({ tabs: [], activeId: null });
+    await waitFor(() => expect(result.current.barNodes).toHaveLength(2));
+    await act(async () => {
+      await result.current.onToggleBookmark();
+    });
+    expect(bridge.toggleBookmark).not.toHaveBeenCalled();
+  });
+
+  it('bookmarks a tab that has not reported a title yet under its url', async () => {
+    // A page bookmarked mid-load has no title. The url is a worse name than a real title and a much
+    // better one than a blank row in the bar.
+    const { result } = renderWith({
+      tabs: [{ id: 't1', url: 'https://a.test/', faviconUrl: null }],
+      activeId: 't1',
+    });
+    await waitFor(() => expect(result.current.barNodes).toHaveLength(2));
+    await act(async () => {
+      await result.current.onToggleBookmark();
+    });
+    expect(bridge.toggleBookmark).toHaveBeenCalledWith('https://a.test/', 'https://a.test/', null);
   });
 
   it('maps the flat listBookmarks rows into bookmarksRef entries', async () => {
@@ -279,11 +322,9 @@ describe('the native context-menu dispatch', () => {
       { id: 'f1' },
     );
     act(() => menuCb?.({ id: 'b1', action: 'add-folder', type: 'bookmark' }));
-    expect(bridge.openPopup).toHaveBeenLastCalledWith(
-      'bookmark-add-folder',
-      expect.anything(),
-      { id: BOOKMARK_ROOT_BAR },
-    );
+    expect(bridge.openPopup).toHaveBeenLastCalledWith('bookmark-add-folder', expect.anything(), {
+      id: BOOKMARK_ROOT_BAR,
+    });
   });
 
   it('a failing onBookmarkMove is logged, not thrown', async () => {
