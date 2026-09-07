@@ -29,7 +29,7 @@ function originOf(url: string): string | null {
  *    clear-path request to the site the user is viewing, tunnel or not. `TabFaviconSchema` enforces
  *    that at the IPC boundary rather than leaving it to this comment.
  */
-function chromeCsp(dev: boolean): string {
+export function chromeCsp(dev: boolean): string {
   const script = dev ? "script-src 'self' 'unsafe-inline'" : "script-src 'self'";
   const connect = dev ? "connect-src 'self' ws: http: https:" : "connect-src 'self'";
   return [

@@ -63,7 +63,7 @@ vi.mock('./web-permissions/permission-broker', () => ({
   },
 }));
 
-const { installSecurity } = await import('./security');
+const { chromeCsp, installSecurity } = await import('./security');
 
 /** Electron's full permission union, copied from `electron.d.ts` (both handler signatures, merged). */
 const ALL_PERMISSIONS = [
@@ -260,6 +260,41 @@ describe('permission check handler (the synchronous permission-state query)', ()
     expect(() =>
       h.check(null, 'media', 'https://a.example', undefined as unknown as { mediaType?: string }),
     ).not.toThrow();
+  });
+});
+
+describe('chromeCsp', () => {
+  it('prod: no dev-server escape hatch, and the always-on lockdown directives', () => {
+    const csp = chromeCsp(false);
+    expect(csp).toContain("script-src 'self'");
+    expect(csp).not.toMatch(/script-src [^;]*'unsafe-inline'/);
+    expect(csp).toContain("connect-src 'self'");
+    expect(csp).not.toContain('ws:');
+    for (const directive of [
+      "default-src 'self'",
+      "object-src 'none'",
+      "base-uri 'self'",
+      "form-action 'none'",
+      "frame-ancestors 'none'",
+    ]) {
+      expect(csp).toContain(directive);
+    }
+    // React inline style attributes are unavoidable; scripts are not.
+    expect(csp).toContain("style-src 'self' 'unsafe-inline'");
+  });
+
+  it('dev: adds ONLY what the Vite HMR preamble needs, and nothing prod does not also have', () => {
+    const dev = chromeCsp(true);
+    const prod = chromeCsp(false);
+    expect(dev).toContain("script-src 'self' 'unsafe-inline'");
+    expect(dev).toContain("connect-src 'self' ws: http: https:");
+    // The dev relaxation is confined to script-src and connect-src — every other directive is identical.
+    const strip = (csp: string): string =>
+      csp
+        .split('; ')
+        .filter((d) => !d.startsWith('script-src') && !d.startsWith('connect-src'))
+        .join('; ');
+    expect(strip(dev)).toBe(strip(prod));
   });
 });
 
