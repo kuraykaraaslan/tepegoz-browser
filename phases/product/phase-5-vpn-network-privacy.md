@@ -388,9 +388,17 @@ endpoint** (one loopback port per active connection), never an OS-level system p
 - [ ] **First-run flow for a tunnel** — import a config, name it, test it, and see a plain-language result;
       a failed test says which step failed (config parse / handshake / DNS / exit reachability), not "not
       connected"
-- [ ] **Connection health over time** — keep-alive, reconnect, and per-connection metrics (handshake success
-      rate, latency, uptime) surfaced in the connections overview, so a tunnel that dies quietly is visible
-      instead of being discovered through a leak
+- [~] **Connection health over time** — keep-alive, reconnect, and per-connection metrics (handshake success
+  rate, latency, uptime) surfaced in the connections overview, so a tunnel that dies quietly is visible
+  instead of being discovered through a leak. _Landed 2026-09-08: the pool now tracks `connectedSince`
+  (set on every → `up`, cleared on → `down` — so a flap shortens uptime), `lastCheckedAt` (the
+  health-poll heartbeat), and a session `drops` counter (incremented only on a real `up` → `down`, not
+  a first failed connect). All three ride `PoolConnectionView` → `NetworkConnectionView` → the
+  connections overview, which renders a rising-`drops` line ("Dropped {n} time(s) this session …",
+  en+tr) on the affected row — a tunnel that keeps reconnecting is now visible without waiting for a
+  leak. Pool tests cover the transitions; component tests cover the line. **Still owed for `[x]`:
+  handshake success rate, latency, and a rendered uptime — those need probe-timing history, a bigger
+  change than this counter.**_
 - [x] **Errors in the user's language, with a next step** — every failure state maps to one localized sentence
       and one action; no raw provider stderr in the UI. _Landed 2026-09-08: pure `classifyNetworkError`
       (`components/network-error.ts`, 16 tests, 100% cov) maps a connect-time `lastError` to one of eight

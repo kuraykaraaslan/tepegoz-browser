@@ -151,6 +151,13 @@ function ConnectionRow({
         // trust shifts to the VPN operator. State it here, on the connection it applies to.
         <p className="mt-1 text-xs text-text-disabled">{s.network.torChainedCaveat}</p>
       )}
+      {c.drops > 0 && (
+        // Phase 5 health: a tunnel that dies quietly should be visible here, not discovered through a
+        // leak. The counter rises on every drop from `up` even when the poll reconnects it.
+        <p className="mt-1 text-xs text-text-disabled">
+          {s.network.connDrops.replace('{count}', String(c.drops))}
+        </p>
+      )}
     </li>
   );
 }

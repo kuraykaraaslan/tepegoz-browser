@@ -26,6 +26,12 @@ export interface NetworkConnectionView {
   note: string;
   kind: NetworkConnection['kind'];
   status: LiveConnectionStatus;
+  /** Host-clock ms this connection last came `up`, or `null` while it is not up (uptime source). */
+  connectedSince: number | null;
+  /** Host-clock ms of the last health probe, or `null` if it has never been probed. */
+  lastCheckedAt: number | null;
+  /** Times this connection has dropped from `up` this session — a rising count means it is unstable. */
+  drops: number;
 }
 
 /** Where one tab's traffic actually goes, and which scope decided it (for the inherited/overridden mark). */

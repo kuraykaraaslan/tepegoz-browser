@@ -833,6 +833,8 @@ export const tr: SettingsStrings = {
     tunnelLimitsBody:
       'Bir tünel, bir sitenin gördüğü ağ adresini değiştirir. Tarayıcı profilinizi değiştirmez — çerezler, oturum açma bilgileri ve geçmiş sekmede kalır — tarayıcının kendi parmak izini de değiştirmez: TLS el sıkışması, HTTP başlık sırası ve istek zamanlaması buradaki her tünelde aynıdır; bu yüzden bot önleme ve itibar sistemleri tarayıcıyı yine tanır. Tepegöz bu sürümde bunları normalleştirmez.',
     tunnelLimitsLink: 'Bir sitenin verilerini temizle',
+    connDrops:
+      'Bu oturumda {count} kez koptu — bu sayı artmaya devam ediyorsa tünel yeniden bağlansa bile kararsız demektir.',
     connError: {
       binaryMissing:
         'Bu bağlantı için yardımcı program kurulu değil. Aşağıdaki yardımcılar bölümünden ekleyin ya da Tepegöz’e programın bulunduğu klasörü gösterin.',

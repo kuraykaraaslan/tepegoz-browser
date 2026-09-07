@@ -841,6 +841,8 @@ export const en = {
     tunnelLimitsBody:
       'A tunnel changes the network address a site sees. It does not change your browser profile — cookies, logins and history stay with the tab — nor the browser’s own fingerprint: the TLS handshake, HTTP header order and request timing are the same through every tunnel here, so anti-bot and reputation systems still recognise the browser. Tepegöz does not normalise those in this version.',
     tunnelLimitsLink: 'Clear a site’s data',
+    connDrops:
+      'Dropped {count} time(s) this session — if this keeps rising, the tunnel is unstable even when it reconnects.',
     connError: {
       binaryMissing:
         'The helper program for this connection is not installed. Add it in the helpers section below, or point Tepegöz at the folder that has it.',

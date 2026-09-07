@@ -23,6 +23,9 @@ function conn(over: Partial<NetworkConnectionView> = {}): NetworkConnectionView 
     note: '',
     kind: 'wireguard',
     status: 'down',
+    connectedSince: null,
+    lastCheckedAt: null,
+    drops: 0,
     ...over,
   };
 }
@@ -104,6 +107,22 @@ describe('NetworkPrivacySection', () => {
     render1();
     await rowFor('Mullvad');
     expect(screen.queryByText(s.network.torNotTorBrowserBody)).toBeNull();
+  });
+
+  it('surfaces a rising drop count on the connection, so a flapping tunnel is visible', async () => {
+    bridge.getNetworkState.mockResolvedValue(
+      netState({ connections: [conn({ status: 'up', drops: 3 })] }),
+    );
+    render1();
+    const row = await rowFor('Mullvad');
+    expect(within(row).getByText(s.network.connDrops.replace('{count}', '3'))).toBeTruthy();
+  });
+
+  it('shows no drop line for a connection that has never dropped', async () => {
+    bridge.getNetworkState.mockResolvedValue(netState({ connections: [conn({ drops: 0 })] }));
+    render1();
+    await rowFor('Mullvad');
+    expect(screen.queryByText(s.network.connDrops.replace('{count}', '0'))).toBeNull();
   });
 
   it('warns on a chained VPN → Tor connection, on the row it applies to', async () => {

@@ -232,6 +232,48 @@ describe('health polling', () => {
     await ConnectionPool.pollOnce();
     expect(h.probe).not.toHaveBeenCalled();
   });
+
+  it('records health over time — connectedSince on up, a drop counter, and a probe heartbeat', async () => {
+    // Brought up in beforeEach: connectedSince is set, nothing has dropped, no probe yet.
+    let view = ConnectionPool.get('tor')!;
+    expect(typeof view.connectedSince).toBe('number');
+    expect(view.drops).toBe(0);
+    expect(view.lastCheckedAt).toBeNull();
+
+    // A healthy sweep stamps the heartbeat but does not touch the drop count or connectedSince.
+    const connectedSince = view.connectedSince ?? 0;
+    const beforePoll = Date.now();
+    await ConnectionPool.pollOnce();
+    view = ConnectionPool.get('tor')!;
+    expect(view.lastCheckedAt).toBeGreaterThanOrEqual(beforePoll);
+    expect(view.drops).toBe(0);
+    expect(view.connectedSince).toBe(connectedSince);
+
+    // It drops → drop count rises, connectedSince clears.
+    h.probe.mockResolvedValue(false);
+    await ConnectionPool.pollOnce();
+    view = ConnectionPool.get('tor')!;
+    expect(view.drops).toBe(1);
+    expect(view.connectedSince).toBeNull();
+
+    // Back up → connectedSince is fresh, the drop count stays (it is a session tally).
+    h.probe.mockResolvedValue(true);
+    await ConnectionPool.ensureUp('tor');
+    view = ConnectionPool.get('tor')!;
+    expect(view.drops).toBe(1);
+    expect(view.connectedSince).toBeGreaterThanOrEqual(connectedSince);
+  });
+
+  it('does not count a first failed connect as a drop — it was never up', async () => {
+    h.prefs.networkConnections = [conn('tor')];
+    ConnectionPool.resetForTests();
+    ConnectionPool.init();
+    h.connect.mockRejectedValue(new Error('nothing listening'));
+    await expect(ConnectionPool.ensureUp('tor')).rejects.toThrow();
+    const view = ConnectionPool.get('tor')!;
+    expect(view.drops).toBe(0);
+    expect(view.connectedSince).toBeNull();
+  });
 });
 
 describe('adding and removing', () => {

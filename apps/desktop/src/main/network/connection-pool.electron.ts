@@ -49,6 +49,15 @@ export interface PoolConnectionView {
   /** Why it is not up, in the provider's own words — shown as-is, because "wireproxy not found" and
    *  "endpoint unreachable" need entirely different things from the user. */
   lastError: string | null;
+  /** Host-clock ms this connection last transitioned INTO `up`, or `null` while it is not up. Uptime =
+   *  `now - connectedSince`. Resets on every reconnect, so a flapping tunnel shows a short uptime. */
+  connectedSince: number | null;
+  /** Host-clock ms of the last health probe for this connection, or `null` if it has never been probed.
+   *  A stalled value means the poll stopped — a tunnel dying quietly is visible here, not only in a leak. */
+  lastCheckedAt: number | null;
+  /** How many times this connection has dropped from `up` this session. A rising count is the signal
+   *  that a tunnel is unstable even when it keeps auto-recovering. */
+  drops: number;
 }
 
 interface Entry {
@@ -60,6 +69,15 @@ interface Entry {
   socksPort: number | null;
   /** Why this connection is not up, in the user's words. Cleared on a successful connect. */
   lastError: string | null;
+  /** See {@link PoolConnectionView.connectedSince} / `lastCheckedAt` / `drops`. */
+  connectedSince: number | null;
+  lastCheckedAt: number | null;
+  drops: number;
+}
+
+/** The health fields a fresh {@link Entry} starts with — same at load and on add. */
+function freshHealth(): Pick<Entry, 'connectedSince' | 'lastCheckedAt' | 'drops'> {
+  return { connectedSince: null, lastCheckedAt: null, drops: 0 };
 }
 
 type StatusListener = (id: string, status: LiveConnectionStatus) => void;
@@ -113,6 +131,13 @@ function providerFor(config: NetworkConnection): NetworkPrivacyProvider {
 function setStatus(id: string, status: LiveConnectionStatus): void {
   const entry = entries.get(id);
   if (entry === undefined || entry.status === status) return;
+  // Health bookkeeping BEFORE the status is overwritten, so the transition can be read.
+  if (status === 'up') {
+    entry.connectedSince = Date.now();
+  } else if (status === 'down') {
+    if (entry.status === 'up') entry.drops += 1; // it WAS up and now isn't — a real drop, not a first attempt
+    entry.connectedSince = null;
+  }
   entry.status = status;
   Logger.info('Connection status changed', { id, status });
   if (status === 'down') {
@@ -140,6 +165,9 @@ function viewOf(entry: Entry): PoolConnectionView {
     status: entry.status,
     upstreamConnectionId: entry.config.kind === 'tor' ? entry.config.upstreamConnectionId : null,
     lastError: entry.lastError,
+    connectedSince: entry.connectedSince,
+    lastCheckedAt: entry.lastCheckedAt,
+    drops: entry.drops,
   };
 }
 
@@ -156,6 +184,7 @@ const ConnectionPool = {
           status: 'down',
           socksPort: null,
           lastError: null,
+          ...freshHealth(),
         });
       } catch (err) {
         // A persisted config we cannot build a provider for is reported, not silently dropped from view:
@@ -280,6 +309,7 @@ const ConnectionPool = {
       status: 'down',
       socksPort: null,
       lastError: null,
+      ...freshHealth(),
     });
     const rest = PreferenceStore.getAll().networkConnections.filter((c) => c.id !== config.id);
     PreferenceStore.update({ networkConnections: [...rest, config] });
@@ -338,6 +368,7 @@ const ConnectionPool = {
     await Promise.all(
       live.map(async (entry) => {
         const alive = await entry.provider.probe();
+        entry.lastCheckedAt = Date.now(); // the poll's heartbeat — a stalled value means it stopped
         if (!alive) {
           Logger.warn('Connection dropped', { id: entry.config.id });
           invalidateTunnelVerification(entry.config.id);
