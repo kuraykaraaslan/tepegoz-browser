@@ -4,6 +4,13 @@ import { runMacro } from './interpreter';
 import type { MacroHost, MacroPolicyStepKind } from './host';
 import { PolicyDeniedError } from './errors';
 
+/**
+ * One branch is deliberately left uncovered: the `?? 'stop'` inside
+ * `'onError' in step ? (step.onError ?? 'stop') : 'stop'`. It needs a step object that HAS the
+ * `onError` key with an undefined value, which `exactOptionalPropertyTypes` makes unconstructible
+ * from typed code; the `in` check already answers the absent case.
+ */
+
 /** A scriptable fake host that records the actions the interpreter drives + every sleep duration. */
 function fakeHost(over: Partial<MacroHost> = {}): MacroHost & { log: string[]; sleeps: number[] } {
   const log: string[] = [];
@@ -369,5 +376,247 @@ describe('runMacro', () => {
         ['fill', false],
       ]);
     });
+  });
+
+  it('defaults a declared variable with no initial to the empty string', async () => {
+    const host = fakeHost();
+    await runMacro(
+      macro([{ kind: 'navigate', url: 'https://x/{{who}}' }], [{ name: 'who' }]),
+      host,
+    );
+    expect(host.log).toEqual(['nav https://x/']);
+  });
+
+  it('runs waitFor / waitLoad / waitMs, honouring a per-step timeout over the default', async () => {
+    const seen: number[] = [];
+    const host = fakeHost({
+      waitFor: (_c, ms) => {
+        seen.push(ms);
+        return Promise.resolve(true);
+      },
+      waitForLoad: (ms) => {
+        seen.push(ms);
+        return Promise.resolve();
+      },
+    });
+    const r = await runMacro(
+      macro([
+        { kind: 'waitFor', target: css('#a'), timeoutMs: 1234 },
+        { kind: 'waitFor', target: css('#b') },
+        { kind: 'waitLoad', timeoutMs: 4321 },
+        { kind: 'waitLoad' },
+        { kind: 'waitMs', ms: 77 },
+      ]),
+      host,
+      { defaultWaitMs: 999 },
+    );
+    expect(r.ok).toBe(true);
+    expect(seen).toEqual([1234, 999, 4321, 999]);
+    expect(host.sleeps).toContain(77);
+  });
+
+  it('takes the then branch when the condition holds', async () => {
+    const host = fakeHost({ pageContainsText: (t) => Promise.resolve(t === 'Error') });
+    const r = await runMacro(
+      macro([
+        {
+          kind: 'if',
+          cond: { kind: 'textPresent', text: 'Error' },
+          then: [{ kind: 'click', target: css('.retry') }],
+          else: [{ kind: 'click', target: css('.ok') }],
+        },
+      ]),
+      host,
+    );
+    expect(r.ok).toBe(true);
+    expect(host.log).toEqual(['click .retry']);
+  });
+
+  it('an if with no else branch simply does nothing when the condition is false', async () => {
+    const host = fakeHost({ pageContainsText: () => Promise.resolve(false) });
+    const r = await runMacro(
+      macro([
+        {
+          kind: 'if',
+          cond: { kind: 'textPresent', text: 'Error' },
+          then: [{ kind: 'click', target: css('.retry') }],
+        },
+      ]),
+      host,
+    );
+    expect(r.ok).toBe(true);
+    expect(host.log).toEqual([]);
+  });
+
+  it('forEachRow over an empty CSV runs the body zero times rather than once', async () => {
+    const host = fakeHost({ readCsv: () => Promise.resolve([]) });
+    const r = await runMacro(
+      macro([
+        {
+          kind: 'forEachRow',
+          csvBlobHash: 'h',
+          as: 'i',
+          onEnd: 'stop',
+          body: [{ kind: 'click', target: css('.row') }],
+        },
+      ]),
+      host,
+    );
+    expect(r.ok).toBe(true);
+    expect(host.log).toEqual([]);
+  });
+
+  it('stops a run that exceeds its step budget, naming the step it stopped on', async () => {
+    const host = fakeHost();
+    const r = await runMacro(
+      macro([
+        { kind: 'scroll', direction: 'down' },
+        { kind: 'scroll', direction: 'down' },
+        { kind: 'scroll', direction: 'down' },
+      ]),
+      host,
+      { maxSteps: 2 },
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error?.message).toBe('Exceeded step budget (2)');
+    expect(r.error?.path).toEqual([2]);
+    expect(host.log).toHaveLength(2);
+  });
+
+  it('stops a while loop whose body is EMPTY, which the schema allows', async () => {
+    // Regression. `body` has no minimum length, so this macro is valid — and the budget check inside
+    // the loop used to be unreachable, because `stepsRun` only moved inside `executeStep` and an
+    // empty body never gets there. The loop then spun without yielding to the macrotask queue, so
+    // nothing could interrupt it: not the abort signal, not a test timeout. It hung the process.
+    //
+    // The host yields on purpose here: if this regresses, the loop gives the event loop a turn and
+    // this test times out with a failure, instead of hanging the whole suite.
+    const host = fakeHost({
+      elementExists: () => new Promise((resolve) => setTimeout(() => resolve(true), 0)),
+    });
+    const r = await runMacro(
+      macro([
+        {
+          kind: 'repeat',
+          while: { kind: 'elementExists', target: css('#forever') },
+          body: [],
+        },
+      ]),
+      host,
+      { maxSteps: 5 },
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error?.message).toBe('Exceeded step budget (5)');
+  });
+
+  it('reports progress: started then step then done, and a located failed phase', async () => {
+    const events: string[] = [];
+    await runMacro(macro([{ kind: 'scroll', direction: 'down' }]), fakeHost(), {
+      onProgress: (e) => {
+        events.push('kind' in e && e.kind !== undefined ? `${e.phase}:${e.kind}` : e.phase);
+      },
+    });
+    expect(events).toEqual(['started', 'step:scroll', 'done']);
+
+    const failures: unknown[] = [];
+    await runMacro(
+      macro([{ kind: 'waitFor', target: css('#gone') }]),
+      fakeHost({ waitFor: () => Promise.resolve(false) }),
+      {
+        onProgress: (e) => {
+          if (e.phase === 'failed') failures.push(e);
+        },
+      },
+    );
+    expect(failures[0]).toMatchObject({
+      phase: 'failed',
+      kind: 'waitFor',
+      path: [0],
+      detail: 'waitFor: element never appeared',
+    });
+  });
+
+  it('reports the retry and skipped phases as they happen', async () => {
+    const events: string[] = [];
+    let attempts = 0;
+    const host = fakeHost({
+      click: () => {
+        attempts++;
+        return attempts < 2 ? Promise.reject(new Error('flaky')) : Promise.resolve();
+      },
+      scroll: () => Promise.reject(new Error('always down')),
+    });
+    await runMacro(
+      macro([
+        { kind: 'click', target: css('.a'), onError: 'retry', retries: 2 },
+        { kind: 'scroll', direction: 'down', onError: 'skip' },
+      ]),
+      host,
+      {
+        onProgress: (e) => {
+          if (e.phase === 'step') events.push(e.kind);
+        },
+      },
+    );
+    expect(events).toEqual(['click', 'click:retry', 'scroll', 'scroll:skipped']);
+  });
+
+  it('coerces a non-Error thrown by the host into a located message', async () => {
+    // Anything can be thrown across a host boundary, and `.message` on a bare string is undefined —
+    // an error with no message is the opposite of this engine's "never an opaque code" promise.
+    const thrown = 'the frame went away' as unknown as Error;
+    const host = fakeHost({ click: () => Promise.reject(thrown) });
+    const r = await runMacro(macro([{ kind: 'click', target: css('.a') }]), host);
+    expect(r.ok).toBe(false);
+    expect(r.error?.message).toBe('the frame went away');
+    expect(r.error?.path).toEqual([0]);
+  });
+
+  it('coerces a non-Error thrown by the POLICY check the same way', async () => {
+    const thrown = 'kernel said no' as unknown as Error;
+    const host = fakeHost({ checkPolicy: () => Promise.reject(thrown) });
+    const r = await runMacro(macro([{ kind: 'click', target: css('.a') }]), host);
+    expect(r.ok).toBe(false);
+    expect(r.error?.message).toBe('kernel said no');
+  });
+
+  it('lets an abort raised inside a nested step through the parent step error policy', async () => {
+    // The abort is raised by the INNER step and travels out through the enclosing repeat's own
+    // catch, which must rethrow it rather than treat it as a flaky page action worth retrying.
+    const controller = new AbortController();
+    const host = fakeHost({
+      scroll: () => {
+        controller.abort();
+        return Promise.resolve();
+      },
+    });
+    const r = await runMacro(
+      macro([
+        {
+          kind: 'repeat',
+          count: 5,
+          body: [
+            { kind: 'scroll', direction: 'down' },
+            { kind: 'click', target: css('.a'), onError: 'retry', retries: 3 },
+          ],
+        },
+      ]),
+      host,
+      { signal: controller.signal },
+    );
+    expect(r.aborted).toBe(true);
+    expect(r.ok).toBe(false);
+  });
+
+  it('does not swallow an error thrown by the progress listener itself', async () => {
+    // A broken listener must not come back as a failed MACRO — that would blame the page for a bug
+    // in the caller.
+    await expect(
+      runMacro(macro([{ kind: 'scroll', direction: 'down' }]), fakeHost(), {
+        onProgress: (e) => {
+          if (e.phase === 'step') throw new Error('listener blew up');
+        },
+      }),
+    ).rejects.toThrow('listener blew up');
   });
 });

@@ -202,6 +202,12 @@ export async function runMacro(
         } else if (step.while !== undefined) {
           while (await evalPredicate(step.while, host, vars)) {
             checkAbort();
+            // Count the ITERATION, not only the steps inside it. `body` has no minimum length in the
+            // schema, so `repeat { while: <always true>, body: [] }` is a valid macro that never
+            // reaches `executeStep` — and without this increment `stepsRun` is frozen, the budget can
+            // never fire, and the loop spins forever. It spins without yielding to the macrotask
+            // queue, so nothing outside can interrupt it either: not a timeout, not the abort signal.
+            stepsRun++;
             if (stepsRun > maxSteps) {
               throw new MacroError(`Exceeded step budget (${maxSteps})`, path, step.kind);
             }
