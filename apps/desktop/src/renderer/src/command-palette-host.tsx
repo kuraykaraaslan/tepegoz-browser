@@ -3,8 +3,14 @@ import { CommandPalette } from '@tepegoz/ext-agent/command-palette';
 import type { PaletteCommand, PaletteSources } from '@tepegoz/ext-agent/command-palette-core';
 import { coreDict } from '@tepegoz/i18n';
 import { useT } from '@tepegoz/i18n/react';
+import { settingsDict } from '@tepegoz/settings-ui';
+import { formatShortcut, SHORTCUTS } from '@tepegoz/shortcuts';
 import { browserDict } from '../../i18n';
 import { INTERNAL_SETTINGS_URL } from '@tepegoz/desktop-ipc';
+
+/** `tepegoz://settings#shortcuts` — the full, searchable shortcut list; every palette shortcut row
+ *  lands here so a half-remembered key is discoverable without leaving the keyboard. */
+const SHORTCUTS_URL = `${INTERNAL_SETTINGS_URL}#shortcuts`;
 
 /**
  * Wires the Command Palette (Ctrl+K) to the app.
@@ -21,6 +27,8 @@ import { INTERNAL_SETTINGS_URL } from '@tepegoz/desktop-ipc';
 export function CommandPaletteHost({ open, onClose }: { open: boolean; onClose: () => void }) {
   const t = useT(browserDict);
   const core = useT(coreDict);
+  const sc = useT(settingsDict).shortcuts;
+  const platform = window.tepegoz.platform;
 
   const sources: PaletteSources = useMemo(() => {
     const chat: PaletteCommand[] = [
@@ -52,12 +60,27 @@ export function CommandPaletteHost({ open, onClose }: { open: boolean; onClose: 
           window.tepegoz.navigateTab(INTERNAL_SETTINGS_URL);
         },
       },
+      // Every keyboard shortcut, findable by its name OR its key ("ctrl+l", "kısayol"). Selecting one
+      // jumps to the full list rather than firing it — a discoverability surface (S8), not a second
+      // dispatch path for keys the main process already owns.
+      ...SHORTCUTS.map((spec): PaletteCommand => {
+        const key = formatShortcut(spec, platform);
+        return {
+          id: `shortcut.${spec.id}`,
+          title: (sc.descriptions as Record<string, string>)[spec.id] ?? spec.id,
+          subtitle: key,
+          keywords: [key, spec.key, spec.id, 'keyboard', 'shortcut', 'kısayol'],
+          run: () => {
+            window.tepegoz.navigateTab(SHORTCUTS_URL);
+          },
+        };
+      }),
     ];
     // Do / Make / Tasks are the agent's modes; they fill in as those surfaces expose commands. Shown as
     // empty rather than hidden, because a mode that appears only sometimes is harder to learn than one
     // that is visibly empty.
     return { chat, do: [], make: [], tasks: [] };
-  }, [t]);
+  }, [t, core, sc, platform]);
 
   return <CommandPalette open={open} onClose={onClose} sources={sources} />;
 }

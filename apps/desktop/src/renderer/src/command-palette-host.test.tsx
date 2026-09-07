@@ -20,6 +20,7 @@ const bridge = {
   reopenClosedTab: vi.fn(),
   tabReload: vi.fn(),
   navigateTab: vi.fn(),
+  platform: 'linux' as NodeJS.Platform,
   onCommandPaletteOpen: vi.fn((cb: () => void) => {
     paletteCb = cb;
     return paletteUnsub;
@@ -99,5 +100,20 @@ describe('CommandPaletteHost', () => {
     const { input } = openHost();
     runByQuery(input, 'settings');
     expect(bridge.navigateTab).toHaveBeenCalledWith(INTERNAL_SETTINGS_URL);
+  });
+
+  it('finds a keyboard shortcut by its key and jumps to the shortcuts list', () => {
+    const { input } = openHost();
+    // "Ctrl+L" is the address-bar shortcut — searchable by the key a user half-remembers.
+    runByQuery(input, 'ctrl+l');
+    expect(bridge.navigateTab).toHaveBeenCalledWith(`${INTERNAL_SETTINGS_URL}#shortcuts`);
+  });
+
+  it('surfaces the shortcut rows under a generic term ("shortcut")', () => {
+    openHost();
+    fireEvent.change(screen.getByRole('combobox'), { target: { value: 'shortcut' } });
+    // The registry has well over a dozen entries; every one is a findable row.
+    expect(screen.getAllByText('Ctrl+R').length).toBeGreaterThan(0);
+    expect(screen.getAllByRole('option').length).toBeGreaterThan(5);
   });
 });

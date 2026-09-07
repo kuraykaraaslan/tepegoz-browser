@@ -172,9 +172,16 @@ Six UI-scoped PRs, each ≤250 lines, sequenced behind their substrate phases. N
 - [ ] **New tab is the user's, not the assistant's** — an explicit choice between assistant, bookmarks/speed
       dial, and blank. Comet's forced-AI new tab and Neon's "small AI button, confusing surface" are opposite
       failures of the same decision: the product deciding how much AI the user wants.
-- [ ] **Discoverability pass** — keyboard shortcuts listed and searchable from the palette itself; every agent
+- [~] **Discoverability pass** — keyboard shortcuts listed and searchable from the palette itself; every agent
       surface reachable without a mouse. Repeated in the Atlas and Neon reports as the thing that stops strong
-      features from being adopted.
+      features from being adopted. _Landed 2026-09-08: the Command Palette's chat mode now carries every
+      `@tepegoz/shortcuts` `SHORTCUTS` entry as a row — title = its localized description, subtitle = the
+      platform-formatted key (`formatShortcut`), findable by the key a user half-remembers ("ctrl+l") or a
+      generic term ("shortcut" / "kısayol"). Selecting one jumps to `tepegoz://settings#shortcuts` (the
+      full list) rather than re-dispatching a key the main process already owns. Tests: find-by-key →
+      settings#shortcuts, and the generic term surfacing the whole set. **Still owed for `[x]`:** "every
+      agent surface reachable without a mouse" — a full keyboard audit of the agent console, not just the
+      palette._
 - [ ] **Localized to the same bar as the rest of the app** (en + tr). Both Claude-extension studies list
       missing Turkish as a support-cost and adoption problem; this project treats it as a gate.
 
