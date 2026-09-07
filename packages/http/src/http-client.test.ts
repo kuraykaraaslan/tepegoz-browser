@@ -1,7 +1,21 @@
-import { describe, it, expect } from 'vitest';
-import { AxiosError, type AxiosAdapter, type AxiosResponse } from 'axios';
+import { afterEach, describe, it, expect } from 'vitest';
+import { Agent } from 'node:http';
+import { Agent as HttpsAgent } from 'node:https';
+import {
+  AxiosError,
+  type AxiosAdapter,
+  type AxiosResponse,
+  type InternalAxiosRequestConfig,
+} from 'axios';
 import { AppError } from '@tepegoz/libs';
-import { backoffMs, createHttpClient, normalizeHttpError, retryAfterMs } from './http-client';
+import {
+  DEFAULT_TIMEOUT_MS,
+  backoffMs,
+  createHttpClient,
+  normalizeHttpError,
+  retryAfterMs,
+} from './http-client';
+import { resetEgressForTests, setEgressPolicy, setTunnelAgentFactory } from './egress-route';
 import { HttpMessages } from './messages';
 
 function axiosError(opts: {
@@ -22,6 +36,12 @@ function axiosError(opts: {
         } as AxiosResponse);
   return new AxiosError(opts.message ?? 'boom', opts.code, undefined, undefined, response);
 }
+
+/**
+ * One branch stays uncovered: `delay`'s already-aborted early return. The retry path checks
+ * `signal.aborted` immediately before calling it, so reaching that line needs an abort to land
+ * between the check and the next statement — a race no test can stage, and `delay` is not exported.
+ */
 
 describe('normalizeHttpError', () => {
   it('maps client-side timeouts to 503', () => {
@@ -212,5 +232,202 @@ describe('createHttpClient — 429 retry', () => {
       client.get('http://example.test/x', { signal: controller.signal }),
     ).rejects.toBeDefined();
     expect(calls()).toBeLessThanOrEqual(1);
+  });
+});
+
+describe('reading a provider error out of the body', () => {
+  it('prefers `{ error: { message } }`, the shape OpenAI and Anthropic use', () => {
+    const e = normalizeHttpError(
+      axiosError({
+        status: 400,
+        message: 'Request failed',
+        data: { error: { message: 'bad key' } },
+      }),
+    );
+    expect(e.message).toBe('bad key');
+  });
+
+  it('accepts the flat `{ error: "..." }` shape too', () => {
+    const e = normalizeHttpError(
+      axiosError({ status: 400, message: 'Request failed', data: { error: 'quota exhausted' } }),
+    );
+    expect(e.message).toBe('quota exhausted');
+  });
+
+  it('falls back to axios own message for a body that carries no usable one', () => {
+    // Anything but a non-empty string in the right place is not a message: an empty string, a number,
+    // an error object with no message, a body with no `error` key at all, or no body.
+    const bodies: unknown[] = [
+      { error: '' },
+      { error: 42 },
+      { error: {} },
+      { error: { message: '' } },
+      { error: { message: 7 } },
+      { detail: 'not our shape' },
+      null,
+      'a bare string body',
+    ];
+    for (const data of bodies) {
+      const e = normalizeHttpError(axiosError({ status: 400, message: 'Request failed', data }));
+      expect(e.message, JSON.stringify(data)).toBe('Request failed');
+    }
+  });
+});
+
+describe('createHttpClient — configuration', () => {
+  it('applies a baseURL when one is given, and leaves it unset otherwise', () => {
+    expect(createHttpClient({ baseURL: 'https://api.example.test' }).defaults.baseURL).toBe(
+      'https://api.example.test',
+    );
+    expect(createHttpClient().defaults.baseURL).toBeUndefined();
+  });
+
+  it('merges caller headers over the JSON default rather than dropping them', () => {
+    const client = createHttpClient({
+      headers: { 'X-Trace': 'abc', 'Content-Type': 'text/plain' },
+    });
+    expect(client.defaults.headers['X-Trace']).toBe('abc');
+    expect(client.defaults.headers['Content-Type']).toBe('text/plain');
+  });
+
+  it('uses the default timeout unless one is asked for', () => {
+    expect(createHttpClient().defaults.timeout).toBe(DEFAULT_TIMEOUT_MS);
+    expect(createHttpClient({ timeoutMs: 1234 }).defaults.timeout).toBe(1234);
+  });
+});
+
+describe('createHttpClient — the egress route is decided per request', () => {
+  afterEach(() => {
+    resetEgressForTests();
+  });
+
+  it('attaches nothing for the ordinary Direct case', async () => {
+    // Direct has to stay byte-identical to a plain axios request: no agents, and axios still free to
+    // read the environment proxy as it always did.
+    const client = createHttpClient();
+    let seen: InternalAxiosRequestConfig | null = null;
+    client.defaults.adapter = (config) => {
+      seen = config;
+      return Promise.resolve({
+        status: 200,
+        statusText: 'OK',
+        headers: {},
+        data: {},
+        config,
+      } as AxiosResponse);
+    };
+
+    await client.get('http://example.test/x');
+    expect(seen).not.toBeNull();
+    expect((seen as unknown as InternalAxiosRequestConfig).httpsAgent).toBeUndefined();
+    expect((seen as unknown as InternalAxiosRequestConfig).proxy).toBeUndefined();
+  });
+
+  it('attaches the tunnel agents and turns axios off the environment proxy', async () => {
+    // One route per request, and it is ours: leaving HTTP_PROXY in play would give a tunnelled
+    // request a second, unasked-for hop.
+    const httpAgent = new Agent();
+    const httpsAgent = new HttpsAgent();
+    setTunnelAgentFactory(() => ({ httpAgent, httpsAgent }));
+    setEgressPolicy(() => ({ mode: 'tunnel', socksPort: 1080 }));
+
+    const client = createHttpClient();
+    let seen: InternalAxiosRequestConfig | null = null;
+    client.defaults.adapter = (config) => {
+      seen = config;
+      return Promise.resolve({
+        status: 200,
+        statusText: 'OK',
+        headers: {},
+        data: {},
+        config,
+      } as AxiosResponse);
+    };
+
+    await client.get('http://example.test/x');
+    const cfg = seen as unknown as InternalAxiosRequestConfig;
+    expect(cfg.httpAgent).toBe(httpAgent);
+    expect(cfg.httpsAgent).toBe(httpsAgent);
+    expect(cfg.proxy).toBe(false);
+  });
+
+  it('decides the route at REQUEST time, not when the client was built', async () => {
+    // A long-lived client (an LLM provider) outlives a change to the General binding; deciding at
+    // construction would keep sending down a route the user has since turned off.
+    const client = createHttpClient();
+    const seen: unknown[] = [];
+    client.defaults.adapter = (config) => {
+      seen.push(config.httpsAgent);
+      return Promise.resolve({
+        status: 200,
+        statusText: 'OK',
+        headers: {},
+        data: {},
+        config,
+      } as AxiosResponse);
+    };
+
+    await client.get('http://example.test/one');
+
+    const httpsAgent = new HttpsAgent();
+    setTunnelAgentFactory(() => ({ httpAgent: new Agent(), httpsAgent }));
+    setEgressPolicy(() => ({ mode: 'tunnel', socksPort: 1080 }));
+    await client.get('http://example.test/two');
+
+    expect(seen[0]).toBeUndefined();
+    expect(seen[1]).toBe(httpsAgent);
+  });
+});
+
+describe('createHttpClient — a cancelled run stops retrying', () => {
+  it('does not retry a 429 once the caller has aborted', async () => {
+    // The backoff must not outlive the run it belongs to: a cancelled agent step should stop making
+    // requests, not keep paying for them.
+    const client = createHttpClient();
+    const controller = new AbortController();
+    let calls = 0;
+    client.defaults.adapter = (config) => {
+      calls += 1;
+      controller.abort();
+      return Promise.reject(
+        new AxiosError('rate limited', undefined, config, {}, {
+          status: 429,
+          statusText: '',
+          headers: {},
+          data: {},
+          config,
+        } as AxiosResponse),
+      );
+    };
+
+    await expect(
+      client.get('http://example.test/x', { signal: controller.signal }),
+    ).rejects.toBeInstanceOf(AppError);
+    expect(calls).toBe(1);
+  });
+
+  it('rejects mid-backoff when the caller aborts while it is waiting', async () => {
+    const client = createHttpClient();
+    const controller = new AbortController();
+    let calls = 0;
+    client.defaults.adapter = (config) => {
+      calls += 1;
+      if (calls === 1) setTimeout(() => controller.abort(), 0);
+      return Promise.reject(
+        new AxiosError('rate limited', undefined, config, {}, {
+          status: 429,
+          statusText: '',
+          // a long Retry-After, so the abort lands while the backoff is still waiting
+          headers: { 'retry-after': '30' },
+          data: {},
+          config,
+        } as AxiosResponse),
+      );
+    };
+
+    await expect(
+      client.get('http://example.test/x', { signal: controller.signal }),
+    ).rejects.toBeInstanceOf(AppError);
+    expect(calls).toBe(1);
   });
 });
