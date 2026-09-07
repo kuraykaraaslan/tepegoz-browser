@@ -23,6 +23,11 @@ const badge = (over: Partial<GroupRouteBadge>): GroupRouteBadge => ({
   ...over,
 });
 
+/**
+ * Two branches stay uncovered: the `?? 'down'` defaults on each half of the SPLIT shield. That branch
+ * only runs when both legs are non-null, which is what selects it — the defaults there can never fire.
+ */
+
 /** The shields are `role="img"`, so the accessible name is what a user actually gets told. */
 function shieldName(): string {
   return screen.getByRole('img').getAttribute('aria-label') ?? '';
@@ -102,5 +107,40 @@ describe('a chained route — Tor through a VPN', () => {
       />,
     );
     expect(shieldName()).toBe('Tor → FRA — VPN: not connected, Tor: not connected');
+  });
+});
+
+describe('a host that ships no route strings', () => {
+  /** The four labels every strip must have; the route ones are all optional. */
+  const BARE: TabStripLabels = {
+    tablist: 'Tabs',
+    untitled: 'Untitled',
+    closeTab: 'Close',
+    newTab: 'New',
+  };
+
+  it('still says both legs and their health, in built-in English', () => {
+    // The route labels are optional on the leaf, so a host can render this badge before it has
+    // translated anything. An unlabelled shield would be a coloured dot to a screen reader — and
+    // colour is the one channel this badge must not rely on.
+    render(<GroupRouteShield badge={badge({ vpn: 'up', tor: 'down' })} labels={BARE} />);
+    expect(shieldName()).toBe('FRA — VPN: connected, Tor: not connected');
+  });
+
+  it('falls back for the connecting state too', () => {
+    render(<GroupRouteShield badge={badge({ vpn: 'connecting' })} labels={BARE} />);
+    expect(shieldName()).toBe('FRA — VPN: connecting');
+  });
+});
+
+describe('a badge with no legs at all', () => {
+  it('still names the route rather than rendering an unexplained shield', () => {
+    // Both legs null is a Direct group's shape. The header does not draw a shield for one, but the
+    // component is exported on its own and must not produce a nameless icon if it is handed one.
+    render(
+      <GroupRouteShield badge={badge({ vpn: null, tor: null, label: 'Direct' })} labels={LABELS} />,
+    );
+    expect(shieldName()).toBe('Direct — ');
+    expect(screen.getByRole('img')).toBeDefined();
   });
 });
