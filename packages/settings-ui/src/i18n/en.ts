@@ -838,6 +838,9 @@ export const en = {
       'Direct and Tor traffic run in this browser at the same time. Activity correlated across the two can re-link an anonymous session — the pattern Tor Browser exists to prevent. For strong anonymity, use Tor Browser rather than routing a single tab.',
     torChainedCaveat:
       'Sending a VPN before Tor shifts trust onto the VPN operator, which can then see that you use Tor. Combining the two is generally not recommended.',
+    tunnelLimitsBody:
+      'A tunnel changes the network address a site sees. It does not change your browser profile — cookies, logins and history stay with the tab — nor the browser’s own fingerprint: the TLS handshake, HTTP header order and request timing are the same through every tunnel here, so anti-bot and reputation systems still recognise the browser. Tepegöz does not normalise those in this version.',
+    tunnelLimitsLink: 'Clear a site’s data',
     binaryMissing:
       '{name} was not found. Put it in {dir}, or give its full path below. Tepegöz does not ship it.',
     helpersHint:

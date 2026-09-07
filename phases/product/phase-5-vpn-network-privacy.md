@@ -310,14 +310,21 @@ endpoint** (one loopback port per active connection), never an OS-level system p
 - [ ] **One claim, one surface.** Fingerprint posture binds at the same three scopes as a route
       (General / group / tab) and is shown in the same place as the route badge — "this tab is anonymous" must
       not be assembled by the user out of two independent settings that can disagree
-- [ ] **Say what the tunnel does not do.** The connections overview states plainly that a tunnel hides the
-      network address and **not** the browser profile, and links to the Phase 2 protection. Today the UI's
-      disclosure copy is silent on this, which is the most likely way a user over-trusts it
-- [ ] **The transport carries its own identity.** Changing the exit IP does not change the **TLS
+- [x] **Say what the tunnel does not do.** The connections overview states plainly that a tunnel hides the
+      network address and **not** the browser profile, and links to the Phase 2 protection.
+      _Landed 2026-09-08 as a permanent framing line at the top of the Connections card
+      (`network.tunnelLimitsBody`, en+tr), with a `CrossLink` to the `privacy` section ("Clear a site’s
+      data") — shown whether or not any connection exists, since that silence is the over-trust risk.
+      Test: "always states what a tunnel does NOT change, and links to per-site data clearing" (asserts
+      `href="#privacy"`)._
+- [x] **The transport carries its own identity.** Changing the exit IP does not change the **TLS
       fingerprint** (JA3/JA4-class), the HTTP header order, or the request rhythm — all three are
       standard inputs to anti-bot and reputation systems, and all three survive every tunnel this phase
-      builds. Decide and record whether Tepegöz normalizes any of them; if it does not, the disclosure
-      copy says so rather than letting "routed through Tor" imply more than it delivers.
+      builds. _Decided and recorded: Tepegöz **does not** normalize any of the three in this version
+      (fingerprint-normalization work is frozen out of v1 per the ship line), and the same
+      `network.tunnelLimitsBody` disclosure says so outright — "the TLS handshake, HTTP header order and
+      request timing are the same through every tunnel here … Tepegöz does not normalise those in this
+      version" — so "routed through Tor" cannot imply more than it delivers._
       Source: [`../../docs/research/research-cross-profile-tracking.md`](../../docs/research/research-cross-profile-tracking.md)
 - [ ] **ECH (Encrypted Client Hello) — the biggest remaining plaintext leak this phase does not close.**
       A tunnel hides the address; TLS still announces **which host** is being visited in the ClientHello's

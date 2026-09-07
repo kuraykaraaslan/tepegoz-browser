@@ -830,6 +830,9 @@ export const tr: SettingsStrings = {
       'Doğrudan trafik ve Tor trafiği bu tarayıcıda aynı anda çalışır. İkisi arasında ilişkilendirilen etkinlik, anonim bir oturumu yeniden ilişkilendirebilir — Tor Browser’ın tam da önlemek için var olduğu durum. Güçlü anonimlik için tek bir sekmeyi yönlendirmek yerine Tor Browser kullanın.',
     torChainedCaveat:
       'Tor’dan önce bir VPN kullanmak, güveni VPN operatörüne kaydırır; operatör Tor kullandığınızı görebilir. İkisini birleştirmek genellikle önerilmez.',
+    tunnelLimitsBody:
+      'Bir tünel, bir sitenin gördüğü ağ adresini değiştirir. Tarayıcı profilinizi değiştirmez — çerezler, oturum açma bilgileri ve geçmiş sekmede kalır — tarayıcının kendi parmak izini de değiştirmez: TLS el sıkışması, HTTP başlık sırası ve istek zamanlaması buradaki her tünelde aynıdır; bu yüzden bot önleme ve itibar sistemleri tarayıcıyı yine tanır. Tepegöz bu sürümde bunları normalleştirmez.',
+    tunnelLimitsLink: 'Bir sitenin verilerini temizle',
     binaryMissing:
       '{name} bulunamadı. {dir} klasörüne koyun ya da aşağıya tam yolunu yazın. Tepegöz bu dosyayı içinde getirmez.',
     helpersHint:

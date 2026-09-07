@@ -12,7 +12,7 @@ import { AlertBanner, Badge, Button, Card, cn } from '@tepegoz/ui';
 import { AddConnectionRow } from './settings-network-forms';
 import { ConfirmAction } from './settings-confirm';
 import { NetworkRoutesCard } from './settings-network-routes';
-import { Select } from './settings-shared';
+import { CrossLink, Select } from './settings-shared';
 
 /**
  * Network privacy (Phase 5) — the VPN/Tor connection manager and the profile-wide default route.
@@ -264,6 +264,14 @@ export function NetworkPrivacySection({ s }: { s: SettingsStrings }) {
             className="mb-4"
           />
         )}
+
+        {/* Permanent framing (Phase 5): a tunnel changes the IP a site sees, nothing else — not the
+            profile, not the browser's own fingerprint. Silence here is the most likely way a user
+            over-trusts the feature. */}
+        <p className="mb-4 text-xs text-text-secondary">
+          {s.network.tunnelLimitsBody}{' '}
+          <CrossLink sectionId="privacy">{s.network.tunnelLimitsLink}</CrossLink>
+        </p>
 
         <AddConnectionRow
           s={s}

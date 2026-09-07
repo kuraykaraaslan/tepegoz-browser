@@ -84,6 +84,13 @@ describe('NetworkPrivacySection', () => {
     await waitFor(() => expect(screen.getByText(s.network.noConnections)).toBeTruthy());
   });
 
+  it('always states what a tunnel does NOT change, and links to per-site data clearing', async () => {
+    render1();
+    await waitFor(() => expect(screen.getByText(s.network.tunnelLimitsBody)).toBeTruthy());
+    const link = screen.getByRole('link', { name: s.network.tunnelLimitsLink });
+    expect(link.getAttribute('href')).toBe('#privacy');
+  });
+
   it('discloses "a Tor tab is not a Tor Browser session" once any Tor connection exists', async () => {
     bridge.getNetworkState.mockResolvedValue(
       netState({ connections: [conn({ id: 't1', label: 'Tor', kind: 'tor' })] }),
