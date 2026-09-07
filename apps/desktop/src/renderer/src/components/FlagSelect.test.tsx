@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { stubJsdomLayout } from '../test-support/jsdom-layout';
 import { FlagSelect, type FlagOption } from './FlagSelect';
 
@@ -247,6 +247,23 @@ describe('search', () => {
     fireEvent.click(trigger);
 
     expect(screen.queryByLabelText('Search languages')).toBeNull();
+  });
+
+  it('focuses the search box on open, so the list is typeable without a second click', () => {
+    // Deferred a tick because the panel is portalled and not in the document when the state flips.
+    // Without it the control is searchable in name only: you open it and still have to aim at the
+    // box before typing, which on a ~250-row region list is the whole point of the search.
+    vi.useFakeTimers();
+    try {
+      const { trigger } = setup({ searchable: true });
+      fireEvent.click(trigger);
+      act(() => {
+        vi.advanceTimersByTime(0);
+      });
+      expect(document.activeElement).toBe(screen.getByLabelText('Search languages'));
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('filters by label', () => {
