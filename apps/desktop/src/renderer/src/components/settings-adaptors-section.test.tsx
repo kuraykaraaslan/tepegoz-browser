@@ -56,7 +56,10 @@ describe('AdaptorsSection', () => {
   });
 
   it('renders one row per adaptor with its label', async () => {
-    listAdaptors.mockResolvedValue([adaptor({ id: 'a1', label: 'Gmail' }), adaptor({ id: 'a2', label: 'Drive' })]);
+    listAdaptors.mockResolvedValue([
+      adaptor({ id: 'a1', label: 'Gmail' }),
+      adaptor({ id: 'a2', label: 'Drive' }),
+    ]);
     renderSection();
     await waitFor(() => expect(screen.getAllByRole('listitem')).toHaveLength(2));
     expect(screen.getByText('Gmail')).toBeTruthy();
@@ -65,7 +68,9 @@ describe('AdaptorsSection', () => {
 
   it('truncates a long scope list to four plus a "+N" count, then expands on demand', async () => {
     const scopes = ['s1', 's2', 's3', 's4', 's5', 's6'];
-    listAdaptors.mockResolvedValue([adaptor({ permissions: [perm({ capability: 'mail', scopes })] })]);
+    listAdaptors.mockResolvedValue([
+      adaptor({ permissions: [perm({ capability: 'mail', scopes })] }),
+    ]);
     renderSection();
 
     const row = await screen.findByRole('listitem');
@@ -80,11 +85,19 @@ describe('AdaptorsSection', () => {
   });
 
   it('offers no expand button when no permission exceeds the preview length', async () => {
-    listAdaptors.mockResolvedValue([
-      adaptor({ permissions: [perm({ scopes: ['a', 'b', 'c'] })] }),
-    ]);
+    listAdaptors.mockResolvedValue([adaptor({ permissions: [perm({ scopes: ['a', 'b', 'c'] })] })]);
     const row = (renderSection(), await screen.findByRole('listitem'));
     expect(within(row).queryByRole('button')).toBeNull();
+  });
+
+  it('renders a scopeless permission as the bare capability, with no dangling colon', () => {
+    // A capability can be granted with no scopes at all. Rendering "calendar:" with nothing after it
+    // reads as a truncation bug in exactly the list that has to be readable — the permissions list.
+    listAdaptors.mockResolvedValue([adaptor({ permissions: [perm({ capability: 'calendar' })] })]);
+    renderSection();
+    return waitFor(() => {
+      expect(screen.getByText('calendar').textContent).toBe('calendar');
+    });
   });
 
   it('shows the audit-required badge for an adaptor that needs one', async () => {
