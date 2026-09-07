@@ -288,10 +288,17 @@ Six UI-scoped PRs, each ≤250 lines, sequenced behind their substrate phases. N
       user can still take back. ⚠️ Trust boundary: steer text is **trusted user input** and a queued steer can
       never be derived from page content — the same rule `clarify` answers hold. Keep the queue in panel state
       and hand it to IPC only at the moment it applies.
-- [ ] **B4 — Pin provider / model / autonomy at the top of each turn.** Today it lives in the composer's gear
+- [x] **B4 — Pin provider / model / autonomy at the top of each turn.** Today it lives in the composer's gear
       popover (which is the better control surface — keep it), but reading a run back later cannot answer
       "which model and which autonomy level was this?". The journal knows; the panel does not show it. Make it
-      a persistent transcript line, not a second control.
+      a persistent transcript line, not a second control. _Landed 2026-09-08: `onRun` snapshots the live
+      config (`provider` / `model` / `autonomy` / `effort`) onto the `Turn` as `TurnConfig`;
+      `TurnConfigLine` (`panel-turn-config-line.tsx`) renders a muted `provider · model · autonomy` line
+      under each turn's prompt — read-back only, the gear popover stays the place to change it,
+      `a.modelAuto` shown when no model is pinned, autonomy via `a.autonomy[level].title`. A turn restored
+      from a stored conversation has no `config` and simply shows no line (per-turn config is not
+      persisted; the export's conversation-level meta already carries it). en + tr (`thread.runConfig`
+      aria-label). 3 render tests._
 - [ ] **B3 — Drop approval history into the transcript as a permanent card.** LibreChat renders tool approval
       inline instead of as a modal. **Do not copy that part** — the modal here is deliberately blocking, and
       the risk-class naming plus the commerce double-confirm are built on it; removing it would be a

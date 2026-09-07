@@ -8,8 +8,9 @@ import type { AgentHostApi } from './types';
 import type { Turn } from './panel-state';
 
 /**
- * Message-level copy (S8 A4). Only code blocks were copyable; now the user's prompt and each prose
- * response carry a copy button that writes the message text to the clipboard.
+ * Transcript adornments: message-level copy (S8 A4) and the per-turn run-config read-back line
+ * (S8 B4). Copy was code-blocks-only; the config line answers "which model / autonomy was this?"
+ * when scrolling back a long run.
  */
 
 const a = agentDict.en;
@@ -100,5 +101,36 @@ describe('PanelThread — message-level copy', () => {
     expect(
       within(bubble.parentElement as HTMLElement).getByText('Book me a flight to Rome'),
     ).toBeTruthy();
+  });
+});
+
+describe('PanelThread — run-config read-back (B4)', () => {
+  it('shows the provider · model · autonomy the turn ran with', () => {
+    renderThread([
+      turn({
+        config: {
+          provider: 'anthropic',
+          model: 'claude-sonnet-5',
+          autonomy: 'act',
+          effort: 'high',
+        },
+      }),
+    ]);
+    const line = screen.getByLabelText(a.thread.runConfig);
+    expect(line.textContent).toContain('anthropic');
+    expect(line.textContent).toContain('claude-sonnet-5');
+    expect(line.textContent).toContain(a.autonomy.act.title);
+  });
+
+  it('shows the auto-routing label when no model is pinned', () => {
+    renderThread([
+      turn({ config: { provider: 'openai', model: '', autonomy: 'auto', effort: 'medium' } }),
+    ]);
+    expect(screen.getByLabelText(a.thread.runConfig).textContent).toContain(a.modelAuto);
+  });
+
+  it('renders no config line for a turn restored without one', () => {
+    renderThread([turn()]);
+    expect(screen.queryByLabelText(a.thread.runConfig)).toBeNull();
   });
 });

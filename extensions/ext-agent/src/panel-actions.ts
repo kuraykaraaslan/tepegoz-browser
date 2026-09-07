@@ -59,7 +59,24 @@ export function useAgentActions(deps: AgentActionsDeps) {
     const groupId = activeGroupId;
     const fullPrompt = serializeAttachments(activeState.attachments, text);
     const id = `turn-${String(Date.now())}-${String(activeState.turns.length)}`;
-    const newTurn: Turn = { id, prompt: text, runId: null, events: [] };
+    const newTurn: Turn = {
+      id,
+      prompt: text,
+      runId: null,
+      events: [],
+      // Snapshot the run settings so reading the transcript back answers "which model / autonomy was
+      // this?" — the journal knows, the panel did not show it (S8 B4).
+      ...(config !== null
+        ? {
+            config: {
+              provider: config.provider,
+              model: config.model,
+              autonomy: config.autonomy,
+              effort: config.effort,
+            },
+          }
+        : {}),
+    };
     mutateGroup(groupId, (s) => ({
       ...s,
       turns: [...s.turns, newTurn],

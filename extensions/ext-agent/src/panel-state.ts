@@ -74,11 +74,25 @@ export function buildNotices(
 }
 
 /** One conversation turn: the user's message + the agent events streamed for its run. */
+/** A snapshot of the run config a turn was started with (S8 B4) — read back later from the transcript,
+ *  not a live control. Absent on a turn restored from a stored conversation (per-turn config is not
+ *  persisted; the conversation-level meta on export carries it). Plain strings: it is a record, not a
+ *  handle. */
+export interface TurnConfig {
+  provider: string;
+  /** Pinned model id, or `''` for the provider's auto/tiered routing. */
+  model: string;
+  autonomy: string;
+  effort: string;
+}
+
 export interface Turn {
   id: string;
   prompt: string;
   runId: string | null;
   events: AgentEvent[];
+  /** The provider / model / autonomy / effort this turn ran with (S8 B4). Absent on a restored turn. */
+  config?: TurnConfig;
   /**
    * What this run’s evidence supported (S4). Absent when the run never reached a completion verdict —
    * deliberately not defaulted, because "we do not know" and "we could not confirm" are different
