@@ -24,8 +24,12 @@ import { defineConfig } from 'vitest/config';
  * RAISED statements (79.75 → 80.14), which is the tell that the exclusion was never protecting a
  * number — it was just stale.
  *
- * One exclusion remains, and it is not discretionary:
+ * One PACKAGE exclusion remains, and it is not discretionary:
  *  - `packages/ui` — vendored kui-react fork (see packages/ui/_FORK.md), explicitly not repo code.
+ *
+ * Separately, the per-file `exclude` at the bottom drops test SPECS (`*.test.*`, `*.eval.ts`) and
+ * `index.ts` barrels. That is a different thing from a package exclusion — it removes code this run
+ * cannot execute, not code it would rather not measure. The reasoning is recorded at that list.
  *
  * NOT IN SCOPE, said plainly: `apps/desktop`. It ships 47 test files that run under `turbo run test`
  * and are not measured here. This is a real gap, not a definition — measured on 2026-08-22, adding it
@@ -241,7 +245,14 @@ export default defineConfig({
         'packages/uploads-ui/src/**',
         'packages/web-tools/src/**',
       ],
-      exclude: ['**/*.test.{ts,tsx}', '**/index.ts'],
+      // `*.eval.ts` joins `*.test.{ts,tsx}` here on the SAME ground, not as a rescue: it is a test
+      // spec, not product code. `harness.eval.ts` imports `test` from `@playwright/test` and is
+      // collected by `playwright.eval.config.ts` (`testMatch: '**/*.eval.ts'`), so this vitest pass
+      // can never execute it — counting its 144 statements as uncovered product code reported a
+      // number about the wrong thing. Stated plainly because it moves one: `packages/agent-eval`
+      // reads 76.78% → 83.08% statements on the same tests. Nothing else in the repo matches the
+      // glob, and the code the spec DRIVES (`harness-run.ts`, `harness-report.ts`) stays measured.
+      exclude: ['**/*.test.{ts,tsx}', '**/*.eval.ts', '**/index.ts'],
     },
   },
 });
