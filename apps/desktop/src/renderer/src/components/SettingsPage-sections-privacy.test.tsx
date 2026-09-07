@@ -81,11 +81,15 @@ describe('privacyAndAdvancedSections — the privacy card', () => {
 
   it('ForgetSiteRow: review builds a plan, confirm clears and reports', async () => {
     renderPrivacy();
-    fireEvent.change(screen.getByLabelText(s.forgetSite.title), { target: { value: 'example.com' } });
+    fireEvent.change(screen.getByLabelText(s.forgetSite.title), {
+      target: { value: 'example.com' },
+    });
     fireEvent.click(screen.getByRole('button', { name: s.forgetSite.review }));
 
     await waitFor(() =>
-      expect(screen.getByText(s.forgetSite.confirmFor.replace('{site}', 'example.com'))).toBeTruthy(),
+      expect(
+        screen.getByText(s.forgetSite.confirmFor.replace('{site}', 'example.com')),
+      ).toBeTruthy(),
     );
     fireEvent.click(screen.getByRole('button', { name: s.forgetSite.confirm }));
     await waitFor(() =>
@@ -105,10 +109,33 @@ describe('privacyAndAdvancedSections — the privacy card', () => {
   it('ForgetSiteRow: a failed clear also drops the confirm panel', async () => {
     bridge.clearSiteData.mockRejectedValueOnce(new Error('clear failed'));
     renderPrivacy();
-    fireEvent.change(screen.getByLabelText(s.forgetSite.title), { target: { value: 'example.com' } });
+    fireEvent.change(screen.getByLabelText(s.forgetSite.title), {
+      target: { value: 'example.com' },
+    });
     fireEvent.click(screen.getByRole('button', { name: s.forgetSite.review }));
     await waitFor(() => screen.getByRole('button', { name: s.forgetSite.confirm }));
     fireEvent.click(screen.getByRole('button', { name: s.forgetSite.confirm }));
+    await waitFor(() =>
+      expect(screen.queryByRole('button', { name: s.forgetSite.confirm })).toBeNull(),
+    );
+    expect(screen.queryByText(s.forgetSite.cleared.replace('{site}', 'example.com'))).toBeNull();
+  });
+
+  it('ForgetSiteRow: a clear that returns nothing reports nothing', async () => {
+    // `clearSiteData` resolves null when main could not act on the url. Reporting "cleared
+    // example.com" off a null result would be the settings page claiming a deletion that did not
+    // happen — the one sentence a privacy screen must not say falsely.
+    bridge.clearSiteData.mockResolvedValueOnce(null);
+    renderPrivacy();
+    fireEvent.change(screen.getByLabelText(s.forgetSite.title), {
+      target: { value: 'example.com' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: s.forgetSite.review }));
+    await waitFor(() => screen.getByRole('button', { name: s.forgetSite.confirm }));
+
+    fireEvent.click(screen.getByRole('button', { name: s.forgetSite.confirm }));
+
+    // the confirm panel still goes away, but no "cleared" line appears
     await waitFor(() =>
       expect(screen.queryByRole('button', { name: s.forgetSite.confirm })).toBeNull(),
     );
