@@ -5,6 +5,7 @@ import {
   buildJsonPreferencePatch,
   buildStringPreferencePatch,
   listDeveloperPreferenceRows,
+  validatePreferenceValue,
 } from './developer-settings-model';
 
 /**
@@ -46,10 +47,18 @@ describe('developer settings model', () => {
     });
   });
 
-  it('builds string preference patches', () => {
+  it('builds string preference patches for a schema-valid value', () => {
     expect(buildStringPreferencePatch('searchEngineId', 'duckduckgo')).toEqual({
-      searchEngineId: 'duckduckgo',
+      ok: true,
+      patch: { searchEngineId: 'duckduckgo' },
     });
+  });
+
+  it('rejects a string value the preferences schema would reject, before the IPC round-trip', () => {
+    // `theme` is a z.enum — the old builder handed 'neon' straight to updatePreferences and let the
+    // boundary bounce it back as a raw zod error.
+    const result = buildStringPreferencePatch('theme', 'neon');
+    expect(result.ok).toBe(false);
   });
 
   it('builds JSON preference patches from valid JSON', () => {
@@ -64,6 +73,17 @@ describe('developer settings model', () => {
       ok: false,
       error: 'Invalid JSON',
     });
+  });
+
+  it('rejects well-formed JSON whose value fails the schema', () => {
+    // parses fine as JSON; `agentTokenQuota` is z.number().int().min(0), so -5 must not get through.
+    const result = buildJsonPreferencePatch('agentTokenQuota', '-5', 'Invalid JSON');
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error.length).toBeGreaterThan(0);
+  });
+
+  it('passes an unknown key through — the editor never invents a key, the boundary rejects it', () => {
+    expect(validatePreferenceValue('notARealPreference' as never, 'x')).toEqual({ ok: true });
   });
 
   it('classifies a preference with no visibility entry as private, not public', () => {

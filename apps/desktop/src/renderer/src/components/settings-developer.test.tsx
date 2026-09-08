@@ -62,6 +62,15 @@ describe('DeveloperSection — PreferenceEditModal', () => {
     );
   });
 
+  it('refuses a string edit the schema would reject, without calling updatePreferences', () => {
+    const { onUpdatePrefs } = renderSection({ agentAutonomy: 'ask' });
+    const dialog = openEditor('agentAutonomy');
+    fireEvent.change(within(dialog).getByRole('textbox'), { target: { value: 'reckless' } });
+    fireEvent.click(within(dialog).getByRole('button', { name: s.developerApply }));
+    expect(onUpdatePrefs).not.toHaveBeenCalled();
+    expect(screen.getByRole('dialog')).toBeTruthy();
+  });
+
   it('refuses to apply invalid JSON, keeping the modal open with an error', () => {
     renderSection({ mcpServers: [] });
     const dialog = openEditor('mcpServers');
@@ -75,7 +84,9 @@ describe('DeveloperSection — PreferenceEditModal', () => {
     const { onUpdatePrefs } = renderSection({ mcpServers: [] });
     const dialog = openEditor('mcpServers');
     fireEvent.change(within(dialog).getByRole('textbox'), {
-      target: { value: '[{"id":"x","label":"X","transport":"stdio","enabled":true}]' },
+      target: {
+        value: '[{"id":"x","label":"X","transport":"stdio","command":"node","enabled":true}]',
+      },
     });
     fireEvent.click(within(dialog).getByRole('button', { name: s.developerApply }));
     await waitFor(() => expect(onUpdatePrefs).toHaveBeenCalledTimes(1));

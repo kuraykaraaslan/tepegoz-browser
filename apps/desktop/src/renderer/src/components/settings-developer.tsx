@@ -156,7 +156,12 @@ function PreferenceEditModal({
 
   async function applyString(): Promise<void> {
     if (row === null) return;
-    await apply(buildStringPreferencePatch(row.key, draft));
+    const result = buildStringPreferencePatch(row.key, draft);
+    if (!result.ok) {
+      setError(result.error);
+      return;
+    }
+    await apply(result.patch);
   }
 
   async function applyJson(): Promise<void> {

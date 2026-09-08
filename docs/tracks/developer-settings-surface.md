@@ -1,10 +1,10 @@
 # Track — Developer settings surface: every browser + web-content knob in one place
 
 - **Status:** In progress — **Tier B + the `tepegoz://developer` page shipped 2026-08-28**; **Tier A's per-key
-  metadata registry landed 2026-09-08** (`@tepegoz/preferences/developer-registry` — stability +
-  `restartRequired` per key, `satisfies`-pinned so a new pref must be classified, completeness-tested;
-  surfaced as a badge + relaunch hint in the raw editor). Tier A's nested-object drill-down + zod-derived
-  value constraints, and Tiers C / D, still owed.
+  metadata registry + schema-derived pre-save validation landed 2026-09-08**
+  (`@tepegoz/preferences/developer-registry` — stability + `restartRequired` per key, `satisfies`-pinned;
+  `validatePreferenceValue` runs each edit through `PreferencesSchema.shape[key]` before the patch is
+  built). Tier A's nested-object drill-down + per-key label/description text, and Tiers C / D, still owed.
 - **Owner decisions taken (2026-08-28):** Chromium flags are **allowlist-only** · this document + an ADR
   land **before any code** · **revised same day:** a dedicated **`tepegoz://developer`** page, unlisted
   (no menu entry) but openable by any user and **not** dev-gated — the `chrome://flags` shape. The
@@ -59,8 +59,13 @@ Safe-to-expose `webPreferences` / `session` subset: `backgroundThrottling`, `plu
    - nested-object drill-down (today a nested object is one opaque JSON blob — e.g. `adblock`, `translate`,
      `newTabBackground`);
    - a **metadata registry** per key: label, description, `stable | experimental | internal` badge,
-     `restartRequired`, and value constraints **derived from the zod schema** so the editor validates
-     before save instead of after.
+     `restartRequired` — **landed 2026-09-08** (`@tepegoz/preferences/developer-registry`; label/description
+     still resolved from `settingsDict` by key);
+   - value constraints **derived from the zod schema** so the editor validates before save instead of
+     after — **landed 2026-09-08** (`validatePreferenceValue` in `developer-settings-model.ts` runs the
+     edited value through `PreferencesSchema.shape[key]` before building the patch; a bad enum /
+     over-length string / malformed URL / schema-invalid JSON is now caught in the modal, not bounced
+     back from the IPC boundary).
 2. **Chromium Flags** — new `chromiumFlags: z.record(z.string(), z.string())` preference, plus an
    **allowlist registry** of known-safe switches/features. Applied in `index.ts` **before**
    `app.whenReady()` (Chromium reads switches only at startup). "Relaunch to apply" banner. No free-form
@@ -78,8 +83,12 @@ Safe-to-expose `webPreferences` / `session` subset: `backgroundThrottling`, `plu
 - ✅ **`developer-registry.ts`** (landed in `@tepegoz/preferences`, 2026-09-08) — per-key `stability` +
   `restartRequired` metadata as one tested source; `satisfies Record<keyof Preferences, …>` +
   `developer-registry.test.ts` assert every `Preferences` key has exactly one row. (The Chromium-flag
-  allowlist stays in `@tepegoz/shared-types/chromium-flags` where Tier B put it.) _Owed: the zod-derived
-  value constraints + `label`/`description` text (currently the editor still resolves those from
+  allowlist stays in `@tepegoz/shared-types/chromium-flags` where Tier B put it.)
+- ✅ **Schema-derived pre-save validation** (landed 2026-09-08) — `validatePreferenceValue(key, value)`
+  in `developer-settings-model.ts` calls `PreferencesSchema.shape[key].safeParse`; `buildStringPreferencePatch`
+  / `buildJsonPreferencePatch` return `{ ok: false, error }` on a schema miss so the modal shows it
+  before any IPC round-trip. An unknown key still passes through (the editor never invents a key).
+  _Owed: nested-object drill-down + per-key `label`/`description` text (editor still resolves those from
   `settingsDict` by key)._
 - **`apps/desktop/src/main/index.ts`** — read `chromiumFlags`, validate against the allowlist, apply the
   switches before `whenReady()`.
