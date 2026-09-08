@@ -90,6 +90,26 @@ module.exports = {
       to: { path: ['^apps/', 'node_modules/electron'] },
     },
     {
+      name: 'profiles-no-app-no-electron',
+      severity: 'error',
+      comment:
+        '@tepegoz/profiles must stay Electron-free and app-free: the desktop app injects profiles.json’s ' +
+        'path and resolves which profile a process is. The pure `.` barrel must also stay fs-free so ' +
+        '@tepegoz/profiles-ui can bundle it — fs lives behind the `./store` subpath. See docs/package-map.md.',
+      from: { path: '^packages/profiles/' },
+      to: { path: ['^apps/', 'node_modules/electron'] },
+    },
+    {
+      name: 'profiles-pure-barrel-no-fs',
+      severity: 'error',
+      comment:
+        'The `@tepegoz/profiles` `.` barrel (index/model/registry) is imported by the renderer via ' +
+        '@tepegoz/profiles-ui and must never pull Node fs / @tepegoz/json-store. Persistence is the ' +
+        'main-process-only `./store` subpath. See docs/package-map.md.',
+      from: { path: '^packages/profiles/src/(index|profiles-model|profiles-registry)\\.ts$' },
+      to: { path: ['^packages/json-store/', '^node:fs', '^fs$'] },
+    },
+    {
       name: 'tab-strip-is-a-leaf',
       severity: 'error',
       comment:

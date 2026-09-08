@@ -1,17 +1,24 @@
 # Track — Chrome-style multi-profile data & session isolation
 
-- **Status:** 📋 **Proposed — not scheduled (2026-08-28).** A first implementation shipped on the
+- **Status:** 🔨 **Scheduled — implementing on `main` (2026-09-08).** A first implementation shipped on the
   abandoned branch `feat/multi-profile-windows` (5 commits, 2026-08-17) and was **never merged**; that
-  branch is now ~350 commits behind `main` and will not rebase cleanly. This track is the re-derivation:
+  branch is now ~945 commits behind `main` and will not rebase cleanly. This track is the re-derivation:
   the capabilities to deliver, the architecture that branch converged on (process-per-profile), and a
   fresh plan against today's `main`. **Do not cherry-pick the branch** — read it for intent, rebuild for
   today's tree.
-- **Owner decisions owed:** (1) ship as process-per-profile (accept ~200–300 MB RAM per open profile) or
-  retry in-process routing; (2) partition-key scheme now that Phase 5's `persist:tepegoz-web--conn-<id>`
-  tunnel partitions have landed on `main`; (3) whether this earns a numbered phase row or stays a track;
-  (4) ADR number — the branch wrote `docs/adr/0025-multi-profile-isolation.md`, but `0025` on `main` is
-  `0025-model-streaming-boundary.md`, so a merge must renumber to the next free ADR (0042+).
-- **Companion ADR (to be written):** supersedes the branch's ADR-0025 draft; refines
+- **Owner decisions (settled 2026-09-08):**
+  1. **Process-per-profile.** Accept ~200–300 MB RAM per open profile; cross-profile bleed becomes
+     structurally impossible rather than a routing invariant to uphold at ~50 call sites.
+  2. **Profile-scoped partition names** — `persist:tepegoz-profile-<id>` (browsing) /
+     `persist:tepegoz-profile-<id>--app` (chrome), replacing the bare `persist:tepegoz-web` /
+     `persist:tepegoz-app`. Chosen for defense-in-depth even though the process boundary already
+     isolates the partition directories; the cost is threading `<id>` into every partition-name
+     construction site (`window.ts`, `tabs`, the Phase 5 network layer's `binding-service` /
+     `browsing-sessions` / `connection-pool`, downloads, the site-data IPC). Phase 5's per-connection
+     tunnels compose as `persist:tepegoz-profile-<id>--conn-<connId>`.
+  3. **Stays a track** — not a numbered phase row. Delivered via the 5-PR plan below.
+  4. **ADR-0045** (next free; `0025`–`0044` are taken). Supersedes the branch's ADR-0025 draft.
+- **Companion ADR (`docs/adr/0045-multi-profile-isolation.md`, to be written):** supersedes the branch's ADR-0025 draft; refines
   [ADR-0014](../../docs/adr/0014-user-data-layout-db-connector.md) (single `userData` → `Profiles/<id>/`
   subdivision), [ADR-0020](../../docs/adr/0020-tab-boundary-model.md) (per-profile partition isolation it
   deferred), and the Phase 5 network layer's partition-key convention.
@@ -70,9 +77,11 @@ with `--user-data-dir=<root>/Profiles/<id>`:
   path inside it — the pre-multi-profile code, unchanged, routing facade deleted. Cross-profile bleed is
   structurally impossible: there is no "other profile" in the process to leak into.
 - Chromium writes `Partitions/`, `Cache/`, `Local State` under `userData` ⇒ a profile really is one
-  self-contained, copyable folder — full Chrome parity. Partition **names** can stay
-  `persist:tepegoz-app` / `persist:tepegoz-web` (two profiles never share one — the directories differ).
-  Deleting a profile is a single recursive directory remove.
+  self-contained, copyable folder — full Chrome parity. Deleting a profile is a single recursive
+  directory remove. Partition **names** _could_ stay `persist:tepegoz-app` / `persist:tepegoz-web`
+  (the process boundary already isolates them), but **decision 2 takes the profile-scoped names**
+  `persist:tepegoz-profile-<id>` / `persist:tepegoz-profile-<id>--app` for defense-in-depth — see the
+  decisions list at the top and PR3 below.
 - `TaskService`, `McpService`, `CapabilityRegistry`, `MacroService`, `FileOperationsHost` are
   per-process singletons ⇒ genuinely per-profile at no extra cost. An agent run in one profile cannot
   touch another's data.
@@ -117,10 +126,13 @@ PRs kept small and each a no-user-visible-change checkpoint until the last.
    - Single-instance-lock `second-instance` handler focuses the running profile's window.
    - Still one profile in practice (`default`), just launched through the new path.
 3. **PR3 — partitions + session hooks per profile.**
-   - Decide the partition-key scheme against the Phase 5 network layer (`binding-service`,
-     `browsing-sessions`, `connection-pool` all speak `persist:tepegoz-web[--conn-<id>]`). Process-per-
-     profile lets the names stay unchanged; confirm `BrowsingSessions.isBrowsingPartition` and the
-     tunnel-partition composition still hold when `userData` differs.
+   - Adopt the profile-scoped partition names (decision 2): `persist:tepegoz-profile-<id>` (browsing) /
+     `persist:tepegoz-profile-<id>--app` (chrome). A single `profilePartition(id)` / `appPartition(id)`
+     helper is the only construction site; thread the boot profile's `id` into `window.ts`, `tabs`, the
+     Phase 5 network layer (`binding-service`, `browsing-sessions`, `connection-pool` — all speak
+     `persist:tepegoz-web[--conn-<id>]` today), the download service, and the site-data IPC. Tunnels
+     compose as `persist:tepegoz-profile-<id>--conn-<connId>`; update
+     `BrowsingSessions.isBrowsingPartition` / the tunnel-partition parser for the new prefix.
    - Re-register session-level hooks (CSP in `security.ts`, the shared `webRequest` multiplexer in
      `browsing-web-request-service`, download interception, `user-agent-host`) per process — most of this
      falls out for free once each profile is its own process.
