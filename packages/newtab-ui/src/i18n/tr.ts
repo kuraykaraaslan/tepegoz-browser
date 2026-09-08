@@ -9,6 +9,7 @@ export const tr: NewTabStrings = {
   aiHint: 'Ajana sor',
   favorites: {
     urlPlaceholder: 'https://',
+    gridLabel: 'Kısayollar',
     empty: 'Henüz kısayol yok. Eklediklerin burada görünür.',
     add: 'Kısayol ekle',
     edit: 'Düzenle',

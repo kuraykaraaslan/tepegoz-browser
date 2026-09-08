@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useRef, useState, type FormEvent, type KeyboardEvent as ReactKeyboardEvent } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faMagnifyingGlass,
@@ -16,6 +16,7 @@ import {
   MAX_SHORTCUTS,
   hostOf,
   initialOf,
+  nextRovingIndex,
   type DialogState,
   type MenuState,
 } from './newtab-page-helpers';
@@ -75,6 +76,25 @@ export function NewTabPage({
   const tiles = shortcuts.slice(0, MAX_SHORTCUTS);
   const canEdit = Boolean(onEditShortcut || onRemoveShortcut);
   const canAdd = Boolean(onAddShortcut) && tiles.length < MAX_SHORTCUTS;
+
+  // Roving tabindex over the grid: the add tile (when shown) is the last cell after the shortcuts.
+  const cellCount = tiles.length + (canAdd ? 1 : 0);
+  const [activeCell, setActiveCell] = useState(0);
+  const cellRefs = useRef<(HTMLButtonElement | null)[]>([]);
+  const rovingCell = Math.min(Math.max(activeCell, 0), Math.max(cellCount - 1, 0));
+
+  function onGridKeyDown(e: ReactKeyboardEvent<HTMLUListElement>): void {
+    if (cellCount === 0) return;
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      cellRefs.current[rovingCell]?.click();
+      return;
+    }
+    if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End'].includes(e.key)) return;
+    e.preventDefault();
+    const next = nextRovingIndex(e.key, rovingCell, cellCount);
+    if (next !== rovingCell) cellRefs.current[next]?.focus();
+  }
 
   function submitSearch(e: FormEvent): void {
     e.preventDefault();
@@ -139,11 +159,20 @@ export function NewTabPage({
           {showEmpty ? (
             <p className="mt-10 text-center text-sm text-text-secondary">{t.favorites.empty}</p>
           ) : (
-            <ul className="mt-10 grid w-full grid-cols-5 gap-2">
-              {tiles.map((shortcut) => (
+            <ul
+              className="mt-10 grid w-full grid-cols-5 gap-2"
+              aria-label={t.favorites.gridLabel}
+              onKeyDown={onGridKeyDown}
+            >
+              {tiles.map((shortcut, i) => (
                 <li key={shortcut.id}>
                   <button
                     type="button"
+                    ref={(el) => {
+                      cellRefs.current[i] = el;
+                    }}
+                    tabIndex={i === rovingCell ? 0 : -1}
+                    onFocus={() => setActiveCell(i)}
                     onClick={() => onOpenShortcut(shortcut.url)}
                     onContextMenu={
                       canEdit
@@ -153,6 +182,7 @@ export function NewTabPage({
                           }
                         : undefined
                     }
+                    aria-label={shortcut.title || hostOf(shortcut.url)}
                     title={shortcut.url}
                     className="group flex w-full flex-col items-center gap-2 rounded-xl px-1 py-3 hover:bg-surface-raised focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus"
                   >
@@ -169,7 +199,13 @@ export function NewTabPage({
                 <li>
                   <button
                     type="button"
+                    ref={(el) => {
+                      cellRefs.current[tiles.length] = el;
+                    }}
+                    tabIndex={tiles.length === rovingCell ? 0 : -1}
+                    onFocus={() => setActiveCell(tiles.length)}
                     onClick={() => setDialog({ mode: 'add' })}
+                    aria-label={t.favorites.add}
                     title={t.favorites.add}
                     className="group flex w-full flex-col items-center gap-2 rounded-xl px-1 py-3 hover:bg-surface-raised focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus"
                   >

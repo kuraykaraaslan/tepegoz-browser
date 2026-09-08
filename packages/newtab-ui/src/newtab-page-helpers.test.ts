@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import type { NewTabShortcut } from '@tepegoz/desktop-ipc';
-import { MAX_SHORTCUTS, hostOf, initialOf, normalizeUrl } from './newtab-page-helpers';
+import {
+  GRID_COLUMNS,
+  MAX_SHORTCUTS,
+  hostOf,
+  initialOf,
+  nextRovingIndex,
+  normalizeUrl,
+} from './newtab-page-helpers';
 
 const shortcut = (over: Partial<NewTabShortcut> = {}): NewTabShortcut => ({
   id: 's1',
@@ -37,6 +44,33 @@ describe('initialOf', () => {
 
   it('is "?" when there is neither a title nor a parseable host', () => {
     expect(initialOf(shortcut({ title: '', url: '' }))).toBe('?');
+  });
+});
+
+describe('nextRovingIndex', () => {
+  // A two-row grid of eight cells: 0..4 on top, 5..7 below.
+  it('steps one cell on Arrow Left/Right, and one row on Arrow Up/Down', () => {
+    expect(nextRovingIndex('ArrowRight', 0, 8)).toBe(1);
+    expect(nextRovingIndex('ArrowLeft', 3, 8)).toBe(2);
+    expect(nextRovingIndex('ArrowDown', 1, 8)).toBe(1 + GRID_COLUMNS);
+    expect(nextRovingIndex('ArrowUp', 6, 8)).toBe(6 - GRID_COLUMNS);
+  });
+
+  it('jumps to the first / last cell on Home / End', () => {
+    expect(nextRovingIndex('Home', 6, 8)).toBe(0);
+    expect(nextRovingIndex('End', 2, 8)).toBe(7);
+  });
+
+  it('clamps at the edges rather than wrapping or leaving the grid', () => {
+    expect(nextRovingIndex('ArrowLeft', 0, 8)).toBe(0);
+    expect(nextRovingIndex('ArrowRight', 7, 8)).toBe(7);
+    expect(nextRovingIndex('ArrowUp', 2, 8)).toBe(2);
+    expect(nextRovingIndex('ArrowDown', 6, 8)).toBe(6); // 6 + 5 is past the last cell
+  });
+
+  it('leaves the index alone for a non-navigation key or an empty grid', () => {
+    expect(nextRovingIndex('a', 3, 8)).toBe(3);
+    expect(nextRovingIndex('ArrowRight', 0, 0)).toBe(0);
   });
 });
 
