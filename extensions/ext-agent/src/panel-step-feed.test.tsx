@@ -51,8 +51,9 @@ describe('StepFeed', () => {
       />,
     );
     expect(screen.getByText(`${a.progress} (3)`)).toBeTruthy();
-    expect(screen.getByText('browser_get_page: allow')).toBeTruthy();
-    expect(screen.getByText('browser_update_page ✗')).toBeTruthy();
+    // The rows show the localized tool intent, not the raw `browser_get_page: allow` prose (S8 A3).
+    expect(screen.getByText(a.toolIntent.browser_get_page)).toBeTruthy();
+    expect(screen.getByText(`${a.toolIntent.browser_update_page} ✗`)).toBeTruthy();
   });
 
   it('collapses to the latest step inline while working', () => {
@@ -67,8 +68,8 @@ describe('StepFeed', () => {
       />,
     );
     expect(screen.getByText('· Reading the page')).toBeTruthy();
-    // The individual step lines are hidden while collapsed.
-    expect(screen.queryByText('browser_get_page: allow')).toBeNull();
+    // The individual step lines are hidden while collapsed (only the header's inline latest shows).
+    expect(screen.queryAllByText(a.toolIntent.browser_get_page)).toHaveLength(0);
   });
 
   it('marks the last step as running (pulsing) only while the turn is working', () => {

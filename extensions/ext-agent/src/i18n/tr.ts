@@ -290,6 +290,11 @@ export const tr: AgentStrings = {
     web_fetch: 'URL getiriliyor',
     web_send_form: 'Web formu gönderiliyor',
   },
+  // Bir adımdaki politika kararı; "allow" dışında olduğunda StepFeed'de gösterilir (S8 PR8 A3).
+  stepDecision: {
+    ask: 'onay gerekiyor',
+    deny: 'engellendi',
+  },
   // Markdown kod bloklarındaki kopyala düğmesi.
   copy: 'Kopyala',
   // Sohbet akışı — her tur, kullanıcının mesajı ve ardından ajanın yanıtı.

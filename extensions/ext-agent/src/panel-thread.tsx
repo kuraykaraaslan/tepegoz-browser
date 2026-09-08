@@ -8,6 +8,7 @@ import { KIND_DOT, SparkIcon } from './panel-icons';
 import { MessageCopyButton } from './panel-copy-button';
 import { StepFeed } from './panel-step-feed';
 import { toolIntent } from './panel-tool-intent';
+import { humanizeStepMessage } from './panel-step-message';
 import { TurnApprovals, TurnMeta } from './panel-turn-meta';
 import { PROSE_KINDS, STEP_KINDS, type Turn } from './panel-state';
 
@@ -150,7 +151,11 @@ export function PanelThread({
                   steps={steps}
                   open={stepsOpen}
                   working={working}
-                  latestMessage={latestStep?.message}
+                  latestMessage={
+                    latestStep === undefined
+                      ? undefined
+                      : humanizeStepMessage(latestStep.kind, latestStep.message, a)
+                  }
                   onToggle={() => onToggleSteps(turn.id)}
                   a={a}
                 />

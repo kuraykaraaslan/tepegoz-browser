@@ -308,6 +308,12 @@ export const en = {
     web_fetch: 'Fetching a URL',
     web_send_form: 'Submitting a web form',
   },
+  // The policy decision on a step, shown in the StepFeed when it is not the ordinary "allow" (S8 PR8
+  // A3). `allow` gets no suffix; these two do.
+  stepDecision: {
+    ask: 'needs approval',
+    deny: 'blocked',
+  },
   // Copy button on markdown code blocks.
   copy: 'Copy',
   // Chat thread — each turn is the user's message followed by the agent's response.

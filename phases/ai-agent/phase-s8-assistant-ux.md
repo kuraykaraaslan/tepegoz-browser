@@ -297,10 +297,13 @@ Six UI-scoped PRs, each ≤250 lines, sequenced behind their substrate phases. N
   event as its intent with the raw id on hover; a `plan` line is left verbatim; an unmapped id (a new
   tool, an MCP tool) de-snakes rather than getting an invented label — so the feed never shows a bare
   `snake_case` identifier and never lies about one. `panel-tool-intent.test.ts` (4) + 3 in
-  `panel-thread.test.tsx`. **Still owed for `[x]`:** the activity-phase grouping (deterministic
-  headers keyed off the plan-DAG step) and the same label in the `StepFeed` rows — the StepFeed
-  `step_start` / `step_ok` messages embed the id in prose, so applying it there is a parse, not a
-  lookup._
+  `panel-thread.test.tsx`. _StepFeed rows landed 2026-09-08: `humanizeStepMessage(kind, message, a)`
+  (`panel-step-message.ts`) parses the three exact shapes the runtime emits
+  (`browser_get_page: allow` / `browser_get_page ✓` / `browser_update_page ✗`) into the localized
+  `toolIntent` plus a status glyph or a localized `ask` / `deny` suffix; an unmatched message is
+  returned untouched, so it can only improve a row. Applied to the feed rows and the collapsed-header
+  latest-step line; raw prose kept on hover. `panel-step-message.test.ts` (5)._ **Still owed for
+  `[x]`:** the activity-phase grouping (deterministic headers keyed off the plan-DAG step)._
 - [ ] **A1 — Steer queue: pending chips + a receipt when applied.** `steer` today is one-shot — you send it,
       it joins the run, and there is no visible queue, no undo. Queue them, show pending steers as chips the
       user can **withdraw, edit or escalate**, and show a receipt once one is actually applied. This is a

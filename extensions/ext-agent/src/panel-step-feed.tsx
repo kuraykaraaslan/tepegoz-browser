@@ -3,6 +3,7 @@ import { DEFAULT_AGENT_MAX_STEPS } from '@tepegoz/shared-types';
 import type { AgentStrings } from './i18n';
 import type { AgentEvent } from './types';
 import { GaugeIcon, KIND_DOT } from './panel-icons';
+import { humanizeStepMessage } from './panel-step-message';
 
 /**
  * Wall time of each tool call, aligned to `steps` (S8 PR9). No new data path: the audit stream
@@ -115,7 +116,12 @@ export function StepFeed({
                   aria-hidden
                 />
                 <div className="min-w-0 flex-1">
-                  <span className="text-text-primary [overflow-wrap:anywhere]">{e.message}</span>
+                  <span
+                    className="text-text-primary [overflow-wrap:anywhere]"
+                    title={e.message}
+                  >
+                    {humanizeStepMessage(e.kind, e.message, a)}
+                  </span>
                   {e.detail !== undefined && e.detail.length > 0 && (
                     <span className="ml-1 text-text-secondary [overflow-wrap:anywhere]">
                       — {e.detail}
