@@ -423,6 +423,14 @@ permissions reuse the single Policy/PermissionGuard (no parallel permission flow
       navigating away zeroes the counters. Match-case toggle included. 10 unit tests.
   - [x] The bar, the shortcut and the plumbing landed: `@tepegoz/find-bar` + `main/find-in-page.ts` +
         `ipc/ipc-find.ts`, 10 unit tests, plus a stale-query guard and a navigation reset.
+  - [ ] **"Match whole word" — investigated 2026-09-09, NOT built (dead end via the obvious route).**
+        The plan was to forward it to `webContents.findInPage` as `wordStart` beside the existing
+        `matchCase` flag. **Chromium removed word-start matching upstream years ago** — Electron
+        deprecated `wordStart` / `medialCapitalAsWordStart` in v4 and dropped them by v5; they are not
+        in Electron 43's `FindInPageOptions`, so the option is silently ignored. A real whole-word (and
+        the "highlight all matches" / regex asks) needs a DOM-level matcher — injected `\b`-anchored
+        search plus our own highlight overlay — replacing `webContents.findInPage`. That is a genuine
+        feature, not a toggle; deferred. Do not re-attempt the `wordStart` route.
   - [x] **Verified end to end.** `e2e/find-in-page.spec.ts` passes against the real app: the bar
         opens, the counter reads 1/3, Enter steps to 2/3, Escape closes.
   - [x] It did not work when first written, and the cause was ours. Electron's `findNext` option means
