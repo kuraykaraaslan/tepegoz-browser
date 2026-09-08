@@ -39,11 +39,13 @@ describe('PermissionsCenter (site permissions)', () => {
     expect(screen.getByText(pc.sitesEmpty)).toBeTruthy();
   });
 
-  it('adds a site up front, seeded with an explicit prompt for the first capability', () => {
+  it('adds a site up front, seeded with an explicit prompt on notifications', () => {
     const { onSet } = renderCenter({});
     fireEvent.change(screen.getByLabelText(pc.addSite), { target: { value: 'example.com' } });
     fireEvent.click(screen.getByRole('button', { name: pc.addSiteButton }));
-    expect(onSet).toHaveBeenCalledWith('https://example.com', 'camera', 'prompt');
+    // `notifications` specifically — not `WEB_PERMISSION_CAPABILITIES[0]` (`camera`) — see the seed
+    // comment in PermissionsCenter.tsx.
+    expect(onSet).toHaveBeenCalledWith('https://example.com', 'notifications', 'prompt');
   });
 
   it('keeps Add disabled for an unparseable host and for a site already listed', () => {
