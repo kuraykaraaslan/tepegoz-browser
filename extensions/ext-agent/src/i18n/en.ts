@@ -3,6 +3,13 @@ export const en = {
   title: 'Agent Console',
   progress: 'Progress',
   tokens: 'Tokens',
+  // The token chip's hover breakdown (the input / output split behind the single running total).
+  // `{in}` and `{out}` are filled by the caller; `thisRun` adds the qualifier shown on the
+  // lifetime-quota variant of the chip, where the tooltip is the only place the per-run figure appears.
+  tokenUsage: {
+    breakdown: '{in} in / {out} out',
+    breakdownThisRun: '{in} in / {out} out (this run)',
+  },
   noActiveTasks: 'No active tasks',
   awaitingApproval: 'Awaiting your approval',
   open: 'Agent',

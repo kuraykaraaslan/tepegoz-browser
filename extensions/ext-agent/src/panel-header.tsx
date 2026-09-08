@@ -43,6 +43,10 @@ export function PanelHeader({
   onOpenConversation,
   onDismissExportError,
 }: PanelHeaderProps) {
+  // The input / output split shown on the token chip's tooltip. `{in}` / `{out}` are placeholders,
+  // not concatenation, so the translation keeps its own word order.
+  const tokenBreakdown = (template: string, inTok: number, outTok: number): string =>
+    template.replace('{in}', String(inTok)).replace('{out}', String(outTok));
   return (
     <>
       {/* Header */}
@@ -74,7 +78,7 @@ export function PanelHeader({
                   ? 'bg-amber-500/15 text-amber-500'
                   : 'bg-surface-overlay text-text-secondary',
               )}
-              title={`${a.tokens}: ${String(tokens.inputTokens)} in / ${String(tokens.outputTokens)} out (this run)`}
+              title={`${a.tokens}: ${tokenBreakdown(a.tokenUsage.breakdownThisRun, tokens.inputTokens, tokens.outputTokens)}`}
             >
               {a.tokens}: {tokens.lifetimeTokens.toLocaleString()} / {tokens.quota.toLocaleString()}
             </span>
@@ -83,7 +87,7 @@ export function PanelHeader({
             tokens.totalTokens > 0 && (
               <span
                 className="rounded-full bg-surface-overlay px-2 py-0.5 text-xs text-text-secondary"
-                title={`${a.tokens}: ${String(tokens.inputTokens)} in / ${String(tokens.outputTokens)} out`}
+                title={`${a.tokens}: ${tokenBreakdown(a.tokenUsage.breakdown, tokens.inputTokens, tokens.outputTokens)}`}
               >
                 {a.tokens}: {tokens.totalTokens.toLocaleString()}
               </span>

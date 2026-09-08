@@ -5,6 +5,13 @@ export const tr: AgentStrings = {
   title: 'Ajan Konsolu',
   progress: 'İlerleme',
   tokens: 'Token',
+  // Token rozetinin üzerine gelince görünen döküm (tek toplamın arkasındaki girdi / çıktı ayrımı).
+  // `{in}` ve `{out}` çağıran tarafından doldurulur; `thisRun`, rozetin ömür boyu kota varyantında
+  // gösterilen niteleyiciyi ekler — orada bu çalıştırmaya ait rakamın göründüğü tek yer ipucudur.
+  tokenUsage: {
+    breakdown: '{in} girdi / {out} çıktı',
+    breakdownThisRun: '{in} girdi / {out} çıktı (bu çalıştırma)',
+  },
   noActiveTasks: 'Aktif görev yok',
   awaitingApproval: 'Onayınız bekleniyor',
   open: 'Ajan',

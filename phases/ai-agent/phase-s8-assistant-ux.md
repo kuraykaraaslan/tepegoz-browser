@@ -196,13 +196,24 @@ Six UI-scoped PRs, each ≤250 lines, sequenced behind their substrate phases. N
   settings#shortcuts, and the generic term surfacing the whole set. **Still owed for `[x]`:** "every
   agent surface reachable without a mouse" — a full keyboard audit of the agent console, not just the
   palette._
-- [~] **Localized to the same bar as the rest of the app** (en + tr). Both Claude-extension studies list
+- [x] **Localized to the same bar as the rest of the app** (en + tr). Both Claude-extension studies list
       missing Turkish as a support-cost and adoption problem; this project treats it as a gate.
       _2026-09-08: the `@tepegoz/agent-runtime` package no longer holds any user-facing English literal —
       the terminal stop-reason sentences (`stopReasonStrings`) **and** the runtime lifecycle Console
       lines (plan rejected / all steps skipped / advisory egress warning, `runtimeStrings`) are now
-      injected by the host from `@tepegoz/ext-agent`'s parity-tested dict. Still owed: a sweep of the
-      `ext-agent` panel React surfaces themselves for any remaining hardcoded string._
+      injected by the host from `@tepegoz/ext-agent`'s parity-tested dict._
+      _2026-09-09: swept every React surface under `extensions/ext-agent/src/` (panel + header + composer +
+      thread + turn-meta + step-feed + modals + run-config + skills + dropdown + copy-button +
+      conversation-history-dropdown + history-page + command-palette + schedule-task-modal + icons). One
+      genuine gap: the token chip's hover breakdown in `panel-header.tsx` assembled its input/output
+      split from hardcoded fragments (`… in / … out (this run)`) — now `tokenUsage.{breakdown,
+      breakdownThisRun}` in the parity-tested dict, wired through a placeholder helper. Test:
+      `panel-header.test.tsx`. Everything else already pulls from `useT(agentDict)` / `coreDict` / passed
+      labels. Out of scope, noted not fixed: `summarizeConversationPrompt`'s `'Untitled conversation'`
+      fallback in `history.ts` is computed at persist time in `@tepegoz/persistence` (main process, no
+      locale context) and stored in the DB, not rendered by a panel surface — localizing it needs a
+      non-`ext-agent` change; the diagnostic-bundle transcript (`serializeConversationLog` /
+      `EVENT_KIND_LABEL`) is an exported debug artifact, treated like `console.*`._
 
 > **Second wave (2026-09-01 studies).** Six items from a later sweep —
 > [Fellou](../../docs/research/research-fellou.md), [Opera Neon](../../docs/research/research-opera-neon.md),
