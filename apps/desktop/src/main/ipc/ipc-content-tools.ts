@@ -5,16 +5,19 @@ import {
   isExtensionEnabled,
   type LocalModelInfo,
   type Macro,
+  type MacrosImportResult,
   type MacroSummary,
 } from '@tepegoz/desktop-ipc';
 import { AppError } from '@tepegoz/libs';
 import { macrosManifest } from '@tepegoz/ext-macros/manifest';
+import { parseMacrosImport } from '@tepegoz/persistence';
 import {
   MacroAttachCsvSchema,
   MacroIdSchema,
   MacroRunDraftSchema,
   MacroRunInputSchema,
   MacroSchema,
+  MacrosImportJsonSchema,
 } from '@tepegoz/desktop-ipc/schemas';
 import ModelManager from '../model-catalog/model-manager.electron';
 import MacroService, { type MacroCursorOpts } from '../macro/macro-service.electron';
@@ -78,6 +81,26 @@ export function registerToolsIpc(): void {
   handle(IpcChannels.macrosAttachCsv, (_event, payload): string => {
     requireMacrosEnabled();
     return MacroService.attachCsv(MacroAttachCsvSchema.parse(payload).content);
+  });
+  handle(IpcChannels.macrosExport, (): string => {
+    // No secrets — a macro is a recorded click/type script (CSV attachments are blob refs, not the
+    // rows). Main only stringifies; the untrusted renderer does the Blob download, same split as
+    // bookmarks / history / preferences export.
+    requireMacrosEnabled();
+    return MacroService.exportJson();
+  });
+  handle(IpcChannels.macrosImport, (_event, payload): MacrosImportResult => {
+    requireMacrosEnabled();
+    const json = MacrosImportJsonSchema.parse(payload);
+    let split: ReturnType<typeof parseMacrosImport>;
+    try {
+      split = parseMacrosImport(json);
+    } catch {
+      // Not JSON, or JSON with no macro list — a malformed file is a bad request, mapped to the same
+      // generic localized 400 as any other rejected renderer payload.
+      throw new AppError('Macros import is not a valid export file', 400, 'badRequest');
+    }
+    return { imported: MacroService.importMacros(split.macros), skipped: split.skipped };
   });
   handle(IpcChannels.macrosRun, (event, payload): { runId: string } => {
     requireMacrosEnabled();

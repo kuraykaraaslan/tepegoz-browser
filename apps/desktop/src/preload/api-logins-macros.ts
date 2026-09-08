@@ -9,6 +9,7 @@ import {
   type MacroRunDraftInput,
   type MacroRunInput,
   type MacroRunProgress,
+  type MacrosImportResult,
   type MacroSummary,
   type TepegozApi,
 } from '@tepegoz/desktop-ipc';
@@ -29,6 +30,8 @@ export const loginsMacrosApi: Pick<
   | 'getMacro'
   | 'saveMacro'
   | 'deleteMacro'
+  | 'exportMacros'
+  | 'importMacros'
   | 'attachMacroCsv'
   | 'runMacro'
   | 'runDraftMacro'
@@ -76,6 +79,9 @@ export const loginsMacrosApi: Pick<
   getMacro: (id: string) => invoke<Macro | null>(IpcChannels.macrosGet, id),
   saveMacro: (macro: Macro) => invoke<MacroSummary>(IpcChannels.macrosSave, macro),
   deleteMacro: (id: string) => invoke<void>(IpcChannels.macrosDelete, id),
+  exportMacros: () => invoke<string>(IpcChannels.macrosExport),
+  importMacros: (json: string) =>
+    invoke<MacrosImportResult>(IpcChannels.macrosImport, json),
   attachMacroCsv: (content: string) => invoke<string>(IpcChannels.macrosAttachCsv, { content }),
   runMacro: (input: MacroRunInput) => invoke<{ runId: string }>(IpcChannels.macrosRun, input),
   runDraftMacro: (input: MacroRunDraftInput) =>

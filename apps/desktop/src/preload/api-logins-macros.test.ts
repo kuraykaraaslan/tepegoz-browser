@@ -116,6 +116,16 @@ describe('macros', () => {
     expect(invoke).toHaveBeenCalledWith(IpcChannels.macrosDelete, 'm1');
   });
 
+  it('exportMacros → macrosExport, no payload', () => {
+    void loginsMacrosApi.exportMacros();
+    expect(invoke).toHaveBeenCalledWith(IpcChannels.macrosExport);
+  });
+
+  it('importMacros → macrosImport with the bare json string', () => {
+    void loginsMacrosApi.importMacros('{"macros":[]}');
+    expect(invoke).toHaveBeenCalledWith(IpcChannels.macrosImport, '{"macros":[]}');
+  });
+
   it('attachMacroCsv → macrosAttachCsv with { content }', () => {
     void loginsMacrosApi.attachMacroCsv('a,b\n1,2');
     expect(invoke).toHaveBeenCalledWith(IpcChannels.macrosAttachCsv, { content: 'a,b\n1,2' });

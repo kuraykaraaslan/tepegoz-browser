@@ -5,7 +5,7 @@ import type { MacroRunInput, MacroRunProgress, MacroSummary } from '@tepegoz/des
 import { runMacro, type RunProgress } from '@tepegoz/macro-engine';
 import type { MacroRunOutcome, MacrosCapabilityHost } from '@tepegoz/ext-macros/types';
 import { parseCsv } from '@tepegoz/ext-macros/csv';
-import { BlobStore, MacroStore, type Db } from '@tepegoz/persistence';
+import { BlobStore, MacroStore, serializeMacrosJson, type Db } from '@tepegoz/persistence';
 import { getDb } from '../db/database.electron';
 import { createMacroHost } from './macro-host.electron';
 import { healSelector } from './macro-selector-healer.electron';
@@ -120,6 +120,23 @@ const MacroService = {
 
   delete(id: string): void {
     MacroStore.delete(db(), id);
+  },
+
+  /** Every saved macro's full IR as one pretty-printed JSON document, for a user-initiated backup. */
+  exportJson(): string {
+    return serializeMacrosJson(MacroStore.exportAll(db()));
+  },
+
+  /**
+   * Persist a batch of already-validated macros (upsert on id) and return how many were written. The
+   * caller ({@link registerToolsIpc}) parses + validates the untrusted file with `parseMacrosImport`
+   * first; this only touches the DB.
+   */
+  importMacros(macros: readonly Macro[]): number {
+    const d = db();
+    const now = Date.now();
+    for (const macro of macros) MacroStore.save(d, macro, now);
+    return macros.length;
   },
 
   /** Store CSV text as a content-addressed blob; returns the bare hash referenced from a macro IR. */

@@ -45,12 +45,22 @@ const ModelManager = vi.hoisted(() => ({
 }));
 vi.mock('../model-catalog/model-manager.electron', () => ({ default: ModelManager }));
 
+const parseMacrosImport = vi.hoisted(() =>
+  vi.fn<(json: string) => { macros: unknown[]; skipped: number }>(() => ({
+    macros: [{ id: 'a' }, { id: 'b' }],
+    skipped: 1,
+  })),
+);
+vi.mock('@tepegoz/persistence', () => ({ parseMacrosImport }));
+
 const MacroService = vi.hoisted(() => ({
   list: vi.fn(() => [{ id: 'x' }]),
   get: vi.fn(() => ({ id: 'x', steps: [] })),
   save: vi.fn(() => ({ id: 'x' })),
   delete: vi.fn(),
   attachCsv: vi.fn(() => 'csv-ref'),
+  exportJson: vi.fn(() => 'macros-json'),
+  importMacros: vi.fn((macros: unknown[]) => macros.length),
   run: vi.fn<
     (
       input: unknown,
@@ -155,6 +165,46 @@ describe('macros — CRUD', () => {
     expect(MacroService.delete).toHaveBeenCalledWith('x');
     expect(call('macrosAttachCsv', { content: 'a,b\n1,2' })).toBe('csv-ref');
     expect(MacroService.attachCsv).toHaveBeenCalledWith('a,b\n1,2');
+  });
+});
+
+describe('macros — export / import', () => {
+  it('403s macrosExport / macrosImport when the extension is disabled', () => {
+    isExtensionEnabled.mockReturnValue(false);
+    for (const ch of ['macrosExport', 'macrosImport']) {
+      let thrown: unknown;
+      try {
+        call(ch, '[]');
+      } catch (e) {
+        thrown = e;
+      }
+      expect(thrown).toMatchObject({ statusCode: 403, code: 'extensionDisabled' });
+    }
+  });
+
+  it('macrosExport hands back the JSON MacroService produces', () => {
+    expect(call('macrosExport')).toBe('macros-json');
+  });
+
+  it('macrosImport parses the file, upserts the valid macros, and returns { imported, skipped }', () => {
+    const res = call('macrosImport', '{"macros":[]}');
+    expect(parseMacrosImport).toHaveBeenCalledWith('{"macros":[]}');
+    expect(MacroService.importMacros).toHaveBeenCalledWith([{ id: 'a' }, { id: 'b' }]);
+    expect(res).toEqual({ imported: 2, skipped: 1 });
+  });
+
+  it('macrosImport maps a malformed file (parse throws) to a 400', () => {
+    parseMacrosImport.mockImplementationOnce(() => {
+      throw new SyntaxError('not json');
+    });
+    let thrown: unknown;
+    try {
+      call('macrosImport', 'not json');
+    } catch (e) {
+      thrown = e;
+    }
+    expect(thrown).toMatchObject({ statusCode: 400, code: 'badRequest' });
+    expect(MacroService.importMacros).not.toHaveBeenCalled();
   });
 });
 

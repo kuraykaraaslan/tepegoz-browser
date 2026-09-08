@@ -6,6 +6,7 @@ export * from './csv';
 export * from './event-journal';
 export * from './blob-store';
 export * from './macro-store';
+export * from './macro-export';
 export * from './history-store';
 export * from './history-export';
 export * from './session-store';

@@ -147,6 +147,7 @@ import type {
   MacroRunDraftInput,
   MacroRunInput,
   MacroRunProgress,
+  MacrosImportResult,
   MacroSummary,
   Step,
 } from '@tepegoz/shared-types/macro-ir';
@@ -156,6 +157,7 @@ export type {
   MacroRunDraftInput,
   MacroRunInput,
   MacroRunProgress,
+  MacrosImportResult,
   MacroSummary,
   Step,
 };

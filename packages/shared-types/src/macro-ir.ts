@@ -191,3 +191,14 @@ export interface MacroRecordedStep {
   index: number;
   step: Step;
 }
+
+/**
+ * Outcome of a macros import. Every entry in the imported file is validated on its own against the
+ * macro schema: `imported` counts the macros that passed and were written (upsert on id), `skipped`
+ * counts the entries dropped because they are not a valid macro. A file that is not JSON, or that has
+ * no macro list at all, is rejected outright and never produces this result.
+ */
+export interface MacrosImportResult {
+  imported: number;
+  skipped: number;
+}

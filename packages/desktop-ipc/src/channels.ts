@@ -433,6 +433,12 @@ export const IpcChannels = {
   macrosAttachCsv: 'macros:attach-csv',
   macrosRecordStart: 'macros:record-start',
   macrosRecordStop: 'macros:record-stop',
+  /** Every saved macro's full IR as one pretty-printed JSON file, for the user to save. No secrets —
+   *  a macro is a recorded click/type script — so a plain JSON export is safe and re-importable. */
+  macrosExport: 'macros:export',
+  /** Renderer→main: the JSON text of a previously exported macros file. Main validates every entry
+   *  with MacroSchema and upserts the ones that pass (`{ imported, skipped }`). */
+  macrosImport: 'macros:import',
   /** Main→renderer push: a step was captured while recording. */
   macrosRecordStep: 'macros:record-step',
   /** Main→renderer push: run progress (step started/finished, run done/failed). */

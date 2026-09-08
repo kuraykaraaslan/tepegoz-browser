@@ -44,8 +44,10 @@ const store = vi.hoisted(() => ({
   get: vi.fn((): unknown => ({ id: 'm1', name: 'M1', steps: [{}, {}] })),
   save: vi.fn(),
   delete: vi.fn(),
+  exportAll: vi.fn((): unknown[] => [{ id: 'm1' }, { id: 'm2' }]),
 }));
-vi.mock('@tepegoz/persistence', () => ({ BlobStore: blob, MacroStore: store }));
+const serializeMacrosJson = vi.hoisted(() => vi.fn((macros: unknown[]) => `json:${String(macros.length)}`));
+vi.mock('@tepegoz/persistence', () => ({ BlobStore: blob, MacroStore: store, serializeMacrosJson }));
 
 const db = vi.hoisted((): { value: unknown } => ({ value: { __db: true } }));
 vi.mock('../db/database.electron', () => ({ getDb: () => db.value }));
@@ -112,6 +114,22 @@ describe('CRUD + CSV', () => {
     const summary = MacroService.save(MACRO);
     expect(store.save).toHaveBeenCalledWith({ __db: true }, MACRO, expect.any(Number));
     expect(summary).toMatchObject({ id: 'm1', name: 'Checkout', stepCount: 3 });
+  });
+
+  it('exportJson serializes every macro from MacroStore.exportAll', () => {
+    expect(MacroService.exportJson()).toBe('json:2');
+    expect(store.exportAll).toHaveBeenCalledWith({ __db: true });
+    expect(serializeMacrosJson).toHaveBeenCalledWith([{ id: 'm1' }, { id: 'm2' }]);
+  });
+
+  it('importMacros upserts each validated macro and returns the count written', () => {
+    const macros = [
+      { id: 'a', name: 'A', steps: [] },
+      { id: 'b', name: 'B', steps: [] },
+    ] as never[];
+    expect(MacroService.importMacros(macros)).toBe(2);
+    expect(store.save).toHaveBeenCalledTimes(2);
+    expect(store.save).toHaveBeenNthCalledWith(1, { __db: true }, macros[0], expect.any(Number));
   });
 
   it('attachCsv stores a blob and returns the bare hash (cas:// stripped)', () => {

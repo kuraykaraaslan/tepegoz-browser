@@ -57,6 +57,28 @@ export class MacroStore {
     }
   }
 
+  /**
+   * Every saved macro's full IR, newest first, for a user-initiated export. Unlike {@link
+   * MacroStore.list} there is no `LIMIT` — a backup must be complete — and unlike it the whole IR is
+   * returned, not a summary. A row whose stored JSON does not parse (corrupt write) is skipped rather
+   * than failing the whole export. This is the only unbounded read of the table; it is on a
+   * deliberate user action, not a hot path.
+   */
+  static exportAll(db: Db): Macro[] {
+    const rows = db
+      .prepare('SELECT ir FROM macros ORDER BY updated_at DESC')
+      .all() as { ir: string }[];
+    const macros: Macro[] = [];
+    for (const row of rows) {
+      try {
+        macros.push(JSON.parse(row.ir) as Macro);
+      } catch {
+        // Corrupt row — drop it from the export rather than aborting the whole backup.
+      }
+    }
+    return macros;
+  }
+
   static delete(db: Db, id: string): void {
     db.prepare('DELETE FROM macros WHERE id = ?').run(id);
   }

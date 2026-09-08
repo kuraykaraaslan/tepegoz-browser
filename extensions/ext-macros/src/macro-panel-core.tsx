@@ -22,6 +22,7 @@ import {
   updateStepAtLocation,
 } from './macro-step-tree';
 import { StepList, type StepListHandlers } from './macro-panel-core-step-list';
+import { MacroBackupControls } from './macro-backup-controls';
 
 /** Shared stateful core — used by both the sidebar Studio and the internal page manager. */
 export function MacrosCore({ api }: Readonly<{ api: MacrosHostApi }>) {
@@ -233,13 +234,14 @@ export function MacrosCore({ api }: Readonly<{ api: MacrosHostApi }>) {
   // -- List view -----------------------------------------------------------------------------------
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         <button type="button" className={BTN} onClick={() => void toggleRecord()}>
           {t.record}
         </button>
         <button type="button" className={BTN_GHOST} onClick={() => setDraft(emptyDraft())}>
           {'+'} {t.newMacro}
         </button>
+        <MacroBackupControls api={api} onImported={refresh} />
       </div>
 
       {progressLine}

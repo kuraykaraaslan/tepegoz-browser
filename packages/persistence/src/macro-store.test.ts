@@ -46,6 +46,17 @@ describe('MacroStore', () => {
     expect(got?.steps).toEqual([{ kind: 'waitMs', ms: 5 }]);
   });
 
+  it('exportAll returns every macro newest-first with the full IR (no LIMIT, corrupt rows dropped)', () => {
+    MacroStore.save(db, macro('m1', 'A'), 1000);
+    MacroStore.save(db, macro('m2', 'B'), 2000);
+    db.prepare(
+      "INSERT INTO macros (id, name, ir, created_at, updated_at) VALUES ('bad', 'Bad', '{not json', 3000, 3000)",
+    ).run();
+    const all = MacroStore.exportAll(db);
+    expect(all.map((m) => m.id)).toEqual(['m2', 'm1']);
+    expect(all[0]?.steps).toHaveLength(2);
+  });
+
   it('deletes', () => {
     MacroStore.save(db, macro('m1', 'A'), 1000);
     MacroStore.delete(db, 'm1');

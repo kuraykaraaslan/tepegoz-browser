@@ -9,6 +9,7 @@ import type {
   MacroRunDraftInput,
   MacroRunInput,
   MacroRunProgress,
+  MacrosImportResult,
   MacroSummary,
 } from './contract';
 
@@ -37,6 +38,12 @@ export interface LoginsApi {
   /** Save (upsert) a macro; the IR is validated by MacroSchema in main. Returns its summary. */
   saveMacro(macro: Macro): Promise<MacroSummary>;
   deleteMacro(id: string): Promise<void>;
+  /** Every saved macro's full IR as one pretty-printed JSON string for the user to save. Carries no
+   *  secrets (a macro is a recorded click/type script), so the plain export is safe to re-import. */
+  exportMacros(): Promise<string>;
+  /** Import a previously exported macros JSON string. Each entry is validated on its own; only the
+   *  ones that pass are written (upsert on id). Rejects a non-JSON / macro-less file. */
+  importMacros(json: string): Promise<MacrosImportResult>;
   /** Store CSV text as a content-addressed blob; returns the hash to reference from a `forEachRow`. */
   attachMacroCsv(content: string): Promise<string>;
   /** Start a saved-macro run; progress streams via {@link onMacroRunProgress}. Returns the runId. */

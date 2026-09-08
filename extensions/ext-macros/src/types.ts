@@ -4,6 +4,7 @@ import type {
   MacroRunDraftInput,
   MacroRunInput,
   MacroRunProgress,
+  MacrosImportResult,
   MacroSummary,
 } from '@tepegoz/shared-types';
 
@@ -16,6 +17,10 @@ export interface MacrosHostApi {
   getMacro(id: string): Promise<Macro | null>;
   saveMacro(macro: Macro): Promise<MacroSummary>;
   deleteMacro(id: string): Promise<void>;
+  /** Every saved macro's full IR as one JSON string for the user to save (no secrets). */
+  exportMacros(): Promise<string>;
+  /** Restore macros from a previously exported JSON string; invalid entries are skipped, not fatal. */
+  importMacros(json: string): Promise<MacrosImportResult>;
   attachMacroCsv(content: string): Promise<string>;
   runMacro(input: MacroRunInput): Promise<{ runId: string }>;
   /** Run an unsaved macro IR directly (record/edit → play without persisting). */
