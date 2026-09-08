@@ -1180,7 +1180,8 @@ permissions reuse the single Policy/PermissionGuard (no parallel permission flow
 
 - [~] Extend the existing deterministic prefix engine (`tab:`/`history:`/`bookmark:` from Phase 1a) with
   **`@`-scoped commands**: `@agent <task>` (start an agent thread — the one place the omnibox crosses into
-  AI), ~~`@workspace <name>`~~, `@download <query>`, `@skill <name>`; bridge to the command palette
+  AI), ~~`@workspace <name>`~~, `@download <query>`, `@skill <name>`, `@command <query>`; bridge to the
+  command palette
   - [x] _**The deterministic-address-bar rule, restated precisely rather than broken.**
         `omnibox-suggest.ts` has always said the address bar "must NEVER start an AI thread (Comet
         lesson)", and that rule stands. What Comet got wrong was **implicit** routing: ordinary typed
@@ -1206,8 +1207,18 @@ permissions reuse the single Policy/PermissionGuard (no parallel permission flow
   - [x] _**A bare `@` shows the command menu.** Without it the mode is invisible; picking an entry
         FILLS the box rather than running anything, so discovery can never itself be an action._
   - [ ] _`@workspace` — no surface to route to (see the DoD line above)._
-  - [ ] _Bridge to the command palette not built. The palette exists (`Ctrl+K`) and command mode does
-        not hand off to it; the four commands are self-contained today._
+  - [x] _**Bridge to the command palette built as a HAND-OFF, not a second command list.**
+        `@command <query>` opens the palette (`Ctrl+K`) with the typed text already in its search box
+        and stops there — the omnibox never learns what any palette command DOES. That is the whole
+        point: two surfaces that both answer "what can this browser do" must not keep two copies of
+        the answer, or they drift, and the address bar would slowly grow a shadow command registry.
+        A bare `@command` opens the palette empty, which is Ctrl+K reached from a keyboard the user
+        already had their hands on._
+  - [x] _**The seed is one-shot.** A Ctrl+K open clears it (`useCommandPalette` resets `query` on the
+        forwarded key), so a palette summoned by keyboard is never silently pre-filtered by something
+        typed minutes earlier — a filtered list whose cause is off-screen is worse than no filter._
+  - [x] _**`@command` obeys the same no-navigate rule as the rest of command mode**, asserted:
+        `@command example.com` opens the palette searching for that text and cannot visit it._
 - [x] `@`-command hints + results localized; non-`@` input keeps the deterministic navigate/search behavior
   - [x] _en+tr for every hint, description and empty state. `omniboxAgentHint` says out loud what Enter
         will do — "hands this text to the agent, leaves the deterministic address bar" — because being

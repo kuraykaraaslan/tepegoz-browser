@@ -111,6 +111,10 @@ export function App() {
     bookmarks.openAllUrls !== null || omniboxViewHidden,
   );
 
+  // Ctrl/Cmd+K. Declared before the kiosk early-return so the hook order never changes between
+  // renders, and before the omnibox hook because `@command` hands its query to `palette.openWith`.
+  const palette = useCommandPalette();
+
   const omniboxHistory = useOmniboxAndHistory(
     tabsRef,
     {
@@ -128,12 +132,17 @@ export function App() {
       commandAgent: browserT.omniboxCommandAgent,
       commandDownload: browserT.omniboxCommandDownload,
       commandSkill: browserT.omniboxCommandSkill,
+      commandPalette: browserT.omniboxCommandPalette,
+      paletteSearch: browserT.omniboxPaletteSearch,
+      paletteOpen: browserT.omniboxPaletteOpen,
+      paletteHint: browserT.omniboxPaletteHint,
       download: browserT.omniboxDownload,
       skill: browserT.omniboxSkill,
       commandNoResults: browserT.omniboxCommandNoResults,
     },
     bookmarks.bookmarksRef,
     extSurfaces.closeSurface,
+    palette.openWith,
   );
 
   const answerPermission = useCallback(
@@ -208,9 +217,6 @@ export function App() {
   const contentSnapshot =
     extSurfaces.resizeSnapshot ?? (omniboxViewHidden ? omniboxSnapshot : null);
 
-  // Ctrl/Cmd+K. Declared before the kiosk early-return so the hook order never changes between renders.
-  const palette = useCommandPalette();
-
   // Chromeless kiosk surface (startupMode: 'kiosk' → loaded with ?kiosk=1): no tab strip / toolbar /
   // overlays — the kiosk URL's web view (laid out by main over `contentRef`) fills the whole screen. The
   // hooks above still run, so content bounds + tab state stay wired.
@@ -257,6 +263,7 @@ export function App() {
         />
         <CommandPaletteHost
           open={palette.open}
+          initialQuery={palette.query}
           onClose={() => {
             palette.setOpen(false);
           }}

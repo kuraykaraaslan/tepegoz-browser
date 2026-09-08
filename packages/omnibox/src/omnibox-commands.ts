@@ -18,7 +18,7 @@ import { foldForSearch } from '@tepegoz/i18n';
  *    mistaken Enter to open.
  */
 
-export type OmniboxCommandId = 'agent' | 'download' | 'skill';
+export type OmniboxCommandId = 'agent' | 'download' | 'skill' | 'palette';
 
 export interface OmniboxCommandSpec {
   id: OmniboxCommandId;
@@ -38,6 +38,11 @@ export const OMNIBOX_COMMANDS: readonly OmniboxCommandSpec[] = [
   { id: 'agent', prefix: '@agent', freeText: true },
   { id: 'download', prefix: '@download', freeText: false },
   { id: 'skill', prefix: '@skill', freeText: false },
+  // The bridge to the Command Palette (Ctrl+K). It is the one command that does not do the work
+  // itself — it hands what was typed to the palette, which owns the command list. Two surfaces that
+  // both answer "what can this browser do" should not maintain two copies of the answer, and a user
+  // who starts typing in the address bar should not have to abandon it to reach the other one.
+  { id: 'palette', prefix: '@command', freeText: true },
 ];
 
 /** What the omnibox is currently in the middle of typing. */

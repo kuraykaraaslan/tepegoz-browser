@@ -55,6 +55,24 @@ describe('useCommandPalette', () => {
     // still only the one subscription, no toggle from the DOM event
   });
 
+  it('openWith seeds the search box — the omnibox `@command <query>` hand-off', () => {
+    const { result } = renderHook(() => useCommandPalette());
+    act(() => result.current.openWith('settings'));
+    expect(result.current.open).toBe(true);
+    expect(result.current.query).toBe('settings');
+  });
+
+  it('clears the seed on the next Ctrl+K, so it can never become a sticky filter', () => {
+    // A palette summoned by keyboard must show every command. If the seed survived, a user would be
+    // silently looking at a filtered list they never asked for and could not see the cause of.
+    const { result } = renderHook(() => useCommandPalette());
+    act(() => result.current.openWith('settings'));
+    act(() => result.current.setOpen(false));
+    act(() => paletteCb?.());
+    expect(result.current.open).toBe(true);
+    expect(result.current.query).toBe('');
+  });
+
   it('unsubscribes on unmount', () => {
     const { unmount } = renderHook(() => useCommandPalette());
     unmount();
@@ -63,11 +81,15 @@ describe('useCommandPalette', () => {
 });
 
 describe('CommandPaletteHost', () => {
-  function openHost() {
+  function openHost(initialQuery?: string) {
     const onClose = vi.fn();
     render(
       <I18nProvider locale="en">
-        <CommandPaletteHost open onClose={onClose} />
+        <CommandPaletteHost
+          open
+          onClose={onClose}
+          {...(initialQuery === undefined ? {} : { initialQuery })}
+        />
       </I18nProvider>,
     );
     return { onClose, input: screen.getByRole('combobox') };
@@ -107,6 +129,15 @@ describe('CommandPaletteHost', () => {
     // "Ctrl+L" is the address-bar shortcut — searchable by the key a user half-remembers.
     runByQuery(input, 'ctrl+l');
     expect(bridge.navigateTab).toHaveBeenCalledWith(`${INTERNAL_SETTINGS_URL}#shortcuts`);
+  });
+
+  it('opens already filtered by the seed, and Enter runs the top match', () => {
+    // The hand-off has to arrive filtered or it is not a hand-off — the user would retype the words
+    // they had already typed into the address bar.
+    const { input } = openHost('settings');
+    expect((input as HTMLInputElement).value).toBe('settings');
+    fireEvent.keyDown(input, { key: 'Enter' });
+    expect(bridge.navigateTab).toHaveBeenCalledWith(INTERNAL_SETTINGS_URL);
   });
 
   it('surfaces the shortcut rows under a generic term ("shortcut")', () => {

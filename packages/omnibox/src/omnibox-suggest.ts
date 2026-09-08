@@ -23,7 +23,8 @@ export type OmniboxSuggestionKind =
   | 'command'
   | 'agent'
   | 'download'
-  | 'skill';
+  | 'skill'
+  | 'palette';
 
 export type OmniboxQuickSettingTarget = 'appearance' | 'language' | 'privacy';
 
@@ -41,7 +42,13 @@ export type OmniboxAction =
    */
   | { type: 'agentTask'; task: string }
   | { type: 'openDownload'; id: string }
-  | { type: 'runSkill'; id: string };
+  | { type: 'runSkill'; id: string }
+  /**
+   * Hand off to the Command Palette (Ctrl+K), pre-seeded with what was typed after `@command`.
+   * A hand-off, not a second dispatch path: the omnibox does not know what any palette command DOES,
+   * it only opens the surface that does, with the query already in its box.
+   */
+  | { type: 'openPalette'; query: string };
 
 export interface OmniboxSuggestion {
   /** Stable key for React lists + keyboard selection. */
@@ -147,6 +154,13 @@ export interface OmniboxSuggestLabels {
   commandAgent: string;
   commandDownload: string;
   commandSkill: string;
+  commandPalette: string;
+  /** Primary line for `@command <query>`, with `{query}` replaced by what was typed. */
+  paletteSearch: string;
+  /** Primary line for a bare `@command` — opens the palette with nothing typed. */
+  paletteOpen: string;
+  /** Subtitle under both: says the palette is where this lands. */
+  paletteHint: string;
   /** Subtitles for `@download` / `@skill` results. */
   download: string;
   skill: string;

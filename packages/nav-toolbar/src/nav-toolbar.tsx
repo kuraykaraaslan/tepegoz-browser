@@ -72,6 +72,8 @@ export interface NavToolbarProps {
   /** Forwarded straight to the omnibox — see `OmniboxProps`. */
   onAgentTask?: ((task: string) => void) | undefined;
   onRunSkill?: ((id: string) => void) | undefined;
+  /** `@command` — hands the typed query to the Command Palette (Ctrl+K). */
+  onOpenPalette?: ((query: string) => void) | undefined;
   onOpenDownload?: ((id: string) => void) | undefined;
   /** Reports the omnibox dropdown height to hosts that need to manage native web-view layering. */
   onOmniboxDropdownHeightChange?: ((height: number) => void) | undefined;
@@ -123,6 +125,7 @@ export function NavToolbar({
   onAgentTask,
   onRunSkill,
   onOpenDownload,
+  onOpenPalette,
   onOmniboxDropdownHeightChange,
   zoomPercent,
   zoomLabels,
@@ -182,6 +185,7 @@ export function NavToolbar({
         onAgentTask={onAgentTask}
         onRunSkill={onRunSkill}
         onOpenDownload={onOpenDownload}
+        onOpenPalette={onOpenPalette}
         onDropdownHeightChange={onOmniboxDropdownHeightChange}
       />
 

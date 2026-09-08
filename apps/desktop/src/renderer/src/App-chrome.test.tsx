@@ -133,6 +133,7 @@ function omniboxHistoryFixture(): OmniboxHistoryResult {
     onAgentTaskFromOmnibox: vi.fn(),
     onRunSkillFromOmnibox: vi.fn(),
     onOpenDownloadFromOmnibox: vi.fn(),
+    onOpenPaletteFromOmnibox: vi.fn(),
   };
 }
 

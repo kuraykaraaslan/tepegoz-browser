@@ -9,6 +9,7 @@ import {
   faFile,
   faGear,
   faGlobe,
+  faKeyboard,
   faLock,
   faMagnifyingGlass,
   faRobot,
@@ -93,6 +94,11 @@ export interface OmniboxProps {
   onOpenDownload?: ((id: string) => void) | undefined;
   /** Run a saved skill from `@skill`. */
   onRunSkill?: ((id: string) => void) | undefined;
+  /**
+   * Open the Command Palette from `@command`, pre-seeded with what was typed. A hand-off, not a
+   * second dispatch path: the omnibox opens the surface that owns the command list and stops there.
+   */
+  onOpenPalette?: ((query: string) => void) | undefined;
   /** Reports the rendered dropdown height so native hosts can manage WebContentsView layering. */
   onDropdownHeightChange?: ((height: number) => void) | undefined;
   /** Extra classes for the wrapping form (e.g. `flex-1` for layout). */
@@ -135,6 +141,7 @@ export function Omnibox({
   onAgentTask,
   onOpenDownload,
   onRunSkill,
+  onOpenPalette,
   onDropdownHeightChange,
   className,
 }: OmniboxProps) {
@@ -305,6 +312,9 @@ export function Omnibox({
         break;
       case 'runSkill':
         onRunSkill?.(s.action.id);
+        break;
+      case 'openPalette':
+        onOpenPalette?.(s.action.query);
         break;
     }
   }
@@ -522,7 +532,7 @@ function SiteInfoControl({
 }
 
 /**
- * A distinct FontAwesome glyph for every {@link OmniboxSuggestion} kind — all eleven, so a typed URL
+ * A distinct FontAwesome glyph for every {@link OmniboxSuggestion} kind — all twelve, so a typed URL
  * no longer wears a search icon (omnibox § A6). Glyphs match how each concept is drawn elsewhere in
  * the app (bookmark star/book, `faRobot` for the agent, `faWandMagicSparkles` for a skill, `faGlobe`
  * for a bare navigation, …).
@@ -539,6 +549,7 @@ const SUGGESTION_ICONS: Record<OmniboxSuggestion['kind'], IconDefinition> = {
   agent: faRobot,
   download: faDownload,
   skill: faWandMagicSparkles,
+  palette: faKeyboard,
 };
 
 /**

@@ -28,6 +28,10 @@ const LABELS = {
   download: 'Download',
   skill: 'Skill',
   commandNoResults: 'Nothing matched',
+  commandPalette: 'Search the command palette',
+  paletteSearch: 'Command palette: {query}',
+  paletteOpen: 'Open the command palette',
+  paletteHint: 'Opens the command palette with what you typed',
 };
 
 const SOURCES: OmniboxSuggestSources = {

@@ -179,6 +179,7 @@ export function AppChrome({
         onAgentTask={omniboxHistory.onAgentTaskFromOmnibox}
         onRunSkill={omniboxHistory.onRunSkillFromOmnibox}
         onOpenDownload={omniboxHistory.onOpenDownloadFromOmnibox}
+        onOpenPalette={omniboxHistory.onOpenPaletteFromOmnibox}
         onOmniboxDropdownHeightChange={onOmniboxDropdownHeightChange}
         zoomPercent={Math.round(tabs.activeZoomFactor * 100)}
         onZoom={(direction) => window.tepegoz.setPageZoom(direction)}

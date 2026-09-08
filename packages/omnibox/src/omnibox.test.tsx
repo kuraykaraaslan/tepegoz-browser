@@ -419,7 +419,7 @@ describe('Omnibox suggestion dispatch', () => {
     expect(writeText).toHaveBeenCalledWith('4');
   });
 
-  it('routes the quick-setting, agent-task, download and skill rows to their own handlers', async () => {
+  it('routes the quick-setting, agent-task, download, skill and palette rows to their own handlers', async () => {
     const cases = [
       {
         s: {
@@ -455,6 +455,16 @@ describe('Omnibox suggestion dispatch', () => {
         s: { key: 's', kind: 'skill', title: 'A skill', action: { type: 'runSkill', id: 'sk-1' } },
         prop: 'onRunSkill',
         arg: 'sk-1',
+      },
+      {
+        s: {
+          key: 'p',
+          kind: 'palette',
+          title: 'Command palette',
+          action: { type: 'openPalette', query: 'settings' },
+        },
+        prop: 'onOpenPalette',
+        arg: 'settings',
       },
     ] as const;
 

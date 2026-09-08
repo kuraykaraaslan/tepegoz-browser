@@ -22,6 +22,7 @@ const MAX_PER_COMMAND = 8;
 function describe(id: OmniboxCommandId, labels: OmniboxSuggestLabels): string {
   if (id === 'agent') return labels.commandAgent;
   if (id === 'download') return labels.commandDownload;
+  if (id === 'palette') return labels.commandPalette;
   return labels.commandSkill;
 }
 
@@ -61,6 +62,29 @@ function agentSuggestions(term: string, labels: OmniboxSuggestLabels): OmniboxSu
       // they should still be told what it means before they press Enter.
       subtitle: labels.agentHint,
       action: { type: 'agentTask', task: term },
+    },
+  ];
+}
+
+/**
+ * `@command <query>` — the bridge to the Command Palette.
+ *
+ * One suggestion, always, and it is a HAND-OFF rather than an execution: the omnibox opens the palette
+ * with the query already typed, and the palette's own list, filtering and Enter decide what runs. The
+ * omnibox never learns what a palette command does, so the two surfaces cannot drift into two
+ * different answers to "what can this browser do".
+ *
+ * A bare `@command` opens the palette empty — the same thing Ctrl+K does, reached from the keyboard a
+ * user already had their hands on.
+ */
+function paletteSuggestions(term: string, labels: OmniboxSuggestLabels): OmniboxSuggestion[] {
+  return [
+    {
+      key: 'palette:open',
+      kind: 'palette',
+      title: term.length === 0 ? labels.paletteOpen : labels.paletteSearch.replace('{query}', term),
+      subtitle: labels.paletteHint,
+      action: { type: 'openPalette', query: term },
     },
   ];
 }
@@ -114,6 +138,7 @@ export function commandSuggestions(
 
   const needle = foldForSearch(parsed.term);
   if (parsed.id === 'agent') return agentSuggestions(parsed.term, labels);
+  if (parsed.id === 'palette') return paletteSuggestions(parsed.term, labels);
 
   const found =
     parsed.id === 'download'

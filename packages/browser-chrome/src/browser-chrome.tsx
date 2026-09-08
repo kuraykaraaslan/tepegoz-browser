@@ -129,6 +129,8 @@ export interface BrowserChromeProps {
   /** Forwarded to the omnibox — `@agent` is the one address-bar path that crosses into AI. */
   onAgentTask?: ((task: string) => void) | undefined;
   onRunSkill?: ((id: string) => void) | undefined;
+  /** `@command` — hands the typed query to the Command Palette (Ctrl+K). */
+  onOpenPalette?: ((query: string) => void) | undefined;
   onOpenDownload?: ((id: string) => void) | undefined;
   /** Reports the omnibox dropdown height to hosts that need to manage native web-view layering. */
   onOmniboxDropdownHeightChange?: ((height: number) => void) | undefined;
@@ -208,6 +210,7 @@ export function BrowserChrome({
   onAgentTask,
   onRunSkill,
   onOpenDownload,
+  onOpenPalette,
   onOmniboxDropdownHeightChange,
   zoomPercent,
   onZoom,
@@ -322,6 +325,7 @@ export function BrowserChrome({
         onAgentTask={onAgentTask}
         onRunSkill={onRunSkill}
         onOpenDownload={onOpenDownload}
+        onOpenPalette={onOpenPalette}
         onOmniboxDropdownHeightChange={onOmniboxDropdownHeightChange}
         zoomPercent={zoomPercent}
         zoomLabels={{

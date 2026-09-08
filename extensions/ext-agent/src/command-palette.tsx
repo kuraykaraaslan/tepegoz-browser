@@ -34,12 +34,24 @@ export interface CommandPaletteProps {
   sources: PaletteSources;
   /** Mode to open in. Defaults to chat. */
   initialMode?: PaletteMode;
+  /**
+   * Text the search box opens with — the omnibox's `@command <query>` hands off here rather than
+   * making the user retype what they had already typed. Cleared on the next open like everything
+   * else, so a seeded open is a one-shot, not a sticky filter.
+   */
+  initialQuery?: string;
 }
 
-export function CommandPalette({ open, onClose, sources, initialMode }: CommandPaletteProps) {
+export function CommandPalette({
+  open,
+  onClose,
+  sources,
+  initialMode,
+  initialQuery,
+}: CommandPaletteProps) {
   const t = useT(agentDict).commandPalette;
   const [mode, setMode] = useState<PaletteMode>(initialMode ?? 'chat');
-  const [query, setQuery] = useState('');
+  const [query, setQuery] = useState(initialQuery ?? '');
   const [selected, setSelected] = useState(0);
   const [scrollTop, setScrollTop] = useState(0);
   const listRef = useRef<HTMLDivElement | null>(null);
@@ -54,11 +66,11 @@ export function CommandPalette({ open, onClose, sources, initialMode }: CommandP
   useEffect(() => {
     if (!open) return;
     setMode(initialMode ?? 'chat');
-    setQuery('');
+    setQuery(initialQuery ?? '');
     setSelected(0);
     setScrollTop(0);
     inputRef.current?.focus();
-  }, [open, initialMode]);
+  }, [open, initialMode, initialQuery]);
 
   // Keep the highlighted row on screen when it moves by keyboard.
   useEffect(() => {

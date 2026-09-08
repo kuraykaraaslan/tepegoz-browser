@@ -22,6 +22,8 @@ export interface OmniboxHistoryResult {
   onRunSkillFromOmnibox: (id: string) => void;
   /** `@download <query>` — opens the downloads page. */
   onOpenDownloadFromOmnibox: (id: string) => void;
+  /** `@command <query>` — hands the typed text to the Command Palette instead of answering it here. */
+  onOpenPaletteFromOmnibox: (query: string) => void;
 }
 
 /** The host of a download's source URL, or the raw string when it will not parse. */
@@ -42,6 +44,7 @@ export function useOmniboxAndHistory(
   labels: OmniboxSuggestLabels,
   bookmarksRef: MutableRefObject<OmniboxBookmarkCandidate[]>,
   onCloseSurface: () => void,
+  onOpenPalette: (query: string) => void,
 ): OmniboxHistoryResult {
   // Ref keeps the injected callback stable so the Omnibox effect doesn't refetch every render; mirrors
   // latest state.
@@ -185,6 +188,21 @@ export function useOmniboxAndHistory(
     window.tepegoz.navigateTab('tepegoz://downloads');
   }, [onCloseSurface]);
 
+  /**
+   * Hand off to the Command Palette rather than answering here.
+   *
+   * The omnibox does not learn what any palette command does — it opens the palette with the query
+   * already typed and stops. Two surfaces that both answer "what can this browser do" must not keep
+   * two copies of the answer, or they drift.
+   */
+  const onOpenPaletteFromOmnibox = useCallback(
+    (query: string): void => {
+      onCloseSurface();
+      onOpenPalette(query);
+    },
+    [onCloseSurface, onOpenPalette],
+  );
+
   const onActivateTabFromOmnibox = useCallback(
     (tabId: string): void => {
       onCloseSurface();
@@ -199,5 +217,6 @@ export function useOmniboxAndHistory(
     onAgentTaskFromOmnibox,
     onRunSkillFromOmnibox,
     onOpenDownloadFromOmnibox,
+    onOpenPaletteFromOmnibox,
   };
 }

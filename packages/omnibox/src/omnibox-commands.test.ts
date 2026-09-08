@@ -20,6 +20,10 @@ const LABELS: OmniboxSuggestLabels = {
   download: 'Download',
   skill: 'Skill',
   commandNoResults: 'Nothing matched',
+  commandPalette: 'Search the command palette',
+  paletteSearch: 'Command palette: {query}',
+  paletteOpen: 'Open the command palette',
+  paletteHint: 'Opens the command palette with what you typed',
 };
 
 const SOURCES = {
@@ -97,7 +101,16 @@ describe('the deterministic surface is not breached', () => {
 
   it('emits NO navigate action anywhere in command mode', () => {
     // A stray Enter inside `@…` must not be able to open a page or run a web search.
-    for (const q of ['@', '@ag', '@agent', '@agent hello', '@download tax', '@skill', '@zzz']) {
+    for (const q of [
+      '@',
+      '@ag',
+      '@agent',
+      '@agent hello',
+      '@download tax',
+      '@skill',
+      '@command example.com',
+      '@zzz',
+    ]) {
       expect(build(q).some((s) => s.action.type === 'navigate')).toBe(false);
     }
   });
@@ -147,6 +160,31 @@ describe('command mode', () => {
     expect(out[0]?.action.type).not.toBe('navigate');
   });
 
+  it('bridges to the command palette with what was typed, and does not answer it itself', () => {
+    // The bridge is a HAND-OFF: the omnibox opens the palette with the query seeded and stops there.
+    // If it tried to answer `@command` from its own list, the palette and the address bar would keep
+    // two copies of "what can this browser do" and drift apart.
+    const out = build('@command settings');
+    expect(out).toHaveLength(1);
+    expect(out[0]?.title).toBe('Command palette: settings');
+    expect(out[0]?.subtitle).toBe('Opens the command palette with what you typed');
+    expect(out[0]?.action).toEqual({ type: 'openPalette', query: 'settings' });
+  });
+
+  it('opens the palette empty for a bare @command, which is what Ctrl+K does', () => {
+    const out = build('@command');
+    expect(out).toHaveLength(1);
+    expect(out[0]?.title).toBe('Open the command palette');
+    expect(out[0]?.action).toEqual({ type: 'openPalette', query: '' });
+  });
+
+  it('never routes a palette query into a navigation or a search', () => {
+    // `@command example.com` opens the palette searching for "example.com" — it does not visit it.
+    const out = build('@command example.com');
+    expect(out.some((sug) => sug.action.type === 'navigate')).toBe(false);
+    expect(out[0]?.action).toEqual({ type: 'openPalette', query: 'example.com' });
+  });
+
   it('finds nothing rather than throwing when a source is not wired', () => {
     const bare = buildOmniboxSuggestions('@skill x', { tabs: [], history: [] }, LABELS);
     expect(bare.map((s) => s.title)).toEqual(['Nothing matched']);
@@ -156,7 +194,12 @@ describe('command mode', () => {
 describe('matchingCommands', () => {
   it('matches on the typed prefix, folded', () => {
     expect(matchingCommands('@SK').map((c) => c.id)).toEqual(['skill']);
-    expect(matchingCommands('@').map((c) => c.id)).toEqual(['agent', 'download', 'skill']);
+    expect(matchingCommands('@').map((c) => c.id)).toEqual([
+      'agent',
+      'download',
+      'skill',
+      'palette',
+    ]);
   });
 
   it('has no @workspace — there is no such surface in this product yet', () => {

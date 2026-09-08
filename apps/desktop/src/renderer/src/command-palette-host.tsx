@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { CommandPalette } from '@tepegoz/ext-agent/command-palette';
 import type { PaletteCommand, PaletteSources } from '@tepegoz/ext-agent/command-palette-core';
 import { coreDict } from '@tepegoz/i18n';
@@ -24,7 +24,16 @@ const SHORTCUTS_URL = `${INTERNAL_SETTINGS_URL}#shortcuts`;
  * `keydown` binding only fired while the chrome had focus, which is a minority of a browser's life; the
  * main path works whether a PAGE or the chrome has focus. The chrome still owns the toggle.
  */
-export function CommandPaletteHost({ open, onClose }: { open: boolean; onClose: () => void }) {
+export function CommandPaletteHost({
+  open,
+  onClose,
+  initialQuery,
+}: {
+  open: boolean;
+  onClose: () => void;
+  /** Seed text when the palette was opened from the omnibox's `@command <query>`. */
+  initialQuery?: string;
+}) {
   const t = useT(browserDict);
   const core = useT(coreDict);
   const sc = useT(settingsDict).shortcuts;
@@ -82,20 +91,44 @@ export function CommandPaletteHost({ open, onClose }: { open: boolean; onClose: 
     return { chat, do: [], make: [], tasks: [] };
   }, [t, core, sc, platform]);
 
-  return <CommandPalette open={open} onClose={onClose} sources={sources} />;
+  return (
+    <CommandPalette
+      open={open}
+      onClose={onClose}
+      sources={sources}
+      {...(initialQuery === undefined ? {} : { initialQuery })}
+    />
+  );
 }
 
-/** Ctrl/Cmd+K toggles the palette (main forwards the key); the palette also closes itself. */
-export function useCommandPalette(): { open: boolean; setOpen: (open: boolean) => void } {
+/**
+ * Ctrl/Cmd+K toggles the palette (main forwards the key); the palette also closes itself.
+ *
+ * `openWith` is the omnibox's `@command <query>` door — it opens the palette with that text already in
+ * the search box. The seed is deliberately ONE-SHOT: a Ctrl+K open clears it, so the next palette a
+ * user summons by keyboard is never silently pre-filtered by something they typed minutes ago.
+ */
+export function useCommandPalette(): {
+  open: boolean;
+  query: string;
+  setOpen: (open: boolean) => void;
+  openWith: (query: string) => void;
+} {
   const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState('');
   useEffect(
     () =>
       window.tepegoz.onCommandPaletteOpen(() => {
         // A toggle, not just an open: `before-input-event` fires in every focus context, so a second
         // Ctrl+K while the palette is up closes it — the behaviour the old renderer binding had.
+        setQuery('');
         setOpen((cur) => !cur);
       }),
     [],
   );
-  return { open, setOpen };
+  const openWith = useCallback((seed: string): void => {
+    setQuery(seed);
+    setOpen(true);
+  }, []);
+  return { open, query, setOpen, openWith };
 }

@@ -57,10 +57,18 @@ const labels: OmniboxSuggestLabels = {
   download: 'Download',
   skill: 'Skill',
   commandNoResults: 'Nothing matched',
+  commandPalette: 'Search the command palette',
+  paletteSearch: 'Command palette: {query}',
+  paletteOpen: 'Open the command palette',
+  paletteHint: 'Opens the command palette with what you typed',
 };
 
+const onOpenPalette = vi.fn();
+
 const render = () =>
-  renderHook(() => useOmniboxAndHistory(tabsRef, labels, bookmarksRef, onCloseSurface));
+  renderHook(() =>
+    useOmniboxAndHistory(tabsRef, labels, bookmarksRef, onCloseSurface, onOpenPalette),
+  );
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -198,6 +206,17 @@ describe('the @-command handlers', () => {
     act(() => result.current.onOpenDownloadFromOmnibox('d1'));
     expect(onCloseSurface).toHaveBeenCalled();
     expect(bridge.navigateTab).toHaveBeenCalledWith('tepegoz://downloads');
+  });
+
+  it('@command hands the query to the palette instead of navigating or running anything', () => {
+    // The bridge is a hand-off. If this surface answered `@command` itself, the address bar and the
+    // palette would keep two copies of "what can this browser do" and drift apart.
+    const { result } = render();
+    act(() => result.current.onOpenPaletteFromOmnibox('settings'));
+    expect(onCloseSurface).toHaveBeenCalled();
+    expect(onOpenPalette).toHaveBeenCalledWith('settings');
+    expect(bridge.navigateTab).not.toHaveBeenCalled();
+    expect(bridge.runAgent).not.toHaveBeenCalled();
   });
 
   it('activate-tab closes the surface and switches tab', () => {

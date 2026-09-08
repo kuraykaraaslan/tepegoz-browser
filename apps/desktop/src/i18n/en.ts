@@ -28,7 +28,7 @@ export const en = {
     omniboxQuickAppearance: 'Open Appearance settings',
     omniboxQuickLanguage: 'Open Language & region settings',
     omniboxQuickPrivacy: 'Open Privacy settings',
-    // ── Omnibox command mode (`@agent` / `@download` / `@skill`) ───────────────────────────────────
+    // ── Omnibox command mode (`@agent` / `@download` / `@skill` / `@command`) ────────────────────
     // `@agent` is the ONE place the address bar crosses into AI, and only ever from a prefix the user
     // typed on purpose. `omniboxAgentHint` therefore says out loud what pressing Enter will do —
     // Comet's mistake was ordinary text becoming a model prompt with nothing telling the user.
@@ -39,6 +39,13 @@ export const en = {
     omniboxCommandAgent: 'Give the agent a task',
     omniboxCommandDownload: 'Find something you downloaded',
     omniboxCommandSkill: 'Run a saved skill',
+    // `@command` is a HAND-OFF, not a second command list: it opens the Command Palette (Ctrl+K)
+    // with the typed query already in its box. The hint names the palette so the user knows where
+    // they are being taken before they press Enter.
+    omniboxCommandPalette: 'Search the command palette',
+    omniboxPaletteSearch: 'Command palette: {query}',
+    omniboxPaletteOpen: 'Open the command palette',
+    omniboxPaletteHint: 'Opens the command palette (Ctrl+K) with what you typed',
     omniboxDownload: 'Download',
     omniboxSkill: 'Skill',
     omniboxCommandNoResults: 'Nothing matched',

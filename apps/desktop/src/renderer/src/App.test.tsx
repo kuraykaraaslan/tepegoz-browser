@@ -104,6 +104,7 @@ function omniboxHistoryFixture(): OmniboxHistoryResult {
     onAgentTaskFromOmnibox: vi.fn(),
     onRunSkillFromOmnibox: vi.fn(),
     onOpenDownloadFromOmnibox: vi.fn(),
+    onOpenPaletteFromOmnibox: vi.fn(),
   };
 }
 
@@ -134,7 +135,12 @@ beforeEach(() => {
   vi.mocked(useOmniboxAndHistory).mockReturnValue(omniboxHistoryFixture());
   vi.mocked(useReader).mockReturnValue(readerFixture());
   vi.mocked(useWindowMaximized).mockReturnValue(false);
-  vi.mocked(useCommandPalette).mockReturnValue({ open: false, setOpen: vi.fn() });
+  vi.mocked(useCommandPalette).mockReturnValue({
+    open: false,
+    query: '',
+    setOpen: vi.fn(),
+    openWith: vi.fn(),
+  });
   bridge.onReaderToggle.mockImplementation(() => () => undefined);
   bridge.updatePreferences.mockImplementation(() => Promise.resolve({}));
   Object.defineProperty(window, 'tepegoz', { configurable: true, value: bridge });
@@ -413,7 +419,12 @@ describe('App', () => {
 
   it('opens the command palette from useCommandPalette state and closes it through setOpen(false)', () => {
     const setOpen = vi.fn();
-    vi.mocked(useCommandPalette).mockReturnValue({ open: true, setOpen });
+    vi.mocked(useCommandPalette).mockReturnValue({
+      open: true,
+      query: '',
+      setOpen,
+      openWith: vi.fn(),
+    });
     render(<App />);
     const call = vi.mocked(CommandPaletteHost).mock.calls.at(-1)!;
     expect(call[0].open).toBe(true);
