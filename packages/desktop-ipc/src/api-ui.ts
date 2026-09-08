@@ -134,6 +134,11 @@ export interface UiApi {
   /** Open a new private (disposable) window. */
   openPrivateWindow(): Promise<void>;
   exportBookmarks(): Promise<string>;
+  /** The whole downloads list as CSV (filename, url, source origin, total bytes, status, risk,
+   *  created/completed ISO) for the user to save. Renderer-untrusted: it receives only the string
+   *  and hands it to the browser download path — main never writes a file, and no on-disk paths,
+   *  hashes or quarantine internals are included. */
+  exportDownloads(): Promise<string>;
   /** Replace one bookmark's tags. Returns the stored (normalized) display forms. */
   setBookmarkTags(id: string, tags: string[]): Promise<string[]>;
   /** Every tag in use, with how many bookmarks carry it. */

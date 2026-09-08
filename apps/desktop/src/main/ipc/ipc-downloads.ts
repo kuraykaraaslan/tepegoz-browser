@@ -1,8 +1,10 @@
 import { BrowserWindow, dialog, shell } from 'electron';
 import { IpcChannels, type DownloadRecord } from '@tepegoz/desktop-ipc';
 import { DownloadCommandInputSchema } from '@tepegoz/desktop-ipc/schemas';
+import { DownloadStore, serializeDownloadsCsv } from '@tepegoz/persistence';
 import PreferenceStore from '@tepegoz/preferences';
 import DownloadService from '../downloads/download-service.electron';
+import { getDb } from '../db/database.electron';
 import TabManager from '../tabs';
 import { handle, handleAsync } from './ipc-helpers';
 
@@ -22,6 +24,16 @@ export function registerDownloadsIpc(): void {
   // the settings page was looping the id-addressed command instead — N round trips and N broadcasts
   // for one user action, with no count to report back.
   handle(IpcChannels.downloadsClearFinished, (): number => DownloadService.clearTerminal());
+
+  handle(IpcChannels.downloadsExport, (): string => {
+    // A local-first browser whose data cannot leave it is not local-first (same reasoning as
+    // bookmarks/history export). CSV so a spreadsheet can open it; no import side exists. The
+    // renderer is untrusted, so it only receives the string and runs the Blob download itself —
+    // main never writes a file, and the projected columns carry no on-disk path, hash or
+    // quarantine internals.
+    const db = getDb();
+    return serializeDownloadsCsv(db === null ? [] : DownloadStore.exportRows(db));
+  });
 
   handleAsync(
     IpcChannels.downloadsPickDirectory,

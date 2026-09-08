@@ -2,6 +2,8 @@ export const en = {
   title: 'Downloads',
   empty: 'No downloads yet',
   loading: 'Loading...',
+  /** Header button: save the whole downloads list as a CSV file. */
+  exportAll: 'Export',
   progressUnknown: 'Progress unknown',
   /** Appended after a transfer speed, e.g. "1.2 MB" + "/s". */
   perSecond: '/s',

@@ -121,6 +121,30 @@ function toParams(record: PersistedDownload): Record<string, unknown> {
   };
 }
 
+/**
+ * One row of a user-initiated downloads export ({@link serializeDownloadsCsv}). Only the
+ * user-meaningful, non-sensitive columns: what was downloaded, where from, how big, how it ended and
+ * when. Deliberately NOT projected — a portable "list of things I downloaded" has no use for them and
+ * some are outright unsafe to hand out: local filesystem paths (`quarantinePath`/`finalPath`), the
+ * content hash (`sha256`), the redirect chain / validators, the partition, and the quarantine/trust
+ * internals.
+ */
+export interface DownloadExportRow {
+  filename: string;
+  /** The URL the bytes came from. */
+  url: string;
+  /** Origin of the page the download was started from, or `''` when it was not recorded. */
+  sourceOrigin: string;
+  /** Total size in bytes, or `null` when the server never declared one. */
+  totalBytes: number | null;
+  status: DownloadRecord['status'];
+  risk: DownloadRecord['risk'];
+  /** Epoch ms the download was started. */
+  createdAt: number;
+  /** Epoch ms it finished, or `null` when it never did. */
+  completedAt: number | null;
+}
+
 export class DownloadStore {
   static list(db: Db, limit = 500): PersistedDownload[] {
     const n = Math.max(1, Math.min(Math.trunc(limit), 1000));
@@ -128,6 +152,41 @@ export class DownloadStore {
       .prepare('SELECT * FROM downloads ORDER BY updated_at DESC LIMIT ?')
       .all(n) as DownloadRow[];
     return rows.map(rowToDownload);
+  }
+
+  /**
+   * Every download row, newest first, for a user-initiated export ({@link serializeDownloadsCsv}).
+   * No 500-row cap — this is a deliberate user action, not a hot path — and a hand-picked column set
+   * (see {@link DownloadExportRow}): no on-disk paths, no hash, no quarantine internals. Ordered by
+   * `created_at` because a download belongs to the moment it was started (the same reasoning as
+   * `clearTerminalSince`).
+   */
+  static exportRows(db: Db): DownloadExportRow[] {
+    const rows = db
+      .prepare(
+        `SELECT filename, url, source_origin, total_bytes, status, risk, created_at, completed_at
+         FROM downloads ORDER BY created_at DESC`,
+      )
+      .all() as {
+      filename: string;
+      url: string;
+      source_origin: string | null;
+      total_bytes: number | null;
+      status: DownloadRecord['status'];
+      risk: DownloadRecord['risk'];
+      created_at: number;
+      completed_at: number | null;
+    }[];
+    return rows.map((r) => ({
+      filename: r.filename,
+      url: r.url,
+      sourceOrigin: r.source_origin ?? '',
+      totalBytes: r.total_bytes,
+      status: r.status,
+      risk: r.risk,
+      createdAt: r.created_at,
+      completedAt: r.completed_at,
+    }));
   }
 
   static upsert(db: Db, record: PersistedDownload): void {

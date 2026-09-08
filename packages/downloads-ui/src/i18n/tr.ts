@@ -4,6 +4,7 @@ export const tr: DownloadsStrings = {
   title: 'İndirilenler',
   empty: 'Henüz indirme yok',
   loading: 'Yükleniyor...',
+  exportAll: 'Dışa aktar',
   progressUnknown: 'İlerleme bilinmiyor',
   perSecond: '/sn',
   etaLeft: 'kaldı',

@@ -223,6 +223,10 @@ export const IpcChannels = {
    *  this by issuing one `downloads:command` per record — N round trips for a bulk operation main
    *  already had (`clearTerminal`) and simply never exposed. */
   downloadsClearFinished: 'downloads:clear-finished',
+  /** Renderer→main: the whole downloads list as a CSV string for the user to save. Renderer is
+   *  untrusted, so it only gets the string and runs the Blob download itself; main never writes a
+   *  file. No on-disk paths, hashes or quarantine internals. */
+  downloadsExport: 'downloads:export',
   /** Native directory picker for the download location, seeded with the current one. */
   downloadsPickDirectory: 'downloads:pick-directory',
   /** Open the download folder in the OS file manager. `false` ⇒ the path could not be opened. */

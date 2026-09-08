@@ -15,12 +15,14 @@ export const downloadsApi: Pick<
   | 'listDownloads'
   | 'commandDownload'
   | 'clearFinishedDownloads'
+  | 'exportDownloads'
   | 'pickDownloadDirectory'
   | 'openDownloadFolder'
   | 'onDownloadsState'
 > = {
   listDownloads: () => invoke<DownloadRecord[]>(IpcChannels.downloadsList),
   clearFinishedDownloads: () => invoke<number>(IpcChannels.downloadsClearFinished),
+  exportDownloads: () => invoke<string>(IpcChannels.downloadsExport),
   pickDownloadDirectory: () =>
     invoke<{ path: string; cancelled: boolean }>(IpcChannels.downloadsPickDirectory),
   openDownloadFolder: () => invoke<boolean>(IpcChannels.downloadsOpenFolder),

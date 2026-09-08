@@ -41,6 +41,17 @@ vi.mock('@tepegoz/preferences', () => ({
   default: { getAll: () => ({ downloadDirectory: prefs.downloadDirectory }) },
 }));
 
+const getDb = vi.hoisted(() => vi.fn<() => unknown>(() => ({ __db: true })));
+vi.mock('../db/database.electron', () => ({ getDb }));
+
+const DownloadStore = vi.hoisted(() => ({
+  exportRows: vi.fn(() => [{ filename: 'f.txt' }]),
+}));
+const serializeDownloadsCsv = vi.hoisted(() =>
+  vi.fn((rows: unknown) => `csv:${String((rows as unknown[]).length)}`),
+);
+vi.mock('@tepegoz/persistence', () => ({ DownloadStore, serializeDownloadsCsv }));
+
 const TRUSTED = 'app://tepegoz/chrome.html';
 vi.mock('../lib/trusted-origin', () => ({ isTrustedAppUrl: (u: string) => u === TRUSTED }));
 vi.mock('../lib/i18n-main', () => ({
@@ -77,6 +88,9 @@ beforeEach(() => {
   svc.list.mockClear();
   svc.command.mockClear();
   svc.clearTerminal.mockClear();
+  getDb.mockReset().mockReturnValue({ __db: true });
+  DownloadStore.exportRows.mockClear().mockReturnValue([{ filename: 'f.txt' }]);
+  serializeDownloadsCsv.mockClear();
   shellMock.openPath.mockClear();
   shellMock.openPath.mockResolvedValue('');
   bw.fromWebContents.mockReturnValue({ id: 'win' });
@@ -92,6 +106,7 @@ describe('registerDownloadsIpc', () => {
         IpcChannels.downloadsList,
         IpcChannels.downloadsCommand,
         IpcChannels.downloadsClearFinished,
+        IpcChannels.downloadsExport,
         IpcChannels.downloadsPickDirectory,
         IpcChannels.downloadsOpenFolder,
       ].sort(),
@@ -149,6 +164,14 @@ describe('registerDownloadsIpc', () => {
 
   it('downloads:list returns the service list', () => {
     expect(h.handlers.get(IpcChannels.downloadsList)?.(ev, undefined)).toEqual(['rec']);
+  });
+
+  it('downloads:export serializes the exported rows to CSV (empty list when no DB)', () => {
+    expect(h.handlers.get(IpcChannels.downloadsExport)?.(ev, undefined)).toBe('csv:1');
+    expect(DownloadStore.exportRows).toHaveBeenCalledWith({ __db: true });
+    getDb.mockReturnValue(null);
+    expect(h.handlers.get(IpcChannels.downloadsExport)?.(ev, undefined)).toBe('csv:0');
+    expect(DownloadStore.exportRows).toHaveBeenCalledTimes(1);
   });
 
   it('downloads:command validates then calls the service with the sender window active tab', async () => {

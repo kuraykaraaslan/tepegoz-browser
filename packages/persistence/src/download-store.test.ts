@@ -38,6 +38,48 @@ describe('DownloadStore', () => {
     db.close();
   });
 
+  it('exportRows returns every row newest-first, with no path/hash/quarantine columns', () => {
+    const db = openDatabase(':memory:');
+    migrate(db);
+
+    DownloadStore.upsert(
+      db,
+      download({ id: 'old', filename: 'old.txt', createdAt: 100, completedAt: 150, sha256: undefined }),
+    );
+    DownloadStore.upsert(
+      db,
+      download({
+        id: 'new',
+        filename: 'new.txt',
+        url: 'https://cdn.example/new.txt',
+        status: 'in_progress',
+        createdAt: 300,
+        totalBytes: null,
+      }),
+    );
+
+    const rows = DownloadStore.exportRows(db);
+    expect(rows.map((r) => r.filename)).toEqual(['new.txt', 'old.txt']);
+    expect(rows[0]).toEqual({
+      filename: 'new.txt',
+      url: 'https://cdn.example/new.txt',
+      sourceOrigin: 'https://example.com',
+      totalBytes: null,
+      status: 'in_progress',
+      risk: 'normal',
+      createdAt: 300,
+      completedAt: null,
+    });
+    // No leak of on-disk paths, the content hash, or quarantine internals.
+    for (const r of rows) {
+      expect(Object.keys(r).sort()).toEqual(
+        ['completedAt', 'createdAt', 'filename', 'risk', 'sourceOrigin', 'status', 'totalBytes', 'url'],
+      );
+    }
+
+    db.close();
+  });
+
   it('clears terminal rows only', () => {
     const db = openDatabase(':memory:');
     migrate(db);

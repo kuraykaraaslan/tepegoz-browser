@@ -19,6 +19,7 @@ export function DownloadsPageSurface() {
           list={() => window.tepegoz.listDownloads()}
           command={(input) => window.tepegoz.commandDownload(input)}
           subscribe={(callback) => window.tepegoz.onDownloadsState(callback)}
+          onExport={() => window.tepegoz.exportDownloads()}
         />
       </div>
     </I18nProvider>

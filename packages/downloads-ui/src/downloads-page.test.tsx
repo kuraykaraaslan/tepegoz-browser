@@ -29,19 +29,33 @@ function record(over: Partial<DownloadRecord> = {}): DownloadRecord {
   };
 }
 
-function renderPage(records: DownloadRecord[], locale: 'en' | 'tr' = 'en') {
+function renderPage(
+  records: DownloadRecord[],
+  locale: 'en' | 'tr' = 'en',
+  over: { onExport?: () => Promise<string> } = {},
+) {
   const list = vi.fn<() => Promise<DownloadRecord[]>>(() => Promise.resolve(records));
   const command = vi.fn<(input: unknown) => Promise<void>>(() => Promise.resolve());
   const subscribe = vi.fn<(cb: (s: DownloadsState) => void) => () => void>(() => () => undefined);
+  const onExport = over.onExport === undefined ? undefined : vi.fn(over.onExport);
   render(
     <I18nProvider locale={locale}>
-      <DownloadsPage list={list} command={command} subscribe={subscribe} />
+      <DownloadsPage
+        list={list}
+        command={command}
+        subscribe={subscribe}
+        {...(onExport === undefined ? {} : { onExport })}
+      />
     </I18nProvider>,
   );
-  return { list, command, subscribe };
+  return { list, command, subscribe, onExport };
 }
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  vi.unstubAllGlobals();
+  vi.restoreAllMocks();
+});
 
 describe('DownloadsPage', () => {
   it("warns that an archive wasn't scanned inside — only while it is still openable", async () => {
@@ -301,6 +315,38 @@ describe('every row action reaches the host', () => {
       expect(command, `${status} → ${label}`).toHaveBeenCalledWith({ id: 'row', action });
       cleanup();
     }
+  });
+});
+
+describe('exporting the downloads list', () => {
+  it('offers Export only when the host can produce a file', async () => {
+    renderPage([record({ status: 'completed' })]);
+    await screen.findByText('file.bin');
+    expect(screen.queryByRole('button', { name: 'Export' })).toBeNull();
+  });
+
+  it('downloads the CSV the host returns via a blob link', async () => {
+    const createObjectURL = vi.fn(() => 'blob:fake');
+    const revokeObjectURL = vi.fn();
+    vi.stubGlobal('URL', { ...URL, createObjectURL, revokeObjectURL });
+    const click = vi.fn();
+    const realCreate = document.createElement.bind(document);
+    vi.spyOn(document, 'createElement').mockImplementation((tag: string) => {
+      const el = realCreate(tag);
+      if (tag === 'a') el.click = click;
+      return el;
+    });
+
+    const { onExport } = renderPage([record({ status: 'completed' })], 'en', {
+      onExport: () => Promise.resolve('filename,url\r\n'),
+    });
+    await screen.findByText('file.bin');
+    fireEvent.click(screen.getByRole('button', { name: 'Export' }));
+
+    await waitFor(() => expect(onExport).toHaveBeenCalledTimes(1));
+    expect(createObjectURL).toHaveBeenCalledWith(expect.any(Blob));
+    expect(click).toHaveBeenCalled();
+    expect(revokeObjectURL).toHaveBeenCalledWith('blob:fake');
   });
 });
 

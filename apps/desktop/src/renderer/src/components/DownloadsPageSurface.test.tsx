@@ -34,6 +34,7 @@ const bridge = {
   listDownloads: vi.fn<() => Promise<DownloadRecord[]>>(() => Promise.resolve([])),
   commandDownload: vi.fn(() => Promise.resolve()),
   onDownloadsState: vi.fn(() => () => undefined),
+  exportDownloads: vi.fn<() => Promise<string>>(() => Promise.resolve('filename,url\r\n')),
 };
 
 beforeEach(() => {
@@ -49,6 +50,7 @@ beforeEach(() => {
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
+  vi.restoreAllMocks();
 });
 
 describe('DownloadsPageSurface', () => {
@@ -63,5 +65,22 @@ describe('DownloadsPageSurface', () => {
     render(<DownloadsPageSurface />);
     fireEvent.click(await screen.findByRole('button', { name: /Open/ }));
     expect(bridge.commandDownload).toHaveBeenCalledWith({ id: 'd1', action: 'open' });
+  });
+
+  it('wires the CSV export button to the bridge', async () => {
+    vi.stubGlobal('URL', {
+      ...URL,
+      createObjectURL: vi.fn(() => 'blob:x'),
+      revokeObjectURL: vi.fn(),
+    });
+    const realCreate = document.createElement.bind(document);
+    vi.spyOn(document, 'createElement').mockImplementation((tag: string) => {
+      const el = realCreate(tag);
+      if (tag === 'a') el.click = vi.fn();
+      return el;
+    });
+    render(<DownloadsPageSurface />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Export' }));
+    await waitFor(() => expect(bridge.exportDownloads).toHaveBeenCalledTimes(1));
   });
 });

@@ -25,14 +25,16 @@ beforeEach(() => {
 });
 
 describe('request/response methods', () => {
-  it('list / clear / pick-dir / open-folder hit their channels with no payload', () => {
+  it('list / clear / export / pick-dir / open-folder hit their channels with no payload', () => {
     void downloadsApi.listDownloads();
     void downloadsApi.clearFinishedDownloads();
+    void downloadsApi.exportDownloads();
     void downloadsApi.pickDownloadDirectory();
     void downloadsApi.openDownloadFolder();
     expect(invoke.mock.calls.map((c) => c[0])).toEqual([
       IpcChannels.downloadsList,
       IpcChannels.downloadsClearFinished,
+      IpcChannels.downloadsExport,
       IpcChannels.downloadsPickDirectory,
       IpcChannels.downloadsOpenFolder,
     ]);

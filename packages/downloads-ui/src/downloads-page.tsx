@@ -26,6 +26,9 @@ export interface DownloadsPageProps {
   list: () => Promise<DownloadRecord[]>;
   command: (input: DownloadCommandInput) => Promise<void>;
   subscribe: (callback: (state: DownloadsState) => void) => () => void;
+  /** Produce the whole downloads list as a CSV string. Absent ⇒ no Export button (the host cannot
+   *  make the file). */
+  onExport?: () => Promise<string>;
 }
 
 function formatBytes(
@@ -73,10 +76,31 @@ function liveRateSuffix(
   return speed + eta;
 }
 
-export function DownloadsPage({ list, command, subscribe }: Readonly<DownloadsPageProps>) {
+export function DownloadsPage({
+  list,
+  command,
+  subscribe,
+  onExport,
+}: Readonly<DownloadsPageProps>) {
   const t = useT(downloadsDict);
   const [items, setItems] = useState<DownloadRecord[]>([]);
   const [loading, setLoading] = useState(true);
+
+  /**
+   * Export goes renderer → main for the data, then a Blob + `<a download>` in this (trusted chrome)
+   * document — the same path bookmarks, history and password export use. "Renderer is untrusted"
+   * stays intact: main never writes a file, and the string never leaves the device.
+   */
+  async function handleExport(): Promise<void> {
+    if (onExport === undefined) return;
+    const csv = await onExport();
+    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'tepegoz-downloads.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -115,6 +139,15 @@ export function DownloadsPage({ list, command, subscribe }: Readonly<DownloadsPa
         <div className="mx-auto flex max-w-4xl items-center gap-3">
           <FontAwesomeIcon icon={faDownload} className="h-4 w-4 text-text-secondary" aria-hidden />
           <h1 className="text-base font-semibold">{t.title}</h1>
+          {onExport !== undefined && (
+            <button
+              type="button"
+              onClick={() => void handleExport()}
+              className="ml-auto rounded-md border border-border px-3 py-1.5 text-sm text-text-secondary hover:bg-surface-overlay hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus"
+            >
+              {t.exportAll}
+            </button>
+          )}
         </div>
       </div>
 
