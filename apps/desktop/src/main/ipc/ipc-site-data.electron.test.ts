@@ -45,7 +45,7 @@ const journalAppend = vi.hoisted(() => vi.fn());
 vi.mock('@tepegoz/persistence', () => ({ EventJournal: { append: journalAppend } }));
 const vaultList = vi.hoisted(() => vi.fn(() => Promise.resolve([] as { url: string }[])));
 vi.mock('@tepegoz/password-vault', () => ({ passwordVault: { list: vaultList } }));
-vi.mock('../window', () => ({ APP_PARTITION: 'persist:tepegoz-chrome' }));
+vi.mock('../window', () => ({ appPartition: () => 'persist:tepegoz-chrome' }));
 const db = vi.hoisted((): { value: unknown } => ({ value: {} }));
 vi.mock('../db/database.electron', () => ({ getDb: () => db.value }));
 

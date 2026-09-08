@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 import {
   affectedByGeneralChange,
   affectedByGroupChange,
@@ -11,6 +11,12 @@ import {
   type TabBindingState,
 } from './connection-binding';
 import { privatePartitionKey } from './private-partition';
+import {
+  appChromePartition,
+  directBrowsingPartition,
+  resetProfilePartitionScope,
+  setProfilePartitionScope,
+} from './partition-scope';
 
 const conn = (id: string): ScopedBinding => ({ kind: 'connection', connectionId: id });
 const inherit: ScopedBinding = { kind: 'inherit' };
@@ -77,6 +83,33 @@ describe('partition keys', () => {
 
   it('a tunneled resolution hangs off the same base as a `--conn-` sibling', () => {
     expect(partitionKeyFor({ connectionId: 'vpn-a' })).toBe('persist:tepegoz-web--conn-vpn-a');
+  });
+
+  describe('with a profile partition scope set (multi-profile, ADR-0045)', () => {
+    afterEach(() => resetProfilePartitionScope());
+
+    it('scopes the Direct partition to the profile id', () => {
+      setProfilePartitionScope('profile-2');
+      expect(directBrowsingPartition()).toBe('persist:tepegoz-profile-profile-2');
+      expect(partitionKeyFor({ connectionId: null })).toBe('persist:tepegoz-profile-profile-2');
+    });
+
+    it('composes a `--conn-` tunnel on the scoped base, and the app partition as `--app`', () => {
+      setProfilePartitionScope('default');
+      expect(partitionKeyFor({ connectionId: 'vpn-a' })).toBe(
+        'persist:tepegoz-profile-default--conn-vpn-a',
+      );
+      expect(appChromePartition()).toBe('persist:tepegoz-profile-default--app');
+      // The app partition must NOT look like a browsing partition to a bare prefix match.
+      expect(appChromePartition().startsWith(`${directBrowsingPartition()}--conn-`)).toBe(false);
+      expect(appChromePartition()).not.toBe(directBrowsingPartition());
+    });
+
+    it('a tunneled scoped partition is still recognised as tunneled', () => {
+      setProfilePartitionScope('default');
+      expect(isTunneledPartition(partitionKeyFor({ connectionId: 'vpn-a' }))).toBe(true);
+      expect(isTunneledPartition(partitionKeyFor({ connectionId: null }))).toBe(false);
+    });
   });
 
   it('two groups on the SAME connection share one partition — groups are a binding layer, not a partition axis', () => {

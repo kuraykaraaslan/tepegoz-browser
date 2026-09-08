@@ -24,6 +24,7 @@ import { registerCertificateHandler } from './auth/certificate-broker';
 import { registerClientCertificateHandler } from './auth/client-certificate-broker';
 import { initStores } from './stores.electron';
 import { resolveAndPinProfile } from './profiles/profile-boot';
+import { setProfilePartitionScope } from '@tepegoz/tab-engine';
 import { applyNativeThemeSource } from './lib/surface-theme';
 import { initHosts, openWindow } from './browser-windows';
 import { initTray, revealAllWindows } from './tray';
@@ -132,6 +133,9 @@ registerInternalPagesScheme();
 // migration and reads the registry's last-active pointer. MUST precede requestSingleInstanceLock()
 // below, whose lock is keyed by the user-data dir and therefore yields one instance PER PROFILE.
 const CURRENT_PROFILE_ID = resolveAndPinProfile();
+// Every Chromium partition name this process builds is scoped to the profile from here on
+// (`persist:tepegoz-profile-<id>` / `--app`), before any partition is materialized into a Session.
+setProfilePartitionScope(CURRENT_PROFILE_ID);
 
 // Crash counter + safe-mode decision (ADR-0038). MUST run here: after the userData pin (the record lives
 // in that directory) and before anything else can fail, because every gate below asks `isSafeMode()` and

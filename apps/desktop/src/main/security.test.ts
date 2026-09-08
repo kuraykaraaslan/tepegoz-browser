@@ -41,7 +41,7 @@ vi.mock('electron', () => ({
   },
   session: { fromPartition: () => ({ webRequest: { onHeadersReceived } }) },
 }));
-vi.mock('./window', () => ({ APP_PARTITION: 'persist:app' }));
+vi.mock('./window', () => ({ appPartition: () => 'persist:app' }));
 vi.mock('./internal-pages/protocol', () => ({ INTERNAL_PAGES_SCHEME: 'tepegoz' }));
 
 const allowed = new Set<string>();

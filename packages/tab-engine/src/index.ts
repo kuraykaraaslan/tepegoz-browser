@@ -19,5 +19,6 @@ export {
   type TabRecord,
 } from './types';
 export * from './task-metrics';
+export * from './partition-scope';
 export * from './connection-binding';
 export * from './private-partition';

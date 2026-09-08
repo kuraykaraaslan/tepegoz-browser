@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { DIRECT_PARTITION, partitionKeyFor } from './connection-binding';
+import { partitionKeyFor } from './connection-binding';
+import { directBrowsingPartition } from './partition-scope';
 import { isPrivatePartition, PRIVATE_PARTITION, privatePartitionKey } from './private-partition';
 
 /**
@@ -21,8 +22,8 @@ describe('the private partition is never persisted', () => {
   });
 
   it('is never the ordinary browsing partition, which IS persisted', () => {
-    expect(DIRECT_PARTITION.startsWith('persist:')).toBe(true);
-    expect(privatePartitionKey({ connectionId: null })).not.toBe(DIRECT_PARTITION);
+    expect(directBrowsingPartition().startsWith('persist:')).toBe(true);
+    expect(privatePartitionKey({ connectionId: null })).not.toBe(directBrowsingPartition());
     expect(privatePartitionKey({ connectionId: 'tor' })).not.toBe(
       partitionKeyFor({ connectionId: 'tor' }),
     );
@@ -58,7 +59,7 @@ describe('isPrivatePartition', () => {
   });
 
   it('does NOT claim the ordinary partitions', () => {
-    expect(isPrivatePartition(DIRECT_PARTITION)).toBe(false);
+    expect(isPrivatePartition(directBrowsingPartition())).toBe(false);
     expect(isPrivatePartition(partitionKeyFor({ connectionId: 'tor' }))).toBe(false);
     expect(isPrivatePartition('persist:tepegoz-app')).toBe(false);
   });

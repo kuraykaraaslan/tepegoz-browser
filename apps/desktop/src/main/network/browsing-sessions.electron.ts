@@ -1,7 +1,7 @@
 import { session, type Session } from 'electron';
 import { Logger } from '@tepegoz/libs';
 import {
-  DIRECT_PARTITION,
+  directBrowsingPartition,
   isPrivatePartition,
   isTunneledPartition,
   PRIVATE_PARTITION,
@@ -33,8 +33,10 @@ import { BLACKHOLE_PROXY_CONFIG } from '@tepegoz/security-policy';
  * no traffic — the correct outcome when we cannot prove the filtering/quarantine plane is attached.
  */
 
-/** Every tunnel partition is a `--conn-` sibling of the Direct one — see `partitionKeyFor`. */
-const TUNNEL_PREFIX = `${DIRECT_PARTITION}--conn-`;
+/** Every tunnel partition is a `--conn-` sibling of the Direct one — see `partitionKeyFor`. A function,
+ *  not a constant, because the Direct partition name carries the process's profile scope (ADR-0045),
+ *  fixed at boot before any of this runs. */
+const tunnelPrefix = (): string => `${directBrowsingPartition()}--conn-`;
 
 export type BrowsingSessionAttacher = (ses: Session, partition: string) => void;
 
@@ -157,7 +159,7 @@ const BrowsingSessions = {
 
   /** The base, untunneled partition every page used before Phase 5 and every Direct tab still uses. */
   direct(): Session {
-    return BrowsingSessions.ensure(DIRECT_PARTITION);
+    return BrowsingSessions.ensure(directBrowsingPartition());
   },
 
   /**
@@ -192,8 +194,8 @@ const BrowsingSessions = {
   /** Is this one of OUR browsing partitions? Guards call sites that must never touch app chrome. */
   isBrowsingPartition(partition: string): boolean {
     return (
-      partition === DIRECT_PARTITION ||
-      partition.startsWith(TUNNEL_PREFIX) ||
+      partition === directBrowsingPartition() ||
+      partition.startsWith(tunnelPrefix()) ||
       isPrivatePartition(partition)
     );
   },
@@ -272,7 +274,7 @@ const BrowsingSessions = {
    *  in reach of a destructive call written for a different lifecycle. Per-`WebContents` hardening asks
    *  {@link isTunnelSession} instead, which covers both spellings because it only ever tightens. */
   isTunnelPartition(partition: string): boolean {
-    return partition.startsWith(TUNNEL_PREFIX);
+    return partition.startsWith(tunnelPrefix());
   },
 
   /** The partition a live session was created under, or `null` if it is not one of ours (app chrome,

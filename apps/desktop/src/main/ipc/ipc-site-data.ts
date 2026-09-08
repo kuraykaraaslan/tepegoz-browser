@@ -12,7 +12,7 @@ import {
 import { clearBrowsingData } from '../privacy/clear-browsing-data.electron';
 import { EventJournal } from '@tepegoz/persistence';
 import { passwordVault } from '@tepegoz/password-vault';
-import { APP_PARTITION } from '../window';
+import { appPartition } from '../window';
 import BrowsingSessions from '../network/browsing-sessions.electron';
 import { getDb } from '../db/database.electron';
 import { handleAsync } from './ipc-helpers';
@@ -108,9 +108,9 @@ export function registerSiteDataIpc(): void {
     const plan = await buildPlan(SiteUrlSchema.parse(payload));
     if (plan === null) return null;
 
-    // Browsing partitions only, and ALL of them. APP_PARTITION is the browser's own chrome; a site clear
+    // Browsing partitions only, and ALL of them. the app-chrome partition is the browser's own chrome; a site clear
     // that reached into it would be clearing something the user never asked about.
-    const appSession = session.fromPartition(APP_PARTITION);
+    const appSession = session.fromPartition(appPartition());
     const targets = BrowsingSessions.all().filter((s) => s.session !== appSession);
     if (targets.length !== BrowsingSessions.all().length) {
       Logger.warn('Refusing a site clear on a partition shared with the app chrome');

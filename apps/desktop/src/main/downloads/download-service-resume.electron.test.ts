@@ -20,7 +20,7 @@ const sessions = vi.hoisted(() => {
 vi.mock('node:fs', () => fsMock);
 vi.mock('./download-service-store.electron', () => store);
 vi.mock('../network/browsing-sessions.electron', () => ({ default: { ensure: sessions.ensure } }));
-vi.mock('@tepegoz/tab-engine', () => ({ DIRECT_PARTITION: 'persist:tepegoz-web' }));
+vi.mock('@tepegoz/tab-engine', () => ({ directBrowsingPartition: () => 'persist:tepegoz-web' }));
 vi.mock('@tepegoz/libs', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@tepegoz/libs')>()),
   Logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },

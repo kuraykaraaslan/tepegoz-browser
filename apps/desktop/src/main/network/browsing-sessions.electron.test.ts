@@ -13,7 +13,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const DIRECT_PARTITION = 'persist:tepegoz-web';
 const PRIVATE_PARTITION = 'tepegoz-private';
 vi.mock('@tepegoz/tab-engine', () => ({
-  DIRECT_PARTITION,
+  directBrowsingPartition: () => DIRECT_PARTITION,
   PRIVATE_PARTITION,
   isPrivatePartition: (p: string) => p.startsWith('tepegoz-private'),
   isTunneledPartition: (p: string) => p.includes('--conn-'),

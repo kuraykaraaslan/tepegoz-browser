@@ -149,13 +149,13 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-it('CHROME_WEB_PREFERENCES keeps the hardening flags', () => {
-  expect(mod.CHROME_WEB_PREFERENCES).toMatchObject({
+it('chromeWebPreferences() keeps the hardening flags', () => {
+  expect(mod.chromeWebPreferences()).toMatchObject({
     contextIsolation: true,
     sandbox: true,
     nodeIntegration: false,
     webSecurity: true,
-    partition: mod.APP_PARTITION,
+    partition: mod.appPartition(),
   });
 });
 

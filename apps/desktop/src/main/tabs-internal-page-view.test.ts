@@ -20,7 +20,7 @@ const URLS = {
   INTERNAL_DEVELOPER_URL: 'tepegoz://developer/',
 };
 vi.mock('@tepegoz/desktop-ipc', () => URLS);
-vi.mock('./window', () => ({ CHROME_WEB_PREFERENCES: { preload: '/preload.js' } }));
+vi.mock('./window', () => ({ chromeWebPreferences: () => ({ preload: '/preload.js' }) }));
 vi.mock('./lib/surface-theme', () => ({ resolveSurfaceTheme: () => ({ color: '#101828' }) }));
 
 const observer = vi.hoisted(() => vi.fn());

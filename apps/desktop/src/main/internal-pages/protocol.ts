@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import { extname, join, resolve } from 'node:path';
 import { protocol, session } from 'electron';
-import { APP_PARTITION } from '../window';
+import { appPartition } from '../window';
 import { REAL_PAGE_HOSTS } from './real-page-hosts';
 
 /**
@@ -27,7 +27,7 @@ import { REAL_PAGE_HOSTS } from './real-page-hosts';
  * by: CSP content, `corsEnabled`, response header count, response size (tested to 2MB of pure-ASCII AND
  * of multi-byte-UTF-8 filler), concurrent requests, load-vs-attach ordering, or the real preload script —
  * an isolated minimal repro reproducing every one of those exactly still works. It reproduces ONLY when
- * `session.fromPartition(APP_PARTITION).webRequest.onHeadersReceived` (installed by `security.ts` for the
+ * `session.fromPartition(appPartition()).webRequest.onHeadersReceived` (installed by `security.ts` for the
  * CSP header) is registered on the SAME session as a `protocol.handle`-served SUBRESOURCE request — the
  * navigation request is unaffected either way. This looks like an Electron bug in that specific
  * combination (Electron 43.4.1), not something fixable from this module's response shape.
@@ -243,14 +243,14 @@ function getInlinedAppPage(): Promise<InlinedPage> {
  * path — everything else is a 404, not a guess (there is nothing to serve per-path any more: the whole
  * document is self-contained). Call AFTER `app.whenReady()`.
  *
- * Registered on the APP_PARTITION session specifically — NOT the top-level `protocol` module. Electron's
+ * Registered on the app-chrome partition's session specifically — NOT the top-level `protocol` module. Electron's
  * module-level `protocol.handle` binds to `session.defaultSession`; the chrome (and every internal-page
  * `WebContentsView`, `tabs-internal-page-view.ts`) lives on the NAMED `persist:tepegoz-app` partition, a
  * different session object with its own `protocol`. Registering on the wrong one means the scheme is
  * "privileged" but has no handler wherever it's actually loaded.
  */
 export function registerInternalPagesProtocol(): void {
-  session.fromPartition(APP_PARTITION).protocol.handle(INTERNAL_PAGES_SCHEME, async (request) => {
+  session.fromPartition(appPartition()).protocol.handle(INTERNAL_PAGES_SCHEME, async (request) => {
     let url: URL;
     try {
       url = new URL(request.url);

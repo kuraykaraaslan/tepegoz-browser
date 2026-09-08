@@ -1,5 +1,5 @@
 import { app, session } from 'electron';
-import { APP_PARTITION } from './window';
+import { appPartition } from './window';
 import { INTERNAL_PAGES_SCHEME } from './internal-pages/protocol';
 import WebPermissionBroker from './web-permissions/permission-broker';
 import type { WebPermissionCapability } from '@tepegoz/desktop-ipc';
@@ -110,7 +110,7 @@ export function installSecurity(): void {
   // (no `'unsafe-inline'`) would then block the page's inline script outright — dev only "works" by
   // accident, because dev's `chromeCsp` happens to add `'unsafe-inline'` for the Vite preamble.
   const csp = chromeCsp(!app.isPackaged);
-  session.fromPartition(APP_PARTITION).webRequest.onHeadersReceived((details, callback) => {
+  session.fromPartition(appPartition()).webRequest.onHeadersReceived((details, callback) => {
     if (details.url.startsWith(`${INTERNAL_PAGES_SCHEME}://`)) {
       callback({});
       return;

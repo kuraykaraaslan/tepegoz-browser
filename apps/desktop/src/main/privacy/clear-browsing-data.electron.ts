@@ -14,7 +14,7 @@ import {
   HistoryStore,
   type Db,
 } from '@tepegoz/persistence';
-import { APP_PARTITION } from '../window';
+import { appPartition } from '../window';
 import BrowsingSessions from '../network/browsing-sessions.electron';
 
 /**
@@ -22,7 +22,7 @@ import BrowsingSessions from '../network/browsing-sessions.electron';
  *
  * The three properties inherited from the per-site clear, because they were right there too:
  *
- * 1. **Only BROWSING partitions.** `APP_PARTITION` holds the browser's own chrome state, not the
+ * 1. **Only BROWSING partitions.** The app-chrome partition holds the browser's own chrome state, not the
  *    user's browsing, and clearing it would remove something nobody asked about.
  * 2. **EVERY browsing partition.** Since Phase 5 a tab bound to a VPN/Tor connection keeps its cookies
  *    in that connection's own partition. Stopping at the base partition would report success and leave
@@ -92,7 +92,7 @@ export async function clearBrowsingData(
 
   // The Chromium half. No time range exists here at any Electron version (see TIME_RANGEABLE_CATEGORIES
   // in shared-types) — these are all-or-nothing, which the dialog says out loud.
-  const appSession = session.fromPartition(APP_PARTITION);
+  const appSession = session.fromPartition(appPartition());
   const targets = BrowsingSessions.all().filter((s) => s.session !== appSession);
 
   if (wanted.has('cookies')) {

@@ -1,7 +1,7 @@
 import { statSync } from 'node:fs';
 import { planDownloadResume, type DownloadResumePlan } from '@tepegoz/downloads';
 import { AppError, Logger } from '@tepegoz/libs';
-import { DIRECT_PARTITION } from '@tepegoz/tab-engine';
+import { directBrowsingPartition } from '@tepegoz/tab-engine';
 import BrowsingSessions from '../network/browsing-sessions.electron';
 import type { ActiveDownload } from './download-service-model.electron';
 import { patch, type DownloadState } from './download-service-store.electron';
@@ -37,7 +37,7 @@ export function resumeInterrupted(
   if (record.quarantinePath === undefined)
     return { action: 'restart', offset: 0, reason: 'no-partial-file' };
 
-  const partition = record.partition ?? DIRECT_PARTITION;
+  const partition = record.partition ?? directBrowsingPartition();
   const ses = BrowsingSessions.ensure(partition);
   ses.createInterruptedDownload({
     path: record.quarantinePath,

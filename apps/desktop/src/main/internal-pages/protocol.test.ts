@@ -29,7 +29,7 @@ vi.mock('electron', () => ({
   protocol: { registerSchemesAsPrivileged },
   session: { fromPartition },
 }));
-vi.mock('../window', () => ({ APP_PARTITION: 'persist:tepegoz-app-test' }));
+vi.mock('../window', () => ({ appPartition: () => 'persist:tepegoz-app-test' }));
 
 const INDEX_HTML = `<!doctype html><html><head>
 <link rel="icon" type="image/svg+xml" href="./favicon.svg">

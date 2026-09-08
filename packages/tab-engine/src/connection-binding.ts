@@ -19,6 +19,7 @@
  */
 
 import { isValidConnectionId as isValidId } from '@tepegoz/shared-types';
+import { directBrowsingPartition } from './partition-scope';
 
 /** What one scope (Tab or Group) can be set to. `inherit` defers to the next scope up. */
 export type ScopedBinding =
@@ -70,15 +71,17 @@ export function resolveBinding(
 }
 
 /**
- * The partition every Direct (untunneled) page has always lived in, unchanged. Kept BYTE-IDENTICAL on
- * purpose: renaming it would orphan every existing user's cookies, logins and site storage behind a
- * partition nothing reads any more. Phase 5 only ever ADDS `--conn-` siblings next to it.
+ * The partition every Direct (untunneled) page lives in.
  *
- * Deliberately NOT profile-keyed. Profile isolation is done a level up — each profile runs as its own
- * process over its own `userData` directory — so the partition name is already profile-scoped by
- * construction, and baking a profile id into it would be both redundant and the rename described above.
+ * A function, not a constant, because its name carries the process's profile scope (ADR-0045):
+ * `persist:tepegoz-profile-<id>` with a profile set, `persist:tepegoz-web` without (tests, an
+ * opted-out `--user-data-dir` run) — see {@link directBrowsingPartition}. The scope is fixed at boot
+ * before any partition is materialized, so this is effectively constant for the process's lifetime;
+ * the first-run migration renames the on-disk `Partitions/` directory to match so no existing user's
+ * cookies are orphaned. Phase 5 only ever ADDS `--conn-` siblings next to whatever this returns.
+ *
+ * {@link directBrowsingPartition} (re-exported from this package's barrel) is that function.
  */
-export const DIRECT_PARTITION = 'persist:tepegoz-web';
 
 /** A connection id is a partition-name component, so it is constrained to what can never collide or
  *  escape. The rule itself lives in `@tepegoz/shared-types` — the schema source — because the
@@ -90,20 +93,20 @@ export { CONNECTION_ID_PATTERN, isValidConnectionId } from '@tepegoz/shared-type
  *
  * Keyed by connection, deliberately NOT by group — per the phase's own model, groups are a binding/UI
  * layer, and N groups sharing one connection share one partition. A `Direct` resolution uses
- * {@link DIRECT_PARTITION}, so an untunneled tab is byte-identical to the browser before Phase 5.
+ * {@link directBrowsingPartition}, so an untunneled tab is byte-identical to the browser before Phase 5.
  *
  * Throws on an id that is not a valid partition component rather than sanitizing it: quietly mapping
  * `vpn/a` and `vpn-a` onto one partition would put two connections' traffic in one cookie jar, and a
  * throw at the binding boundary is recoverable where that bleed is not.
  */
 export function partitionKeyFor(resolved: ResolvedConnection): string {
-  if (resolved.connectionId === null) return DIRECT_PARTITION;
+  if (resolved.connectionId === null) return directBrowsingPartition();
   if (!isValidId(resolved.connectionId)) {
     throw new Error(
       `Invalid connection id for a session partition: ${JSON.stringify(resolved.connectionId)}`,
     );
   }
-  return `${DIRECT_PARTITION}--conn-${resolved.connectionId}`;
+  return `${directBrowsingPartition()}--conn-${resolved.connectionId}`;
 }
 
 /** The infix both {@link partitionKeyFor} and `privatePartitionKey` use to name a bound partition. */

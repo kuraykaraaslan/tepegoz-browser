@@ -43,6 +43,10 @@ describe('migrateLegacyProfile', () => {
     // Chromium's own storage must come along too, or the user silently loses cookies / logins.
     mkdirSync(join(root, 'Partitions', 'tepegoz-web'), { recursive: true });
     writeFileSync(join(root, 'Partitions', 'tepegoz-web', 'Cookies'), 'c', 'utf8');
+    mkdirSync(join(root, 'Partitions', 'tepegoz-app'), { recursive: true });
+    writeFileSync(join(root, 'Partitions', 'tepegoz-app', 'Local Storage'), 'x', 'utf8');
+    mkdirSync(join(root, 'Partitions', 'tepegoz-web--conn-vpn-a'), { recursive: true });
+    writeFileSync(join(root, 'Partitions', 'tepegoz-web--conn-vpn-a', 'Cookies'), 't', 'utf8');
 
     migrateLegacyProfile(root);
 
@@ -61,7 +65,14 @@ describe('migrateLegacyProfile', () => {
     expect(existsSync(join(defaultDir, 'tepegoz.db-shm'))).toBe(true);
     expect(existsSync(join(defaultDir, 'adblock', 'engine.bin'))).toBe(true);
     expect(readFileSync(join(defaultDir, 'vpn', 'wg0.conf'), 'utf8')).toBe('secret');
-    expect(existsSync(join(defaultDir, 'Partitions', 'tepegoz-web', 'Cookies'))).toBe(true);
+    // Partition directories are renamed to the profile-scoped names this build addresses (ADR-0045),
+    // so Chromium finds the migrated cookie jars instead of creating empty new ones.
+    const parts = join(defaultDir, 'Partitions');
+    expect(readFileSync(join(parts, 'tepegoz-profile-default', 'Cookies'), 'utf8')).toBe('c');
+    expect(readFileSync(join(parts, 'tepegoz-profile-default--app', 'Local Storage'), 'utf8')).toBe('x');
+    expect(readFileSync(join(parts, 'tepegoz-profile-default--conn-vpn-a', 'Cookies'), 'utf8')).toBe('t');
+    expect(existsSync(join(parts, 'tepegoz-web'))).toBe(false);
+    expect(existsSync(join(parts, 'tepegoz-app'))).toBe(false);
   });
 
   it('leaves a fresh install with no db/prefs untouched (no spurious migration)', () => {

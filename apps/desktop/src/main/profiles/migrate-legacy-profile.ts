@@ -1,4 +1,4 @@
-import { cpSync, existsSync, mkdirSync, renameSync, rmSync } from 'node:fs';
+import { cpSync, existsSync, mkdirSync, readdirSync, renameSync, rmSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { userInfo } from 'node:os';
 import { Logger } from '@tepegoz/libs';
@@ -50,6 +50,52 @@ function moveIfExists(src: string, dst: string): void {
   }
 }
 
+/**
+ * Rename the Chromium session-partition directories inside a just-migrated `Profiles/default/Partitions/`
+ * from their pre-multi-profile names to the profile-scoped names this build uses (ADR-0045):
+ *
+ *   `tepegoz-web`            → `tepegoz-profile-default`
+ *   `tepegoz-app`            → `tepegoz-profile-default--app`
+ *   `tepegoz-web--conn-<x>`  → `tepegoz-profile-default--conn-<x>`
+ *
+ * Without this the renamed partition names would point at directories that do not exist, silently
+ * orphaning every existing user's cookies, logins and site storage. `tepegoz-private--conn-<x>` is left
+ * alone — private partitions are never `persist:` (memory-only) and are not profile-scoped.
+ *
+ * Idempotent by construction: it only ever runs inside `migrateLegacyProfile`, which is itself gated on
+ * `profiles.json` not existing, and a destination that already exists is skipped.
+ */
+function renameLegacyPartitionDirs(partitionsDir: string): void {
+  if (!existsSync(partitionsDir)) return;
+  const scoped = `tepegoz-profile-${DEFAULT_PROFILE_ID}`;
+  let entries: string[];
+  try {
+    entries = readdirSync(partitionsDir);
+  } catch (err) {
+    Logger.warn('Could not read Partitions/ during migration', { err: String(err) });
+    return;
+  }
+  for (const name of entries) {
+    let target: string | null = null;
+    if (name === 'tepegoz-web') target = scoped;
+    else if (name === 'tepegoz-app') target = `${scoped}--app`;
+    else if (name.startsWith('tepegoz-web--conn-')) target = `${scoped}${name.slice('tepegoz-web'.length)}`;
+    if (target === null || target === name) continue;
+    const from = join(partitionsDir, name);
+    const to = join(partitionsDir, target);
+    if (existsSync(to)) continue;
+    try {
+      renameSync(from, to);
+    } catch (err) {
+      Logger.warn('Failed to rename a legacy partition directory', {
+        from: name,
+        to: target,
+        err: String(err),
+      });
+    }
+  }
+}
+
 function defaultProfileName(): string {
   try {
     const name = userInfo().username;
@@ -81,6 +127,10 @@ export function migrateLegacyProfile(root: string): void {
       for (const entry of LEGACY_ENTRIES) {
         moveIfExists(join(root, entry), join(defaultDir, entry));
       }
+      // The partitions came across under their old names; rename them to the profile-scoped ones this
+      // build addresses (ADR-0045), or Chromium would create empty new ones and the user's cookies /
+      // logins would sit unreachable under the old names.
+      renameLegacyPartitionDirs(join(defaultDir, 'Partitions'));
     }
   } catch (err) {
     // Data loss-safe: on any failure, leave whatever moved where it landed and let the stores treat

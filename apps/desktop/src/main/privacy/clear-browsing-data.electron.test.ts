@@ -28,7 +28,7 @@ const stores = vi.hoisted(() => ({
 vi.mock('@tepegoz/persistence', () => stores);
 
 const APP_SESSION = { __app: true };
-vi.mock('../window', () => ({ APP_PARTITION: 'persist:app' }));
+vi.mock('../window', () => ({ appPartition: () => 'persist:app' }));
 vi.mock('electron', () => ({ session: { fromPartition: () => APP_SESSION } }));
 
 const sessions = vi.hoisted(

@@ -7,6 +7,7 @@ import {
 } from 'electron';
 import { join } from 'node:path';
 import { IpcChannels, type StartupMode } from '@tepegoz/desktop-ipc';
+import { appChromePartition } from '@tepegoz/tab-engine';
 import PreferenceStore from '@tepegoz/preferences';
 import { isTrustedAppUrl } from './lib/trusted-origin';
 import { whenChromeReady } from './chrome-ready';
@@ -15,24 +16,37 @@ import { ensureOnScreen, isBoundsOnScreen } from './window-placement';
 import { GLASS_BG, isMicaSupported } from './lib/glass';
 import { resolveSurfaceTheme } from './lib/surface-theme';
 
-/** App-chrome partition — shared by the main window and extension popups (both are trusted chrome).
- *  Exported for the CSP hook in security.ts (the policy applies to this session ONLY). */
-export const APP_PARTITION = 'persist:tepegoz-app';
+/**
+ * App-chrome partition — shared by the main window and extension popups (both are trusted chrome).
+ * Used by the CSP hook in security.ts (the policy applies to this session ONLY), the internal-pages
+ * protocol handler, and the site-data / clear-browsing-data paths that must skip it.
+ *
+ * A function, not a constant: its name carries the process's profile scope (ADR-0045) —
+ * `persist:tepegoz-profile-<id>--app` with a profile set, `persist:tepegoz-app` without. The scope is
+ * fixed at boot before the first window opens, and the first-run migration renames the on-disk
+ * `Partitions/` directory to match, so no existing user's chrome state is orphaned.
+ */
+export function appPartition(): string {
+  return appChromePartition();
+}
 /**
  * Secure webPreferences shared by every chrome window (internal-ai-rules BLOCKING: one config).
+ * A function so the profile-scoped `partition` is resolved at call time, not baked in at module load.
  * Exported so a `tepegoz://` internal-page view (`tabs-internal-page-view.ts`) can give a real page the
- * SAME trust level as the chrome it replaces — reusing this constant rather than a second copy is what
+ * SAME trust level as the chrome it replaces — reusing this factory rather than a second copy is what
  * the BLOCKING rule is about: "a second window factory is how a hardening flag silently stops applying".
  */
-export const CHROME_WEB_PREFERENCES = {
-  preload: join(__dirname, '../preload/index.js'),
-  contextIsolation: true,
-  sandbox: true,
-  nodeIntegration: false,
-  webSecurity: true,
-  spellcheck: false,
-  partition: APP_PARTITION,
-} as const;
+export function chromeWebPreferences() {
+  return {
+    preload: join(__dirname, '../preload/index.js'),
+    contextIsolation: true,
+    sandbox: true,
+    nodeIntegration: false,
+    webSecurity: true,
+    spellcheck: false,
+    partition: appPartition(),
+  } as const;
+}
 
 // Default main-window size for a fresh profile (no saved placement yet). The window opens OS-centered.
 const DEFAULT_WINDOW_WIDTH = 1280;
@@ -213,7 +227,7 @@ export function createWindow(opts?: { forceForeground?: boolean }): BrowserWindo
     ...(glass ? { backgroundMaterial: 'mica' as const } : {}),
     // App-chrome gets its own persistent partition. Browsed (untrusted) pages run in SEPARATE isolated
     // partitions/WebContentsView, never sharing this session.
-    webPreferences: { ...CHROME_WEB_PREFERENCES },
+    webPreferences: { ...chromeWebPreferences() },
   });
 
   // Reopen maximized if that is how the user left it (the restored bounds above become the un-maximize
@@ -359,7 +373,7 @@ export function createPopupWindow(
     fullscreenable: false,
     skipTaskbar: true,
     backgroundColor,
-    webPreferences: { ...CHROME_WEB_PREFERENCES },
+    webPreferences: { ...chromeWebPreferences() },
   });
   win.setMenu(null);
   win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
@@ -393,7 +407,7 @@ export function createDragPreviewWindow(): BrowserWindow {
     hasShadow: false,
     alwaysOnTop: true,
     // No backgroundColor — the surface paints its own translucent chip over the transparent window.
-    webPreferences: { ...CHROME_WEB_PREFERENCES },
+    webPreferences: { ...chromeWebPreferences() },
   });
   win.setMenu(null);
   // Float above everything (incl. fullscreen) and never intercept the pointer while it tracks the cursor.

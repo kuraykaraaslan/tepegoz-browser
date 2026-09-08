@@ -14,7 +14,7 @@ import {
   INTERNAL_SETTINGS_URL,
   INTERNAL_UPLOADS_URL,
 } from '@tepegoz/desktop-ipc';
-import { CHROME_WEB_PREFERENCES } from './window';
+import { chromeWebPreferences } from './window';
 import { resolveSurfaceTheme } from './lib/surface-theme';
 import { contextMenuObservers, internalBaseUrl } from './tabs-shared';
 
@@ -30,7 +30,7 @@ import { contextMenuObservers, internalBaseUrl } from './tabs-shared';
  * Giving it a real view for display + context-menu purposes without touching any of those call sites is
  * exactly what keeping it out of `views` buys.
  *
- * Uses the SAME `CHROME_WEB_PREFERENCES` (preload + `persist:tepegoz-app` partition) as the chrome
+ * Uses the SAME `chromeWebPreferences()` (preload + the app-chrome partition) as the chrome
  * window itself — this is trusted, bundled, first-party content (the same renderer bundle the chrome
  * document already loads), not browsed (untrusted) content, so it gets the same trust level it already
  * had when it rendered as a React overlay inside the chrome document. Nothing about the security
@@ -154,7 +154,7 @@ export function createInternalPageView(
   url: string,
   getBounds: () => Rectangle,
 ): WebContentsView {
-  const view = new WebContentsView({ webPreferences: { ...CHROME_WEB_PREFERENCES } });
+  const view = new WebContentsView({ webPreferences: { ...chromeWebPreferences() } });
   // Pre-paint ground. The renderer's <html> paints nothing (see renderer/index.html), so what shows
   // between attach and the page's first React frame is THIS colour — resolved from the active theme,
   // not Chromium's default white, and not the brand navy the HTML used to fall back to.

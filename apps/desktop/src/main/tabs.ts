@@ -7,6 +7,6 @@
  * `tabs-window.ts`; internal `tabs-*` modules import THAT, and only outside callers come through this
  * barrel. Same surface as before — `import TabManager from './tabs'` is unchanged.
  */
-export { BROWSING_PARTITION, type DetachedTab, type NavigationObserver } from './tabs-shared';
+export { type DetachedTab, type NavigationObserver } from './tabs-shared';
 export { WindowTabs } from './tabs-window';
 export { default } from './tabs-manager';

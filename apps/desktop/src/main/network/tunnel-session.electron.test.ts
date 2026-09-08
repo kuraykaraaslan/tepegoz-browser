@@ -26,7 +26,7 @@ const h = vi.hoisted(() => {
 
 vi.mock('electron', () => ({ session: { fromPartition: h.fromPartition } }));
 
-const { DIRECT_PARTITION } = await import('@tepegoz/tab-engine');
+const { directBrowsingPartition } = await import('@tepegoz/tab-engine');
 const { default: BrowsingSessions } = await import('./browsing-sessions.electron');
 const {
   ensureTunnelSession,
@@ -135,7 +135,7 @@ describe('hardenIfTunneled', () => {
   const contents = (ses: unknown) => ({ session: ses, setWebRTCIPHandlingPolicy: vi.fn() });
 
   it('locks WebRTC on a browsed tunnel session', () => {
-    const wc = contents(BrowsingSessions.ensure(`${DIRECT_PARTITION}--conn-a`));
+    const wc = contents(BrowsingSessions.ensure(`${directBrowsingPartition()}--conn-a`));
     hardenIfTunneled(wc as never);
     expect(wc.setWebRTCIPHandlingPolicy).toHaveBeenCalledWith('disable_non_proxied_udp');
   });
@@ -147,7 +147,7 @@ describe('hardenIfTunneled', () => {
   });
 
   it('leaves a Direct view ALONE — with no tunnel, the policy would break ordinary WebRTC', () => {
-    const wc = contents(BrowsingSessions.ensure(DIRECT_PARTITION));
+    const wc = contents(BrowsingSessions.ensure(directBrowsingPartition()));
     hardenIfTunneled(wc as never);
     expect(wc.setWebRTCIPHandlingPolicy).not.toHaveBeenCalled();
   });
@@ -166,7 +166,7 @@ describe('hardenIfTunneled', () => {
 
   it('propagates a failed lock on a tunneled view — a tab that leaks must not just load', () => {
     const wc = {
-      session: BrowsingSessions.ensure(`${DIRECT_PARTITION}--conn-a`),
+      session: BrowsingSessions.ensure(`${directBrowsingPartition()}--conn-a`),
       setWebRTCIPHandlingPolicy: vi.fn(() => {
         throw new Error('policy rejected');
       }),
