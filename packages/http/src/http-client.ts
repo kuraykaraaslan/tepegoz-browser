@@ -3,9 +3,13 @@ import axios, {
   type CreateAxiosDefaults,
   type InternalAxiosRequestConfig,
 } from 'axios';
+
+/** axios's `beforeRedirect` hook signature (options, responseDetails, requestDetails) → void. */
+type BeforeRedirect = NonNullable<InternalAxiosRequestConfig['beforeRedirect']>;
 import { AppError, Logger } from '@tepegoz/libs';
 import { HttpMessages } from './messages';
 import { resolveEgressAgents } from './egress-route';
+import { isPublicHttpUrl } from './ssrf-guard';
 
 /**
  * The ONE outbound-HTTP seam for the whole app. Every REST integration (LLM providers, MCP HTTP
@@ -27,6 +31,15 @@ export interface HttpClientOptions {
   timeoutMs?: number;
   /** Default headers merged onto every request (e.g. `Authorization`). */
   headers?: Record<string, string>;
+  /**
+   * Opt-in SSRF guard. When `true`, a request whose target host is not a publicly routable
+   * http(s) address (loopback, RFC-1918, link-local, ULA, CGNAT, `localhost`-family, cloud
+   * metadata) is refused with an {@link AppError} 400 BEFORE it is sent, and every redirect hop is
+   * re-checked. Off by default so LLM-provider / internal clients are unaffected; the web-fetch and
+   * any future agent-directed-URL clients turn it on. Literal-address only — it does not resolve
+   * DNS, so DNS-rebinding still needs resolve-then-pin at the socket layer (tracked follow-up).
+   */
+  blockPrivateHosts?: boolean;
 }
 
 export const DEFAULT_TIMEOUT_MS = 30_000;
@@ -47,6 +60,22 @@ function extractProviderMessage(data: unknown): string | undefined {
     if (typeof message === 'string' && message.length > 0) return message;
   }
   return undefined;
+}
+
+/**
+ * Resolve a request's `url` + optional `baseURL` to the absolute URL that will actually be hit, so
+ * the SSRF guard sees `https://api.host/v1/x` and not the relative `/x`. An already-absolute `url`
+ * wins (axios ignores `baseURL` for it); an unparseable combination is returned as-is so the guard
+ * rejects it.
+ */
+function fullRequestUrl(url: string | undefined, baseURL: string | undefined): string {
+  const path = url ?? '';
+  if (baseURL === undefined || baseURL.length === 0 || /^https?:\/\//i.test(path)) return path;
+  try {
+    return new URL(path, baseURL).toString();
+  } catch {
+    return path;
+  }
 }
 
 /**
@@ -184,6 +213,29 @@ export function createHttpClient(options: HttpClientOptions = {}): AxiosInstance
     }
     return cfg;
   });
+  // Opt-in SSRF guard, at the seam so every caller that asks for it is covered by construction. A
+  // request whose target is not publicly routable is refused before it is sent, and a `beforeRedirect`
+  // hook re-checks every hop — a public URL can 3xx to `http://169.254.169.254/…` or an RFC-1918 host.
+  // Deliberately in the request interceptor (not client construction) so it composes with the egress
+  // route decided just above and sees the fully-resolved per-request URL.
+  if (options.blockPrivateHosts === true) {
+    instance.interceptors.request.use((cfg) => {
+      if (!isPublicHttpUrl(fullRequestUrl(cfg.url, cfg.baseURL))) {
+        throw new AppError(HttpMessages.BlockedNonPublicHost, 400);
+      }
+      const priorBeforeRedirect = cfg.beforeRedirect;
+      const guardedBeforeRedirect: BeforeRedirect = (...args) => {
+        const rawHref = (args[0] as { href?: unknown }).href;
+        const href = typeof rawHref === 'string' ? rawHref : '';
+        if (!isPublicHttpUrl(href)) {
+          throw new AppError(HttpMessages.BlockedNonPublicHost, 400);
+        }
+        priorBeforeRedirect?.(...args);
+      };
+      cfg.beforeRedirect = guardedBeforeRedirect;
+      return cfg;
+    });
+  }
   // Single boundary: a retryable failure — a 429 (rate limited) or a pre-send network error (DNS blip /
   // connection refused) — is backed off and retried, bounded + cancel-aware + honoring Retry-After. Both
   // mean the request was never processed, so retrying is safe. Anything else — or a retry past the

@@ -1,7 +1,6 @@
 import { createHttpClient } from '@tepegoz/http';
 import {
   createSitemapReader,
-  isPublicHttpUrl,
   type SitemapFetch,
   type WebFetchResolvedInput,
   type WebFetchResult,
@@ -16,6 +15,10 @@ const client = createHttpClient({
     Accept: 'text/html,text/plain,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
     'User-Agent': 'TepegozBrowser/1.0',
   },
+  // The agent picks the `web_get_page` URL, so the shared seam refuses a loopback / private /
+  // link-local / cloud-metadata target before the fetch and re-checks every redirect hop. The zod
+  // `.refine` on `WebFetchInputSchema.url` stays as defense in depth + a cleaner error for the agent.
+  blockPrivateHosts: true,
 });
 
 function decodeHtml(value: string): string {
@@ -81,18 +84,12 @@ async function search(input: WebSearchResolvedInput): Promise<WebSearchResult[]>
 }
 
 async function fetchPage(input: WebFetchResolvedInput): Promise<WebFetchResult> {
-  // The schema already refused a private-host URL; this re-checks EACH redirect hop, because a public
-  // URL can 302 to `http://169.254.169.254/…` or a RFC-1918 address (SSRF via redirect).
+  // The SSRF guard (literal address + every redirect hop) is enforced by the `blockPrivateHosts`
+  // client above; the schema `.refine` already refused a private-host URL before we got here.
   const response = await client.get<string>(input.url, {
     responseType: 'text',
     maxContentLength: input.maxBytes,
     transformResponse: [(data: unknown) => String(data)],
-    beforeRedirect: (options: { href?: string }) => {
-      const target = options.href ?? '';
-      if (!isPublicHttpUrl(target)) {
-        throw new Error(`Blocked redirect to a non-public address: ${target}`);
-      }
-    },
   });
   const raw = response.data.slice(0, input.maxBytes + 1);
   const truncated = raw.length > input.maxBytes;

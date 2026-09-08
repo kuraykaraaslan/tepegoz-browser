@@ -29,6 +29,9 @@
 - [ ] Yanıt gövdesindeki hassas alanları da loglamadan önce redakte etmeli
 - [ ] 4xx passthrough'da orijinal sunucu mesajını (redakte edilmiş) korumalı
 - [ ] `HttpMessages` mesajları tutarlılık için tek yerde tutulmalı
+- [ ] `blockPrivateHosts: true` ile SSRF guard'ı seam'de zorlamalı (publicly routable olmayan hedefi
+      gönderimden önce `AppError` 400 ile reddetmeli, her redirect hop'unu yeniden kontrol etmeli);
+      `isPublicHttpUrl` saf predicate'ini dışa aktarmalı
 
 ## Çok niş
 

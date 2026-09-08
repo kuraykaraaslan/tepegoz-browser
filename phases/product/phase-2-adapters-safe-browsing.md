@@ -59,10 +59,16 @@
         dotted-quad. It is enforced as a `.refine` on `WebFetchInputSchema.url` (so `web_get_page` is
         refused **before** the fetch is dispatched, regardless of host impl) and `fetchPage` adds a
         `beforeRedirect` hook that re-checks every hop.
-  - [ ] Still owed for `[x]`: (a) **resolve-then-pin** at connection time (defeats DNS rebinding —
-        a public hostname resolving to a private IP still passes the literal check); (b) moving the
-        check down to **`createHttpClient` itself** so MCP HTTP transports + future skill endpoints are
-        covered by construction, not one call site at a time. Original fix list follows:
+  - [x] **The seam-level move landed 2026-09-09.** `isPublicHttpUrl` now lives in `@tepegoz/http`
+        (`packages/http/src/ssrf-guard.ts`, exported from the barrel); `createHttpClient` takes an
+        opt-in `blockPrivateHosts?: boolean` that installs a request interceptor (refuse before send,
+        `AppError` 400) plus a `beforeRedirect` hook that re-checks every hop. `web-tools-host.electron`
+        turns it on and its inline `beforeRedirect` is gone; `@tepegoz/web-tools` re-exports the guard
+        for its zod `.refine` (defense in depth). MCP `http_sse` has no `createHttpClient` caller yet
+        (transport reserved for Phase 1b) so nothing to wire there. The zod `.refine` on
+        `WebFetchInputSchema.url` stays.
+  - [ ] Still owed for `[~]`: **resolve-then-pin** at connection time (defeats DNS rebinding —
+        a public hostname resolving to a private IP still passes the literal check). Original fix list follows:
   - [ ] One pure, obfuscation-resistant classifier next to `egress-route.ts` — canonicalize
         decimal/octal/hex/short-form IPv4 and `::ffff:`-mapped IPv6 **before** matching, since all of those
         are equivalent to the caller but not to a naive string-prefix check. Reject loopback / RFC1918 /
@@ -70,9 +76,10 @@
   - [ ] Check the **resolved IP at connection time, then connect to that literal IP** — not the hostname at
         URL-parse time. This specific ordering is what defeats DNS rebinding; a TTL-0 answer can otherwise
         swap the target between the check and the connect.
-  - [ ] Enforce at `createHttpClient` itself — its own docblock already calls it "the ONE outbound-HTTP seam
+  - [x] Enforce at `createHttpClient` itself — its own docblock already calls it "the ONE outbound-HTTP seam
         for the whole app" — so `web-tools`, MCP HTTP transports and any future skill-declared endpoint are
-        covered **by construction**, not one patched call site at a time.
+        covered **by construction**, not one patched call site at a time. _(landed 2026-09-09 as the opt-in
+        `blockPrivateHosts` option; literal-address + per-redirect-hop only — resolve-then-pin still owed.)_
   - [ ] Re-validate every redirect hop, cap the chain, and drop rather than follow into a private target.
         `sitemap-reader.ts` already has the right instinct locally (`maxRedirects: 0` with a comment saying
         why) — generalize it instead of leaving it a one-file workaround.

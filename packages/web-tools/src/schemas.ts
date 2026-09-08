@@ -5,7 +5,7 @@ import {
   MAX_WEB_FETCH_BYTES,
   MAX_WEB_SEARCH_RESULTS,
 } from './index';
-import { isPublicHttpUrl } from './ssrf-guard';
+import { isPublicHttpUrl } from '@tepegoz/http';
 
 export const WebSearchInputSchema = z.object({
   query: z.string().min(1).max(500),

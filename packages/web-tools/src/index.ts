@@ -41,7 +41,10 @@ export interface WebToolsHost {
 }
 
 export { createSitemapReader, type SitemapFetch, type SitemapReader } from './sitemap-reader';
-export { isPublicHttpUrl } from './ssrf-guard';
+// The SSRF guard now lives at the shared outbound-HTTP seam (`@tepegoz/http`) so it is enforced at
+// `createHttpClient` for every caller; re-exported here for the `web_get_page` zod `.refine`
+// (defense in depth + a cleaner error for the agent).
+export { isPublicHttpUrl } from '@tepegoz/http';
 
 export {
   buildWebFetchContent,

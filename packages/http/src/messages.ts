@@ -6,4 +6,5 @@ export const HttpMessages = {
   RequestTimedOut: 'HTTP request timed out',
   RequestCanceled: 'HTTP request canceled',
   UnknownHttpError: 'Unknown HTTP client error',
+  BlockedNonPublicHost: 'HTTP request blocked: target is not a publicly routable http(s) address',
 } as const;

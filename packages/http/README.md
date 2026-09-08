@@ -9,6 +9,13 @@ no Electron imports).
 - **`createHttpClient(options)`** — a configured `AxiosInstance`. Sets a default JSON content type and
   a per-request timeout (default 30s, overridable per call), and installs a response interceptor that
   maps every rejection to an `AppError` (see below). Pass `baseURL` / `headers` for a provider client.
+  Pass `blockPrivateHosts: true` to enforce the SSRF guard at this seam — a request whose target is
+  not a publicly routable http(s) address (loopback / RFC-1918 / link-local / CGNAT / `localhost` /
+  cloud metadata) is refused with an `AppError` 400 before it is sent, and every redirect hop is
+  re-checked. Off by default; the web-fetch tool host and any future agent-directed-URL client turn
+  it on. Literal-address only — DNS rebinding still needs resolve-then-pin at the socket layer.
+- **`isPublicHttpUrl(url)`** — the pure predicate behind `blockPrivateHosts`; `@tepegoz/web-tools`
+  re-exports it for the `web_get_page` zod refine (defense in depth + a cleaner error for the agent).
 - **`http`** — a shared default instance for ad-hoc calls with no base URL / auth.
 - **`normalizeHttpError(err)`** — pure axios-error → `AppError` mapper (4xx passthrough, everything
   else → 503; timeouts/cancels → 503) with `Logger.redact` applied to the message. Unit-tested.

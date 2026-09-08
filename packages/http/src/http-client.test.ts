@@ -296,6 +296,76 @@ describe('createHttpClient — configuration', () => {
   });
 });
 
+describe('createHttpClient — blockPrivateHosts SSRF guard', () => {
+  function ok(config: InternalAxiosRequestConfig): Promise<AxiosResponse> {
+    return Promise.resolve({
+      status: 200,
+      statusText: 'OK',
+      headers: {},
+      data: { ok: true },
+      config,
+    } as AxiosResponse);
+  }
+
+  it('refuses a private-host request before it is sent (AppError 400, adapter never called)', async () => {
+    const client = createHttpClient({ blockPrivateHosts: true });
+    let calls = 0;
+    client.defaults.adapter = (config) => {
+      calls += 1;
+      return ok(config);
+    };
+    for (const url of [
+      'http://169.254.169.254/latest/meta-data/',
+      'http://127.0.0.1/',
+      'http://10.1.2.3/admin',
+      'http://localhost:9000/',
+    ]) {
+      const err = await client.get(url).catch((e: unknown) => e);
+      expect(err, url).toBeInstanceOf(AppError);
+      expect((err as AppError).statusCode, url).toBe(400);
+    }
+    expect(calls).toBe(0);
+  });
+
+  it('re-checks every redirect hop via beforeRedirect', async () => {
+    const client = createHttpClient({ blockPrivateHosts: true });
+    let beforeRedirect: ((o: { href?: string }) => void) | undefined;
+    client.defaults.adapter = (config) => {
+      beforeRedirect = config.beforeRedirect as typeof beforeRedirect;
+      return ok(config);
+    };
+    await client.get('https://public.example/start');
+    expect(beforeRedirect).toBeTypeOf('function');
+    expect(() => beforeRedirect!({ href: 'https://also-public.example/next' })).not.toThrow();
+    expect(() => beforeRedirect!({ href: 'http://169.254.169.254/latest/' })).toThrow(AppError);
+    expect(() => beforeRedirect!({ href: 'http://192.168.1.1/' })).toThrow(AppError);
+  });
+
+  it('is a no-op when the option is absent — a private host passes straight through', async () => {
+    const client = createHttpClient();
+    let seen: InternalAxiosRequestConfig | null = null;
+    client.defaults.adapter = (config) => {
+      seen = config;
+      return ok(config);
+    };
+    const res = await client.get('http://127.0.0.1:9000/admin');
+    expect(res.status).toBe(200);
+    expect((seen as unknown as InternalAxiosRequestConfig).beforeRedirect).toBeUndefined();
+  });
+
+  it('is a no-op when the option is explicitly false', async () => {
+    const client = createHttpClient({ blockPrivateHosts: false });
+    let calls = 0;
+    client.defaults.adapter = (config) => {
+      calls += 1;
+      return ok(config);
+    };
+    const res = await client.get('http://10.0.0.1/');
+    expect(res.status).toBe(200);
+    expect(calls).toBe(1);
+  });
+});
+
 describe('createHttpClient — the egress route is decided per request', () => {
   afterEach(() => {
     resetEgressForTests();

@@ -9,8 +9,19 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
  * null on error.
  */
 
-const http = vi.hoisted(() => ({ get: vi.fn() }));
-vi.mock('@tepegoz/http', () => ({ createHttpClient: () => http }));
+const http = vi.hoisted(() => ({ get: vi.fn(), blockPrivateHosts: false }));
+vi.mock('@tepegoz/http', async (orig) => {
+  const actual = await orig<typeof import('@tepegoz/http')>();
+  // Keep the real SSRF guard (web-tools re-exports it for its zod refine); swap only the client,
+  // recording the SSRF opt-in it was built with.
+  return {
+    ...actual,
+    createHttpClient: (opts: { blockPrivateHosts?: boolean }) => {
+      http.blockPrivateHosts = opts.blockPrivateHosts ?? false;
+      return http;
+    },
+  };
+});
 
 const sitemap = vi.hoisted(
   (): { fetch?: (url: string, maxBytes: number) => Promise<unknown> } => ({}),
@@ -108,17 +119,11 @@ describe('fetch', () => {
     expect('mimeType' in r).toBe(false);
   });
 
-  it('installs a beforeRedirect hook that blocks a redirect to a non-public address (SSRF)', async () => {
-    http.get.mockResolvedValue({ data: '', status: 200, headers: {} });
-    await webToolsHost.fetch({ url: 'https://p.test/', maxBytes: 100 });
-    const cfg = http.get.mock.calls[0]![1] as {
-      beforeRedirect: (o: { href?: string }) => void;
-    };
-    expect(() => cfg.beforeRedirect({ href: 'https://public.example/ok' })).not.toThrow();
-    expect(() => cfg.beforeRedirect({ href: 'http://169.254.169.254/latest/' })).toThrow(
-      /non-public address/,
-    );
-    expect(() => cfg.beforeRedirect({ href: 'http://localhost:9000/' })).toThrow();
+  it('builds the client with blockPrivateHosts so the seam guards the URL + every redirect hop', () => {
+    // The literal-address + per-hop SSRF guard now lives in `@tepegoz/http` (`blockPrivateHosts`),
+    // exercised directly in that package's `http-client.test.ts`; this host just has to opt in.
+    // `createHttpClient` is mocked to a bare spy here, so we assert the wiring, not the behaviour.
+    expect(http.blockPrivateHosts).toBe(true);
   });
 });
 

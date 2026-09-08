@@ -1,22 +1,23 @@
 /**
- * SSRF guard for `web_get_page` — the one fetch whose URL the *agent* chooses (and can therefore be
- * steered toward by injected page content). Flagged as a real defect, independently, by two rival
- * parity reviews (`browserless` P1, `librechat` P2): the tool dispatched any `http(s)` URL with no
- * check that the host is publicly routable, so a run could be talked into hitting
- * `http://169.254.169.254/…` (cloud metadata), `http://localhost:PORT/…` or a RFC-1918 address.
+ * SSRF guard — the literal-address half of the defense, living at the ONE outbound-HTTP seam
+ * ({@link createHttpClient}) so every caller — `web_get_page`, MCP HTTP transports, future skill
+ * endpoints — is covered by construction rather than one call site at a time.
  *
- * This is the literal-address half of the defense — it rejects a URL whose host is a loopback,
- * private, link-local, ULA, or cloud-metadata address, or a `localhost`-family name. Obfuscated IPv4
- * (decimal `2130706433`, octal, hex, short-form `127.1`) is handled *for free* by parsing through
- * `new URL()` first — the WHATWG parser normalizes all of those to dotted-quad, so the octet check
- * below sees `127.0.0.1` either way. It does **not** resolve DNS, so a public hostname that resolves
- * to a private IP (DNS rebinding) still passes here; closing that needs resolve-then-pin at the socket
- * layer and is tracked as a follow-up, as is moving the check down to `createHttpClient` so MCP HTTP
- * transports are covered by construction. The `web-search` tool needs no guard — it only ever hits a
- * fixed `duckduckgo.com` endpoint with the query as a parameter.
+ * `isPublicHttpUrl` rejects a URL whose host is a loopback, private, link-local, ULA, or
+ * cloud-metadata address, or a `localhost`-family name. Obfuscated IPv4 (decimal `2130706433`,
+ * octal, hex, short-form `127.1`) is handled *for free* by parsing through `new URL()` first — the
+ * WHATWG parser normalizes all of those to dotted-quad, so the octet check below sees `127.0.0.1`
+ * either way. It does **not** resolve DNS, so a public hostname that resolves to a private IP (DNS
+ * rebinding) still passes here; closing that needs resolve-then-pin at the socket layer and is
+ * tracked as a follow-up.
+ *
+ * Consumers that want it enforced pass `blockPrivateHosts: true` to {@link createHttpClient}, which
+ * installs a request interceptor (refuse before send) plus a `beforeRedirect` hook (re-check each
+ * hop). `@tepegoz/web-tools` re-exports `isPublicHttpUrl` from here for its zod `.refine` on the
+ * `web_get_page` URL (defense in depth + a cleaner error for the agent).
  */
 
-/** Cloud-metadata / internal hostnames that are never a legitimate `web_get_page` target. */
+/** Cloud-metadata / internal hostnames that are never a legitimate outbound target. */
 const BLOCKED_HOST_NAMES = new Set([
   'localhost',
   'metadata',
