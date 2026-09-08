@@ -159,6 +159,12 @@ work lives in Phase 2; agent orchestration (multi-tab parallelism) stays in Phas
       projection (6, `process-metrics.electron.test.ts`), row shaping/sort/totals + component
       (`@tepegoz/process-ui`), and `tepegoz://process` added to `e2e/tepegoz-internal-pages.spec.ts`
       (real content + bridge call resolves + zero CSP violations)._
+      — _Sortable columns landed: every column header (Task / CPU / Memory / Process ID) is a real
+      `<button>` that click-sorts, toggles asc/desc on repeat, shows a ▲/▼ glyph and drives `aria-sort`
+      on the `<th>`. The sort is a pure, stable, presentational pass in `@tepegoz/process-ui`
+      (`sortRowsByColumn`) re-run from sort state on every render, so it survives a poll refresh and
+      never mutates the incoming rows; no header picked keeps today's kind-grouped default. New en/tr
+      strings for the announced direction._
 
 ### L9 — Everyday-UX toggles with no current home
 

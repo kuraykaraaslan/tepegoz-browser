@@ -33,6 +33,55 @@ export function sortRows(rows: readonly ProcessRow[]): ProcessRow[] {
   });
 }
 
+/** The columns the user can click to sort by. `task` sorts on the row label. */
+export const SORT_KEYS = ['task', 'cpu', 'memory', 'pid'] as const;
+export type SortKey = (typeof SORT_KEYS)[number];
+export type SortDirection = 'asc' | 'desc';
+export interface SortState {
+  key: SortKey;
+  direction: SortDirection;
+}
+
+/**
+ * First-click direction per column: names read best ascending (A→Z), the resource counters best
+ * descending (heaviest / newest first) — same as Chrome's task manager.
+ */
+export const DEFAULT_SORT_DIRECTION: Record<SortKey, SortDirection> = {
+  task: 'asc',
+  cpu: 'desc',
+  memory: 'desc',
+  pid: 'asc',
+};
+
+const SORT_COMPARATORS: Record<SortKey, (a: ProcessRow, b: ProcessRow) => number> = {
+  task: (a, b) => a.label.localeCompare(b.label),
+  cpu: (a, b) => a.cpuPercent - b.cpuPercent,
+  memory: (a, b) => a.memoryBytes - b.memoryBytes,
+  pid: (a, b) => a.pid - b.pid,
+};
+
+/**
+ * Presentational, user-driven column sort. Pure and stable: rows whose key compares equal keep their
+ * incoming order (explicit index tie-break, not a reliance on the engine's stability), and the input
+ * array is never mutated — the page re-runs this from the current sort state on every poll refresh so
+ * the chosen order survives new data.
+ */
+export function sortRowsByColumn(
+  rows: readonly ProcessRow[],
+  key: SortKey,
+  direction: SortDirection,
+): ProcessRow[] {
+  const sign = direction === 'asc' ? 1 : -1;
+  const compare = SORT_COMPARATORS[key];
+  return rows
+    .map((row, index) => ({ row, index }))
+    .sort((a, b) => {
+      const byKey = compare(a.row, b.row) * sign;
+      return byKey !== 0 ? byKey : a.index - b.index;
+    })
+    .map((entry) => entry.row);
+}
+
 /** Column sums for the footer "Total" row. */
 export function totals(rows: readonly ProcessRow[]): { cpuPercent: number; memoryBytes: number } {
   return rows.reduce(

@@ -3,4 +3,15 @@
  * the poll + end-process callbacks; this package owns row shaping and en/tr strings.
  */
 export { ProcessPage, type ProcessPageProps } from './process-page';
-export { formatBytes, formatCpu, sortRows, totals } from './process-page-helpers';
+export {
+  DEFAULT_SORT_DIRECTION,
+  formatBytes,
+  formatCpu,
+  SORT_KEYS,
+  sortRows,
+  sortRowsByColumn,
+  totals,
+  type SortDirection,
+  type SortKey,
+  type SortState,
+} from './process-page-helpers';

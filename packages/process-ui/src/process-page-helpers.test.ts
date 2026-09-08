@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import type { ProcessRow } from '@tepegoz/desktop-ipc';
-import { formatBytes, formatCpu, sortRows, totals } from './process-page-helpers';
+import {
+  formatBytes,
+  formatCpu,
+  sortRows,
+  sortRowsByColumn,
+  totals,
+} from './process-page-helpers';
 
 function row(over: Partial<ProcessRow>): ProcessRow {
   return {
@@ -54,6 +60,37 @@ describe('sortRows', () => {
     const before = input.map((r) => r.pid);
     sortRows(input);
     expect(input.map((r) => r.pid)).toEqual(before);
+  });
+});
+
+describe('sortRowsByColumn', () => {
+  const rows: ProcessRow[] = [
+    row({ pid: 3, label: 'Charlie', cpuPercent: 2, memoryBytes: 300 }),
+    row({ pid: 1, label: 'Alice', cpuPercent: 9, memoryBytes: 100 }),
+    row({ pid: 2, label: 'Bravo', cpuPercent: 2, memoryBytes: 200 }),
+  ];
+
+  it('sorts by the chosen key, ascending or descending', () => {
+    expect(sortRowsByColumn(rows, 'memory', 'asc').map((r) => r.pid)).toEqual([1, 2, 3]);
+    expect(sortRowsByColumn(rows, 'memory', 'desc').map((r) => r.pid)).toEqual([3, 2, 1]);
+    expect(sortRowsByColumn(rows, 'task', 'asc').map((r) => r.label)).toEqual([
+      'Alice',
+      'Bravo',
+      'Charlie',
+    ]);
+    expect(sortRowsByColumn(rows, 'pid', 'desc').map((r) => r.pid)).toEqual([3, 2, 1]);
+  });
+
+  it('is stable — equal keys keep their incoming order, both directions', () => {
+    // Charlie (pid 3) precedes Bravo (pid 2) in the input; both have cpuPercent 2.
+    expect(sortRowsByColumn(rows, 'cpu', 'asc').map((r) => r.pid)).toEqual([3, 2, 1]);
+    expect(sortRowsByColumn(rows, 'cpu', 'desc').map((r) => r.pid)).toEqual([1, 3, 2]);
+  });
+
+  it('does not mutate its input', () => {
+    const before = rows.map((r) => r.pid);
+    sortRowsByColumn(rows, 'cpu', 'desc');
+    expect(rows.map((r) => r.pid)).toEqual(before);
   });
 });
 

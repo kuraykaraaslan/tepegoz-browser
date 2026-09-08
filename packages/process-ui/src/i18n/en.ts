@@ -27,6 +27,13 @@ export const en = {
   endProcessConfirm: 'End this tab’s process? The page will reload when you return to it.',
   /** aria-label / tooltip for the manual refresh control. */
   refresh: 'Refresh now',
+  /** Click-to-sort column headers. `hint` is the header button's tooltip; `ascending` / `descending`
+   *  are announced (visually hidden) on the active column alongside the ▲ / ▼ glyph. */
+  sort: {
+    hint: 'Sort by this column',
+    ascending: 'sorted ascending',
+    descending: 'sorted descending',
+  },
 };
 
 export type ProcessStrings = typeof en;

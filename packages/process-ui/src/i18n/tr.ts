@@ -23,4 +23,9 @@ export const tr: ProcessStrings = {
   endProcessConfirm:
     'Bu sekmenin işlemi sonlandırılsın mı? Geri döndüğünüzde sayfa yeniden yüklenir.',
   refresh: 'Şimdi yenile',
+  sort: {
+    hint: 'Bu sütuna göre sırala',
+    ascending: 'artan sırada sıralı',
+    descending: 'azalan sırada sıralı',
+  },
 };
