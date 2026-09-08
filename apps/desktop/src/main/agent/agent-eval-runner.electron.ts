@@ -219,6 +219,7 @@ export async function maybeRunEval(): Promise<void> {
         returnedToOrigin: tabSpawn.returnedToOrigin,
       },
       stopReasonStrings: stopReason,
+      runtimeStrings: mainStrings().agent.runtime,
       localInference: { engine: llamaEngine(), resolveModel: () => ModelManager.resolveModel() },
       // Per-trial token ceiling (`TEPEGOZ_EVAL_RUN_CEILING`, 0 = off). `maxSteps` bounds how MANY steps
       // a trial takes, never how large they are — the worst run measured in this repo burned 224k tokens

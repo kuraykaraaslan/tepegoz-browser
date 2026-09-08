@@ -69,6 +69,14 @@ export const tr: AgentStrings = {
     login:
       'Bir giriş ekranı algılandı. Tepegöz duraklattı ve sizin yerinize giriş yapmayacak. Sayfada giriş yapın, sonra “Devam et”e basın — görevi oradan sürdürür.',
   },
+  // Çalışma zamanının kendi yaşam döngüsü Konsol satırları (S8): hiçbir şey çalışmadan önce plan
+  // reddedildi, plan önizlemesinde her adım atlandı ve tavsiye niteliğindeki egress uyarısı (PII /
+  // kodlanmış veri — yine de gönderilir).
+  runtime: {
+    planRejected: 'Plan reddedildi — hiçbir şey çalıştırılmadı.',
+    allStepsSkipped: 'Tüm adımlar atlandı — çalıştırılacak bir şey yok.',
+    egressWarning: 'Egress uyarısı: model isteğinde olası PII/kodlanmış veri',
+  },
   // Ajanın kendi özetini yazmadan durduğu bir çalışma için terminal Konsol satırı (S8) — ham bir enum
   // ("Finished: max_steps") yerine her durma nedeni için düz bir cümle.
   stopReason: {

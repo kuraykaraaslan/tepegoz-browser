@@ -77,6 +77,9 @@ export interface AgentRunDeps {
   /** Localized terminal-line copy for a run that stopped without its own summary (S8) — one plain
    *  sentence per stop reason. See {@link terminalMessageFor}. */
   stopReasonStrings: StopReasonStrings;
+  /** Localized Console copy for the runtime's own lifecycle events (plan rejected before anything
+   *  ran, every step skipped, an advisory egress warning). Injected by the host from its dictionary. */
+  runtimeStrings: { planRejected: string; allStepsSkipped: string; egressWarning: string };
   /**
    * On-device inference config (engine + selected-model resolver). Injected by the Electron wiring;
    * absent when the app didn't wire a local engine, in which case `'local'` routing is unavailable and

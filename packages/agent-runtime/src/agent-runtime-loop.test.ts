@@ -41,6 +41,11 @@ function deps(over: Partial<AgentRunDeps> = {}): AgentRunDeps {
       transientError: 'transient',
       generic: 'stopped',
     },
+    runtimeStrings: {
+      planRejected: 'plan-rejected',
+      allStepsSkipped: 'all-skipped',
+      egressWarning: 'egress-warning',
+    },
     listTabs: () => [
       { id: TABS.origin, url: 'https://a.example', title: 'A', active: true },
       { id: TABS.spawned, url: 'https://a.example/new', title: 'New', active: false },

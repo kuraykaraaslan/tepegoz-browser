@@ -35,6 +35,11 @@ const DEPS: AgentRunDeps = {
     transientError: 'transient',
     generic: 'stopped',
   },
+  runtimeStrings: {
+    planRejected: 'plan-rejected',
+    allStepsSkipped: 'all-skipped',
+    egressWarning: 'egress-warning',
+  },
 };
 
 function hooks(): AgentRunHooks {
@@ -324,7 +329,7 @@ describe('runAgent — plan phase, approval, and egress-during-planning', () => 
     expect(res.stoppedReason).toBe('plan_rejected'); // the warn is advisory — the request went out
     expect(h.onEvent).toHaveBeenCalledWith(
       'decision',
-      expect.stringContaining('Egress warning'),
+      DEPS.runtimeStrings.egressWarning,
       expect.stringContaining('pii_email'),
     );
   });

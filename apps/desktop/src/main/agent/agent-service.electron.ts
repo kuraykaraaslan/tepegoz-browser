@@ -97,6 +97,7 @@ export default class AgentService {
             returnedToOrigin: tabSpawn.returnedToOrigin,
           },
           stopReasonStrings: stopReason,
+          runtimeStrings: mainStrings().agent.runtime,
           localInference: {
             engine: llamaEngine(),
             resolveModel: () => ModelManager.resolveModel(),

@@ -87,11 +87,7 @@ export async function runAgent(
     // Advisory (PII / encoded blob): surface to the Console, still send.
     onWarn: (findings) => {
       const summary = findings.map((f) => `${f.kind} (${f.sample})`).join(', ');
-      hooks.onEvent(
-        'decision',
-        'Egress warning: possible PII/encoded data in the model request',
-        summary,
-      );
+      hooks.onEvent('decision', deps.runtimeStrings.egressWarning, summary);
     },
     // Possible secret (block-severity): route to HITL — the user chooses to send or cancel (origin-blind
     // detection can't tell a real secret from token-shaped page content it was asked to read, so a hard
@@ -185,7 +181,7 @@ export async function runAgent(
         skippedStepIds: decision.skipStepIds ?? [],
       }),
     );
-    hooks.onEvent('done', 'Plan rejected — nothing was executed.');
+    hooks.onEvent('done', deps.runtimeStrings.planRejected);
     return { stoppedReason: 'plan_rejected', ok: false, checkpoint: lastCheckpoint };
   }
   const skip = new Set(decision.skipStepIds ?? []);
@@ -198,7 +194,7 @@ export async function runAgent(
   );
   if (steps.length === 0) {
     emitCheckpoint(terminalCheckpoint(transition('complete'), 'plan_empty'));
-    hooks.onEvent('done', 'All steps skipped — nothing to run.');
+    hooks.onEvent('done', deps.runtimeStrings.allStepsSkipped);
     return { stoppedReason: 'plan_empty', ok: false, checkpoint: lastCheckpoint };
   }
   const approvedPlan: Plan = { goal: plan.goal, steps };

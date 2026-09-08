@@ -196,8 +196,13 @@ Six UI-scoped PRs, each ≤250 lines, sequenced behind their substrate phases. N
   settings#shortcuts, and the generic term surfacing the whole set. **Still owed for `[x]`:** "every
   agent surface reachable without a mouse" — a full keyboard audit of the agent console, not just the
   palette._
-- [ ] **Localized to the same bar as the rest of the app** (en + tr). Both Claude-extension studies list
+- [~] **Localized to the same bar as the rest of the app** (en + tr). Both Claude-extension studies list
       missing Turkish as a support-cost and adoption problem; this project treats it as a gate.
+      _2026-09-08: the `@tepegoz/agent-runtime` package no longer holds any user-facing English literal —
+      the terminal stop-reason sentences (`stopReasonStrings`) **and** the runtime lifecycle Console
+      lines (plan rejected / all steps skipped / advisory egress warning, `runtimeStrings`) are now
+      injected by the host from `@tepegoz/ext-agent`'s parity-tested dict. Still owed: a sweep of the
+      `ext-agent` panel React surfaces themselves for any remaining hardcoded string._
 
 > **Second wave (2026-09-01 studies).** Six items from a later sweep —
 > [Fellou](../../docs/research/research-fellou.md), [Opera Neon](../../docs/research/research-opera-neon.md),

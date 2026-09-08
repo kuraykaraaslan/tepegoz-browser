@@ -66,6 +66,13 @@ export const en = {
     login:
       'A login screen was detected. Tepegöz has paused and will not sign in for you. Log in on the page, then press Resume — it will continue the task from there.',
   },
+  // The runtime's own lifecycle Console lines (S8): plan rejected before anything ran, every step
+  // skipped in the plan preview, and the advisory egress warning (PII / encoded blob — still sent).
+  runtime: {
+    planRejected: 'Plan rejected — nothing was executed.',
+    allStepsSkipped: 'All steps skipped — nothing to run.',
+    egressWarning: 'Egress warning: possible PII/encoded data in the model request',
+  },
   // Terminal Console line for a run that stopped WITHOUT the agent writing its own summary (S8) — a
   // plain sentence per stop reason instead of a raw enum ("Finished: max_steps").
   stopReason: {
