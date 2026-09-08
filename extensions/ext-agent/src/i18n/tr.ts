@@ -126,6 +126,12 @@ export const tr: AgentStrings = {
     warnBody:
       "Bu hesap token kotasının %80'inden fazlasını kullandı. Ayarlar → Ajan'dan düzenleyin.",
   },
+  context: {
+    label: 'Bağlam',
+    aria: 'Bağlam penceresi %{pct} dolu',
+    tooltip:
+      "Modelin bu görevdeki çalışma belleği — yaklaşık {max} tokenin {used} kadarı. Doldukça ajan devam edebilmek için önceki adımları özetler; uzun bir çalışmanın aniden sıkışmasının nedeni budur. Bu, token kotanız değildir; pencere boyutu bu model için bir tahmindir.",
+  },
   // Agentic komut paleti (Sohbet/Yap/Üret/Görevler) — bu yüzeyin sahibi bu eklenti.
   commandPalette: {
     modes: 'Modlar',

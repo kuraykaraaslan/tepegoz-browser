@@ -120,6 +120,8 @@ export function AgentPanel({ api, onClose }: AgentPanelProps) {
         api={api}
         activeGroupId={activeGroupId}
         tokens={tokens}
+        provider={config?.provider}
+        model={config?.model}
         turnCount={turns.length}
         logExported={logExported}
         exportError={exportError}

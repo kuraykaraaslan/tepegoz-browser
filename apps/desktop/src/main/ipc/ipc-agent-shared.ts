@@ -71,6 +71,9 @@ export function tokenUsage(): TokenUsageSnapshot {
     totalTokens: t.totalTokens,
     quota,
     lifetimeTokens,
+    // Peak prompt size of any one model call this run — the run's real context-window pressure,
+    // which the cumulative counter above cannot show. Feeds the panel's context-fullness gauge.
+    contextTokens: TokenLedger.peakContextTokens(),
   };
 }
 

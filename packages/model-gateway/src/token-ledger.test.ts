@@ -59,6 +59,24 @@ describe('TokenLedger', () => {
     });
   });
 
+  it('tracks the peak single-call prompt size, not a cumulative sum', () => {
+    expect(TokenLedger.peakContextTokens()).toBe(0);
+    TokenLedger.record('anthropic', 'm', 'exec', {
+      inputTokens: 4_000,
+      outputTokens: 500,
+      cacheReadTokens: 6_000,
+      cacheWriteTokens: 2_000,
+    });
+    // 4k + 6k + 2k prompt — output does not count toward the input context.
+    expect(TokenLedger.peakContextTokens()).toBe(12_000);
+    // A smaller later call (e.g. a cheap classify) must not lower the high-water mark.
+    TokenLedger.record('anthropic', 'm', 'classify', { inputTokens: 800, outputTokens: 20 });
+    expect(TokenLedger.peakContextTokens()).toBe(12_000);
+    // A bigger call raises it.
+    TokenLedger.record('anthropic', 'm', 'exec', { inputTokens: 30_000, outputTokens: 400 });
+    expect(TokenLedger.peakContextTokens()).toBe(30_000);
+  });
+
   it('reports a quota that is off (0) as never warning or exceeded', () => {
     TokenLedger.record('anthropic', 'm', 'plan', { inputTokens: 100, outputTokens: 900 });
     const status = TokenLedger.budgetStatus();
@@ -92,12 +110,14 @@ describe('TokenLedger', () => {
     expect(TokenLedger.quotaExhausted()).toBe(false);
   });
 
-  it('reset clears the baseline and quota', () => {
+  it('reset clears the baseline, quota and peak context', () => {
     TokenLedger.setQuota(100);
     TokenLedger.setBaseline(90);
+    TokenLedger.record('anthropic', 'm', 'exec', { inputTokens: 5_000, outputTokens: 10 });
     TokenLedger.reset();
     expect(TokenLedger.budgetStatus()).toMatchObject({ quota: 0, used: 0 });
     expect(TokenLedger.quotaExhausted()).toBe(false);
+    expect(TokenLedger.peakContextTokens()).toBe(0);
   });
 
   describe('runScoped — concurrent runs do not share counters', () => {

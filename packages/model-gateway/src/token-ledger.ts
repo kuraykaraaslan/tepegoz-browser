@@ -57,10 +57,24 @@ interface LedgerState {
   quota: number;
   /** Total-token ceiling for THIS run alone (0 = off). See {@link TokenLedger.setRunCeiling}. */
   runCeiling: number;
+  /**
+   * High-water mark of the PROMPT size of any single model call this run — uncached input + cache
+   * reads + cache writes, i.e. every token that was actually in the request. This is the run's real
+   * context-window pressure, distinct from {@link totals} (cumulative COST across every call). Feeds
+   * the panel's context-fullness gauge (S8 PR8 A2). 0 until the first call is recorded.
+   */
+  peakContext: number;
 }
 
 function newState(): LedgerState {
-  return { entries: new Map(), budgets: new Map(), baseline: 0, quota: 0, runCeiling: 0 };
+  return {
+    entries: new Map(),
+    budgets: new Map(),
+    baseline: 0,
+    quota: 0,
+    runCeiling: 0,
+    peakContext: 0,
+  };
 }
 
 /**
@@ -110,6 +124,7 @@ export class TokenLedger {
     s.baseline = 0;
     s.quota = 0;
     s.runCeiling = 0;
+    s.peakContext = 0;
   }
 
   /** Seed the persisted lifetime total (input+output) so budgetStatus reflects cumulative usage. */
@@ -168,6 +183,22 @@ export class TokenLedger {
     cur.cacheWriteTokens += usage.cacheWriteTokens ?? 0;
     cur.calls += 1;
     entries.set(k, cur);
+
+    // The prompt actually sent on THIS call = everything that was in the request. Tracked as a
+    // high-water mark, not a running sum: context is what one call carried, not the run's lifetime.
+    const promptTokens =
+      usage.inputTokens + (usage.cacheReadTokens ?? 0) + (usage.cacheWriteTokens ?? 0);
+    const s = state();
+    if (promptTokens > s.peakContext) s.peakContext = promptTokens;
+  }
+
+  /**
+   * The largest single-call prompt this run has sent (uncached input + cache reads + cache writes) —
+   * the run's peak context-window fill, for the panel's context-fullness gauge (S8 PR8 A2). 0 before
+   * any call. Deliberately NOT cumulative: {@link totals} already answers "how much has this cost".
+   */
+  static peakContextTokens(): number {
+    return state().peakContext;
   }
 
   static totalOutputForCapability(capability: string): number {

@@ -18,7 +18,10 @@ vi.mock('@tepegoz/ext-agent/manifest', () => ({ agentManifest: { id: 'com.tepego
 const ledgerTotals = vi.hoisted(() =>
   vi.fn(() => ({ inputTokens: 10, outputTokens: 5, totalTokens: 15 })),
 );
-vi.mock('@tepegoz/model-gateway', () => ({ TokenLedger: { totals: ledgerTotals } }));
+const ledgerPeakContext = vi.hoisted(() => vi.fn(() => 1200));
+vi.mock('@tepegoz/model-gateway', () => ({
+  TokenLedger: { totals: ledgerTotals, peakContextTokens: ledgerPeakContext },
+}));
 
 const convList = vi.hoisted(() => vi.fn(() => [{ id: 'c1' }]));
 const lifetimeTotals = vi.hoisted(() => vi.fn(() => ({ totalTokens: 4200 })));
@@ -49,6 +52,7 @@ const mod = await import('./ipc-agent-shared');
 beforeEach(() => {
   getAllWindows.mockReturnValue([]);
   ledgerTotals.mockReturnValue({ inputTokens: 10, outputTokens: 5, totalTokens: 15 });
+  ledgerPeakContext.mockReturnValue(1200);
   convList.mockReturnValue([{ id: 'c1' }]);
   lifetimeTotals.mockReturnValue({ totalTokens: 4200 });
   push.mockClear();
@@ -154,12 +158,18 @@ describe('tokenUsage', () => {
       totalTokens: 15,
       quota: 50_000,
       lifetimeTokens: 4200,
+      contextTokens: 1200,
     });
   });
 
   it('reports 0 lifetime tokens when there is no database', () => {
     db.value = null;
     expect(mod.tokenUsage().lifetimeTokens).toBe(0);
+  });
+
+  it('carries the peak single-call context size for the fullness gauge', () => {
+    ledgerPeakContext.mockReturnValue(148_000);
+    expect(mod.tokenUsage().contextTokens).toBe(148_000);
   });
 });
 

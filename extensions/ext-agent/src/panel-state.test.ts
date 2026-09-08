@@ -44,7 +44,14 @@ describe('serializeConversationLog', () => {
       provider: 'anthropic',
       autonomy: 'ask',
       effort: 'high',
-      tokens: { inputTokens: 10, outputTokens: 5, totalTokens: 15, quota: 0, lifetimeTokens: 0 },
+      tokens: {
+        inputTokens: 10,
+        outputTokens: 5,
+        totalTokens: 15,
+        quota: 0,
+        lifetimeTokens: 0,
+        contextTokens: 0,
+      },
     });
 
     expect(out).toContain('# Tepegöz Agent — Chat Log');

@@ -291,11 +291,30 @@ Six UI-scoped PRs, each ≤250 lines, sequenced behind their substrate phases. N
   unmount, en + tr (`thread.copyMessage` / `thread.copied`). 5 tests in `panel-thread.test.tsx`
   (prompt + response copy, missing-clipboard tolerance, empty-thread, layout). **Quote and
   edit-and-resend still owed** — those touch the composer/attachment path, not just the renderer._
-- [ ] **A2 — A context-fullness gauge, distinct from the token counter.** The counter and the 80% quota
+- [~] **A2 — A context-fullness gauge, distinct from the token counter.** The counter and the 80% quota
       warning measure **cost**; how full the _context window_ is is invisible. That is the real breaking point
       of a long run. The data already exists on the `cache-window` / `TokenLedger` side. Showing it answers
       "why did it suddenly summarize?" _before_ it happens — pair it with the visible compaction marker in
       [Phase 1b](../product/phase-1b-agentic-deepening.md) / `webbrain` P9-a.
+      _Landed 2026-09-09: `ContextGauge` (`panel-context-gauge.tsx`) — a thin bar + `Context NN%` beside the
+      token chip in `PanelHeader`, amber past 70% of the window, red past 85%, `role="progressbar"`, and a
+      localized `title` that spells out it is the model's working memory for this task, **not** the token
+      quota (en + tr `context.*`). Hidden entirely when the run has reported no context size (`contextTokens
+      <= 0`) — a 0% gauge would imply "empty" when the truth is "unknown". **The USED figure is real:**
+      `TokenLedger` now tracks `peakContextTokens()` — the high-water mark of the actual prompt size
+      (uncached input + cache reads + cache writes) of any single model call in the run, distinct from the
+      cumulative cost `totals()` — and `ipc-agent-shared.tokenUsage()` carries it to the panel as
+      `TokenUsageSnapshot.contextTokens` (no new zod boundary: main → renderer, display-only). Tests:
+      `token-ledger.test.ts` (peak is a high-water mark, not a sum; survives a smaller later call; cleared
+      by `reset`), `ipc-agent-shared.test.ts` (the field is carried), `panel-context-gauge.test.tsx` (11 —
+      hidden with no data / non-finite, the three colour bands at threshold values, 100% clamp, en+tr
+      tooltip, and the `contextWindowFor` lookup). **Still owed for `[x]`:** the window MAX is a per-model
+      lookup table in `panel-context-gauge.tsx` (Opus 5 / Sonnet 5 = 1M and Haiku 4.5 = 200K from the
+      `claude-api` reference; the other providers are conservative best-effort constants) because model
+      context-window sizes are not reported to the panel — a real `contextMax` would come from
+      `@tepegoz/model-gateway` (`models.ts` has no window column yet) threaded through the same
+      `tokenUsage()` snapshot. That follow-up, plus the live (non-peak) value and the visible compaction
+      marker, are what this item is short of `[x]`._
 - [~] **A3 — Activity-phase grouping + a live tool-intent label.** A 40-step run is a flat
   `step_start`/`step_ok`/`step_error` list today. **Tepegöz can do this more cheaply and more honestly
   than LibreChat does:** LibreChat has the _model_ generate group headers, but the plan here is already a

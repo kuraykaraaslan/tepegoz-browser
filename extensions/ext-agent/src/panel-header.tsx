@@ -1,7 +1,9 @@
 import { cn } from '@tepegoz/ui';
 import type { Resources } from '@tepegoz/i18n';
+import type { AIProvider } from '@tepegoz/shared-types/providers';
 import type { AgentStrings } from './i18n';
 import type { AgentConversationDetail, AgentHostApi, TokenUsageSnapshot } from './types';
+import { ContextGauge } from './panel-context-gauge';
 import { ConversationHistoryDropdown } from './conversation-history-dropdown';
 import { CheckIcon, CloseIcon, NewTaskIcon, ScheduleIcon, SparkIcon } from './panel-icons';
 import { ICON_BTN } from './panel-styles';
@@ -16,6 +18,9 @@ interface PanelHeaderProps {
   api: AgentHostApi;
   activeGroupId: string | null;
   tokens: TokenUsageSnapshot | null;
+  /** The run's provider + pinned model — sizes the context-fullness gauge's window estimate. */
+  provider: AIProvider | undefined;
+  model: string | undefined;
   turnCount: number;
   logExported: boolean;
   exportError: string | null;
@@ -33,6 +38,8 @@ export function PanelHeader({
   api,
   activeGroupId,
   tokens,
+  provider,
+  model,
   turnCount,
   logExported,
   exportError,
@@ -69,6 +76,14 @@ export function PanelHeader({
           <h2 className="text-sm font-semibold text-text-primary">{a.title}</h2>
         </div>
         <div className="flex items-center gap-1.5">
+          {tokens !== null && (
+            <ContextGauge
+              contextTokens={tokens.contextTokens}
+              provider={provider}
+              model={model}
+              a={a}
+            />
+          )}
           {tokens !== null && tokens.quota > 0 ? (
             // Quota indicator: cumulative lifetime usage against the account quota; amber at ≥80%.
             <span

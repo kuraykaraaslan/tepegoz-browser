@@ -125,6 +125,15 @@ export const en = {
     warnTitle: 'Approaching your token quota',
     warnBody: 'This account has used over 80% of its token quota. Adjust it in Settings → Agent.',
   },
+  // Context-fullness gauge (S8 PR8 A2) — the model's working memory for THIS task, shown beside the
+  // token counter (which measures COST, a different thing). {pct}/{used}/{max} are filled by the
+  // caller. The gauge is hidden entirely when the run has reported no context size yet.
+  context: {
+    label: 'Context',
+    aria: 'Context window {pct}% full',
+    tooltip:
+      "The model's working memory for this task — about {used} of ~{max} tokens. As it fills, the agent summarises earlier steps to keep going, which is why a long run can suddenly compact. This is not your token quota; the window size is an estimate for this model.",
+  },
   // The agentic command palette (Chat/Do/Make/Tasks) — this extension owns the surface.
   commandPalette: {
     modes: 'Modes',

@@ -158,6 +158,13 @@ export interface TokenUsageSnapshot {
   quota: number;
   /** Persisted lifetime tokens used against the quota (non-refunded), across every run/restart. */
   lifetimeTokens: number;
+  /**
+   * Peak PROMPT size (uncached input + cache reads + cache writes) of any single model call in the
+   * current run — the run's real context-window pressure, which is a different thing from the
+   * cost counters above. Drives the context-fullness gauge (S8 PR8 A2). 0 before the first call, or
+   * on a build where the runtime does not report it.
+   */
+  contextTokens: number;
 }
 
 /**
