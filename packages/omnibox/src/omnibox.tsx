@@ -20,6 +20,8 @@ import {
 } from '@fortawesome/free-solid-svg-icons';
 import { cn } from '@tepegoz/ui';
 import { evaluateOmniboxCalc } from './omnibox-calc';
+import { emphasisSegments } from './omnibox-emphasis';
+import { parseOmniboxQuery } from './omnibox-suggest';
 import type { OmniboxQuickSettingTarget, OmniboxSuggestion } from './omnibox-suggest';
 
 /**
@@ -183,6 +185,10 @@ export function Omnibox({
   // object …). Typing "2+2" froze the renderer. Depend on the boolean instead.
   const isCalc = calc !== null;
   const open = focused && !isCalc && suggestions.length > 0;
+  // The term to emphasise in each row — the typed text minus any `tab:` / `history:` scope prefix, so
+  // a scoped search still bolds the part that actually matched. Structural, not a string: an empty
+  // term just yields one unmatched segment.
+  const matchTerm = parseOmniboxQuery(value).term;
 
   // The leading site-info control: shown for every classified level (a lock, a red "Not secure", a
   // gear for an app page) but not for `unknown` / no labels. `http://` and a bypassed certificate
@@ -431,6 +437,9 @@ export function Omnibox({
               id={`${listboxId}-opt-${i}`}
               role="option"
               aria-selected={i === selected}
+              // Name the row from its own text, so a screen reader announces "Example Blog", not the
+              // emphasis-fragmented "Exam… ple Blog" that the matched-substring `<span>`s would compute to.
+              aria-label={s.subtitle !== undefined ? `${s.title} ${s.subtitle}` : s.title}
               // Choose on mousedown (before the input blurs) so the click isn't swallowed by the blur.
               onMouseDown={(e) => {
                 e.preventDefault();
@@ -447,11 +456,17 @@ export function Omnibox({
               )}
             >
               <SuggestionIcon kind={s.kind} faviconUrl={s.faviconUrl} />
-              <span className="min-w-0 flex-1 truncate text-text-primary">{s.title}</span>
+              <EmphasizedText
+                text={s.title}
+                query={matchTerm}
+                className="min-w-0 flex-1 truncate text-text-primary"
+              />
               {s.subtitle !== undefined && (
-                <span className="max-w-[45%] shrink-0 truncate text-xs text-text-secondary">
-                  {s.subtitle}
-                </span>
+                <EmphasizedText
+                  text={s.subtitle}
+                  query={matchTerm}
+                  className="max-w-[45%] shrink-0 truncate text-xs text-text-secondary"
+                />
               )}
             </li>
           ))}
@@ -586,5 +601,31 @@ function SuggestionIcon({
       className="h-3.5 w-3.5 shrink-0 text-text-secondary"
       aria-hidden
     />
+  );
+}
+
+/**
+ * A suggestion's text with the part that matches the typed query emphasised — Chrome/Firefox's
+ * matched-substring bolding. `emphasisSegments` finds the span the same accent- and Turkish-folded way
+ * the suggestion was itself matched (`@tepegoz/i18n`'s `foldForSearch`). Rendered as plain `<span>`
+ * text nodes only: the matched runs carry `font-semibold`, never `dangerouslySetInnerHTML`.
+ */
+function EmphasizedText({
+  text,
+  query,
+  className,
+}: {
+  text: string;
+  query: string;
+  className?: string | undefined;
+}) {
+  return (
+    <span className={className}>
+      {emphasisSegments(text, query).map((seg, i) => (
+        <span key={i} className={seg.match ? 'font-semibold' : undefined}>
+          {seg.text}
+        </span>
+      ))}
+    </span>
   );
 }

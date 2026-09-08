@@ -127,7 +127,7 @@ describe('Omnibox', () => {
     fireEvent.focus(input);
     fireEvent.change(input, { target: { value: 'duck' } });
 
-    expect(await screen.findByText('Duck facts')).toBeTruthy();
+    expect(await screen.findByRole('option', { name: 'Duck facts' })).toBeTruthy();
     expect(onSuggest).toHaveBeenCalledWith('duck');
   });
 
@@ -144,10 +144,12 @@ describe('Omnibox', () => {
     const input = screen.getByRole('combobox');
     fireEvent.focus(input);
     fireEvent.change(input, { target: { value: 'two' } });
-    expect(await screen.findByText('Two plus two clubhouse')).toBeTruthy();
+    expect(await screen.findByRole('option', { name: 'Two plus two clubhouse' })).toBeTruthy();
 
     fireEvent.change(input, { target: { value: '2+2' } });
-    await waitFor(() => expect(screen.queryByText('Two plus two clubhouse')).toBeNull());
+    await waitFor(() =>
+      expect(screen.queryByRole('option', { name: 'Two plus two clubhouse' })).toBeNull(),
+    );
     expect(screen.getByText('= 4')).toBeTruthy();
   });
 
@@ -165,12 +167,12 @@ describe('Omnibox', () => {
     const input = screen.getByRole('combobox');
     fireEvent.focus(input);
     fireEvent.change(input, { target: { value: 'duck' } });
-    expect(await screen.findByText('Duck facts')).toBeTruthy();
+    expect(await screen.findByRole('option', { name: 'Duck facts' })).toBeTruthy();
 
     fireEvent.submit(omniboxForm());
 
     expect(onNavigate).toHaveBeenCalledWith('duck');
-    await waitFor(() => expect(screen.queryByText('Duck facts')).toBeNull());
+    await waitFor(() => expect(screen.queryByRole('option', { name: 'Duck facts' })).toBeNull());
   });
 
   it('a debounced fetch in flight cannot reopen a dropdown that was already dismissed (§ A9)', async () => {
@@ -207,7 +209,7 @@ describe('Omnibox', () => {
     const input = screen.getByRole('combobox');
     fireEvent.focus(input);
     fireEvent.change(input, { target: { value: 'row' } });
-    expect(await screen.findByText('Row 1')).toBeTruthy();
+    expect(await screen.findByRole('option', { name: 'Row 1' })).toBeTruthy();
     expect(input.getAttribute('aria-activedescendant')).toBeNull();
 
     fireEvent.mouseEnter(screen.getByRole('option', { name: 'Row 1' }));
@@ -230,7 +232,7 @@ describe('Omnibox', () => {
     const input = screen.getByRole('combobox');
     fireEvent.focus(input);
     fireEvent.change(input, { target: { value: 'row' } });
-    await screen.findByText('Row 1');
+    await screen.findByRole('option', { name: 'Row 1' });
 
     fireEvent.keyDown(input, { key: 'ArrowDown' });
     fireEvent.keyDown(input, { key: 'ArrowDown' });
@@ -311,7 +313,7 @@ describe('Omnibox', () => {
     const input = screen.getByRole('combobox');
     fireEvent.focus(input);
     fireEvent.change(input, { target: { value: 'example' } });
-    await screen.findByText('example.com');
+    await screen.findByRole('option', { name: 'example.com' });
 
     expect(container.querySelector('li svg[data-icon="globe"]')).not.toBeNull();
     expect(container.querySelector('li svg[data-icon="magnifying-glass"]')).toBeNull();
@@ -337,7 +339,7 @@ describe('Omnibox', () => {
     const input = screen.getByRole('combobox');
     fireEvent.focus(input);
     fireEvent.change(input, { target: { value: 'example' } });
-    await screen.findByText('Example Blog');
+    await screen.findByRole('option', { name: 'Example Blog' });
 
     const img = container.querySelector('li img');
     expect(img?.getAttribute('src')).toBe(favicon);
@@ -363,7 +365,7 @@ describe('Omnibox', () => {
     const input = screen.getByRole('combobox');
     fireEvent.focus(input);
     fireEvent.change(input, { target: { value: 'broken' } });
-    await screen.findByText('Broken Icon');
+    await screen.findByRole('option', { name: 'Broken Icon' });
 
     fireEvent.error(container.querySelector('li img')!);
     expect(container.querySelector('li img')).toBeNull();
@@ -527,6 +529,91 @@ describe('Omnibox suggestion dispatch', () => {
   });
 });
 
+describe('Omnibox matched-substring emphasis', () => {
+  /** Type `query`, wait for the one suggestion row, return its `<li>`. */
+  async function rowFor(s: OmniboxSuggestion, query: string): Promise<HTMLElement> {
+    render(<Omnibox {...baseProps({ onSuggest: vi.fn(oneSuggestion(s)) })} />);
+    const input = screen.getByRole('combobox');
+    fireEvent.focus(input);
+    fireEvent.change(input, { target: { value: query } });
+    return screen.findByRole('option', { name: s.subtitle ? `${s.title} ${s.subtitle}` : s.title });
+  }
+
+  it('wraps the matched span of the title in the emphasis class, original case kept', async () => {
+    const row = await rowFor(
+      {
+        key: 'h',
+        kind: 'history',
+        title: 'Example Blog',
+        action: { type: 'navigate', input: 'https://example.com/blog' },
+      },
+      'exam',
+    );
+    const bold = row.querySelectorAll('.font-semibold');
+    expect(Array.from(bold, (b) => b.textContent)).toEqual(['Exam']);
+    // The row is still exactly its own text — nothing added, nothing lost.
+    expect(row.textContent).toBe('Example Blog');
+  });
+
+  it('emphasises the URL / secondary line too', async () => {
+    const row = await rowFor(
+      {
+        key: 'h',
+        kind: 'history',
+        title: 'Docs',
+        subtitle: 'https://example.com/guide',
+        action: { type: 'navigate', input: 'https://example.com/guide' },
+      },
+      'example',
+    );
+    const bold = Array.from(row.querySelectorAll('.font-semibold'), (b) => b.textContent);
+    expect(bold).toContain('example');
+  });
+
+  it('renders segments as plain text nodes — never raw HTML', async () => {
+    const row = await rowFor(
+      {
+        key: 'h',
+        kind: 'history',
+        title: '<b>pwn</b> and world',
+        action: { type: 'navigate', input: 'https://x.test/' },
+      },
+      'world',
+    );
+    // The angle-bracket text survived as literal text, and no <b> element was injected.
+    expect(row.textContent).toBe('<b>pwn</b> and world');
+    expect(row.querySelector('b')).toBeNull();
+    expect(row.innerHTML).not.toContain('<b>pwn');
+  });
+
+  it('is Turkish-correct: typing "sisli" emphasises "Şişli"', async () => {
+    const row = await rowFor(
+      {
+        key: 'b',
+        kind: 'bookmark',
+        title: 'Şişli Belediyesi',
+        action: { type: 'navigate', input: 'https://sisli.bel.tr/' },
+      },
+      'sisli',
+    );
+    const bold = Array.from(row.querySelectorAll('.font-semibold'), (b) => b.textContent);
+    expect(bold).toEqual(['Şişli']);
+  });
+
+  it('adds no emphasis when nothing matches', async () => {
+    const row = await rowFor(
+      {
+        key: 'h',
+        kind: 'history',
+        title: 'Totally unrelated',
+        action: { type: 'navigate', input: 'https://u.test/' },
+      },
+      'zzz',
+    );
+    expect(row.querySelector('.font-semibold')).toBeNull();
+  });
+});
+
 describe('Omnibox keyboard and inline calculation', () => {
   it('ArrowUp wraps to the last row and back off the top, and Escape closes the dropdown', async () => {
     const onSuggest = vi.fn(theseSuggestions([navRow(0), navRow(1)]));
@@ -534,7 +621,7 @@ describe('Omnibox keyboard and inline calculation', () => {
     const input = screen.getByRole('combobox');
     fireEvent.focus(input);
     fireEvent.change(input, { target: { value: 'row' } });
-    await screen.findByText('Row 1');
+    await screen.findByRole('option', { name: 'Row 1' });
 
     // from nothing selected, up goes to the LAST row — the shortest path to the bottom of the list
     fireEvent.keyDown(input, { key: 'ArrowUp' });
@@ -591,7 +678,7 @@ describe('Omnibox dropdown height reporting', () => {
     const input = screen.getByRole('combobox');
     fireEvent.focus(input);
     fireEvent.change(input, { target: { value: 'row' } });
-    await screen.findByText('Row 1');
+    await screen.findByRole('option', { name: 'Row 1' });
 
     // jsdom measures every box as 0, so this is the row-count fallback — which is exactly the path
     // that matters: a host told "0" while two rows are painting would clip them away entirely.
@@ -628,7 +715,7 @@ describe('Omnibox dropdown height reporting', () => {
     const input = screen.getByRole('combobox');
     fireEvent.focus(input);
     fireEvent.change(input, { target: { value: 'row' } });
-    await screen.findByText('Row 0');
+    await screen.findByRole('option', { name: 'Row 0' });
 
     expect(observed).toHaveLength(1);
     onDropdownHeightChange.mockClear();
@@ -650,11 +737,11 @@ describe('Omnibox dropdown height reporting', () => {
     const input = screen.getByRole('combobox');
     fireEvent.focus(input);
     fireEvent.change(input, { target: { value: 'row' } });
-    await screen.findByText('Row 0');
+    await screen.findByRole('option', { name: 'Row 0' });
 
     onSuggest.mockImplementationOnce(() => Promise.reject(new Error('suggest bridge down')));
     fireEvent.change(input, { target: { value: 'rows' } });
-    await waitFor(() => expect(screen.queryByText('Row 0')).toBeNull());
+    await waitFor(() => expect(screen.queryByRole('option', { name: 'Row 0' })).toBeNull());
   });
 
   it('reports nothing at all when the host does not ask for the height', async () => {
@@ -664,6 +751,6 @@ describe('Omnibox dropdown height reporting', () => {
     const input = screen.getByRole('combobox');
     fireEvent.focus(input);
     fireEvent.change(input, { target: { value: 'row' } });
-    expect(await screen.findByText('Row 0')).toBeTruthy();
+    expect(await screen.findByRole('option', { name: 'Row 0' })).toBeTruthy();
   });
 });

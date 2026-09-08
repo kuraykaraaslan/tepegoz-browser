@@ -10,6 +10,12 @@ export {
 } from './omnibox';
 export { evaluateOmniboxCalc, type CalcResult } from './omnibox-calc';
 export {
+  emphasisRanges,
+  emphasisSegments,
+  type EmphasisRange,
+  type EmphasisSegment,
+} from './omnibox-emphasis';
+export {
   buildOmniboxSuggestions,
   parseOmniboxQuery,
   looksNavigable,
