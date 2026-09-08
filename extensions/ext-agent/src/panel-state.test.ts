@@ -114,6 +114,27 @@ describe('applyAgentEvent (event→run routing that drives the pause/steer/stop 
     expect(resumed.paused).toBe(false);
   });
 
+  it('recovers running/runId when a non-terminal event arrives after the live flag was wiped mid-run', () => {
+    // An async history hydrate (or a panel reload) replaced the group state with one built from
+    // persisted history — no `running`/`runId`. The next streamed event must put the run back on the
+    // rails so the composer steers the follow-up instead of opening a rejected new run.
+    const cur = group({ running: false, runId: null, turns: [turn('t1', 'run-7', [])] });
+    const out = applyAgentEvent(cur, evt('step_ok', 'run-7'));
+    expect(out.running).toBe(true);
+    expect(out.runId).toBe('run-7');
+  });
+
+  it('does NOT resurrect running from a late non-terminal event once the active turn already settled', () => {
+    const cur = group({
+      running: false,
+      runId: null,
+      turns: [turn('t1', 'run-7', [evt('done', 'run-7')])],
+    });
+    const out = applyAgentEvent(cur, evt('decision', 'run-7'));
+    expect(out.running).toBe(false);
+    expect(out.runId).toBeNull();
+  });
+
   it('a terminal event clears running / paused / runId', () => {
     const cur = group({
       running: true,

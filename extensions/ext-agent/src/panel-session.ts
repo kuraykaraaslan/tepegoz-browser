@@ -124,7 +124,11 @@ export function useAgentSession(api: AgentHostApi): AgentSession {
     void api.getCurrentAgentConversation(activeGroupId).then(
       (detail) => {
         if (cancelled || detail === null) return;
-        mutateGroup(activeGroupId, () => stateFromConversation(detail));
+        // Never clobber a run that is live in THIS session: this fetch resolves asynchronously and can
+        // land just after the user launched a task, and `stateFromConversation` (built from persisted
+        // history) carries no `running`/`runId`. Wiping them mid-run left the composer offering "start a
+        // task" — and a second message opened a rejected new run instead of steering the live one.
+        mutateGroup(activeGroupId, (cur) => (cur.running ? cur : stateFromConversation(detail)));
       },
       () => {},
     );

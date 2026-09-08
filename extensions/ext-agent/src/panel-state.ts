@@ -203,16 +203,22 @@ export function applyAgentEvent(cur: GroupState, e: AgentEvent): GroupState {
   const newTurns = [...cur.turns];
   newTurns[idx] = { ...turn, runId: turn.runId ?? e.runId, events: [...turn.events, e] };
   const isTerminal = e.kind === 'done' || e.kind === 'error';
+  const alreadySettled = turn.events.some((ev) => ev.kind === 'done' || ev.kind === 'error');
   let { running, paused, runId } = cur;
   if (idx === last) {
-    runId = isTerminal ? null : (runId ?? e.runId);
     if (isTerminal) {
+      runId = null;
       running = false;
       paused = false;
-    } else if (e.kind === 'resumed') {
-      paused = false;
-    } else if (e.kind === 'paused') {
-      paused = true;
+    } else if (!alreadySettled) {
+      runId = runId ?? e.runId;
+      // Any non-terminal event for the active turn means its run is still going. `running` is normally
+      // set when the run is launched; setting it here as well RECOVERS the live flag when an async
+      // history hydrate or a panel reload wiped it mid-run — otherwise the composer kept showing "start
+      // a task" and a follow-up message opened a rejected NEW run instead of steering the live one.
+      running = true;
+      if (e.kind === 'resumed') paused = false;
+      else if (e.kind === 'paused') paused = true;
     }
   }
   // A settled event supersedes whatever was streaming toward it, so the tail is dropped here — the
