@@ -1,17 +1,14 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { settingsDict } from '@tepegoz/settings-ui';
-import { Badge, Button, Card, DataTable, Modal, Toggle, type TableColumn } from '@tepegoz/ui';
+import { Badge, Button, Card, DataTable, type TableColumn } from '@tepegoz/ui';
 import { useT } from '@tepegoz/i18n/react';
 import type { Preferences } from '@tepegoz/desktop-ipc';
-import { DEFAULT_PREFERENCES } from '@tepegoz/preferences/model';
 import {
-  buildBooleanPreferencePatch,
-  buildJsonPreferencePatch,
-  buildStringPreferencePatch,
   listDeveloperPreferenceRows,
   type DeveloperPreferenceRow,
 } from '../lib/developer-settings-model';
 import { ChromiumFlagsCard } from './settings-developer-flags';
+import { PreferenceEditModal } from './settings-developer-edit-modal';
 
 export interface DeveloperSectionProps {
   prefs: Preferences;
@@ -119,160 +116,5 @@ export function DeveloperSection({ prefs, onUpdatePrefs }: DeveloperSectionProps
         onUpdatePrefs={onUpdatePrefs}
       />
     </div>
-  );
-}
-
-function PreferenceEditModal({
-  row,
-  onClose,
-  onUpdatePrefs,
-}: {
-  row: TableRow | null;
-  onClose: () => void;
-  onUpdatePrefs: (patch: Partial<Preferences>) => Promise<void>;
-}) {
-  const s = useT(settingsDict);
-  const [draft, setDraft] = useState('');
-  const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
-
-  useEffect(() => {
-    setDraft(row?.valueText ?? '');
-    setError(null);
-  }, [row]);
-
-  async function apply(patch: Partial<Preferences>): Promise<void> {
-    setBusy(true);
-    setError(null);
-    try {
-      await onUpdatePrefs(patch);
-      onClose();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : s.developerSaveFailed);
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function applyString(): Promise<void> {
-    if (row === null) return;
-    const result = buildStringPreferencePatch(row.key, draft);
-    if (!result.ok) {
-      setError(result.error);
-      return;
-    }
-    await apply(result.patch);
-  }
-
-  async function applyJson(): Promise<void> {
-    if (row === null) return;
-    const result = buildJsonPreferencePatch(row.key, draft, s.developerInvalidJson);
-    if (!result.ok) {
-      setError(result.error);
-      return;
-    }
-    await apply(result.patch);
-  }
-
-  const defaultValue = row === null ? undefined : DEFAULT_PREFERENCES[row.key];
-  // Compared as JSON: these values are objects and arrays as often as scalars, and `===` on a fresh
-  // array would call every list "changed" and offer a reset that does nothing.
-  const isAtDefault = row !== null && JSON.stringify(row.value) === JSON.stringify(defaultValue);
-
-  const modalTitle = row?.key;
-
-  return (
-    <Modal
-      open={row !== null}
-      onClose={onClose}
-      {...(modalTitle !== undefined ? { title: modalTitle } : {})}
-      size="md"
-    >
-      {row !== null && (
-        <div className="mt-4 space-y-4">
-          <div className="flex flex-wrap items-center gap-2 text-xs text-text-secondary">
-            <Badge variant={row.visibility === 'public' ? 'info' : 'neutral'}>
-              {row.visibility === 'public' ? s.developerPublic : s.developerPrivate}
-            </Badge>
-            <span>
-              {s.developerType}: <span className="font-mono">{row.kind}</span>
-            </span>
-            {row.stability !== 'stable' && (
-              <Badge variant="neutral">
-                {row.stability === 'experimental'
-                  ? s.developerStabilityExperimental
-                  : s.developerStabilityInternal}
-              </Badge>
-            )}
-          </div>
-
-          {row.restartRequired && (
-            <p className="text-xs text-text-secondary">{s.developerRestartRequired}</p>
-          )}
-
-          {row.kind === 'boolean' && (
-            <Toggle
-              id={`developer-edit-${row.key}`}
-              label={row.value ? 'true' : 'false'}
-              checked={Boolean(row.value)}
-              disabled={busy}
-              onChange={(value) => {
-                void apply(buildBooleanPreferencePatch(row.key, value));
-              }}
-            />
-          )}
-
-          {row.kind === 'string' && (
-            <input
-              type="text"
-              value={draft}
-              disabled={busy}
-              onChange={(e) => setDraft(e.target.value)}
-              className="h-10 w-full rounded-md border border-border bg-surface-base px-3 font-mono text-sm text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus"
-            />
-          )}
-
-          {row.kind === 'json' && (
-            <textarea
-              value={draft}
-              disabled={busy}
-              rows={Math.min(14, Math.max(5, draft.split('\n').length))}
-              onChange={(e) => setDraft(e.target.value)}
-              className="w-full rounded-md border border-border bg-surface-base px-3 py-2 font-mono text-xs leading-5 text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus"
-            />
-          )}
-
-          {error !== null && <p className="text-xs text-error">{error}</p>}
-
-          <div className="flex justify-end gap-2">
-            {/* Per-row reset. The only way back to a default used to be the global reset, which
-                throws away every other preference to undo one experiment. */}
-            <Button
-              size="sm"
-              variant="outline"
-              disabled={busy || isAtDefault}
-              onClick={() => {
-                void apply({ [row.key]: defaultValue });
-              }}
-            >
-              {s.developerResetRow}
-            </Button>
-            <Button size="sm" variant="ghost" disabled={busy} onClick={onClose}>
-              {s.cancel}
-            </Button>
-            {row.kind !== 'boolean' && (
-              <Button
-                size="sm"
-                loading={busy}
-                disabled={draft === row.valueText}
-                onClick={() => void (row.kind === 'string' ? applyString() : applyJson())}
-              >
-                {s.developerApply}
-              </Button>
-            )}
-          </div>
-        </div>
-      )}
-    </Modal>
   );
 }

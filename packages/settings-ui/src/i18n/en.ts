@@ -707,6 +707,7 @@ export const en = {
   developerStabilityExperimental: 'Experimental',
   developerStabilityInternal: 'Internal',
   developerRestartRequired: 'Takes effect after you relaunch Tepegöz.',
+  developerObjectFields: 'Fields',
 
   // --- Accessibility (was a placeholder while the product claimed WCAG 2.2 AA) ---
   accessibility: {

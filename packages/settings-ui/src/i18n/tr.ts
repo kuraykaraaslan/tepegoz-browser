@@ -697,6 +697,7 @@ export const tr: SettingsStrings = {
   developerStabilityExperimental: 'Deneysel',
   developerStabilityInternal: 'Dahili',
   developerRestartRequired: 'Tepegöz’ü yeniden başlattığınızda etkin olur.',
+  developerObjectFields: 'Alanlar',
 
   // --- Erişilebilirlik (ürün WCAG 2.2 AA iddia ederken yer tutucuydu) ---
   accessibility: {

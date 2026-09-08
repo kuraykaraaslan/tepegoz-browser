@@ -1,10 +1,10 @@
 # Track — Developer settings surface: every browser + web-content knob in one place
 
-- **Status:** In progress — **Tier B + the `tepegoz://developer` page shipped 2026-08-28**; **Tier A's per-key
-  metadata registry + schema-derived pre-save validation landed 2026-09-08**
-  (`@tepegoz/preferences/developer-registry` — stability + `restartRequired` per key, `satisfies`-pinned;
-  `validatePreferenceValue` runs each edit through `PreferencesSchema.shape[key]` before the patch is
-  built). Tier A's nested-object drill-down + per-key label/description text, and Tiers C / D, still owed.
+- **Status:** In progress — **Tier B + the `tepegoz://developer` page shipped 2026-08-28**; **Tier A largely
+  landed 2026-09-08** — per-key metadata registry (`@tepegoz/preferences/developer-registry`),
+  schema-derived pre-save validation (`validatePreferenceValue`), and nested-object drill-down (per-leaf
+  editors in the modal). **Owed on Tier A:** per-key label/description text (editor still shows raw keys).
+  **Tiers C / D still owed.**
 - **Owner decisions taken (2026-08-28):** Chromium flags are **allowlist-only** · this document + an ADR
   land **before any code** · **revised same day:** a dedicated **`tepegoz://developer`** page, unlisted
   (no menu entry) but openable by any user and **not** dev-gated — the `chrome://flags` shape. The
@@ -56,8 +56,13 @@ Safe-to-expose `webPreferences` / `session` subset: `backgroundThrottling`, `plu
 ## Shape — Developer becomes three grouped surfaces
 
 1. **Preferences** — the existing table, plus:
-   - nested-object drill-down (today a nested object is one opaque JSON blob — e.g. `adblock`, `translate`,
-     `newTabBackground`);
+   - nested-object drill-down (a nested object was one opaque JSON blob — e.g. `adblock`, `translate`,
+     `newTabBackground`) — **landed 2026-09-08**: the edit modal now renders a per-leaf control list
+     (boolean → toggle, number/string → input) above the raw JSON for an object-valued preference;
+     each edit re-serializes into the same draft string, so Apply + schema validation are unchanged.
+     Nested objects / arrays / null leaves stay in the JSON editor. `PreferenceEditModal` moved to its
+     own file (`settings-developer-edit-modal.tsx`) to keep `settings-developer.tsx` under the
+     ADR-0010 250-line cap;
    - a **metadata registry** per key: label, description, `stable | experimental | internal` badge,
      `restartRequired` — **landed 2026-09-08** (`@tepegoz/preferences/developer-registry`; label/description
      still resolved from `settingsDict` by key);

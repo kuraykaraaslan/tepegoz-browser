@@ -71,6 +71,25 @@ describe('DeveloperSection — PreferenceEditModal', () => {
     expect(screen.getByRole('dialog')).toBeTruthy();
   });
 
+  it('edits a scalar leaf of an object preference through the field list and applies it', async () => {
+    const { onUpdatePrefs } = renderSection();
+    const dialog = openEditor('adblock');
+    // The field list renders one control per scalar leaf; `enabled` is a boolean → a switch.
+    const switches = within(dialog).getAllByRole('switch');
+    fireEvent.click(switches[0]!);
+    fireEvent.click(within(dialog).getByRole('button', { name: s.developerApply }));
+    await waitFor(() => expect(onUpdatePrefs).toHaveBeenCalledTimes(1));
+    const patch = onUpdatePrefs.mock.calls[0]![0] as { adblock: { enabled: boolean } };
+    expect(patch.adblock.enabled).toBe(false);
+    expect(patch.adblock).toMatchObject({ blockingMode: 'ads-and-trackers' });
+  });
+
+  it('shows no field list for an array-valued preference', () => {
+    renderSection({ mcpServers: [] });
+    const dialog = openEditor('mcpServers');
+    expect(within(dialog).queryByText(s.developerObjectFields)).toBeNull();
+  });
+
   it('refuses to apply invalid JSON, keeping the modal open with an error', () => {
     renderSection({ mcpServers: [] });
     const dialog = openEditor('mcpServers');

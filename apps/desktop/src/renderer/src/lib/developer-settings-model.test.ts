@@ -4,8 +4,11 @@ import {
   buildBooleanPreferencePatch,
   buildJsonPreferencePatch,
   buildStringPreferencePatch,
+  editableLeaves,
+  isPlainObject,
   listDeveloperPreferenceRows,
   validatePreferenceValue,
+  withLeaf,
 } from './developer-settings-model';
 
 /**
@@ -84,6 +87,35 @@ describe('developer settings model', () => {
 
   it('passes an unknown key through — the editor never invents a key, the boundary rejects it', () => {
     expect(validatePreferenceValue('notARealPreference' as never, 'x')).toEqual({ ok: true });
+  });
+
+  it('isPlainObject accepts {} but not arrays or null', () => {
+    expect(isPlainObject({ a: 1 })).toBe(true);
+    expect(isPlainObject([])).toBe(false);
+    expect(isPlainObject(null)).toBe(false);
+    expect(isPlainObject('x')).toBe(false);
+  });
+
+  it('editableLeaves keeps scalar props and drops nested objects / arrays / null', () => {
+    const leaves = editableLeaves({
+      enabled: true,
+      count: 3,
+      mode: 'ads',
+      disabledOrigins: [],
+      nested: { x: 1 },
+      missing: null,
+    });
+    expect(leaves).toEqual([
+      { key: 'enabled', kind: 'boolean', value: true },
+      { key: 'count', kind: 'number', value: 3 },
+      { key: 'mode', kind: 'string', value: 'ads' },
+    ]);
+  });
+
+  it('withLeaf replaces one key and leaves the rest (and the input) untouched', () => {
+    const input = { enabled: true, mode: 'ads' };
+    expect(withLeaf(input, 'enabled', false)).toEqual({ enabled: false, mode: 'ads' });
+    expect(input.enabled).toBe(true);
   });
 
   it('classifies a preference with no visibility entry as private, not public', () => {
