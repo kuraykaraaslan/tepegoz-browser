@@ -49,4 +49,21 @@ describe('registerWebTools', () => {
       }).success,
     ).toBe(false);
   });
+
+  it('rejects a private / loopback / metadata fetch URL at the schema boundary (SSRF guard)', () => {
+    CapabilityRegistry.reset();
+    registerWebTools({ host });
+    const schema = CapabilityRegistry.get('web_get_page')!.inputSchema;
+    for (const url of [
+      'http://169.254.169.254/latest/meta-data/',
+      'http://localhost:8080/admin',
+      'http://127.0.0.1/',
+      'http://10.1.2.3/',
+      'http://192.168.0.1/',
+      'http://[::1]/',
+    ]) {
+      expect(schema.safeParse({ url, maxBytes: 1024 }).success, url).toBe(false);
+    }
+    expect(schema.safeParse({ url: 'https://example.com/', maxBytes: 1024 }).success).toBe(true);
+  });
 });

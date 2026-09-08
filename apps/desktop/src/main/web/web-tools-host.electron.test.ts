@@ -15,12 +15,16 @@ vi.mock('@tepegoz/http', () => ({ createHttpClient: () => http }));
 const sitemap = vi.hoisted(
   (): { fetch?: (url: string, maxBytes: number) => Promise<unknown> } => ({}),
 );
-vi.mock('@tepegoz/web-tools', () => ({
-  createSitemapReader: (fn: (url: string, maxBytes: number) => Promise<unknown>) => {
-    sitemap.fetch = fn;
-    return { discover: vi.fn(() => Promise.resolve(['https://x.test/a'])) };
-  },
-}));
+vi.mock('@tepegoz/web-tools', async (orig) => {
+  const actual = await orig<typeof import('@tepegoz/web-tools')>();
+  return {
+    isPublicHttpUrl: actual.isPublicHttpUrl,
+    createSitemapReader: (fn: (url: string, maxBytes: number) => Promise<unknown>) => {
+      sitemap.fetch = fn;
+      return { discover: vi.fn(() => Promise.resolve(['https://x.test/a'])) };
+    },
+  };
+});
 
 const { webToolsHost, discoverSitemap } = await import('./web-tools-host.electron');
 
@@ -102,6 +106,19 @@ describe('fetch', () => {
     expect(r.text).toHaveLength(4);
     expect('title' in r).toBe(false);
     expect('mimeType' in r).toBe(false);
+  });
+
+  it('installs a beforeRedirect hook that blocks a redirect to a non-public address (SSRF)', async () => {
+    http.get.mockResolvedValue({ data: '', status: 200, headers: {} });
+    await webToolsHost.fetch({ url: 'https://p.test/', maxBytes: 100 });
+    const cfg = http.get.mock.calls[0]![1] as {
+      beforeRedirect: (o: { href?: string }) => void;
+    };
+    expect(() => cfg.beforeRedirect({ href: 'https://public.example/ok' })).not.toThrow();
+    expect(() => cfg.beforeRedirect({ href: 'http://169.254.169.254/latest/' })).toThrow(
+      /non-public address/,
+    );
+    expect(() => cfg.beforeRedirect({ href: 'http://localhost:9000/' })).toThrow();
   });
 });
 

@@ -41,6 +41,7 @@ export interface WebToolsHost {
 }
 
 export { createSitemapReader, type SitemapFetch, type SitemapReader } from './sitemap-reader';
+export { isPublicHttpUrl } from './ssrf-guard';
 
 export {
   buildWebFetchContent,

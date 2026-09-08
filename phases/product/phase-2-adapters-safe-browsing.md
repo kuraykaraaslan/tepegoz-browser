@@ -43,14 +43,26 @@
 - [ ] `SafeBrowsingService` full: Google Safe Browsing v5 Update API (local hash-prefix) + community blocklist
 - [ ] `AgentThreatShield`: **local SLM** (landed in Phase 1b) scam/phishing scoring + egress anomaly → on high risk agent-lockout + HITL; anti-blabbering
 - [ ] `PopupAndPermissionGuard`: `setWindowOpenHandler` + background open; single policy-engine (no parallel permission flow)
-- [ ] 🔴 **DEFECT IN SHIPPED CODE — no destination validation on agent-driven outbound fetch.**
+- [~] 🔴 **DEFECT IN SHIPPED CODE — no destination validation on agent-driven outbound fetch.**
       `web_get_page`/`web_search` dispatch whatever URL the model supplies (or a page supplies, through
       indirect prompt injection — "visit this URL for more detail") through `@tepegoz/http`'s
       `createHttpClient` with **no check that the resolved host isn't loopback, RFC1918, link-local, or
       `169.254.169.254` cloud-metadata**, and `fetchPage` sets no redirect limit, so a redirect into a LAN
       host is followed unchecked. An agent told to fetch `http://169.254.169.254/latest/meta-data` succeeds
       today. **Found independently by two tracks reading two different rivals**, which is why it is written
-      here as a defect rather than a proposal. The fix:
+      here as a defect rather than a proposal.
+  - [x] **The literal-address half landed 2026-09-08.** `isPublicHttpUrl` (`@tepegoz/web-tools/ssrf-guard.ts`,
+        24 cases) rejects loopback / RFC-1918 / link-local (`169.254/16`) / CGNAT / multicast / ULA
+        (`fc00::/7`) / link-local IPv6 (`fe80::/10`) / `::1` / `::ffff:` -mapped / `localhost`-family /
+        `metadata.google.internal`. Obfuscated IPv4 (`2130706433`, `0x7f000001`, `017700000001`, `127.1`)
+        is covered because it parses through `new URL()` first, which the WHATWG spec normalizes to
+        dotted-quad. It is enforced as a `.refine` on `WebFetchInputSchema.url` (so `web_get_page` is
+        refused **before** the fetch is dispatched, regardless of host impl) and `fetchPage` adds a
+        `beforeRedirect` hook that re-checks every hop.
+  - [ ] Still owed for `[x]`: (a) **resolve-then-pin** at connection time (defeats DNS rebinding —
+        a public hostname resolving to a private IP still passes the literal check); (b) moving the
+        check down to **`createHttpClient` itself** so MCP HTTP transports + future skill endpoints are
+        covered by construction, not one call site at a time. Original fix list follows:
   - [ ] One pure, obfuscation-resistant classifier next to `egress-route.ts` — canonicalize
         decimal/octal/hex/short-form IPv4 and `::ffff:`-mapped IPv6 **before** matching, since all of those
         are equivalent to the caller but not to a naive string-prefix check. Reject loopback / RFC1918 /

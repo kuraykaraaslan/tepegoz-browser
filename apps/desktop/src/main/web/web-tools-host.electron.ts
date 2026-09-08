@@ -1,6 +1,7 @@
 import { createHttpClient } from '@tepegoz/http';
 import {
   createSitemapReader,
+  isPublicHttpUrl,
   type SitemapFetch,
   type WebFetchResolvedInput,
   type WebFetchResult,
@@ -80,10 +81,18 @@ async function search(input: WebSearchResolvedInput): Promise<WebSearchResult[]>
 }
 
 async function fetchPage(input: WebFetchResolvedInput): Promise<WebFetchResult> {
+  // The schema already refused a private-host URL; this re-checks EACH redirect hop, because a public
+  // URL can 302 to `http://169.254.169.254/…` or a RFC-1918 address (SSRF via redirect).
   const response = await client.get<string>(input.url, {
     responseType: 'text',
     maxContentLength: input.maxBytes,
     transformResponse: [(data: unknown) => String(data)],
+    beforeRedirect: (options: { href?: string }) => {
+      const target = options.href ?? '';
+      if (!isPublicHttpUrl(target)) {
+        throw new Error(`Blocked redirect to a non-public address: ${target}`);
+      }
+    },
   });
   const raw = response.data.slice(0, input.maxBytes + 1);
   const truncated = raw.length > input.maxBytes;
