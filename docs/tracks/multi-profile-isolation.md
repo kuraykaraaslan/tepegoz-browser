@@ -1,11 +1,12 @@
 # Track — Chrome-style multi-profile data & session isolation
 
-- **Status:** 🔨 **Scheduled — implementing on `main` (2026-09-08).** A first implementation shipped on the
-  abandoned branch `feat/multi-profile-windows` (5 commits, 2026-08-17) and was **never merged**; that
-  branch is now ~945 commits behind `main` and will not rebase cleanly. This track is the re-derivation:
-  the capabilities to deliver, the architecture that branch converged on (process-per-profile), and a
-  fresh plan against today's `main`. **Do not cherry-pick the branch** — read it for intent, rebuild for
-  today's tree.
+- **Status:** ✅ **Landed on `main` (2026-09-08)** — five PRs (`6d22287` · `7cb6130` · `a74e1ca` ·
+  `<PR4>` · `<PR5>`) plus [ADR-0045](../adr/0045-multi-profile-isolation.md). Chrome-style profiles are
+  created / renamed / deleted / switched from the profile menu and `tepegoz://profiles`; each runs as
+  its own Electron process over `Profiles/<id>/`; a pre-existing flat install migrates on first run.
+  typecheck / lint / test / build / depcruise green (the one pre-existing `PermissionsCenter` failure is
+  unrelated); unit + E2E coverage. Superseded the abandoned `feat/multi-profile-windows` branch — its
+  intent, rebuilt against a `main` ~945 commits further along.
 - **Owner decisions (settled 2026-09-08):**
   1. **Process-per-profile.** Accept ~200–300 MB RAM per open profile; cross-profile bleed becomes
      structurally impossible rather than a routing invariant to uphold at ~50 call sites.
@@ -147,26 +148,31 @@ permissions failure is unrelated). PR4–PR5 and ADR-0045 outstanding. The app s
      an existing user's cookies / logins are not orphaned.
    - Session-level hooks (CSP, the `webRequest` multiplexer, download interception, `user-agent-host`)
      need no per-process re-registration — process-per-profile gives each its own copy for free.
-4. **PR4 — IPC + UI.**
-   - `@tepegoz/desktop-ipc`: `contract-profiles.ts` / `api-profiles.ts` / `schemas.ts` — `listProfiles`,
-     `getActiveProfile` (**sender-window-resolved**, not process-global), `createProfile`,
-     `renameProfile`, `deleteProfile`, `switchProfile`. `safeParse` on every input at the boundary.
-   - `apps/desktop/src/main/ipc/ipc-profiles.ts` + `apps/desktop/src/preload/api-profiles.ts`.
-   - `@tepegoz/profiles-ui` — presentational `ProfilesPage` (avatar colour, initial, rename modal,
-     delete with last-profile guard), own `src/i18n/{en,tr}.ts` dictionary (ADR-0016).
-   - `tepegoz://profiles` route (via the `protocol.handle` internal-pages plumbing from
-     [protocol-tepegoz-pages.md](protocol-tepegoz-pages.md) — new since the branch; the branch used the
-     old `WebContentsView` internal-page path).
-   - Turn the disabled `UserMenuPopup.tsx` / `MainMenuPopup.tsx` rows into working actions: add-and-
-     switch, switch (focus existing window or spawn), manage, open new window. Passwords / account / sync
-     rows stay disabled (out of scope); Guest stays disabled (phase-2c, unrelated).
-5. **PR5 — deletion + concurrency hardening.**
-   - `deleteProfile`: refuse the last profile and the in-use profile; for a running target, refuse with
-     "close its window first" rather than half-wiping locked files.
+4. **PR4 — IPC + UI.** ✅
+   - `@tepegoz/desktop-ipc`: `contract-profiles.ts` / `api-profiles.ts`, six `profiles:*` channels
+     (`list` / `get-active` / `create` / `rename` / `delete` / `switch`). `safeParse` on every input at
+     the boundary via `@tepegoz/profiles/schemas`. `get-active` is THIS process's profile —
+     process-per-profile, no sender-window resolution (the plan's earlier note was for the in-process
+     design).
+   - `apps/desktop/src/main/ipc/ipc-profiles.ts` + `apps/desktop/src/preload/api-profiles.ts` +
+     `profiles/profile-launcher.ts` (its only caller).
+   - `@tepegoz/profiles-ui` — presentational `ProfilesPage` (avatar colour + initial, inline rename,
+     delete behind a confirm step + last-profile guard, switch, add), own `src/i18n/{en,tr}.ts`.
+   - `tepegoz://profiles` route via `REAL_PAGE_HOSTS` / `REAL_PAGE_BASE_URLS` / `navigation-url` + the
+     `main.tsx` host dispatch (`ProfilesPageSurface`).
+   - `UserMenuPopup.tsx` rows wired: add-and-switch, switch (focus existing window or spawn), manage,
+     new window. Passwords / account / sync stay disabled (out of scope); Guest stays disabled
+     (phase-2c, unrelated).
+5. **PR5 — deletion guards + E2E + ADR.** ✅
+   - `deleteProfile` guards (last profile, in-use profile, locked files → actionable message) — landed
+     with PR4's `ipc-profiles.ts`.
    - `PopupWindowManager` needs no per-owning-window map fix (different processes ⇒ different menus) —
-     confirm and delete the branch's deferred papercut note.
-   - E2E: two profiles as separate process trees at once, distinct themes (dark vs light), no bleed;
-     migration round-trip; last-profile-delete refused.
+     confirmed; the branch's deferred papercut note does not apply.
+   - `TEPEGOZ_PROFILES_ROOT` seam so the real profile system is testable against an isolated directory.
+   - E2E: `e2e/multi-profile.spec.ts` (flat → `Profiles/default/` migration + boots into it);
+     `tepegoz://profiles` added to `tepegoz-internal-pages.spec.ts`'s generic renders-real-content /
+     IPC-trust sweep.
+   - [ADR-0045](../adr/0045-multi-profile-isolation.md) written, superseding the branch's ADR-0025 draft.
 
 ## The security line (non-negotiable — CLAUDE.md, ADR-0010)
 

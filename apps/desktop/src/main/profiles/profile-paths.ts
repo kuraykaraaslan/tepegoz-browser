@@ -16,8 +16,14 @@ import { app } from 'electron';
 /** The shared root that holds `profiles.json` + every `Profiles/<id>/` directory (`%APPDATA%/tepegoz`).
  *  Derived from `appData`, NOT `userData` — inside a profile process the latter is already the profile
  *  directory, one level deeper. The literal `tepegoz` (not `app.getName()`, which is the display name
- *  "Tepegöz") matches the pre-multi-profile single-directory choice. */
+ *  "Tepegöz") matches the pre-multi-profile single-directory choice.
+ *
+ *  `TEPEGOZ_PROFILES_ROOT` overrides it wholesale — the one seam for a test / the eval harness to run
+ *  the real profile system against an isolated directory (Electron derives `appData` from an OS API,
+ *  not `$APPDATA`, so there is no env route otherwise). */
 export function profilesRoot(): string {
+  const override = process.env['TEPEGOZ_PROFILES_ROOT'];
+  if (override !== undefined && override.length > 0) return override;
   return join(app.getPath('appData'), 'tepegoz');
 }
 

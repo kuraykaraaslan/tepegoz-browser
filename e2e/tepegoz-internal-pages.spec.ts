@@ -31,6 +31,7 @@ const PAGES = [
   'bookmarks',
   'process',
   'developer',
+  'profiles',
 ];
 
 test('every migrated tepegoz:// internal page loads as a real page with real content', async () => {
