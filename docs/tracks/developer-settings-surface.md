@@ -1,13 +1,23 @@
 # Track — Developer settings surface: every browser + web-content knob in one place
 
-- **Status:** In progress — **Tier B + the `tepegoz://developer` page shipped 2026-08-28**; Tiers A / C / D still owed.
+- **Status:** In progress — **Tier B + the `tepegoz://developer` page shipped 2026-08-28**; **Tier A's per-key
+  metadata registry landed 2026-09-08** (`@tepegoz/preferences/developer-registry` — stability +
+  `restartRequired` per key, `satisfies`-pinned so a new pref must be classified, completeness-tested;
+  surfaced as a badge + relaunch hint in the raw editor). Tier A's nested-object drill-down + zod-derived
+  value constraints, and Tiers C / D, still owed.
 - **Owner decisions taken (2026-08-28):** Chromium flags are **allowlist-only** · this document + an ADR
   land **before any code** · **revised same day:** a dedicated **`tepegoz://developer`** page, unlisted
   (no menu entry) but openable by any user and **not** dev-gated — the `chrome://flags` shape. The
   dev-only `tepegoz://settings#developer` section stays as a developer convenience.
 - **Landed:** `Preferences.chromiumFlags` + allowlist in `@tepegoz/shared-types/chromium-flags` +
   `chromium-flags-boot.ts` (startup apply) + `settings-developer-flags.tsx` (flags card) +
-  `DeveloperPageSurface.tsx` at `tepegoz://developer` (full Developer surface, not dev-gated). See
+  `DeveloperPageSurface.tsx` at `tepegoz://developer` (full Developer surface, not dev-gated) +
+  `@tepegoz/preferences/developer-registry` (`PREFERENCE_METADATA` — `stability` `stable`/`experimental`/`internal`
+  + `restartRequired`, one row per `Preferences` key, `satisfies Record<keyof Preferences, …>` so an
+  unclassified key is a compile error; `preferenceMeta()` fails open to `stable`). The raw editor
+  (`developer-settings-model.ts` + `settings-developer.tsx`) now carries stability into each row, shows a
+  badge for non-`stable` keys, indexes it for search, and shows a "relaunch to apply" hint in the edit
+  modal for the three startup-only keys. See
   [ADR-0041 § Implementation status](../../docs/adr/0041-developer-settings-surface.md).
 - **Companion ADR:** [ADR-0041](../../docs/adr/0041-developer-settings-surface.md) — the security
   carve-out (what is exposable, what is permanently locked) is decided there, not here.
@@ -65,9 +75,12 @@ Safe-to-expose `webPreferences` / `session` subset: `backgroundThrottling`, `plu
   registry/allowlist types. Still the only schema source.
 - **`preferences.model.ts`** — schema + `DEFAULT_PREFERENCES` entries + `superRefine` for the flag
   allowlist and the web-content subset.
-- **new `developer-registry.ts`** (in `@tepegoz/preferences` or `@tepegoz/settings-ui`) — per-key
-  metadata + the Chromium-flag allowlist, as one tested source. A completeness test asserts every
-  `Preferences` key has a metadata row.
+- ✅ **`developer-registry.ts`** (landed in `@tepegoz/preferences`, 2026-09-08) — per-key `stability` +
+  `restartRequired` metadata as one tested source; `satisfies Record<keyof Preferences, …>` +
+  `developer-registry.test.ts` assert every `Preferences` key has exactly one row. (The Chromium-flag
+  allowlist stays in `@tepegoz/shared-types/chromium-flags` where Tier B put it.) _Owed: the zod-derived
+  value constraints + `label`/`description` text (currently the editor still resolves those from
+  `settingsDict` by key)._
 - **`apps/desktop/src/main/index.ts`** — read `chromiumFlags`, validate against the allowlist, apply the
   switches before `whenReady()`.
 - **`tabs-shared.ts` + a runtime applier** — merge `webContentDefaults` into

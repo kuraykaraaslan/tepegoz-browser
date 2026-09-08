@@ -1,4 +1,5 @@
 import { SETTINGS_VISIBILITY, type Preferences } from '@tepegoz/desktop-ipc';
+import { preferenceMeta, type PreferenceStability } from '@tepegoz/preferences/developer-registry';
 
 export type EditablePreferenceKey = keyof Preferences;
 export type PreferenceValueKind = 'boolean' | 'string' | 'json';
@@ -9,6 +10,8 @@ export interface DeveloperPreferenceRow {
   value: Preferences[EditablePreferenceKey];
   visibility: 'public' | 'private';
   kind: PreferenceValueKind;
+  stability: PreferenceStability;
+  restartRequired: boolean;
   valueText: string;
   searchText: string;
 }
@@ -22,13 +25,16 @@ export function listDeveloperPreferenceRows(prefs: Preferences): DeveloperPrefer
     const visibility = SETTINGS_VISIBILITY[preferenceKey] ?? 'private';
     const kind = preferenceValueKind(value);
     const valueText = preferenceValueText(value, kind);
+    const { stability, restartRequired } = preferenceMeta(preferenceKey);
     return {
       key: preferenceKey,
       value: value as Preferences[EditablePreferenceKey],
       visibility,
       kind,
+      stability,
+      restartRequired,
       valueText,
-      searchText: `${preferenceKey} ${visibility} ${kind} ${valueText}`.toLowerCase(),
+      searchText: `${preferenceKey} ${visibility} ${kind} ${stability} ${valueText}`.toLowerCase(),
     };
   });
 }

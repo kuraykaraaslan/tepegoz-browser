@@ -704,6 +704,9 @@ export const en = {
     'This is the master switch. Individual sites also need their own permission, and turning this off silences them all regardless.',
   notificationsSiteLink: 'Per-site notification permissions',
   developerResetRow: 'Reset to default',
+  developerStabilityExperimental: 'Experimental',
+  developerStabilityInternal: 'Internal',
+  developerRestartRequired: 'Takes effect after you relaunch Tepegöz.',
 
   // --- Accessibility (was a placeholder while the product claimed WCAG 2.2 AA) ---
   accessibility: {

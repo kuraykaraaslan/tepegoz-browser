@@ -24,6 +24,22 @@ describe('developer settings model', () => {
     expect(keys).not.toContain('developerFlags');
   });
 
+  it('carries each row its registry stability + restart flag, and indexes stability for search', () => {
+    const rows = listDeveloperPreferenceRows(PREFS);
+    const flags = rows.find((r) => r.key === 'chromiumFlags');
+    expect(flags?.stability).toBe('stable');
+    expect(flags?.restartRequired).toBe(true);
+    expect(flags?.searchText).toContain('stable');
+
+    const localProvider = rows.find((r) => r.key === 'localProvider');
+    expect(localProvider?.stability).toBe('experimental');
+    expect(localProvider?.searchText).toContain('experimental');
+
+    const onboarding = rows.find((r) => r.key === 'onboardingCompleted');
+    expect(onboarding?.stability).toBe('internal');
+    expect(onboarding?.restartRequired).toBe(false);
+  });
+
   it('builds boolean preference patches', () => {
     expect(buildBooleanPreferencePatch('onboardingCompleted', true)).toEqual({
       onboardingCompleted: true,

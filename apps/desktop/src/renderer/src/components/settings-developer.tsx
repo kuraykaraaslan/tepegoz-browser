@@ -34,9 +34,20 @@ export function DeveloperSection({ prefs, onUpdatePrefs }: DeveloperSectionProps
         thClass: 'w-48',
         tdClass: 'w-48 max-w-48',
         render: (row) => (
-          <code className="rounded bg-surface-sunken px-2 py-1 text-xs text-text-primary">
-            {row.key}
-          </code>
+          <div className="flex flex-col gap-1">
+            <code className="rounded bg-surface-sunken px-2 py-1 text-xs text-text-primary">
+              {row.key}
+            </code>
+            {row.stability !== 'stable' && (
+              <span>
+                <Badge variant="neutral">
+                  {row.stability === 'experimental'
+                    ? s.developerStabilityExperimental
+                    : s.developerStabilityInternal}
+                </Badge>
+              </span>
+            )}
+          </div>
         ),
       },
       {
@@ -181,7 +192,18 @@ function PreferenceEditModal({
             <span>
               {s.developerType}: <span className="font-mono">{row.kind}</span>
             </span>
+            {row.stability !== 'stable' && (
+              <Badge variant="neutral">
+                {row.stability === 'experimental'
+                  ? s.developerStabilityExperimental
+                  : s.developerStabilityInternal}
+              </Badge>
+            )}
           </div>
+
+          {row.restartRequired && (
+            <p className="text-xs text-text-secondary">{s.developerRestartRequired}</p>
+          )}
 
           {row.kind === 'boolean' && (
             <Toggle

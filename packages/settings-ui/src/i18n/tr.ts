@@ -694,6 +694,9 @@ export const tr: SettingsStrings = {
     'Bu ana anahtardır. Siteler ayrıca kendi izinlerini de almalıdır; bunu kapatmak hepsini izinlerinden bağımsız susturur.',
   notificationsSiteLink: 'Site bazlı bildirim izinleri',
   developerResetRow: 'Varsayılana döndür',
+  developerStabilityExperimental: 'Deneysel',
+  developerStabilityInternal: 'Dahili',
+  developerRestartRequired: 'Tepegöz’ü yeniden başlattığınızda etkin olur.',
 
   // --- Erişilebilirlik (ürün WCAG 2.2 AA iddia ederken yer tutucuydu) ---
   accessibility: {

@@ -6,7 +6,8 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
-    "./model": "./src/preferences.model.ts"
+    "./model": "./src/preferences.model.ts",
+    "./developer-registry": "./src/developer-registry.ts"
   },
   "main": "./src/index.ts",
   "types": "./src/index.ts",
