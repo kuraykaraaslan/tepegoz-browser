@@ -7,3 +7,4 @@
  * with the consumers that actually need them.
  */
 export * from './article';
+export * from './reader-preferences';

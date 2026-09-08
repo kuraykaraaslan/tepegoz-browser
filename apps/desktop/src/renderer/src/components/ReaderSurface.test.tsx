@@ -15,6 +15,10 @@ import { ReaderSurface } from './ReaderSurface';
 
 const t = readerDict.en;
 
+afterEach(() => {
+  window.localStorage.clear();
+});
+
 function article(over: Partial<ReaderArticle> = {}): ReaderArticle {
   return {
     title: 'A long-form piece',
@@ -56,9 +60,26 @@ describe('ReaderSurface', () => {
     expect(screen.getByText(t.noArticleBody)).toBeTruthy();
   });
 
-  it('renders the extracted article', () => {
+  it('renders the extracted article, with the reading-options toolbar', () => {
     renderSurface({ status: 'article', article: article({ title: 'The Piece' }) });
     expect(screen.getByText('The Piece')).toBeTruthy();
     expect(screen.getByRole('button', { name: t.exit })).toBeTruthy();
+    expect(screen.getByRole('button', { name: t.fontIncrease })).toBeTruthy();
+    expect(screen.getByRole('button', { name: t.fontDecrease })).toBeTruthy();
+    expect(screen.getByRole('combobox', { name: t.themeLabel })).toBeTruthy();
+  });
+
+  it('persists a reading-theme choice across mounts', () => {
+    const { unmount } = renderSurface({
+      status: 'article',
+      article: article({ title: 'The Piece' }),
+    });
+    fireEvent.change(screen.getByRole('combobox', { name: t.themeLabel }), {
+      target: { value: 'dark' },
+    });
+    unmount();
+    cleanup();
+    renderSurface({ status: 'article', article: article({ title: 'The Piece' }) });
+    expect(screen.getByRole('combobox', { name: t.themeLabel })).toHaveProperty('value', 'dark');
   });
 });

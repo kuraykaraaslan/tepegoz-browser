@@ -57,6 +57,7 @@
 @source "../../../../../packages/find-bar/src";
 @source "../../../../../packages/browser-chrome/src";
 @source "../../../../../packages/browser-menu/src";
+@source "../../../../../packages/reader/src";
 @source "../../../../../extensions/ext-adblock/src";
 @source "../../../../../extensions/ext-macros/src";
 @source "../../../../../extensions/ext-tasks/src";

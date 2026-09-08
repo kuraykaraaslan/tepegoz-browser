@@ -2,6 +2,7 @@ import { useT } from '@tepegoz/i18n/react';
 import { ReaderView, readerDict } from '@tepegoz/reader/view';
 import { Button } from '@tepegoz/ui';
 import type { ReaderState } from '../app-reader';
+import { useReaderPreferences } from '../app-reader-preferences';
 
 /**
  * The reading view as it appears over the content area, plus the two states that are not an article.
@@ -13,6 +14,7 @@ import type { ReaderState } from '../app-reader';
  */
 export function ReaderSurface({ reader, onClose }: { reader: ReaderState; onClose: () => void }) {
   const t = useT(readerDict);
+  const { preferences, setPreferences } = useReaderPreferences();
   if (reader.status === 'off') return null;
 
   return (
@@ -31,7 +33,13 @@ export function ReaderSurface({ reader, onClose }: { reader: ReaderState; onClos
           <p className="text-sm text-text-secondary">{t.noArticleBody}</p>
         </div>
       )}
-      {reader.status === 'article' && <ReaderView article={reader.article} />}
+      {reader.status === 'article' && (
+        <ReaderView
+          article={reader.article}
+          preferences={preferences}
+          onPreferencesChange={setPreferences}
+        />
+      )}
     </div>
   );
 }

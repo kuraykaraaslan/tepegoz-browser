@@ -13,4 +13,13 @@ export const tr: ReaderStrings = {
   noArticleBody:
     'Bu sayfa bir makaleye benzemiyor — okuma görünümü çoğunlukla metinden oluşan sayfalarda çalışır.',
   working: 'Sayfa okunuyor…',
+  optionsLabel: 'Okuma seçenekleri',
+  fontDecrease: 'Yazı boyutunu küçült',
+  fontIncrease: 'Yazı boyutunu büyüt',
+  fontDecreaseGlyph: 'A-',
+  fontIncreaseGlyph: 'A+',
+  themeLabel: 'Okuma teması',
+  themeLight: 'Açık',
+  themeSepia: 'Sepya',
+  themeDark: 'Koyu',
 };

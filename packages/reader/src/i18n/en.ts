@@ -13,6 +13,17 @@ export const en = {
     'This page does not look like an article — reading view works on pages that are mostly text.',
   /** Shown while the page is being read. Extraction is fast; this exists for the slow-page case. */
   working: 'Reading the page…',
+  /** Reading-options toolbar: font size and reading theme (the reading surface, not the app theme). */
+  optionsLabel: 'Reading options',
+  fontDecrease: 'Decrease text size',
+  fontIncrease: 'Increase text size',
+  /** The visible label on the font-size buttons — a typographic cue, the same in every language. */
+  fontDecreaseGlyph: 'A-',
+  fontIncreaseGlyph: 'A+',
+  themeLabel: 'Reading theme',
+  themeLight: 'Light',
+  themeSepia: 'Sepia',
+  themeDark: 'Dark',
 };
 
 export type ReaderStrings = typeof en;

@@ -572,6 +572,16 @@ permissions reuse the single Policy/PermissionGuard (no parallel permission flow
       — _The view is an **overlay**, not a navigation: the tab keeps its URL, history and scroll, so
       leaving it returns the user exactly where they were. Any navigation or tab switch closes it —
       an article left on screen over a different page would misattribute itself to that page._
+      — _**Font-size + reading-theme controls landed** (2026-09-09). A toolbar on the reading view:
+      A-/A+ font-size buttons (five clamped steps, disabled at the ends) and a light/sepia/dark
+      **reading-theme** picker — reading-surface themes, independent of the app theme. Applied as a
+      class on the reading container (`reader-scale-*` / `reader-theme-*` → CSS custom properties in
+      `reader-view.css`), never a `style` attribute near the extracted content, so the HTML-free
+      property holds. Persisted per-viewer in the chrome renderer's `localStorage`
+      (`tepegoz.reader.prefs`), coerced back through `parseReaderPreferences` as untrusted. en+tr for
+      every control; `@tepegoz/reader` preference math + `ReaderView` toolbar + the host
+      `useReaderPreferences` hook are unit-tested (render, clamp-at-max, theme-class swap,
+      persist/restore)._
       — _Mutation-verified: removing the image allow-list, the link-density guard, the STRIP skip in
       `text()`, or the "a block owns its subtree" return each turns a test red. **The subtree one did
       not, at first** — the plain-text list fixture had no element children to descend into, so it
