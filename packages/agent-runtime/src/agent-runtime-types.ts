@@ -6,6 +6,7 @@ import type { AIProvider, Plan } from '@tepegoz/shared-types';
 import type { AgentEventKind } from '@tepegoz/ext-agent/types';
 import type { LocalProviderConfig } from '@tepegoz/local-inference';
 import type { AgentRunCheckpoint } from './run-lifecycle';
+import type { StopReasonStrings } from './agent-runtime-helpers';
 
 export interface PlanApprovalDecision {
   approved: boolean;
@@ -73,6 +74,9 @@ export interface AgentRunDeps {
   handoffStrings: Record<HandoffKind, string>;
   /** Localized tab-spawn console copy (S3 PR3) — see {@link AgentRunDeps.listTabs}. */
   tabSpawnStrings: { opened: string; followBlocked: string; returnedToOrigin: string };
+  /** Localized terminal-line copy for a run that stopped without its own summary (S8) — one plain
+   *  sentence per stop reason. See {@link terminalMessageFor}. */
+  stopReasonStrings: StopReasonStrings;
   /**
    * On-device inference config (engine + selected-model resolver). Injected by the Electron wiring;
    * absent when the app didn't wire a local engine, in which case `'local'` routing is unavailable and

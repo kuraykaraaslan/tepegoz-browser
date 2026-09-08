@@ -236,7 +236,7 @@ export async function runAgent(
     result.stoppedReason === 'completed' || result.stoppedReason === 'aborted' ? 'done' : 'error';
   hooks.onEvent(
     terminalKind,
-    terminalMessageFor(result.stoppedReason, result.summary, failure),
+    terminalMessageFor(result.stoppedReason, result.summary, failure, deps.stopReasonStrings),
     `${String(usage.totalTokens)} tokens`,
   );
   return {

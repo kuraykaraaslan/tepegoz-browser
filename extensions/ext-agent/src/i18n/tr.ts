@@ -69,6 +69,25 @@ export const tr: AgentStrings = {
     login:
       'Bir giriş ekranı algılandı. Tepegöz duraklattı ve sizin yerinize giriş yapmayacak. Sayfada giriş yapın, sonra “Devam et”e basın — görevi oradan sürdürür.',
   },
+  // Ajanın kendi özetini yazmadan durduğu bir çalışma için terminal Konsol satırı (S8) — ham bir enum
+  // ("Finished: max_steps") yerine her durma nedeni için düz bir cümle.
+  stopReason: {
+    maxSteps:
+      'Çalışma bitmeden adım sınırına ulaştı. Daha fazla adıma ihtiyaç duymuş ya da takılmış olabilir — yukarıdaki son birkaç adıma bakın.',
+    loopDetected:
+      'Çalışma, ilerleme kaydetmeden aynı eylemi tekrarladığı için durdu.',
+    toolError: 'Bir araç çağrısı başarısız olduktan ve kurtarılamadıktan sonra çalışma durdu.',
+    policyDenied: 'İhtiyaç duyduğu bir eyleme izin verilmediği için çalışma durdu.',
+    selectorStale:
+      'Çalışma, sayfadaki bir öğenin izini kaybetti (öğe ajanın altında değişti) ve devam edemedi.',
+    navigationTimeout: 'Çalışma, hiç yüklenmeyi bitirmeyen bir sayfayı beklerken durdu.',
+    pageChanged:
+      'Sayfa eylem sırasında beklenmedik şekilde değişti; çalışma, yanlış sayfada işlem yapmak yerine durdu.',
+    modelMalformed: 'Model, üzerinde işlem yapılamayacak bir yanıt döndürdükten sonra çalışma durdu.',
+    transientError:
+      'Çalışma, aşamadığı geçici bir hatadan sonra durdu — yeniden denemek işe yarayabilir.',
+    generic: 'Çalışma beklenmedik bir nedenle durdu.',
+  },
   // Sekme-açılışı dünya modeli (S3 PR3). Bir tıklama/form gönderimi yeni bir sekme açtı (target=_blank,
   // window.open). Ajana sekmenin kimliği araç sonucunda zaten bildirildi; bunlar reaktörün kendi yaptığı
   // şeyin konsol satırları — POLİTİKA KONTROLLÜ bir geçiş (modelin kendi sekme değişikliğiyle aynı

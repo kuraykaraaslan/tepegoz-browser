@@ -29,6 +29,18 @@ function deps(over: Partial<AgentRunDeps> = {}): AgentRunDeps {
     tabUrl: (tabId) => (tabId === TABS.origin ? 'https://a.example' : undefined),
     handoffStrings: { captcha: '', twofa: '', login: '' },
     tabSpawnStrings: { opened: 'opened', followBlocked: 'blocked', returnedToOrigin: 'returned' },
+    stopReasonStrings: {
+      maxSteps: 'max-steps',
+      loopDetected: 'loop',
+      toolError: 'tool-error',
+      policyDenied: 'policy-denied',
+      selectorStale: 'selector-stale',
+      navigationTimeout: 'nav-timeout',
+      pageChanged: 'page-changed',
+      modelMalformed: 'model-malformed',
+      transientError: 'transient',
+      generic: 'stopped',
+    },
     listTabs: () => [
       { id: TABS.origin, url: 'https://a.example', title: 'A', active: true },
       { id: TABS.spawned, url: 'https://a.example/new', title: 'New', active: false },

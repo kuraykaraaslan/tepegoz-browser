@@ -66,6 +66,25 @@ export const en = {
     login:
       'A login screen was detected. Tepegöz has paused and will not sign in for you. Log in on the page, then press Resume — it will continue the task from there.',
   },
+  // Terminal Console line for a run that stopped WITHOUT the agent writing its own summary (S8) — a
+  // plain sentence per stop reason instead of a raw enum ("Finished: max_steps").
+  stopReason: {
+    maxSteps:
+      'The run reached its step limit before finishing. It may have needed more steps, or it got stuck — check the last few steps above.',
+    loopDetected:
+      'The run stopped because it was repeating the same action without making progress.',
+    toolError: 'The run stopped after a tool call failed and could not be recovered.',
+    policyDenied: 'The run stopped because an action it needed was not permitted.',
+    selectorStale:
+      'The run lost track of an element on the page (it changed underneath the agent) and could not continue.',
+    navigationTimeout: 'The run stopped waiting for a page that never finished loading.',
+    pageChanged:
+      'The page changed unexpectedly mid-action, so the run stopped rather than act on the wrong page.',
+    modelMalformed: 'The run stopped after the model returned a response it could not act on.',
+    transientError:
+      'The run stopped after a temporary error it could not get past — trying again may work.',
+    generic: 'The run stopped for an unexpected reason.',
+  },
   // Tab-spawn world model (S3 PR3). A click/form-submit opened a new tab (target=_blank, window.open).
   // The agent is already told the tab's id in the tool result; these are the console-line phrases for
   // what the reactor itself does next — a POLICY-CHECKED follow (same gate a model-issued tab switch

@@ -23,6 +23,18 @@ const DEPS: AgentRunDeps = {
     followBlocked: 'follow-blocked',
     returnedToOrigin: 'returned',
   },
+  stopReasonStrings: {
+    maxSteps: 'max-steps',
+    loopDetected: 'loop',
+    toolError: 'tool-error',
+    policyDenied: 'policy-denied',
+    selectorStale: 'selector-stale',
+    navigationTimeout: 'nav-timeout',
+    pageChanged: 'page-changed',
+    modelMalformed: 'model-malformed',
+    transientError: 'transient',
+    generic: 'stopped',
+  },
 };
 
 function hooks(): AgentRunHooks {

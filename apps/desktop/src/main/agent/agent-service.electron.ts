@@ -76,6 +76,7 @@ export default class AgentService {
   ): Promise<AgentRunSummary> {
     const handoff = mainStrings().agent.handoff;
     const tabSpawn = mainStrings().agent.tabSpawn;
+    const stopReason = mainStrings().agent.stopReason;
     AgentTabGroup.setTopic(groupId, displayPrompt);
     const history = conversations.get(groupId) ?? [];
     let summary: AgentRunSummary;
@@ -95,6 +96,7 @@ export default class AgentService {
             followBlocked: tabSpawn.followBlocked,
             returnedToOrigin: tabSpawn.returnedToOrigin,
           },
+          stopReasonStrings: stopReason,
           localInference: {
             engine: llamaEngine(),
             resolveModel: () => ModelManager.resolveModel(),

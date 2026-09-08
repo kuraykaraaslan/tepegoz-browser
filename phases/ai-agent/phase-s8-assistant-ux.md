@@ -165,9 +165,11 @@ Six UI-scoped PRs, each ≤250 lines, sequenced behind their substrate phases. N
   turn whose last event is `error` gets a **Retry** button under it (`onRetry` → `onRun(promptOverride)`
   re-runs that turn's bare prompt without touching the composer's own text/attachments and without a
   skill binding). 3 render tests (offered on an error turn, hidden mid-run, hidden on a clean turn).
-  **Still owed for `[x]`:** "resume from step" (gated on Phase 1b checkpoints) and the tr localization of
-  the terminal-message sentences (this module has no localizer injected — tracked with S8 "localized to
-  the same bar"; the Retry button label itself IS en + tr)._
+  **tr localization landed 2026-09-08:** `terminalMessageFor` no longer holds English literals — it takes
+  `AgentRunDeps.stopReasonStrings` (the `handoffStrings` / `tabSpawnStrings` injection pattern), which
+  the Electron wiring fills from `mainStrings().agent.stopReason` (en + tr in `@tepegoz/ext-agent`'s
+  dict, parity-tested). An unknown stop reason now falls to a localized generic sentence rather than
+  leaking the raw enum. **Still owed for `[x]`:** "resume from step" (gated on Phase 1b checkpoints)._
 - [ ] **Resume from a step**, not only re-run from zero — the durable half is Phase 1b's checkpoint work; this
       is the surface that exposes it.
 - [ ] **Cost forecast before the run, refund after a tool-side failure.** Show an estimated token/cost range

@@ -197,6 +197,7 @@ export async function maybeRunEval(): Promise<void> {
 
     const handoff = mainStrings().agent.handoff;
     const tabSpawn = mainStrings().agent.tabSpawn;
+    const stopReason = mainStrings().agent.stopReason;
     const hooks: AgentRunHooks = {
       onEvent: (kind, message, detail) =>
         Logger.info(`[eval] ${kind}: ${message}`, { detail: detail ?? '' }),
@@ -217,6 +218,7 @@ export async function maybeRunEval(): Promise<void> {
         followBlocked: tabSpawn.followBlocked,
         returnedToOrigin: tabSpawn.returnedToOrigin,
       },
+      stopReasonStrings: stopReason,
       localInference: { engine: llamaEngine(), resolveModel: () => ModelManager.resolveModel() },
       // Per-trial token ceiling (`TEPEGOZ_EVAL_RUN_CEILING`, 0 = off). `maxSteps` bounds how MANY steps
       // a trial takes, never how large they are — the worst run measured in this repo burned 224k tokens
