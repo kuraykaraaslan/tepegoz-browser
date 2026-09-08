@@ -17,10 +17,11 @@ const EXPECTED = [
   'bookmarks',
   'process',
   'developer',
+  'profiles',
 ];
 
 describe('REAL_PAGE_HOSTS', () => {
-  it('is exactly the eight internal pages that are real WebContentsViews', () => {
+  it('is exactly the nine internal pages that are real WebContentsViews', () => {
     expect([...REAL_PAGE_HOSTS].sort()).toEqual([...EXPECTED].sort());
   });
 

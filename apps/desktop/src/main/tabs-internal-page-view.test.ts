@@ -18,6 +18,7 @@ const URLS = {
   INTERNAL_BOOKMARKS_URL: 'tepegoz://bookmarks/',
   INTERNAL_PROCESS_URL: 'tepegoz://process/',
   INTERNAL_DEVELOPER_URL: 'tepegoz://developer/',
+  INTERNAL_PROFILES_URL: 'tepegoz://profiles/',
 };
 vi.mock('@tepegoz/desktop-ipc', () => URLS);
 vi.mock('./window', () => ({ chromeWebPreferences: () => ({ preload: '/preload.js' }) }));

@@ -27,6 +27,7 @@
     "@tepegoz/extension-sdk": "workspace:*",
     "@tepegoz/navigation": "workspace:*",
     "@tepegoz/persistence": "workspace:*",
+    "@tepegoz/profiles": "workspace:*",
     "@tepegoz/reader": "workspace:*",
     "@tepegoz/screenshots": "workspace:*",
     "@tepegoz/shared-types": "workspace:*",

@@ -206,6 +206,16 @@ module.exports = {
       to: { path: '^apps/' },
     },
     {
+      name: 'profiles-ui-is-a-leaf',
+      severity: 'error',
+      comment:
+        '@tepegoz/profiles-ui is a presentational chrome leaf (the tepegoz://profiles manager): it must ' +
+        'never import back into the desktop app or Electron. List / create / rename / delete / switch are ' +
+        'injected via props; only the @tepegoz/profiles model type is imported. See docs/package-map.md.',
+      from: { path: '^packages/profiles-ui/' },
+      to: { path: ['^apps/', 'node_modules/electron'] },
+    },
+    {
       name: 'history-ui-is-a-leaf',
       severity: 'error',
       comment:

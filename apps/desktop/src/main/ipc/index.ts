@@ -10,6 +10,7 @@ import { registerSiteDataIpc } from './ipc-site-data';
 import { registerPageInfoIpc } from './ipc-page-info';
 import { registerNetworkIpc } from './ipc-network';
 import { registerTrustIpc } from './ipc-trust';
+import { registerProfilesIpc } from './ipc-profiles';
 import { registerTabDragIpc } from '../tab-drag-coordinator';
 
 export { abortActiveAgentRuns } from './ipc-agent';
@@ -33,4 +34,5 @@ export function registerIpc(): void {
   registerPageInfoIpc();
   registerNetworkIpc();
   registerTrustIpc();
+  registerProfilesIpc();
 }

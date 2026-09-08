@@ -30,6 +30,17 @@ function carryOverPreRenameFiles(root: string): void {
   }
 }
 
+let currentProfileId = '';
+
+/**
+ * The profile THIS process is running, resolved once at boot by {@link resolveAndPinProfile} and
+ * constant for the process's lifetime (process-per-profile — every window here is the same profile).
+ * Empty only before `resolveAndPinProfile` has run.
+ */
+export function activeProfileId(): string {
+  return currentProfileId;
+}
+
 /**
  * Resolves WHICH profile this process is, and pins `userData` to that profile's directory — the single
  * step that makes process-per-profile work (ADR-0045). Must run at module load, BEFORE
@@ -49,6 +60,29 @@ function carryOverPreRenameFiles(root: string): void {
  */
 export function resolveAndPinProfile(): string {
   const root = profilesRoot();
+  currentProfileId = resolveAndPin(root);
+
+  // Open the registry (so the IPC layer reads / mutates it without re-initialising) and mark this
+  // profile last-active so a plain relaunch reopens it — ADR-0045 §8. Best-effort: a missing /
+  // corrupt registry must never block startup. SKIPPED for a bare `--user-data-dir` override: that
+  // run has opted out of the profile system (the eval harness, a test), and it must not write into
+  // the real `%APPDATA%/tepegoz/profiles.json` as a side effect.
+  const optedOut =
+    app.commandLine.getSwitchValue('user-data-dir').length > 0 &&
+    app.commandLine.getSwitchValue('profile-id').length === 0;
+  if (!optedOut) {
+    try {
+      ProfilesStore.init({ filePath: profilesJsonPath(root) });
+      ProfilesStore.touchLastUsed(currentProfileId);
+    } catch {
+      /* registry unavailable — the profile still runs off its own directory */
+    }
+  }
+
+  return currentProfileId;
+}
+
+function resolveAndPin(root: string): string {
   const explicitId = app.commandLine.getSwitchValue('profile-id');
   const explicitUserDataDir = app.commandLine.getSwitchValue('user-data-dir');
 
@@ -83,14 +117,5 @@ export function resolveAndPinProfile(): string {
   const dir = profileDir(root, profileId);
   mkdirSync(dir, { recursive: true });
   app.setPath('userData', dir);
-
-  // Record this profile as last-active so a plain (no-switch) relaunch reopens it — ADR-0045 §8.
-  // Best-effort: a missing / corrupt registry must never block startup.
-  try {
-    ProfilesStore.touchLastUsed(profileId);
-  } catch {
-    /* registry unavailable — the profile still runs off its own directory */
-  }
-
   return profileId;
 }

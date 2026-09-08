@@ -10,6 +10,8 @@ export const tr: AppStrings = {
     untitled: 'Yeni Sekme',
     // Listelenmemiş `tepegoz://developer` sayfasının sekme başlığı (Chromium flagleri + ham preferences editörü).
     developerPageTitle: 'Geliştirici',
+    // `tepegoz://profiles` yönetici sayfasının sekme başlığı.
+    profilesPageTitle: 'Profiller',
     back: 'Geri',
     forward: 'İleri',
     reload: 'Yenile',
@@ -329,6 +331,7 @@ export const tr: AppStrings = {
     customizeProfile: 'Profili özelleştir',
     sync: 'Eşitleme açık',
     closeProfile: 'Bu profili kapat',
+    newWindow: 'Yeni pencere',
     otherProfiles: 'Diğer profiller',
     addProfile: 'Profil ekle',
     guestProfile: 'Misafir profili aç',

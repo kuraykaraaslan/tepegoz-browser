@@ -100,6 +100,7 @@
     "@tepegoz/persistence": "workspace:*",
     "@tepegoz/preferences": "workspace:*",
     "@tepegoz/profiles": "workspace:*",
+    "@tepegoz/profiles-ui": "workspace:*",
     "@tepegoz/process-ui": "workspace:*",
     "@tepegoz/screenshots": "workspace:*",
     "@tepegoz/security-policy": "workspace:*",

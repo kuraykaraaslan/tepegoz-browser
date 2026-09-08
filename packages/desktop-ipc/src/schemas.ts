@@ -34,3 +34,9 @@ export {
   ClipboardWriteTextInputSchema,
 } from '@tepegoz/clipboard/schemas';
 export * from './schemas-trust';
+
+export {
+  CreateProfileInputSchema,
+  ProfileIdSchema,
+  RenameProfileInputSchema,
+} from '@tepegoz/profiles/schemas';

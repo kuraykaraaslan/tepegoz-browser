@@ -15,6 +15,8 @@ export const en = {
     untitled: 'New Tab',
     // Tab title for the unlisted `tepegoz://developer` page (Chromium flags + raw preferences editor).
     developerPageTitle: 'Developer',
+    // Tab title for the `tepegoz://profiles` manager page.
+    profilesPageTitle: 'Profiles',
     back: 'Back',
     forward: 'Forward',
     reload: 'Reload',
@@ -359,6 +361,7 @@ export const en = {
     customizeProfile: 'Customize profile',
     sync: 'Sync is on',
     closeProfile: 'Close this profile',
+    newWindow: 'New window',
     otherProfiles: 'Other profiles',
     addProfile: 'Add profile',
     guestProfile: 'Open Guest profile',

@@ -22,6 +22,7 @@ const reg = vi.hoisted(() =>
       'pageInfo',
       'network',
       'trust',
+      'profiles',
     ].map((k) => [k, vi.fn()]),
   ),
 );
@@ -39,6 +40,7 @@ vi.mock('./ipc-site-data', () => ({ registerSiteDataIpc: reg.siteData }));
 vi.mock('./ipc-page-info', () => ({ registerPageInfoIpc: reg.pageInfo }));
 vi.mock('./ipc-network', () => ({ registerNetworkIpc: reg.network }));
 vi.mock('./ipc-trust', () => ({ registerTrustIpc: reg.trust }));
+vi.mock('./ipc-profiles', () => ({ registerProfilesIpc: reg.profiles }));
 
 const { registerIpc } = await import('./index');
 
