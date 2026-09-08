@@ -581,6 +581,17 @@ export const en = {
   resetConfirm: 'Reset all settings to defaults? Saved keys and passwords are kept.',
   resetDone: 'Settings reset to defaults.',
 
+  // --- Backup: export / import preferences ---
+  backupTitle: 'Back up settings',
+  backupDesc:
+    'Save all preferences to a JSON file, or restore them from one. Saved API keys and passwords are never included.',
+  exportButton: 'Export settings',
+  importButton: 'Import settings',
+  importApplied: 'Imported {applied} setting(s).',
+  importSkipped: 'Skipped {skipped} unrecognised key(s).',
+  importNothing: 'Nothing to import — no recognised settings in that file.',
+  importFailed: 'That file is not a valid settings export.',
+
   // --- About ---
   aboutTitle: 'About',
   aboutVersion: 'Version',

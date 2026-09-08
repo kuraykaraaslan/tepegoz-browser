@@ -6,4 +6,5 @@
  */
 export { default } from './preference-store';
 export * from './preferences.model';
+export * from './preferences-import';
 export * from './developer-registry';

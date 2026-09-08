@@ -40,6 +40,13 @@ const INVOKES: Row[] = [
   ['getProcessMetrics', () => api.getProcessMetrics(), IpcChannels.processMetricsGet],
   ['getPreferences', () => api.getPreferences(), IpcChannels.prefsGet],
   ['resetPreferences', () => api.resetPreferences(), IpcChannels.prefsReset],
+  ['exportPreferences', () => api.exportPreferences(), IpcChannels.settingsExport],
+  [
+    'importPreferences (bare json string)',
+    () => api.importPreferences('{"theme":"dark"}'),
+    IpcChannels.settingsImport,
+    '{"theme":"dark"}',
+  ],
   ['completeOnboarding', () => api.completeOnboarding(), IpcChannels.onboardingComplete],
   ['getPublicSettings', () => api.getPublicSettings(), IpcChannels.publicSettingsGet],
   ['getCredentialsStatus', () => api.getCredentialsStatus(), IpcChannels.credentialsStatus],

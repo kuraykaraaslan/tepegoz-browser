@@ -35,6 +35,7 @@ Everything below lives under the app's **user-data directory**:
 | Stored logins      | Settings → Passwords → Export          | Google-compatible CSV                                           |
 | Browsing history   | `tepegoz://history` → **Export**       | CSV (`url,title,last_visited,visit_count`) — opens in any spreadsheet |
 | Downloads list     | `tepegoz://downloads` → **Export**     | CSV (`filename,url,source_origin,total_bytes,status,risk,created_at,completed_at`) — opens in any spreadsheet |
+| Preferences        | Settings → Reset → **Export settings** | JSON — re-importable (Settings → **Import settings**)           |
 | One agent chat     | Agent panel → export conversation      | Plain text                                                      |
 | One agent session  | Agent panel header → diagnostic bundle | Folder: transcript, per-tab DOM + screenshots, redacted journal |
 
@@ -43,14 +44,18 @@ application can restore is a backup shaped like lock-in. History and the downloa
 portable *interchange* format the way bookmarks do, so their export is CSV for inspection and
 archival — there is no history or downloads *import*. The downloads CSV deliberately omits the
 on-disk file paths, the content hash, and the quarantine/trust internals: it is a record of *what*
-was downloaded, not a map of where the bytes landed on this machine.
+was downloaded, not a map of where the bytes landed on this machine. Preferences are the one case
+where a JSON dump is the right answer: there is no cross-browser preferences format to target, and the
+file round-trips — **Import settings** re-applies it key by key, validating each one and skipping
+anything it does not recognise. It carries no secrets (API keys stay in the keychain-sealed vault),
+so it is safe to move between machines.
 
 ## What you cannot export yet
 
-Macros, scheduled tasks, agent memory and skills, trust profiles, and preferences have **no export
-path**. They are readable — `tepegoz.db` is an ordinary SQLite file and nothing stops you opening
-it — but there is no supported way to move them to another installation. This is a real gap, not an
-oversight being hidden: see the tracked item in [`known-issues.md`](known-issues.md).
+Macros, scheduled tasks, agent memory and skills, and trust profiles have **no export path**. They
+are readable — `tepegoz.db` is an ordinary SQLite file and nothing stops you opening it — but there
+is no supported way to move them to another installation. This is a real gap, not an oversight being
+hidden: see the tracked item in [`known-issues.md`](known-issues.md).
 
 ## Backing the whole profile up
 

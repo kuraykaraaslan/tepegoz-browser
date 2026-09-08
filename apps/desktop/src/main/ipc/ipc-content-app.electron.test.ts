@@ -14,6 +14,11 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const helpers = vi.hoisted(() => ({ h: new Map<string, (e: unknown, p: unknown) => unknown>() }));
 vi.mock('./ipc-helpers', () => ({
   handle: (c: string, fn: (e: unknown, p: unknown) => unknown) => helpers.h.set(c, fn),
+  parsePayload: (schema: { safeParse: (x: unknown) => { success: boolean; data?: unknown } }, p: unknown) => {
+    const r = schema.safeParse(p);
+    if (!r.success) throw new AppError('Invalid request', 400);
+    return r.data;
+  },
 }));
 
 const shell = vi.hoisted(() => ({ openPath: vi.fn(() => Promise.resolve('')) }));
@@ -53,6 +58,8 @@ const CH = {
   prefsSet: 'prefs:set',
   publicSettingsGet: 'pub:get',
   prefsReset: 'prefs:reset',
+  settingsExport: 'settings:export',
+  settingsImport: 'settings:import',
   onboardingComplete: 'onboard:done',
   mcpGetStatus: 'mcp:status',
   adaptorsList: 'adaptors:list',
@@ -70,6 +77,10 @@ vi.mock('@tepegoz/desktop-ipc', () => ({ IpcChannels: CH }));
 vi.mock('@tepegoz/desktop-ipc/schemas', () => ({
   AddProviderKeyInputSchema: { parse: (x: unknown) => x },
   AppInfoSchema: { parse: (x: unknown) => x },
+  PreferencesImportJsonSchema: {
+    safeParse: (x: unknown) =>
+      typeof x === 'string' ? { success: true, data: x } : { success: false, error: { issues: [] } },
+  },
   RemoveKeyByIdSchema: { parse: (x: unknown) => x },
   RenameProviderKeyInputSchema: { parse: (x: unknown) => x },
   ReorderKeysSchema: { parse: (x: unknown) => x },
@@ -99,13 +110,23 @@ const prefs = vi.hoisted(() => ({
     ...(p as object),
   })),
 }));
+const parsePreferencesImport = vi.hoisted(() =>
+  vi.fn<(json: string) => { patch: Record<string, unknown>; skipped: string[] }>(() => ({
+    patch: {},
+    skipped: [],
+  })),
+);
 vi.mock('@tepegoz/preferences', () => ({
   default: prefs,
   DEFAULT_PREFERENCES: { __defaults: true },
   PreferencesPatchSchema: { parse: (x: unknown) => x },
+  parsePreferencesImport,
 }));
 
-vi.mock('../lib/i18n-main', () => ({ mainLocale: () => 'en' }));
+vi.mock('../lib/i18n-main', () => ({
+  mainLocale: () => 'en',
+  mainStrings: () => ({ errors: { badRequest: 'Invalid request' } }),
+}));
 vi.mock('../lib/app-info', () => ({
   buildAppInfo: () => ({ version: '1.0.0' }),
   diagnosticsText: () => 'DIAG BLOCK',
@@ -189,6 +210,7 @@ beforeEach(() => {
   helpers.h.clear();
   prefs.getAll.mockReturnValue({ defaultProvider: 'anthropic' });
   prefs.update.mockImplementation((p: unknown) => ({ merged: true, ...(p as object) }));
+  parsePreferencesImport.mockReturnValue({ patch: {}, skipped: [] });
   vault.topProvider.mockReturnValue('anthropic');
   vault.listMeta.mockReturnValue([{ id: 'k1', provider: 'anthropic', label: 'work' }]);
   browserWindow.fromWebContents.mockReturnValue({ __win: true });
@@ -296,6 +318,51 @@ describe('prefsSet / prefsReset', () => {
     call(CH.prefsSet, { locale: 'tr' });
     expect(tray.refreshTray).toHaveBeenCalledTimes(1);
     expect(appMenu.refreshApplicationMenu).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('settingsExport / settingsImport', () => {
+  it('settingsExport hands back the whole preferences object as pretty JSON', () => {
+    prefs.getAll.mockReturnValue({ theme: 'dark', locale: 'tr' } as unknown as {
+      defaultProvider: string;
+    });
+    expect(call(CH.settingsExport)).toBe(JSON.stringify({ theme: 'dark', locale: 'tr' }, null, 2));
+  });
+
+  it('settingsImport applies the validated patch, reconciles every service and broadcasts', () => {
+    parsePreferencesImport.mockReturnValue({
+      patch: { theme: 'dark', locale: 'tr' },
+      skipped: ['bogusKey'],
+    });
+    const res = call(CH.settingsImport, '{"theme":"dark"}');
+    expect(parsePreferencesImport).toHaveBeenCalledWith('{"theme":"dark"}');
+    expect(prefs.update).toHaveBeenCalledWith({ theme: 'dark', locale: 'tr' });
+    expect(mcp.reconcile).toHaveBeenCalled();
+    expect(extCaps.reconcile).toHaveBeenCalled();
+    expect(adblockHost.init).toHaveBeenCalled();
+    expect(surfaceTheme.applyNativeThemeSource).toHaveBeenCalled();
+    expect(publicSettings.broadcastPublicSettings).toHaveBeenCalled();
+    expect(res).toEqual({ applied: 2, skipped: ['bogusKey'] });
+  });
+
+  it('settingsImport writes nothing and does not broadcast when no key validated', () => {
+    parsePreferencesImport.mockReturnValue({ patch: {}, skipped: ['a', 'b'] });
+    const res = call(CH.settingsImport, '{"a":1}');
+    expect(prefs.update).not.toHaveBeenCalled();
+    expect(publicSettings.broadcastPublicSettings).not.toHaveBeenCalled();
+    expect(res).toEqual({ applied: 0, skipped: ['a', 'b'] });
+  });
+
+  it('settingsImport rejects a non-string payload and a non-JSON file with a 400', () => {
+    expect(() => call(CH.settingsImport, { not: 'a string' })).toThrow(
+      expect.objectContaining({ statusCode: 400 }) as Error,
+    );
+    parsePreferencesImport.mockImplementation(() => {
+      throw new SyntaxError('not json');
+    });
+    expect(() => call(CH.settingsImport, 'not json')).toThrow(
+      expect.objectContaining({ statusCode: 400 }) as Error,
+    );
   });
 });
 

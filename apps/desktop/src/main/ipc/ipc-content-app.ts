@@ -9,12 +9,14 @@ import {
   type ExtensionManifestWire,
   type McpServerStatusInfo,
   type Preferences,
+  type PreferencesImportResult,
   type ProviderKeyMeta,
   type PublicSettings,
 } from '@tepegoz/desktop-ipc';
 import {
   AddProviderKeyInputSchema,
   AppInfoSchema,
+  PreferencesImportJsonSchema,
   RemoveKeyByIdSchema,
   RenameProviderKeyInputSchema,
   ReorderKeysSchema,
@@ -26,8 +28,12 @@ import { AI_PROVIDERS, type AIProvider } from '@tepegoz/shared-types';
 import McpService from '../mcp/supervisor.electron';
 import ExtensionCapabilityService from '../extensions/capability-supervisor.electron';
 import FileOperationsHost from '../file-operations/file-operations-host';
-import { DEFAULT_PREFERENCES, PreferencesPatchSchema } from '@tepegoz/preferences';
-import { mainLocale } from '../lib/i18n-main';
+import {
+  DEFAULT_PREFERENCES,
+  parsePreferencesImport,
+  PreferencesPatchSchema,
+} from '@tepegoz/preferences';
+import { mainLocale, mainStrings } from '../lib/i18n-main';
 import { buildAppInfo, diagnosticsText, thirdPartyNoticesPath } from '../lib/app-info';
 import { reapplyZoomEverywhere } from '../site-zoom';
 import { buildAdaptorConnections, buildAiAdaptors } from '../agent/ai-adaptors';
@@ -39,7 +45,7 @@ import adblockHost from '../extensions/adblock-host.electron';
 import typoHost from '../extensions/typo-host.electron';
 import translateHost from '../extensions/translate-host.electron';
 import { builtinManifests } from '../../shared/extensions';
-import { handle } from './ipc-helpers';
+import { handle, parsePayload } from './ipc-helpers';
 import { applyChromeGlass, isMicaSupported } from '../lib/glass';
 import { applyNativeThemeSource, resolveSurfaceTheme } from '../lib/surface-theme';
 import { applyStrictGuard } from './strict-guard';
@@ -92,6 +98,25 @@ function syncDefaultProviderFromKeys(): void {
     PreferenceStore.update({ defaultProvider: top });
     broadcastPublicSettings();
   }
+}
+
+/**
+ * Reconcile every downstream service after a change that could have touched ANY preference key — a
+ * reset, or an import. The per-key `prefs:set` fan-out cannot be reused here because it keys each
+ * reconcile off "was this key in the patch"; a bulk write has no such patch to inspect, so it runs
+ * the full set. Credentials are never in preferences, so the vault is not part of this.
+ */
+function reconcileAfterBulkPreferenceChange(): void {
+  void McpService.reconcile();
+  ExtensionCapabilityService.reconcile();
+  adblockHost.init();
+  typoHost.init();
+  translateHost.init();
+  applyNativeThemeSource();
+  applyStrictGuard();
+  refreshTray();
+  refreshApplicationMenu();
+  broadcastPublicSettings();
 }
 
 /** Register app-info/preferences/public-settings/onboarding/MCP/adaptors/extensions/credentials
@@ -215,21 +240,34 @@ export function registerAppIpc(): void {
     // Merging the full defaults over the current prefs resets every field. Credentials live in the
     // vault (not preferences), so they are untouched. Reconcile downstream services + re-broadcast.
     const next = PreferenceStore.update(DEFAULT_PREFERENCES);
-    void McpService.reconcile();
-    ExtensionCapabilityService.reconcile();
-    adblockHost.init();
-    typoHost.init();
-    translateHost.init();
-    // A reset can change the theme mode and the strict-guard posture back to defaults; the live
-    // process state does not follow the preference on its own (same reason the prefs reconcile has
-    // these branches).
-    applyNativeThemeSource();
-    applyStrictGuard();
-    // A reset can change the locale back to the default, so the native surfaces need it too.
-    refreshTray();
-    refreshApplicationMenu();
-    broadcastPublicSettings();
+    reconcileAfterBulkPreferenceChange();
     return next;
+  });
+
+  handle(IpcChannels.settingsExport, (): string =>
+    // No secrets: API keys are in the keychain-sealed vault, not here. Main only stringifies — the
+    // untrusted renderer does the Blob download (same split as bookmarks / history / password export).
+    JSON.stringify(PreferenceStore.getAll(), null, 2),
+  );
+
+  handle(IpcChannels.settingsImport, (_event, payload): PreferencesImportResult => {
+    const json = parsePayload(PreferencesImportJsonSchema, payload);
+    let split: ReturnType<typeof parsePreferencesImport>;
+    try {
+      split = parsePreferencesImport(json);
+    } catch {
+      // Not JSON, or JSON that is not an object — there is nothing to apply. A malformed file is a
+      // bad request, mapped to the same generic 400 as any other rejected renderer payload.
+      throw new AppError(mainStrings().errors.badRequest, 400);
+    }
+    const applied = Object.keys(split.patch).length;
+    if (applied > 0) {
+      // Same fan-out as a reset: a bulk write can move theme, locale, strict-guard, extension
+      // enablement — none of which the live process follows off the preference on its own.
+      PreferenceStore.update(split.patch);
+      reconcileAfterBulkPreferenceChange();
+    }
+    return { applied, skipped: split.skipped };
   });
 
   handle(IpcChannels.onboardingComplete, (event): void => {

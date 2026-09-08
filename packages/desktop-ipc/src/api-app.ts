@@ -7,6 +7,7 @@ import type {
   AppInfo,
   CredentialsStatus,
   DefaultBrowserStatus,
+  PreferencesImportResult,
   ProcessSnapshot,
   ProviderId,
   ProviderKeyMeta,
@@ -27,6 +28,12 @@ export interface AppApi {
   updatePreferences(patch: Partial<Preferences>): Promise<Preferences>;
   /** Reset all preferences to defaults. Encrypted credentials (the vault) are NOT affected. */
   resetPreferences(): Promise<Preferences>;
+  /** The whole `preferences.json` as a pretty-printed JSON string for the user to save. Carries no
+   *  secrets (API keys are in the keychain-sealed vault), so the plain export is safe to re-import. */
+  exportPreferences(): Promise<string>;
+  /** Import a previously exported preferences JSON string. Each key is validated on its own; only the
+   *  keys that pass are applied. Rejects a non-JSON / non-object file. See {@link PreferencesImportResult}. */
+  importPreferences(json: string): Promise<PreferencesImportResult>;
   /** Finish the first-run welcome flow and load the normal browser chrome. */
   completeOnboarding(): Promise<void>;
   /** The curated PUBLIC settings snapshot exposed to extensions (read-only; never carries secrets). */

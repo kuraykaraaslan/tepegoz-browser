@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ComingSoonCard, type SettingsSection, type SettingsStrings } from '@tepegoz/settings-ui';
 import type { SiteClearPlan } from '@tepegoz/shared-types';
 import type { ClientCertificateChoice } from '@tepegoz/desktop-ipc';
@@ -95,6 +95,87 @@ function ForgetSiteRow({ s }: { s: SettingsStrings }) {
           {s.forgetSite.cleared.replace('{site}', done)}
         </p>
       )}
+    </div>
+  );
+}
+
+/**
+ * Export / import `preferences.json`. The renderer stays untrusted: main only ever hands over (export)
+ * or receives (import) a STRING — the Blob download and the `<input type=file>` + `File.text()` read
+ * happen here, in the trusted chrome document, exactly like bookmarks / history / password backup.
+ * Preferences carry no secrets (API keys are in the keychain-sealed vault), so the JSON is safe to
+ * write out and re-import.
+ */
+function PreferencesBackupRow({ s }: { s: SettingsStrings }) {
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [result, setResult] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  async function handleExport(): Promise<void> {
+    setBusy(true);
+    setResult(null);
+    try {
+      const json = await window.tepegoz.exportPreferences();
+      const url = URL.createObjectURL(new Blob([json], { type: 'application/json' }));
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'tepegoz-settings.json';
+      a.click();
+      URL.revokeObjectURL(url);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleImport(file: File): Promise<void> {
+    setBusy(true);
+    setResult(null);
+    try {
+      const { applied, skipped } = await window.tepegoz.importPreferences(await file.text());
+      const parts =
+        applied === 0
+          ? [s.importNothing]
+          : [s.importApplied.replace('{applied}', String(applied))];
+      if (skipped.length > 0) {
+        parts.push(s.importSkipped.replace('{skipped}', String(skipped.length)));
+      }
+      setResult(parts.join(' '));
+    } catch {
+      setResult(s.importFailed);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div>
+      <p className="text-sm font-medium text-text-primary">{s.backupTitle}</p>
+      <p className="mb-2 text-xs text-text-secondary">{s.backupDesc}</p>
+      <div className="flex flex-wrap items-center gap-2">
+        <Button size="sm" variant="outline" disabled={busy} onClick={() => void handleExport()}>
+          {s.exportButton}
+        </Button>
+        <Button
+          size="sm"
+          variant="outline"
+          disabled={busy}
+          onClick={() => fileRef.current?.click()}
+        >
+          {s.importButton}
+        </Button>
+        <input
+          ref={fileRef}
+          type="file"
+          accept="application/json,.json"
+          className="hidden"
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (file) void handleImport(file);
+            e.target.value = '';
+          }}
+        />
+      </div>
+      {result !== null && <p className="mt-2 text-xs text-text-secondary">{result}</p>}
     </div>
   );
 }
@@ -358,14 +439,19 @@ export function privacyAndAdvancedSections(ctx: SettingsSectionsCtx): SettingsSe
       group: s.groupAdvanced,
       label: s.resetTitle,
       icon: <IconReset />,
-      searchText: `${s.resetTitle} ${s.resetDesc}`,
+      searchText: `${s.resetTitle} ${s.resetDesc} ${s.backupTitle} ${s.backupDesc} ${s.exportButton} ${s.importButton}`,
       content: (
-        <Card title={s.resetTitle}>
-          <p className="mb-3 text-sm text-text-secondary">{s.resetDesc}</p>
-          <Button size="sm" variant="outline" onClick={ctx.resetToDefaults}>
-            {s.resetButton}
-          </Button>
-        </Card>
+        <div className="space-y-6">
+          <Card title={s.backupTitle}>
+            <PreferencesBackupRow s={s} />
+          </Card>
+          <Card title={s.resetTitle}>
+            <p className="mb-3 text-sm text-text-secondary">{s.resetDesc}</p>
+            <Button size="sm" variant="outline" onClick={ctx.resetToDefaults}>
+              {s.resetButton}
+            </Button>
+          </Card>
+        </div>
       ),
     },
     // ---------- About ----------

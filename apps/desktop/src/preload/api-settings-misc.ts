@@ -11,6 +11,7 @@ import {
   type PopupBlockerRequest,
   type PopupBlockerSettings,
   type Preferences,
+  type PreferencesImportResult,
   type ProcessSnapshot,
   type ProviderId,
   type ProviderKeyMeta,
@@ -50,6 +51,8 @@ export const settingsMiscApi: Pick<
   | 'getPreferences'
   | 'updatePreferences'
   | 'resetPreferences'
+  | 'exportPreferences'
+  | 'importPreferences'
   | 'completeOnboarding'
   | 'getPublicSettings'
   | 'onPublicSettingsChanged'
@@ -118,6 +121,9 @@ export const settingsMiscApi: Pick<
   updatePreferences: (patch: Partial<Preferences>) =>
     invoke<Preferences>(IpcChannels.prefsSet, patch),
   resetPreferences: () => invoke<Preferences>(IpcChannels.prefsReset),
+  exportPreferences: () => invoke<string>(IpcChannels.settingsExport),
+  importPreferences: (json: string) =>
+    invoke<PreferencesImportResult>(IpcChannels.settingsImport, json),
   completeOnboarding: () => invoke<void>(IpcChannels.onboardingComplete),
   getPublicSettings: () => invoke<PublicSettings>(IpcChannels.publicSettingsGet),
   onPublicSettingsChanged: (callback: (settings: PublicSettings) => void) => {

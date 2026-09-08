@@ -58,6 +58,17 @@ export interface DefaultBrowserStatus {
   isDefault: boolean;
 }
 
+/**
+ * Outcome of a preferences import. Each key in the imported file is validated on its own against the
+ * preferences schema: `applied` counts the keys that passed and were written, `skipped` names the keys
+ * that were dropped (unknown key, or a value the schema rejected). A non-JSON / non-object file is
+ * rejected outright and never produces this result.
+ */
+export interface PreferencesImportResult {
+  applied: number;
+  skipped: string[];
+}
+
 import type { WebPermissionCapability } from '@tepegoz/shared-types';
 
 export type { WebPermissionCapability };

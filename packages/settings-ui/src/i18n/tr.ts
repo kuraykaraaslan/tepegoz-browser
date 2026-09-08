@@ -572,6 +572,17 @@ export const tr: SettingsStrings = {
     'Tüm ayarlar varsayılanlara sıfırlansın mı? Kayıtlı anahtarlar ve parolalar korunur.',
   resetDone: 'Ayarlar varsayılanlara sıfırlandı.',
 
+  // --- Yedekleme: tercihleri dışa / içe aktar ---
+  backupTitle: 'Ayarları yedekle',
+  backupDesc:
+    'Tüm tercihleri bir JSON dosyasına kaydedin veya bir dosyadan geri yükleyin. Kayıtlı API anahtarları ve parolalar hiçbir zaman dahil edilmez.',
+  exportButton: 'Ayarları dışa aktar',
+  importButton: 'Ayarları içe aktar',
+  importApplied: '{applied} ayar içe aktarıldı.',
+  importSkipped: '{skipped} tanınmayan anahtar atlandı.',
+  importNothing: 'İçe aktarılacak bir şey yok — o dosyada tanınan bir ayar bulunamadı.',
+  importFailed: 'Bu dosya geçerli bir ayar dışa aktarımı değil.',
+
   // --- Hakkında ---
   aboutTitle: 'Hakkında',
   aboutVersion: 'Sürüm',

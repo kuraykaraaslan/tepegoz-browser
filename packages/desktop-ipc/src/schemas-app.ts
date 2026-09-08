@@ -75,6 +75,13 @@ export const ReorderKeysSchema = z.object({
 /** A content-addressed blob reference (`newtab:get-background-image` payload). */
 export const CasRefSchema = z.string().startsWith('cas://').max(128);
 
+/**
+ * `settings:import` payload — the raw JSON text of a previously exported `preferences.json`. Bounded
+ * like any untrusted renderer string; the handler `JSON.parse`s it and validates every key against the
+ * preferences schema individually. 4 MiB is far above any real preferences file and still cheap to parse.
+ */
+export const PreferencesImportJsonSchema = z.string().max(4_194_304);
+
 /** `auth:basic-respond` payload. Credential fields are length-capped like any other renderer string;
  *  they are forwarded to Chromium and never stored, so nothing here is validated against a vault. */
 export const BasicAuthResponseSchema = z.object({

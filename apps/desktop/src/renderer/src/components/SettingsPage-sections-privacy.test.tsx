@@ -22,6 +22,8 @@ const bridge = {
   clearSiteData: vi.fn(),
   listClientCertificateChoices: vi.fn(),
   forgetClientCertificateChoices: vi.fn(() => Promise.resolve()),
+  exportPreferences: vi.fn(() => Promise.resolve('{"theme":"dark"}')),
+  importPreferences: vi.fn(() => Promise.resolve({ applied: 2, skipped: [] as string[] })),
 };
 
 beforeEach(() => {
@@ -176,5 +178,65 @@ describe('privacyAndAdvancedSections — developer gating', () => {
     const withoutDev = privacyAndAdvancedSections(ctx({}, false).ctx).map((sec) => sec.id);
     expect(withDev).toContain('developer');
     expect(withoutDev).not.toContain('developer');
+  });
+});
+
+describe('privacyAndAdvancedSections — the Back up settings card', () => {
+  function renderReset() {
+    const c = ctx();
+    const section = privacyAndAdvancedSections(c.ctx).find((sec) => sec.id === 'reset');
+    render(<I18nProvider locale="en">{section!.content}</I18nProvider>);
+    return c;
+  }
+
+  it('downloads the exported JSON the bridge returns via a blob link', async () => {
+    const createObjectURL = vi.fn(() => 'blob:fake');
+    const revokeObjectURL = vi.fn();
+    vi.stubGlobal('URL', { ...URL, createObjectURL, revokeObjectURL });
+    const click = vi.fn();
+    const realCreate = document.createElement.bind(document);
+    let anchor: HTMLAnchorElement | undefined;
+    vi.spyOn(document, 'createElement').mockImplementation((tag: string) => {
+      const el = realCreate(tag);
+      if (tag === 'a') {
+        el.click = click;
+        anchor = el as HTMLAnchorElement;
+      }
+      return el;
+    });
+
+    renderReset();
+    fireEvent.click(screen.getByRole('button', { name: s.exportButton }));
+
+    await waitFor(() => expect(bridge.exportPreferences).toHaveBeenCalledTimes(1));
+    expect(createObjectURL).toHaveBeenCalledWith(expect.any(Blob));
+    expect(click).toHaveBeenCalled();
+    expect(anchor?.download).toBe('tepegoz-settings.json');
+    expect(revokeObjectURL).toHaveBeenCalledWith('blob:fake');
+    vi.unstubAllGlobals();
+  });
+
+  it('sends the picked file text to the bridge and reports the applied + skipped counts', async () => {
+    bridge.importPreferences.mockResolvedValueOnce({ applied: 3, skipped: ['ghostKey'] });
+    renderReset();
+    const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+    const file = { text: () => Promise.resolve('{"theme":"dark"}') } as File;
+    fireEvent.change(input, { target: { files: [file] } });
+
+    await waitFor(() =>
+      expect(bridge.importPreferences).toHaveBeenCalledWith('{"theme":"dark"}'),
+    );
+    await screen.findByText(/Imported 3/);
+    expect(screen.getByText(/Skipped 1/)).toBeTruthy();
+  });
+
+  it('shows the failure string when the import bridge rejects a bad file', async () => {
+    bridge.importPreferences.mockRejectedValueOnce(new Error('bad request'));
+    renderReset();
+    const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+    const file = { text: () => Promise.resolve('not json') } as File;
+    fireEvent.change(input, { target: { files: [file] } });
+
+    await screen.findByText(s.importFailed);
   });
 });

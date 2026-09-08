@@ -19,6 +19,12 @@ export const IpcChannels = {
   prefsSet: 'prefs:set',
   /** Restore all preferences to their defaults (does NOT touch the encrypted credential vault). */
   prefsReset: 'prefs:reset',
+  /** The whole `preferences.json` as pretty-printed JSON, for the user to save. No secrets — API keys
+   *  live in the keychain-sealed vault, not here — so a plain JSON export is safe and re-importable. */
+  settingsExport: 'settings:export',
+  /** Renderer→main: the JSON text of a previously exported file. Main `JSON.parse`s it and validates
+   *  each key against the preferences schema individually, applying only the keys that pass. */
+  settingsImport: 'settings:import',
   /** Finish first-run onboarding and switch the window into the normal browser chrome. */
   onboardingComplete: 'onboarding:complete',
   // Curated public settings exposed to extensions (read-only). `changed` is a main→renderer push.
