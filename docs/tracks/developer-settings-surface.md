@@ -1,11 +1,12 @@
 # Track — Developer settings surface: every browser + web-content knob in one place
 
-- **Status:** In progress — **Tier B + the `tepegoz://developer` page shipped 2026-08-28**; **Tier A largely
-  landed 2026-09-08** — per-key metadata registry (`@tepegoz/preferences/developer-registry`),
-  schema-derived pre-save validation (`validatePreferenceValue`), and nested-object drill-down (per-leaf
-  editors in the modal). **Tier D** (read-only web-content-defaults mirror) landed 2026-09-08.
-  **Owed:** Tier A per-key label/description text; **Tier C** (making the safe `webPreferences` subset
-  editable).
+- **Status:** In progress — **Tier B + the `tepegoz://developer` page shipped 2026-08-28**; **Tiers A, C,
+  D landed 2026-09-08.** Tier A: per-key metadata registry (`@tepegoz/preferences/developer-registry`),
+  schema-derived pre-save validation (`validatePreferenceValue`), nested-object drill-down. Tier C/D: the
+  `WebContentDefaultsCard` — locked isolation keys read-only, `plugins`/`backgroundThrottling` editable
+  via a new `webContentDefaults` preference merged at browsed-view creation. **Owed:** Tier A per-key
+  label/description text (editor shows raw keys — deprioritized, low value), and Tier D's deep-links from
+  session-mirrored rows to the owning Settings sections.
 - **Owner decisions taken (2026-08-28):** Chromium flags are **allowlist-only** · this document + an ADR
   land **before any code** · **revised same day:** a dedicated **`tepegoz://developer`** page, unlisted
   (no menu entry) but openable by any user and **not** dev-gated — the `chrome://flags` shape. The
@@ -18,7 +19,9 @@
   unclassified key is a compile error; `preferenceMeta()` fails open to `stable`). The raw editor
   (`developer-settings-model.ts` + `settings-developer.tsx`) now carries stability into each row, shows a
   badge for non-`stable` keys, indexes it for search, and shows a "relaunch to apply" hint in the edit
-  modal for the three startup-only keys. See
+  modal for the three startup-only keys. `Preferences.webContentDefaults` + `WEB_CONTENT_DEFAULTS` /
+  `applyWebContentDefaults` in `@tepegoz/shared-types/web-content-defaults` +
+  `settings-developer-web-content.tsx` (Tier C/D card) + the `browsedViewWebPreferences()` merge. See
   [ADR-0041 § Implementation status](../../docs/adr/0041-developer-settings-surface.md).
 - **Companion ADR:** [ADR-0041](../../docs/adr/0041-developer-settings-surface.md) — the security
   carve-out (what is exposable, what is permanently locked) is decided there, not here.
@@ -79,12 +82,14 @@ Safe-to-expose `webPreferences` / `session` subset: `backgroundThrottling`, `plu
 3. **Web Content Defaults** — the safe `webPreferences` / `session` subset. New tabs get it baked into
    `browsedViewWebPreferences()`; open tabs get `webContents.setWebPreferences()` + the matching
    `session` call pushed at save time. Locked keys shown, disabled, with the ADR link.
-   - **Read-only mirror landed 2026-09-08** — `WEB_CONTENT_DEFAULTS` in
-     `@tepegoz/shared-types/web-content-defaults` (the single description of the baseline; a drift test
-     in the `tabs-shared` suite fails if `browsedViewWebPreferences()` disagrees) + a
-     `WebContentDefaultsCard` on the Developer surface showing every key, its value, and a "Locked by
-     security policy" badge on the four isolation keys. **Owed:** making `plugins` /
-     `backgroundThrottling` editable (the `webContentDefaults` pref + boot merge + live-view applier).
+   - **Landed 2026-09-08.** `WEB_CONTENT_DEFAULTS` in `@tepegoz/shared-types/web-content-defaults` is
+     the single description of the baseline (drift-tested against `browsedViewWebPreferences()`).
+     `WebContentDefaultsCard` on the Developer surface: the four isolation keys read-only with a
+     "Locked by security policy" badge, and `plugins` / `backgroundThrottling` as **editable toggles**
+     writing the new `webContentDefaults` preference. `applyWebContentDefaults()` overlays ONLY the two
+     non-locked keys at view creation (a locked key in the pref / a hand-edited `preferences.json` is
+     ignored by construction), so an open tab picks up a change on its next reload — a "reload a tab"
+     hint shows once the selection diverges from what the window booted with.
 
 ## Work items (indicative — not a DoD)
 

@@ -286,6 +286,20 @@ export interface Preferences {
    *  only in the dev-only Developer settings (ADR-0041). Applied to `app.commandLine` at startup; a
    *  change needs a relaunch. Keyed by `CHROMIUM_FLAG_ALLOWLIST` id; unknown keys cannot be persisted. */
   chromiumFlags: ChromiumFlagOverrides;
+  /** The user-adjustable subset of the `webPreferences` every browsed tab is created with (ADR-0041
+   *  Tier C). Only the two non-isolation keys are here — `contextIsolation` / `sandbox` /
+   *  `nodeIntegration` / `webSecurity` are locked by security policy and never read from a preference.
+   *  Applied at view creation, so an open tab picks up a change on its next reload. */
+  webContentDefaults: WebContentDefaults;
+}
+
+/** @see Preferences.webContentDefaults */
+export interface WebContentDefaults {
+  /** Chromium's built-in PDF viewer (renders `application/pdf` in-tab instead of downloading). */
+  plugins: boolean;
+  /** When false, timers/rAF in a backgrounded or hidden tab keep running at full rate (the default —
+   *  an AI-driven or background tab must not be throttled). */
+  backgroundThrottling: boolean;
 }
 
 /** Persisted main-window placement — the restored (non-maximized) rectangle plus whether it was maximized. */

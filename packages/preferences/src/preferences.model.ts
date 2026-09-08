@@ -349,6 +349,13 @@ export const PreferencesSchema = z.object({
   // enum: an unknown key fails here, so a hand-edited preferences.json cannot slip a flag past the
   // allowlist. Absent key ⇒ flag off.
   chromiumFlags: ChromiumFlagOverridesSchema,
+  // The user-adjustable slice of the browsed-tab `webPreferences` baseline (ADR-0041 Tier C). ONLY
+  // the two non-isolation keys — the four page-isolation keys are never represented here, so nothing
+  // a user or a hand-edited preferences.json can set reaches them.
+  webContentDefaults: z.object({
+    plugins: z.boolean(),
+    backgroundThrottling: z.boolean(),
+  }),
 }) satisfies z.ZodType<Preferences>;
 
 /** Patch shape for partial updates — only provided keys are applied. */
@@ -497,4 +504,6 @@ export const DEFAULT_PREFERENCES: Preferences = {
   tabDiscardIdleMinutes: 30,
   // No Chromium flags overridden on a fresh profile — every allowlisted flag sits at its Chromium default.
   chromiumFlags: {},
+  // The hardened baseline: the in-tab PDF viewer on, background throttling off.
+  webContentDefaults: { plugins: true, backgroundThrottling: false },
 };

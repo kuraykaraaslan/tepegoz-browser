@@ -114,6 +114,8 @@ export const PREFERENCE_METADATA = {
   tabDiscardIdleMinutes: stable,
   // Chromium reads command-line switches only at startup; the flags card already says "relaunch".
   chromiumFlags: stableRestart,
+  // Applied at browsed-view creation — an open tab picks up a change on its next reload, not a restart.
+  webContentDefaults: stable,
 } as const satisfies Record<keyof Preferences, PreferenceMeta>;
 
 const DEFAULT_META: PreferenceMeta = stable;

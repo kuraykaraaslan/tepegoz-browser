@@ -712,6 +712,7 @@ export const en = {
   webContentDefaultsDesc:
     'The webPreferences every browsed tab is created with. Read-only: the four page-isolation keys are locked by security policy and can never become a toggle (ADR-0041).',
   webContentDefaultsLocked: 'Locked by security policy',
+  webContentDefaultsReloadHint: 'Reload a tab for the change to take effect there.',
 
   // --- Accessibility (was a placeholder while the product claimed WCAG 2.2 AA) ---
   accessibility: {

@@ -3,6 +3,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { DEFAULT_PREFERENCES } from '@tepegoz/preferences';
 import { CHROMIUM_FLAG_ALLOWLIST } from '@tepegoz/shared-types';
+import { EDITABLE_WEB_CONTENT_KEYS } from '@tepegoz/shared-types/web-content-defaults';
+
+/** Every toggle the Developer surface shows: one per Chromium flag + the editable web-content keys. */
+const TOTAL_SWITCHES = CHROMIUM_FLAG_ALLOWLIST.length + EDITABLE_WEB_CONTENT_KEYS.length;
 import { stubJsdomLayout } from '../test-support/jsdom-layout';
 import { DeveloperPageSurface } from './DeveloperPageSurface';
 
@@ -57,7 +61,7 @@ describe('DeveloperPageSurface (tepegoz://developer)', () => {
     render(<DeveloperPageSurface />);
 
     await waitFor(() => {
-      expect(screen.getAllByRole('switch').length).toBe(CHROMIUM_FLAG_ALLOWLIST.length);
+      expect(screen.getAllByRole('switch').length).toBe(TOTAL_SWITCHES);
     });
     expect(
       screen.getByPlaceholderText(/Search settings keys|Settings keylerinde ara/i),
@@ -73,7 +77,7 @@ describe('DeveloperPageSurface (tepegoz://developer)', () => {
     fireEvent.click(retry);
 
     await waitFor(() => {
-      expect(screen.getAllByRole('switch').length).toBe(CHROMIUM_FLAG_ALLOWLIST.length);
+      expect(screen.getAllByRole('switch').length).toBe(TOTAL_SWITCHES);
     });
   });
 
@@ -86,7 +90,7 @@ describe('DeveloperPageSurface (tepegoz://developer)', () => {
       settingsChangedCb();
       await Promise.resolve();
     });
-    expect(screen.getAllByRole('switch').length).toBe(CHROMIUM_FLAG_ALLOWLIST.length);
+    expect(screen.getAllByRole('switch').length).toBe(TOTAL_SWITCHES);
   });
 
   it('routes a flag edit back through updatePreferences', async () => {

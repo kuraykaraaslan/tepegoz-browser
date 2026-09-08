@@ -66,6 +66,26 @@ describe('browsedViewWebPreferences', () => {
     const tableKeys = new Set<string>(WEB_CONTENT_DEFAULTS.map((d) => d.key));
     expect(Object.keys(applied).filter((k) => k !== 'session' && !tableKeys.has(k))).toEqual([]);
   });
+
+  it('applies the webContentDefaults preference to the two non-isolation keys only', () => {
+    prefs.getAll.mockReturnValue({
+      webContentDefaults: {
+        plugins: false,
+        backgroundThrottling: true,
+        // a hand-edited preferences.json trying to weaken isolation must not get through
+        contextIsolation: false,
+        sandbox: false,
+      },
+    });
+    const applied = browsedViewWebPreferences(FAKE_SESSION);
+    expect(applied.plugins).toBe(false);
+    expect(applied.backgroundThrottling).toBe(true);
+    expect(applied.contextIsolation).toBe(true);
+    expect(applied.sandbox).toBe(true);
+    expect(applied.nodeIntegration).toBe(false);
+    expect(applied.webSecurity).toBe(true);
+    prefs.getAll.mockReturnValue({});
+  });
 });
 
 const { closedTabs, rememberClosedTab, takeClosedTab, recentlyClosedTabs } =

@@ -102,7 +102,7 @@ export function DeveloperSection({ prefs, onUpdatePrefs }: DeveloperSectionProps
     <div className="space-y-4">
       <Card title={s.developerTitle} subtitle={s.developerDesc} />
       <ChromiumFlagsCard prefs={prefs} onUpdatePrefs={onUpdatePrefs} />
-      <WebContentDefaultsCard />
+      <WebContentDefaultsCard prefs={prefs} onUpdatePrefs={onUpdatePrefs} />
       <DataTable
         caption={s.developerTitle}
         rows={rows}

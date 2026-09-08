@@ -23,6 +23,7 @@ import {
 } from '@tepegoz/desktop-ipc';
 import { type TabGroup, type TabRecord } from '@tepegoz/tab-engine';
 import { allSearchEngines, buildSearchUrl } from '@tepegoz/shared-types/search-engines';
+import { applyWebContentDefaults } from '@tepegoz/shared-types/web-content-defaults';
 import PreferenceStore from '@tepegoz/preferences';
 import { mainLocale, mainStrings } from './lib/i18n-main';
 import { extensionIdFromPageUrl, extensionLabel, manifestById } from '../shared/extensions';
@@ -58,11 +59,16 @@ export const MAX_TITLE_LENGTH = 2048;
  * → DownloadService) instead of always downloading. In current Chromium `plugins` gates the internal
  * PDF/print viewers only — NPAPI and Pepper are long gone — so this does not re-open a plugin surface.
  *
+ * The two non-isolation keys (`plugins`, `backgroundThrottling`) are then overlaid from the
+ * `webContentDefaults` preference (ADR-0041 Tier C). `applyWebContentDefaults` copies ONLY those two
+ * across, so `contextIsolation`/`sandbox`/`nodeIntegration`/`webSecurity` stay exactly as set here
+ * whatever the preference (or a hand-edited `preferences.json`) contains.
+ *
  * Takes a concrete `Session`, never a partition NAME: going through `BrowsingSessions` is what
  * guarantees the filtering/quarantine/User-Agent plane is attached before the view can load anything.
  */
 export function browsedViewWebPreferences(session: Session): WebPreferences {
-  return {
+  const base: WebPreferences = {
     contextIsolation: true,
     sandbox: true,
     nodeIntegration: false,
@@ -73,6 +79,11 @@ export function browsedViewWebPreferences(session: Session): WebPreferences {
     // background tab, must keep running at full rate — not just keep painting.
     backgroundThrottling: false,
   };
+  applyWebContentDefaults(
+    base as unknown as Record<string, unknown>,
+    PreferenceStore.getAll().webContentDefaults,
+  );
+  return base;
 }
 
 /**

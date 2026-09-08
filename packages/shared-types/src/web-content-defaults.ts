@@ -37,3 +37,26 @@ export type WebContentDefaultKey = (typeof WEB_CONTENT_DEFAULTS)[number]['key'];
 
 /** The keys that can never be exposed as a toggle, in table order. */
 export const LOCKED_WEB_CONTENT_KEYS = WEB_CONTENT_DEFAULTS.filter((d) => d.locked).map((d) => d.key);
+
+/** The keys a user may adjust from the Developer surface (ADR-0041 Tier C), in table order. */
+export const EDITABLE_WEB_CONTENT_KEYS = WEB_CONTENT_DEFAULTS.filter((d) => !d.locked).map(
+  (d) => d.key,
+);
+
+/**
+ * Overlay the user's editable overrides onto a hardened `webPreferences` base. Only the non-locked
+ * keys are ever copied across — a `contextIsolation`/`sandbox`/`nodeIntegration`/`webSecurity` value
+ * in `overrides` is ignored by construction, so this cannot weaken page isolation whatever it is
+ * handed. `base` is returned mutated (it is the freshly-built options object) and also returned.
+ */
+export function applyWebContentDefaults<T extends Record<string, unknown>>(
+  base: T,
+  overrides: Partial<Record<WebContentDefaultKey, boolean>> | undefined,
+): T {
+  if (overrides === undefined) return base;
+  for (const key of EDITABLE_WEB_CONTENT_KEYS) {
+    const value = overrides[key];
+    if (typeof value === 'boolean') (base as Record<string, unknown>)[key] = value;
+  }
+  return base;
+}

@@ -702,6 +702,7 @@ export const tr: SettingsStrings = {
   webContentDefaultsDesc:
     'Gezinilen her sekmenin oluşturulduğu webPreferences değerleri. Salt okunur: dört sayfa yalıtım anahtarı güvenlik politikasıyla kilitlidir ve hiçbir zaman değiştirilebilir bir seçenek olamaz (ADR-0041).',
   webContentDefaultsLocked: 'Güvenlik politikasıyla kilitli',
+  webContentDefaultsReloadHint: 'Değişikliğin bir sekmede etkili olması için sekmeyi yeniden yükleyin.',
 
   // --- Erişilebilirlik (ürün WCAG 2.2 AA iddia ederken yer tutucuydu) ---
   accessibility: {
