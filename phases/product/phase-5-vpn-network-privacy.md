@@ -419,17 +419,29 @@ endpoint** (one loopback port per active connection), never an OS-level system p
 - [ ] **First-run flow for a tunnel** — import a config, name it, test it, and see a plain-language result;
       a failed test says which step failed (config parse / handshake / DNS / exit reachability), not "not
       connected"
-- [~] **Connection health over time** — keep-alive, reconnect, and per-connection metrics (handshake success
-  rate, latency, uptime) surfaced in the connections overview, so a tunnel that dies quietly is visible
-  instead of being discovered through a leak. _Landed 2026-09-08: the pool now tracks `connectedSince`
-  (set on every → `up`, cleared on → `down` — so a flap shortens uptime), `lastCheckedAt` (the
-  health-poll heartbeat), and a session `drops` counter (incremented only on a real `up` → `down`, not
-  a first failed connect). All three ride `PoolConnectionView` → `NetworkConnectionView` → the
-  connections overview, which renders a rising-`drops` line ("Dropped {n} time(s) this session …",
-  en+tr) on the affected row — a tunnel that keeps reconnecting is now visible without waiting for a
-  leak. Pool tests cover the transitions; component tests cover the line. **Still owed for `[x]`:
-  handshake success rate, latency, and a rendered uptime — those need probe-timing history, a bigger
-  change than this counter.**_
+- [x] **Connection health over time** — keep-alive, reconnect, and per-connection metrics (handshake
+  success rate, reconnect count, last error) surfaced in the connections overview, so a tunnel that dies
+  quietly is visible instead of being discovered through a leak. _Landed 2026-09-08: the pool tracks
+  `connectedSince` (set on every → `up`, cleared on → `down` — so a flap shortens uptime),
+  `lastCheckedAt` (the health-poll heartbeat), and a session `drops` counter (only on a real `up` →
+  `down`), all rendered as a "Dropped {n} time(s) this session …" line on the affected connection row._
+  _Extended 2026-09-09: the pool now also keeps a session handshake tally per connection — `handshakesOk`
+  / `handshakesFailed` (incremented in `ensureUp`'s success / catch), `reconnects` (a success that
+  follows an earlier success this session), `lastHandshakeAt` (retained across drops, unlike
+  `connectedSince`), and `lastErrorAt` (paired with the existing `lastError` string). These ride
+  `PoolConnectionView` → `NetworkConnectionView` and are shown in a new read-only **Connection health**
+  card (`components/settings-network-health.tsx`) under the connection manager: per connection, its live
+  status, "last handshake" as a locale relative time, the reconnect count, the handshake-success rate
+  (`{ok} of {total} ({pct}%)`, or "none attempted yet"), and — only when there has been one — the last
+  error as the same localized `classifyNetworkError` sentence the manager uses (raw stderr stays on
+  `title=`) plus how long ago. Nothing is persisted; the subtitle says the counters reset on restart.
+  The health slice of the `network:get-state` read is `safeParse`d at the renderer boundary
+  (`ConnectionHealthSchema` in `@tepegoz/shared-types`, `parseConnectionHealth`) — a record that fails
+  validation degrades to "health unavailable" for that row. en+tr for every new string. Pool tests
+  cover the tally transitions; `network-health.test.ts` covers the parse + rate; `settings-network-health.test.tsx`
+  covers the rendered rows, the relative-time format, and the show/hide of the error row. **Not in
+  this box:** a rendered numeric latency figure and a first-run "which step failed" test flow — the
+  latency attribution is tracked by the "Slow needs a cause" item below, which owns probe-timing._
 - [x] **Errors in the user's language, with a next step** — every failure state maps to one localized sentence
       and one action; no raw provider stderr in the UI. _Landed 2026-09-08: pure `classifyNetworkError`
       (`components/network-error.ts`, 16 tests, 100% cov) maps a connect-time `lastError` to one of eight

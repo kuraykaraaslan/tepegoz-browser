@@ -11,6 +11,7 @@ import { faCircleCheck, faCircleExclamation } from '@fortawesome/free-solid-svg-
 import { AlertBanner, Badge, Button, Card, cn } from '@tepegoz/ui';
 import { AddConnectionRow } from './settings-network-forms';
 import { ConfirmAction } from './settings-confirm';
+import { NetworkHealthCard } from './settings-network-health';
 import { NetworkRoutesCard } from './settings-network-routes';
 import { CrossLink, Select } from './settings-shared';
 import { classifyNetworkError } from './network-error';
@@ -401,6 +402,8 @@ export function NetworkPrivacySection({ s }: { s: SettingsStrings }) {
           <BinaryRow s={s} binary="tor" status={state.binaries.tor} onChanged={refresh} />
         </ul>
       </Card>
+
+      <NetworkHealthCard s={s} state={state} />
 
       <Card title={s.network.defaultRoute} subtitle={s.network.defaultRouteHint}>
         <div className="w-full max-w-sm">

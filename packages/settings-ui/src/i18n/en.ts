@@ -878,6 +878,18 @@ export const en = {
     tunnelLimitsLink: 'Clear a site’s data',
     connDrops:
       'Dropped {count} time(s) this session — if this keeps rising, the tunnel is unstable even when it reconnects.',
+    // Connection health over time (Phase 5) — a read-only view, session-scoped, resets on restart.
+    healthTitle: 'Connection health',
+    healthHint:
+      'How each connection has held up since Tepegöz started. Read-only — every count here resets when the app restarts.',
+    healthNever: 'Not connected this session',
+    healthUnavailable: 'Health data for this connection could not be read.',
+    healthLastHandshake: 'Last handshake',
+    healthReconnects: 'Reconnects this session',
+    healthHandshakes: 'Handshake success',
+    healthHandshakesRate: '{ok} of {total} succeeded ({pct}%)',
+    healthHandshakesNone: 'None attempted yet',
+    healthLastError: 'Last error',
     connError: {
       binaryMissing:
         'The helper program for this connection is not installed. Add it in the helpers section below, or point Tepegöz at the folder that has it.',

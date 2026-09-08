@@ -26,6 +26,11 @@ function conn(over: Partial<NetworkConnectionView> = {}): NetworkConnectionView 
     connectedSince: null,
     lastCheckedAt: null,
     drops: 0,
+    lastHandshakeAt: null,
+    lastErrorAt: null,
+    handshakesOk: 0,
+    handshakesFailed: 0,
+    reconnects: 0,
     boundTabs: 0,
     ...over,
   };

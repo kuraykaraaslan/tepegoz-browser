@@ -58,6 +58,20 @@ export interface PoolConnectionView {
   /** How many times this connection has dropped from `up` this session. A rising count is the signal
    *  that a tunnel is unstable even when it keeps auto-recovering. */
   drops: number;
+  /** Host-clock ms of the last SUCCESSFUL handshake, retained across drops (unlike `connectedSince`,
+   *  which clears on → `down`). `null` until the connection first comes up this session. This is what
+   *  the health overview shows as "last handshake …" even while the tunnel is currently down. */
+  lastHandshakeAt: number | null;
+  /** Host-clock ms of the last FAILED handshake this session, or `null` if none has failed. Pairs with
+   *  `lastError` — the string — so the overview can say both what went wrong and how long ago. */
+  lastErrorAt: number | null;
+  /** Successful connect-and-verify handshakes this session. */
+  handshakesOk: number;
+  /** Failed handshake attempts this session. `handshakesOk / (handshakesOk + handshakesFailed)` is the
+   *  handshake-success rate shown in the overview. */
+  handshakesFailed: number;
+  /** Times this connection came back `up` after having been up earlier this session. */
+  reconnects: number;
 }
 
 interface Entry {
@@ -69,15 +83,39 @@ interface Entry {
   socksPort: number | null;
   /** Why this connection is not up, in the user's words. Cleared on a successful connect. */
   lastError: string | null;
-  /** See {@link PoolConnectionView.connectedSince} / `lastCheckedAt` / `drops`. */
+  /** See {@link PoolConnectionView.connectedSince} / `lastCheckedAt` / `drops` / the handshake tally. */
   connectedSince: number | null;
   lastCheckedAt: number | null;
   drops: number;
+  lastHandshakeAt: number | null;
+  lastErrorAt: number | null;
+  handshakesOk: number;
+  handshakesFailed: number;
+  reconnects: number;
 }
 
 /** The health fields a fresh {@link Entry} starts with — same at load and on add. */
-function freshHealth(): Pick<Entry, 'connectedSince' | 'lastCheckedAt' | 'drops'> {
-  return { connectedSince: null, lastCheckedAt: null, drops: 0 };
+function freshHealth(): Pick<
+  Entry,
+  | 'connectedSince'
+  | 'lastCheckedAt'
+  | 'drops'
+  | 'lastHandshakeAt'
+  | 'lastErrorAt'
+  | 'handshakesOk'
+  | 'handshakesFailed'
+  | 'reconnects'
+> {
+  return {
+    connectedSince: null,
+    lastCheckedAt: null,
+    drops: 0,
+    lastHandshakeAt: null,
+    lastErrorAt: null,
+    handshakesOk: 0,
+    handshakesFailed: 0,
+    reconnects: 0,
+  };
 }
 
 type StatusListener = (id: string, status: LiveConnectionStatus) => void;
@@ -168,6 +206,11 @@ function viewOf(entry: Entry): PoolConnectionView {
     connectedSince: entry.connectedSince,
     lastCheckedAt: entry.lastCheckedAt,
     drops: entry.drops,
+    lastHandshakeAt: entry.lastHandshakeAt,
+    lastErrorAt: entry.lastErrorAt,
+    handshakesOk: entry.handshakesOk,
+    handshakesFailed: entry.handshakesFailed,
+    reconnects: entry.reconnects,
   };
 }
 
@@ -273,6 +316,11 @@ const ConnectionPool = {
       const bind = await ensureTunnelSession(id, socksPort);
       entry.socksPort = socksPort;
       entry.lastError = null;
+      // Handshake tally (session-scoped, never persisted). A success that follows an earlier success
+      // this session is a RECONNECT — the signal that a tunnel is flapping even while it recovers.
+      entry.handshakesOk += 1;
+      if (entry.lastHandshakeAt !== null) entry.reconnects += 1;
+      entry.lastHandshakeAt = Date.now();
       setStatus(id, 'up');
       ConnectionPool.startHealthPolling();
       return { partition: bind.partition, socksPort };
@@ -281,6 +329,8 @@ const ConnectionPool = {
       // Kept verbatim for the UI: "wireproxy not found" and "endpoint unreachable" need entirely
       // different things from the user, and a generic "could not connect" tells them neither.
       entry.lastError = err instanceof Error ? err.message : String(err);
+      entry.lastErrorAt = Date.now();
+      entry.handshakesFailed += 1;
       setStatus(id, 'down');
       Logger.error('Connection failed to come up', { id, err: String(err) });
       throw err;

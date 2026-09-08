@@ -110,3 +110,29 @@ export type NetworkGeneralBinding = z.infer<typeof NetworkGeneralBindingSchema>;
 export const CONNECTION_STATUSES = ['up', 'down', 'connecting'] as const;
 export const ConnectionStatusSchema = z.enum(CONNECTION_STATUSES);
 export type LiveConnectionStatus = z.infer<typeof ConnectionStatusSchema>;
+
+/**
+ * Per-connection health tallied over the current session — surfaced read-only in Settings so a tunnel
+ * that dies quietly is visible without waiting for a leak.
+ *
+ * Every field is session-scoped and resets when the app restarts; NONE of it is persisted, and none of
+ * it is key material. It rides the same `network:get-state` read the routing picture uses, which crosses
+ * the (untrusted) renderer boundary — so it is `safeParse`d there, and a record that does not validate
+ * renders as "health unavailable" rather than throwing.
+ */
+export const ConnectionHealthSchema = z.object({
+  /** Host-clock ms of the last successful handshake, kept across drops; `null` if it has never come up
+   *  this session. This is the "last handshake …" the overview shows even while the tunnel is down. */
+  lastHandshakeAt: z.number().int().nonnegative().nullable(),
+  /** Host-clock ms of the last failed handshake this session, or `null` if none has failed. */
+  lastErrorAt: z.number().int().nonnegative().nullable(),
+  /** Successful connect-and-verify handshakes this session. */
+  handshakesOk: z.number().int().nonnegative(),
+  /** Failed handshake attempts this session. `handshakesOk / (handshakesOk + handshakesFailed)` is the
+   *  success rate the overview renders. */
+  handshakesFailed: z.number().int().nonnegative(),
+  /** Times this connection came back `up` after having been up earlier this session — a rising count
+   *  means it is flapping even while it keeps auto-recovering. */
+  reconnects: z.number().int().nonnegative(),
+});
+export type ConnectionHealth = z.infer<typeof ConnectionHealthSchema>;

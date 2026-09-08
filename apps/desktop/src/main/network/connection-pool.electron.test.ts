@@ -281,6 +281,69 @@ describe('health polling', () => {
   });
 });
 
+describe('handshake tally — session-scoped, feeds the health overview', () => {
+  beforeEach(() => {
+    h.prefs.networkConnections = [conn('tor')];
+    ConnectionPool.resetForTests();
+    ConnectionPool.init();
+  });
+
+  it('starts every counter at zero with no timestamps', () => {
+    const view = ConnectionPool.get('tor')!;
+    expect(view.handshakesOk).toBe(0);
+    expect(view.handshakesFailed).toBe(0);
+    expect(view.reconnects).toBe(0);
+    expect(view.lastHandshakeAt).toBeNull();
+    expect(view.lastErrorAt).toBeNull();
+  });
+
+  it('counts an ok handshake and stamps lastHandshakeAt — but not a reconnect the first time', async () => {
+    const before = Date.now();
+    await ConnectionPool.ensureUp('tor');
+    const view = ConnectionPool.get('tor')!;
+    expect(view.handshakesOk).toBe(1);
+    expect(view.handshakesFailed).toBe(0);
+    expect(view.reconnects).toBe(0);
+    expect(view.lastHandshakeAt).toBeGreaterThanOrEqual(before);
+  });
+
+  it('counts a failed handshake and stamps lastErrorAt, leaving lastHandshakeAt untouched', async () => {
+    h.connect.mockRejectedValue(new Error('wireproxy did not come up: bad key'));
+    const before = Date.now();
+    await expect(ConnectionPool.ensureUp('tor')).rejects.toThrow();
+    const view = ConnectionPool.get('tor')!;
+    expect(view.handshakesFailed).toBe(1);
+    expect(view.handshakesOk).toBe(0);
+    expect(view.lastErrorAt).toBeGreaterThanOrEqual(before);
+    expect(view.lastHandshakeAt).toBeNull();
+  });
+
+  it('counts the SECOND (and later) successful handshake as a reconnect', async () => {
+    await ConnectionPool.ensureUp('tor');
+    // It drops, then comes back — that return is the reconnect.
+    h.probe.mockResolvedValue(false);
+    await ConnectionPool.pollOnce();
+    h.probe.mockResolvedValue(true);
+    await ConnectionPool.ensureUp('tor');
+
+    const view = ConnectionPool.get('tor')!;
+    expect(view.handshakesOk).toBe(2);
+    expect(view.reconnects).toBe(1);
+    expect(view.lastHandshakeAt).not.toBeNull();
+  });
+
+  it('keeps lastHandshakeAt across a drop — the health view still shows when it last connected', async () => {
+    await ConnectionPool.ensureUp('tor');
+    const at = ConnectionPool.get('tor')!.lastHandshakeAt;
+    h.probe.mockResolvedValue(false);
+    await ConnectionPool.pollOnce();
+    const view = ConnectionPool.get('tor')!;
+    expect(view.status).toBe('down');
+    expect(view.connectedSince).toBeNull();
+    expect(view.lastHandshakeAt).toBe(at); // retained, unlike connectedSince
+  });
+});
+
 describe('adding and removing', () => {
   it('persists an added connection', () => {
     ConnectionPool.init();

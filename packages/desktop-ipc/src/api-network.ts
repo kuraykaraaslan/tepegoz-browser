@@ -32,6 +32,19 @@ export interface NetworkConnectionView {
   lastCheckedAt: number | null;
   /** Times this connection has dropped from `up` this session — a rising count means it is unstable. */
   drops: number;
+  /** Host-clock ms of the last SUCCESSFUL handshake this session, retained across drops (unlike
+   *  `connectedSince`). `null` until it first comes up — shown as "last handshake …" even while down. */
+  lastHandshakeAt: number | null;
+  /** Host-clock ms of the last FAILED handshake this session, or `null` if none has failed. Pairs with
+   *  `lastError` so the health view can say both what went wrong and how long ago. */
+  lastErrorAt: number | null;
+  /** Successful connect-and-verify handshakes this session. */
+  handshakesOk: number;
+  /** Failed handshake attempts this session — `handshakesOk / (handshakesOk + handshakesFailed)` is the
+   *  handshake-success rate the health view renders. */
+  handshakesFailed: number;
+  /** Times this connection came back `up` after having been up earlier this session. */
+  reconnects: number;
   /**
    * How many tabs resolve to this connection right now, across EVERY window.
    *

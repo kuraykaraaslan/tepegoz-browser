@@ -870,6 +870,18 @@ export const tr: SettingsStrings = {
     tunnelLimitsLink: 'Bir sitenin verilerini temizle',
     connDrops:
       'Bu oturumda {count} kez koptu — bu sayı artmaya devam ediyorsa tünel yeniden bağlansa bile kararsız demektir.',
+    // Zaman içinde bağlantı sağlığı (Faz 5) — salt okunur bir görünüm, oturum kapsamlı, yeniden başlatınca sıfırlanır.
+    healthTitle: 'Bağlantı sağlığı',
+    healthHint:
+      'Tepegöz başladığından beri her bağlantının nasıl dayandığı. Salt okunur — buradaki her sayı uygulama yeniden başlayınca sıfırlanır.',
+    healthNever: 'Bu oturumda bağlanmadı',
+    healthUnavailable: 'Bu bağlantının sağlık verileri okunamadı.',
+    healthLastHandshake: 'Son el sıkışması',
+    healthReconnects: 'Bu oturumdaki yeniden bağlanmalar',
+    healthHandshakes: 'El sıkışması başarısı',
+    healthHandshakesRate: '{total} denemenin {ok} tanesi başarılı (%{pct})',
+    healthHandshakesNone: 'Henüz deneme yok',
+    healthLastError: 'Son hata',
     connError: {
       binaryMissing:
         'Bu bağlantı için yardımcı program kurulu değil. Aşağıdaki yardımcılar bölümünden ekleyin ya da Tepegöz’e programın bulunduğu klasörü gösterin.',
