@@ -280,6 +280,9 @@ importers:
       '@tepegoz/process-ui':
         specifier: workspace:*
         version: link:../../packages/process-ui
+      '@tepegoz/profiles':
+        specifier: workspace:*
+        version: link:../../packages/profiles
       '@tepegoz/security-policy':
         specifier: workspace:*
         version: link:../../packages/security-policy

@@ -1,4 +1,3 @@
-import { copyFileSync, existsSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { app, BrowserWindow, powerMonitor } from 'electron';
 import { Logger } from '@tepegoz/libs';
@@ -24,6 +23,7 @@ import { registerBasicAuthHandler } from './auth/basic-auth-broker';
 import { registerCertificateHandler } from './auth/certificate-broker';
 import { registerClientCertificateHandler } from './auth/client-certificate-broker';
 import { initStores } from './stores.electron';
+import { resolveAndPinProfile } from './profiles/profile-boot';
 import { applyNativeThemeSource } from './lib/surface-theme';
 import { initHosts, openWindow } from './browser-windows';
 import { initTray, revealAllWindows } from './tray';
@@ -123,35 +123,15 @@ if (process.platform === 'win32') app.setAppUserModelId('com.tepegoz.browser');
 // app.whenReady() resolves; Electron only reads privileged-scheme registration once, at startup.
 registerInternalPagesScheme();
 
-// Single Chrome-like user-data directory named `tepegoz` (app.setName above is only the display /
-// taskbar name). Pin it explicitly BEFORE whenReady so EVERY app.getPath('userData') — stores, the
-// SQLite DB, and the browsing partitions — resolves here. One-time: carry the small settings files
-// over from the pre-rename "Tepegöz" folder so existing preferences + encrypted API keys survive.
-// An explicit `--user-data-dir=…` WINS, exactly as it does in Chrome. Without this the pin below is
-// unconditional and silently discards the switch, so the app can only ever run against the one real
-// profile: a test harness cannot isolate a run, and two instances cannot be kept apart. The AI-1 eval
-// hit precisely that — it passed `--user-data-dir` per trial and every trial still opened the developer's
-// own profile and restored the previous trial's session on top of its own navigation.
-if (app.commandLine.getSwitchValue('user-data-dir').length === 0) {
-  const appDataDir = app.getPath('appData');
-  const legacyDir = join(appDataDir, 'Tepegöz');
-  const userDataDir = join(appDataDir, 'tepegoz');
-  if (existsSync(legacyDir)) {
-    mkdirSync(userDataDir, { recursive: true });
-    for (const file of ['preferences.json', 'credentials.enc.json']) {
-      const src = join(legacyDir, file);
-      const dst = join(userDataDir, file);
-      if (existsSync(src) && !existsSync(dst)) {
-        try {
-          copyFileSync(src, dst);
-        } catch (err) {
-          Logger.warn('Failed to carry over legacy user-data file', { file, err: String(err) });
-        }
-      }
-    }
-  }
-  app.setPath('userData', userDataDir);
-}
+// Process-per-profile (ADR-0045, docs/tracks/multi-profile-isolation.md): decide which profile THIS
+// process is and pin `userData` to its own directory (`%APPDATA%/tepegoz/Profiles/<id>`), so EVERY
+// later app.getPath('userData') — the stores, the SQLite DB, Chromium's partitions — resolves inside
+// that one profile. This subsumes the old single-directory pin: it still carries the pre-rename
+// "Tepegöz" settings over, still lets an explicit `--user-data-dir=…` win outright (the AI-1 eval
+// harness isolates a run that way), and additionally runs the one-time flat → `Profiles/default/`
+// migration and reads the registry's last-active pointer. MUST precede requestSingleInstanceLock()
+// below, whose lock is keyed by the user-data dir and therefore yields one instance PER PROFILE.
+const CURRENT_PROFILE_ID = resolveAndPinProfile();
 
 // Crash counter + safe-mode decision (ADR-0038). MUST run here: after the userData pin (the record lives
 // in that directory) and before anything else can fail, because every gate below asks `isSafeMode()` and
@@ -227,6 +207,7 @@ if (!app.requestSingleInstanceLock()) {
         electron: process.versions.electron,
         chromium: process.versions.chrome,
         node: process.versions.node,
+        profile: CURRENT_PROFILE_ID,
       });
 
       if (process.platform === 'darwin') {
