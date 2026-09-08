@@ -6,6 +6,7 @@ export const tr: HistoryStrings = {
   search: 'Geçmişte ara',
   empty: 'Henüz geçmiş yok',
   clear: 'Tümünü temizle',
+  exportAll: 'Dışa aktar',
   delete: 'Kaldır',
   loading: 'Yükleniyor...',
 };

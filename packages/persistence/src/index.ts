@@ -6,6 +6,7 @@ export * from './event-journal';
 export * from './blob-store';
 export * from './macro-store';
 export * from './history-store';
+export * from './history-export';
 export * from './session-store';
 export * from './download-store';
 export * from './task-store';

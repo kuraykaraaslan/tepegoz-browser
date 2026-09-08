@@ -74,6 +74,9 @@ export interface UiApi {
   }): Promise<HistoryEntry[]>;
   deleteHistory(url: string): Promise<void>;
   clearHistory(): Promise<void>;
+  /** All history as CSV (url, title, last visit ISO, visit count) for the user to save — the renderer
+   *  is untrusted, so it only receives the string and hands it to the browser download path. */
+  exportHistory(): Promise<string>;
   /**
    * What a "forget this site" would cover and what it would break, WITHOUT doing it (Phase 2).
    * Null when the URL has no site to scope to. The dialog is built from this, so the warning

@@ -48,7 +48,7 @@ import {
   listClientCertificateChoices,
   resolveClientCertificate,
 } from '../auth/client-certificate-broker';
-import { BlobStore, HistoryStore } from '@tepegoz/persistence';
+import { BlobStore, HistoryStore, serializeHistoryCsv } from '@tepegoz/persistence';
 import {
   BookmarkTreeStore,
   importBookmarksHtmlToStore,
@@ -238,6 +238,12 @@ export function registerBrowsingIpc(): void {
   handle(IpcChannels.historyClear, (): void => {
     const db = getDb();
     if (db !== null) HistoryStore.clear(db);
+  });
+  handle(IpcChannels.historyExport, (): string => {
+    // A local-first browser whose data cannot leave it is not local-first (the same reasoning as
+    // bookmarks export above). CSV so a spreadsheet can open it; no import side exists yet.
+    const db = getDb();
+    return serializeHistoryCsv(db === null ? [] : HistoryStore.exportRows(db));
   });
 
   // Bookmarks. http(s) pages plus trusted system paths (tepegoz:// internal pages, file://) are

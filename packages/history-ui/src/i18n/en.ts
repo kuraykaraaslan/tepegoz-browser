@@ -4,6 +4,7 @@ export const en = {
   search: 'Search history',
   empty: 'No history yet',
   clear: 'Clear all',
+  exportAll: 'Export',
   delete: 'Remove',
   loading: 'Loading...',
 };

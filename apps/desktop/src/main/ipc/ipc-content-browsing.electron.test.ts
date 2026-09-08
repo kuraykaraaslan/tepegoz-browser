@@ -69,12 +69,16 @@ const HistoryStore = vi.hoisted(() => ({
   searchForOmnibox: vi.fn(() => ['O']),
   deleteUrl: vi.fn(),
   clear: vi.fn(),
+  exportRows: vi.fn(() => [{ url: 'https://x/', title: 'X', ts: 0, visitCount: 1 }]),
 }));
+const serializeHistoryCsv = vi.hoisted(() =>
+  vi.fn((rows: unknown[]) => `csv:${String(rows.length)}`),
+);
 const BlobStore = vi.hoisted(() => ({
   get: vi.fn((): Buffer | undefined => undefined),
   put: vi.fn(() => 'cas://ref1'),
 }));
-vi.mock('@tepegoz/persistence', () => ({ HistoryStore, BlobStore }));
+vi.mock('@tepegoz/persistence', () => ({ HistoryStore, BlobStore, serializeHistoryCsv }));
 
 const BookmarkTreeStore = vi.hoisted(() => ({
   listFlat: vi.fn(() => ['B']),
@@ -336,6 +340,13 @@ describe('bookmark tree + tags + folders', () => {
     expect(call('bookmarksImport', { html: '<a>' })).toMatchObject({
       errors: ['Database is unavailable'],
     });
+  });
+
+  it('historyExport serializes exported rows to CSV (empty list when no DB)', () => {
+    expect(call('historyExport')).toBe('csv:1');
+    expect(HistoryStore.exportRows).toHaveBeenCalledWith({ __db: true });
+    getDb.mockReturnValue(null);
+    expect(call('historyExport')).toBe('csv:0');
   });
 
   it('bookmarksExport serializes the tree (empty when no DB)', () => {

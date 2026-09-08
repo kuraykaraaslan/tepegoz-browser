@@ -44,6 +44,8 @@ export interface HistoryPageProps {
   remove: (url: string) => Promise<void>;
   /** Clear all history. */
   clear: () => Promise<void>;
+  /** Produce the full history as a CSV string. Absent ⇒ no Export button (host cannot make the file). */
+  onExport?: () => Promise<string>;
 }
 
 /**
@@ -53,7 +55,7 @@ export interface HistoryPageProps {
  * the data source (list/remove/clear) is injected, so the package has no dependency on the Electron
  * bridge. Extracted from `apps/desktop` per docs/package-map.md.
  */
-export function HistoryPage({ list, remove, clear }: Readonly<HistoryPageProps>) {
+export function HistoryPage({ list, remove, clear, onExport }: Readonly<HistoryPageProps>) {
   const t = useT(historyDict);
   const [search, setSearch] = useState('');
   const [entries, setEntries] = useState<HistoryItem[]>([]);
@@ -112,6 +114,22 @@ export function HistoryPage({ list, remove, clear }: Readonly<HistoryPageProps>)
     );
   }, [entries, hasMore, list, search, offset]);
 
+  /**
+   * Export goes renderer → main for the data, then a Blob + `<a download>` in the (trusted chrome)
+   * document — the same path bookmarks and password export use, keeping "renderer is untrusted" where
+   * it is: main never writes a file, and the string never leaves the device.
+   */
+  async function handleExport(): Promise<void> {
+    if (onExport === undefined) return;
+    const csv = await onExport();
+    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'tepegoz-history.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   useEffect(() => {
     const el = sentinelRef.current;
     if (!el) return;
@@ -147,6 +165,15 @@ export function HistoryPage({ list, remove, clear }: Readonly<HistoryPageProps>)
             }}
             className="ml-auto h-9 w-72 max-w-full rounded-full border border-border bg-surface-raised px-4 text-sm text-text-primary placeholder:text-text-disabled focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus"
           />
+          {onExport !== undefined && (
+            <button
+              type="button"
+              onClick={() => void handleExport()}
+              className="rounded-md border border-border px-3 py-1.5 text-sm text-text-secondary hover:bg-surface-overlay hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus"
+            >
+              {t.exportAll}
+            </button>
+          )}
           <button
             type="button"
             onClick={() => {

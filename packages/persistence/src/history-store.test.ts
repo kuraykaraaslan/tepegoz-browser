@@ -17,6 +17,16 @@ describe('HistoryStore', () => {
     expect(list[0]).toMatchObject({ url: 'https://a.com/', title: 'A', visitCount: 1 });
   });
 
+  it('exportRows returns every row newest-first, without a limit or the favicon blob', () => {
+    HistoryStore.record(db, { url: 'https://a.com/', title: 'A', ts: 100 });
+    HistoryStore.record(db, { url: 'https://b.com/', title: 'B', ts: 300 });
+    HistoryStore.setFavicon(db, 'https://a.com/', 'data:image/png;base64,AAAA');
+    const rows = HistoryStore.exportRows(db);
+    expect(rows.map((r) => r.url)).toEqual(['https://b.com/', 'https://a.com/']);
+    expect(rows[1]).toEqual({ url: 'https://a.com/', title: 'A', ts: 100, visitCount: 1 });
+    expect(rows[1]).not.toHaveProperty('favicon');
+  });
+
   it('coalesces repeat visits by url (bumps count + ts + title)', () => {
     HistoryStore.record(db, { url: 'https://a.com/', title: 'A', ts: 100 });
     HistoryStore.record(db, { url: 'https://a.com/', title: 'A v2', ts: 200 });

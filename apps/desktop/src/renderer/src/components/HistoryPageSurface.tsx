@@ -24,6 +24,7 @@ export function HistoryPageSurface() {
           }
           remove={(url) => window.tepegoz.deleteHistory(url)}
           clear={() => window.tepegoz.clearHistory()}
+          onExport={() => window.tepegoz.exportHistory()}
         />
       </div>
     </I18nProvider>

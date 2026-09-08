@@ -39,6 +39,7 @@ export const bookmarksHistoryApi: Pick<
   | 'searchHistory'
   | 'deleteHistory'
   | 'clearHistory'
+  | 'exportHistory'
   | 'planSiteDataClear'
   | 'clearSiteData'
   | 'clearBrowsingData'
@@ -95,6 +96,7 @@ export const bookmarksHistoryApi: Pick<
   }) => invoke<HistoryEntry[]>(IpcChannels.historySearch, params),
   deleteHistory: (url: string) => invoke<void>(IpcChannels.historyDelete, url),
   clearHistory: () => invoke<void>(IpcChannels.historyClear),
+  exportHistory: () => invoke<string>(IpcChannels.historyExport),
   planSiteDataClear: (url: string) => invoke<SiteClearPlan | null>(IpcChannels.siteDataPlan, url),
   clearSiteData: (url: string) => invoke<SiteClearPlan | null>(IpcChannels.siteDataClear, url),
   clearBrowsingData: (request: BrowsingDataClearRequest) =>

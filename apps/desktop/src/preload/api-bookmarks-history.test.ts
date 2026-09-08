@@ -38,6 +38,7 @@ const INVOKES: Row[] = [
   ],
   ['deleteHistory', () => api.deleteHistory('u'), IpcChannels.historyDelete, 'u'],
   ['clearHistory', () => api.clearHistory(), IpcChannels.historyClear],
+  ['exportHistory', () => api.exportHistory(), IpcChannels.historyExport],
   ['planSiteDataClear', () => api.planSiteDataClear('u'), IpcChannels.siteDataPlan, 'u'],
   ['clearSiteData', () => api.clearSiteData('u'), IpcChannels.siteDataClear, 'u'],
   [

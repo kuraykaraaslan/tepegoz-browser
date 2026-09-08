@@ -186,6 +186,24 @@ export class HistoryStore {
   }
 
   /**
+   * Every history row, newest first, for a user-initiated export ({@link serializeHistoryCsv}). No
+   * limit and no `favicon` — the icon is a large inline `data:` blob that bloats the file and does not
+   * belong in a portable list of "pages I visited". This is the only unbounded read of the table; it
+   * is on a deliberate user action, not a hot path.
+   */
+  static exportRows(db: Db): Omit<HistoryEntry, 'favicon'>[] {
+    const rows = db
+      .prepare('SELECT url, title, ts, visit_count FROM history ORDER BY ts DESC')
+      .all() as Omit<HistoryRow, 'favicon'>[];
+    return rows.map((r) => ({
+      url: r.url,
+      title: r.title,
+      ts: r.ts,
+      visitCount: r.visit_count,
+    }));
+  }
+
+  /**
    * Re-fold `url_fold` / `title_fold` for every row when the stored fold version does not match
    * {@link HISTORY_FOLD_VERSION}. Owns two cases with one code path: the initial backfill of rows that
    * predate migration 16 (the meta key is then unset), and a re-fold after {@link foldForSearch}'s

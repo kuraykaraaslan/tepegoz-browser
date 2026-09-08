@@ -70,21 +70,24 @@ function renderPage(
     list?: (query: string, offset: number) => Promise<HistoryItem[]>;
     remove?: (url: string) => Promise<void>;
     clear?: () => Promise<void>;
+    onExport?: () => Promise<string>;
   } = {},
 ) {
   const list = vi.fn(over.list ?? (() => Promise.resolve(page(3))));
   const remove = vi.fn(over.remove ?? (() => Promise.resolve()));
   const clear = vi.fn(over.clear ?? (() => Promise.resolve()));
+  const onExport = over.onExport === undefined ? undefined : vi.fn(over.onExport);
   render(
     <I18nProvider locale="en">
       <HistoryPage
         list={list as unknown as (q: string, o: number) => Promise<never[]>}
         remove={remove}
         clear={clear}
+        {...(onExport === undefined ? {} : { onExport })}
       />
     </I18nProvider>,
   );
-  return { list, remove, clear };
+  return { list, remove, clear, onExport };
 }
 
 describe('loading history', () => {
@@ -258,5 +261,35 @@ describe('favicons on a history page', () => {
     renderPage({ list: () => Promise.resolve([item(0, { favicon: null })]) });
     await screen.findByText('Page 0');
     expect(document.querySelector('img')).toBeNull();
+  });
+});
+
+describe('exporting history', () => {
+  it('offers Export only when the host can produce a file', async () => {
+    renderPage();
+    await screen.findByText('Page 0');
+    expect(screen.queryByRole('button', { name: 'Export' })).toBeNull();
+  });
+
+  it('downloads the CSV the host returns via a blob link', async () => {
+    const createObjectURL = vi.fn(() => 'blob:fake');
+    const revokeObjectURL = vi.fn();
+    vi.stubGlobal('URL', { ...URL, createObjectURL, revokeObjectURL });
+    const click = vi.fn();
+    const realCreate = document.createElement.bind(document);
+    vi.spyOn(document, 'createElement').mockImplementation((tag: string) => {
+      const el = realCreate(tag);
+      if (tag === 'a') el.click = click;
+      return el;
+    });
+
+    const { onExport } = renderPage({ onExport: () => Promise.resolve('url,title\r\n') });
+    await screen.findByText('Page 0');
+    fireEvent.click(screen.getByRole('button', { name: 'Export' }));
+
+    await waitFor(() => expect(onExport).toHaveBeenCalledTimes(1));
+    expect(createObjectURL).toHaveBeenCalledWith(expect.any(Blob));
+    expect(click).toHaveBeenCalled();
+    expect(revokeObjectURL).toHaveBeenCalledWith('blob:fake');
   });
 });
