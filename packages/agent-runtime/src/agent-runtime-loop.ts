@@ -6,7 +6,7 @@ import {
   Reactor,
   type StepOutcome,
 } from '@tepegoz/orchestrator';
-import { TaintTracker, detectHandoff } from '@tepegoz/security-policy';
+import { TaintTracker, detectHandoff, type HandoffSignal } from '@tepegoz/security-policy';
 import type { Plan } from '@tepegoz/shared-types';
 import {
   checkpointFromOutcome,
@@ -56,6 +56,35 @@ function urlFromResult(result: unknown): string | undefined {
     if (typeof url === 'string' && url.length > 0) return url;
   }
   return undefined;
+}
+
+/**
+ * Tools whose result `content` is diagnostics or off-page text — NOT the browser page the agent is
+ * perceiving in order to act. The handoff guard must skip these: `browser_get_console` routinely logs a
+ * `recaptcha/api.js` script URL for a site that merely protects a newsletter form, `browser_get_network`
+ * lists request URLs, and a `web_search_items` / `web_get_page` snippet can quote "verify you are human"
+ * as page text from some OTHER site. Scanning any of them fired a bogus CAPTCHA/login handoff that killed
+ * a legitimate run. Taint recording in `onOutcome` still covers this content (it is still untrusted) —
+ * only the handoff scan is scoped out.
+ */
+const NON_PERCEPTION_TOOLS: ReadonlySet<string> = new Set([
+  'browser_get_console',
+  'browser_get_network',
+  'web_search_items',
+  'web_get_page',
+]);
+
+/**
+ * The human-handoff signal for a completed step, or null. Wraps {@link detectHandoff} with the
+ * {@link NON_PERCEPTION_TOOLS} gate: only content that IS the browser page the agent is acting on can
+ * trip the wall. Exported for its unit test — the reactor's `guard` closure adds the login-hold vs
+ * terminal-stop decision on top of this.
+ */
+export function perceivedHandoffSignal(o: StepOutcome): HandoffSignal | null {
+  if (NON_PERCEPTION_TOOLS.has(o.tool)) return null;
+  const content = contentFromResult(o.result);
+  if (content === undefined) return null;
+  return detectHandoff(content, urlFromResult(o.result));
 }
 
 /** The tab a `browser_update_page` interaction just opened (its `openedTabs[0]`), if any (S3 PR3). Only
@@ -374,9 +403,7 @@ export function runReactiveLoop(args: {
           // CAPTCHA / 2FA stay terminal (solve-and-restart). Without a run-control (eval/tests) a login wall
           // also terminates, so the harness still sees a definite stop rather than a silent hang.
           guard: (o: StepOutcome) => {
-            const content = contentFromResult(o.result);
-            if (content === undefined) return null;
-            const signal = detectHandoff(content, urlFromResult(o.result));
+            const signal = perceivedHandoffSignal(o);
             if (signal === null) return null;
             hooks.onEvent('handoff', deps.handoffStrings[signal.kind]);
             if (signal.kind === 'login' && hooks.control !== undefined) {

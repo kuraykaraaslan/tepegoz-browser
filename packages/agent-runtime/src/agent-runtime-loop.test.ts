@@ -1,7 +1,12 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ToolGateway } from '@tepegoz/capability-plane';
 import type { StepOutcome } from '@tepegoz/orchestrator';
-import { advanceTabLifecycle, originTabFor, spawnedTabFromResult } from './agent-runtime-loop';
+import {
+  advanceTabLifecycle,
+  originTabFor,
+  perceivedHandoffSignal,
+  spawnedTabFromResult,
+} from './agent-runtime-loop';
 import type { AgentRunDeps, AgentRunHooks } from './agent-runtime-types';
 
 /** S3 PR3 tab-spawn world model: policy-checked auto-follow + return-to-origin bookkeeping. */
@@ -58,6 +63,54 @@ describe('spawnedTabFromResult', () => {
     expect(spawnedTabFromResult({ ok: true, openedTabs: [{ id: 't2' }] })).toBeUndefined();
     expect(spawnedTabFromResult(null)).toBeUndefined();
     expect(spawnedTabFromResult('nope')).toBeUndefined();
+  });
+});
+
+describe('perceivedHandoffSignal', () => {
+  it('flags a CAPTCHA / login wall in a perceived page', () => {
+    expect(
+      perceivedHandoffSignal(
+        outcome({ tool: 'browser_get_elements', result: { content: 'Please verify you are human' } }),
+      )?.kind,
+    ).toBe('captcha');
+    expect(
+      perceivedHandoffSignal(
+        outcome({
+          tool: 'browser_get_page',
+          result: { content: 'You must be logged in to view this page' },
+        }),
+      )?.kind,
+    ).toBe('login');
+  });
+
+  it('does NOT scan browser_get_console — a logged recaptcha script URL is not a challenge', () => {
+    const result = {
+      url: 'https://kultur.istanbul/etkinlik/yoga-festivali-2/',
+      content:
+        '[warn] Failed to load resource: https://www.google.com/recaptcha/api.js?render=explicit',
+    };
+    expect(perceivedHandoffSignal(outcome({ tool: 'browser_get_console', result }))).toBeNull();
+  });
+
+  it('does NOT scan browser_get_network or off-page search/fetch text', () => {
+    const captchaText = { content: 'GET /recaptcha/api2/reload → 200 (12ms)' };
+    expect(
+      perceivedHandoffSignal(outcome({ tool: 'browser_get_network', result: captchaText })),
+    ).toBeNull();
+    expect(
+      perceivedHandoffSignal(
+        outcome({ tool: 'web_search_items', result: { content: 'Result: verify you are human …' } }),
+      ),
+    ).toBeNull();
+    expect(
+      perceivedHandoffSignal(
+        outcome({ tool: 'web_get_page', result: { content: 'complete the captcha to continue' } }),
+      ),
+    ).toBeNull();
+  });
+
+  it('is null when the outcome carries no content', () => {
+    expect(perceivedHandoffSignal(outcome({ tool: 'browser_get_elements', result: {} }))).toBeNull();
   });
 });
 
