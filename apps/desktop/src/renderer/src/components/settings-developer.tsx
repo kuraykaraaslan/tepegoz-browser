@@ -9,6 +9,7 @@ import {
 } from '../lib/developer-settings-model';
 import { ChromiumFlagsCard } from './settings-developer-flags';
 import { PreferenceEditModal } from './settings-developer-edit-modal';
+import { WebContentDefaultsCard } from './settings-developer-web-content';
 
 export interface DeveloperSectionProps {
   prefs: Preferences;
@@ -101,6 +102,7 @@ export function DeveloperSection({ prefs, onUpdatePrefs }: DeveloperSectionProps
     <div className="space-y-4">
       <Card title={s.developerTitle} subtitle={s.developerDesc} />
       <ChromiumFlagsCard prefs={prefs} onUpdatePrefs={onUpdatePrefs} />
+      <WebContentDefaultsCard />
       <DataTable
         caption={s.developerTitle}
         rows={rows}

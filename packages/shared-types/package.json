@@ -13,7 +13,8 @@
     "./search-engines": "./src/search-engines.ts",
     "./file-access": "./src/file-access.ts",
     "./adaptors": "./src/adaptors.ts",
-    "./chromium-flags": "./src/chromium-flags.ts"
+    "./chromium-flags": "./src/chromium-flags.ts",
+    "./web-content-defaults": "./src/web-content-defaults.ts"
   },
   "main": "./src/index.ts",
   "types": "./src/index.ts",

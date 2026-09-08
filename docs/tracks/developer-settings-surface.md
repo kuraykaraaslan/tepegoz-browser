@@ -3,8 +3,9 @@
 - **Status:** In progress — **Tier B + the `tepegoz://developer` page shipped 2026-08-28**; **Tier A largely
   landed 2026-09-08** — per-key metadata registry (`@tepegoz/preferences/developer-registry`),
   schema-derived pre-save validation (`validatePreferenceValue`), and nested-object drill-down (per-leaf
-  editors in the modal). **Owed on Tier A:** per-key label/description text (editor still shows raw keys).
-  **Tiers C / D still owed.**
+  editors in the modal). **Tier D** (read-only web-content-defaults mirror) landed 2026-09-08.
+  **Owed:** Tier A per-key label/description text; **Tier C** (making the safe `webPreferences` subset
+  editable).
 - **Owner decisions taken (2026-08-28):** Chromium flags are **allowlist-only** · this document + an ADR
   land **before any code** · **revised same day:** a dedicated **`tepegoz://developer`** page, unlisted
   (no menu entry) but openable by any user and **not** dev-gated — the `chrome://flags` shape. The
@@ -78,6 +79,12 @@ Safe-to-expose `webPreferences` / `session` subset: `backgroundThrottling`, `plu
 3. **Web Content Defaults** — the safe `webPreferences` / `session` subset. New tabs get it baked into
    `browsedViewWebPreferences()`; open tabs get `webContents.setWebPreferences()` + the matching
    `session` call pushed at save time. Locked keys shown, disabled, with the ADR link.
+   - **Read-only mirror landed 2026-09-08** — `WEB_CONTENT_DEFAULTS` in
+     `@tepegoz/shared-types/web-content-defaults` (the single description of the baseline; a drift test
+     in the `tabs-shared` suite fails if `browsedViewWebPreferences()` disagrees) + a
+     `WebContentDefaultsCard` on the Developer surface showing every key, its value, and a "Locked by
+     security policy" badge on the four isolation keys. **Owed:** making `plugins` /
+     `backgroundThrottling` editable (the `webContentDefaults` pref + boot merge + live-view applier).
 
 ## Work items (indicative — not a DoD)
 

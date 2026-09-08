@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Session } from 'electron';
+import { WEB_CONTENT_DEFAULTS } from '@tepegoz/shared-types/web-content-defaults';
 
 const prefs = vi.hoisted(() => ({
   getAll: vi.fn<() => Record<string, unknown>>(() => ({})),
@@ -54,6 +55,16 @@ describe('browsedViewWebPreferences', () => {
 
   it('keeps background throttling off so AI-driven / background tabs run at full rate', () => {
     expect(browsedViewWebPreferences(FAKE_SESSION).backgroundThrottling).toBe(false);
+  });
+
+  it('matches the WEB_CONTENT_DEFAULTS table the Developer surface renders (no drift)', () => {
+    const applied = browsedViewWebPreferences(FAKE_SESSION) as Record<string, unknown>;
+    for (const { key, value } of WEB_CONTENT_DEFAULTS) {
+      expect(applied[key], `webPreferences.${key}`).toBe(value);
+    }
+    // Everything the table claims is applied, and the only extra key is the Session itself.
+    const tableKeys = new Set<string>(WEB_CONTENT_DEFAULTS.map((d) => d.key));
+    expect(Object.keys(applied).filter((k) => k !== 'session' && !tableKeys.has(k))).toEqual([]);
   });
 });
 

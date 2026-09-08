@@ -37,3 +37,4 @@ export * from './trust-profile';
 export * from './web-permissions';
 export * from './page-info';
 export * from './chromium-flags';
+export * from './web-content-defaults';

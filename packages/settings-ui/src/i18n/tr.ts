@@ -698,6 +698,10 @@ export const tr: SettingsStrings = {
   developerStabilityInternal: 'Dahili',
   developerRestartRequired: 'Tepegöz’ü yeniden başlattığınızda etkin olur.',
   developerObjectFields: 'Alanlar',
+  webContentDefaultsTitle: 'Web içeriği varsayılanları',
+  webContentDefaultsDesc:
+    'Gezinilen her sekmenin oluşturulduğu webPreferences değerleri. Salt okunur: dört sayfa yalıtım anahtarı güvenlik politikasıyla kilitlidir ve hiçbir zaman değiştirilebilir bir seçenek olamaz (ADR-0041).',
+  webContentDefaultsLocked: 'Güvenlik politikasıyla kilitli',
 
   // --- Erişilebilirlik (ürün WCAG 2.2 AA iddia ederken yer tutucuydu) ---
   accessibility: {
