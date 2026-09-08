@@ -119,6 +119,42 @@ describe('fetch', () => {
     expect('mimeType' in r).toBe(false);
   });
 
+  it('reports the post-redirect URL as finalUrl while url stays the requested URL', async () => {
+    http.get.mockResolvedValue({
+      data: '<html><body>landed</body></html>',
+      status: 200,
+      headers: {},
+      request: { res: { responseUrl: 'https://elsewhere.example/landing' } },
+    });
+    const r = await webToolsHost.fetch({ url: 'https://p.test/start', maxBytes: 5000 });
+    expect(r.url).toBe('https://p.test/start');
+    expect(r.finalUrl).toBe('https://elsewhere.example/landing');
+  });
+
+  it('leaves finalUrl === url when the response reports no redirect', async () => {
+    http.get.mockResolvedValue({
+      data: 'hello',
+      status: 200,
+      headers: {},
+      request: { res: { responseUrl: 'https://p.test/' } },
+    });
+    const r = await webToolsHost.fetch({ url: 'https://p.test/', maxBytes: 5000 });
+    expect(r.finalUrl).toBe('https://p.test/');
+    expect(r.finalUrl).toBe(r.url);
+  });
+
+  it('rejects when a redirect lands the fetch on a non-public address', async () => {
+    http.get.mockResolvedValue({
+      data: 'secret',
+      status: 200,
+      headers: {},
+      request: { res: { responseUrl: 'http://169.254.169.254/latest/meta-data/' } },
+    });
+    await expect(webToolsHost.fetch({ url: 'https://p.test/', maxBytes: 5000 })).rejects.toThrow(
+      /non-public address/,
+    );
+  });
+
   it('builds the client with blockPrivateHosts so the seam guards the URL + every redirect hop', () => {
     // The literal-address + per-hop SSRF guard now lives in `@tepegoz/http` (`blockPrivateHosts`),
     // exercised directly in that package's `http-client.test.ts`; this host just has to opt in.

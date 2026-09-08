@@ -67,6 +67,10 @@
         for its zod `.refine` (defense in depth). MCP `http_sse` has no `createHttpClient` caller yet
         (transport reserved for Phase 1b) so nothing to wire there. The zod `.refine` on
         `WebFetchInputSchema.url` stays.
+  - [x] **finalUrl accuracy landed 2026-09-09.** `web_get_page` now reports the real post-redirect URL
+        (follow-redirects' `responseUrl` off the last request) as `finalUrl`, not the requested `url`, so
+        the agent's citation / `pageRef` points where the bytes actually came from; the final URL is
+        re-checked through `isPublicHttpUrl` before it is returned.
   - [ ] Still owed for `[~]`: **resolve-then-pin** at connection time (defeats DNS rebinding —
         a public hostname resolving to a private IP still passes the literal check). Original fix list follows:
   - [ ] One pure, obfuscation-resistant classifier next to `egress-route.ts` — canonicalize

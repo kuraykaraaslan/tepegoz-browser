@@ -1,6 +1,7 @@
 import { createHttpClient } from '@tepegoz/http';
 import {
   createSitemapReader,
+  isPublicHttpUrl,
   type SitemapFetch,
   type WebFetchResolvedInput,
   type WebFetchResult,
@@ -91,13 +92,28 @@ async function fetchPage(input: WebFetchResolvedInput): Promise<WebFetchResult> 
     maxContentLength: input.maxBytes,
     transformResponse: [(data: unknown) => String(data)],
   });
+  // Where the bytes ACTUALLY came from. axios's Node adapter carries the post-redirect URL on the
+  // last request (follow-redirects' `responseUrl`); fall back to the requested URL when it can't be
+  // read (no redirect metadata, a non-Node adapter, a test stub). `url` stays the URL we asked for —
+  // the gap between "what I asked for" and "where I landed" is exactly what a citation / pageRef needs.
+  const lastRequest = response.request as { res?: { responseUrl?: unknown } } | undefined;
+  const redirectedTo = lastRequest?.res?.responseUrl;
+  const finalUrl =
+    typeof redirectedTo === 'string' && redirectedTo.length > 0 ? redirectedTo : input.url;
+  // Belt and braces on the value we hand the model: the `blockPrivateHosts` client already re-checks
+  // every redirect hop, but re-verify the final URL here too before it becomes a pageRef / citation.
+  if (finalUrl !== input.url && !isPublicHttpUrl(finalUrl)) {
+    throw new Error(
+      `web_get_page landed on a non-public address after a redirect: ${finalUrl}`,
+    );
+  }
   const raw = response.data.slice(0, input.maxBytes + 1);
   const truncated = raw.length > input.maxBytes;
   const text = stripHtml(raw.slice(0, input.maxBytes)).slice(0, input.maxBytes);
   const contentType = response.headers['content-type'];
   return {
     url: input.url,
-    finalUrl: input.url,
+    finalUrl,
     status: response.status,
     ...(titleOf(response.data) !== undefined ? { title: titleOf(response.data) } : {}),
     ...(typeof contentType === 'string' ? { mimeType: contentType.split(';')[0] } : {}),
