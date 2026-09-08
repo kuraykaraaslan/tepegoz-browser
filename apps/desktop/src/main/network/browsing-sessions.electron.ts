@@ -295,6 +295,43 @@ const BrowsingSessions = {
   },
 
   /**
+   * Clear a tunnel partition's site state IN PLACE, keeping the session itself alive.
+   *
+   * The difference from {@link release} is the whole reason both exist. `release` is for a connection
+   * that is going away: it forgets the registry entry, so the next `ensure()` builds a fresh session
+   * with every attacher re-applied. This is for a connection that STAYS — Tor's "new identity", where
+   * the tabs on the partition keep running and simply must not carry anything from before. Forgetting
+   * the entry here would strand those live `WebContents` on a `Session` object nothing in this registry
+   * knows about any more: still serving them, no longer reachable for a wipe, a rebind or a release.
+   *
+   * Same refusal as `release`, for the same reason: the Direct partition holds every ordinary tab's
+   * cookies and logins, and a wipe reaching it would be a silent mass sign-out.
+   *
+   * A partition that has never been created is not an error — there is nothing on disk to clear, which
+   * is the state the caller wanted.
+   */
+  async wipe(partition: string): Promise<void> {
+    if (!BrowsingSessions.isTunnelPartition(partition)) {
+      throw new Error(`Refusing to wipe a non-tunnel partition: ${partition}`);
+    }
+    const ses = live.get(partition);
+    if (ses === undefined) return;
+    try {
+      await ses.clearStorageData();
+      await ses.clearCache();
+      await ses.clearAuthCache();
+      await ses.clearHostResolverCache();
+      Logger.info('Tunnel partition wiped in place', { partition });
+    } catch (err) {
+      // Thrown, not swallowed: the caller is promising the user a clean identity, and a wipe that
+      // failed means the next page load carries the old one. Reporting failure is the only honest
+      // outcome — a "new identity" that quietly kept the cookies is worse than one that says it broke.
+      Logger.error('Failed to wipe a tunnel partition', { partition, err: String(err) });
+      throw err;
+    }
+  },
+
+  /**
    * Tear a tunnel partition down for good: wipe its storage, caches and credentials, then forget it.
    *
    * Called when a connection is removed from the pool. Electron can clear a partition's CONTENTS but has

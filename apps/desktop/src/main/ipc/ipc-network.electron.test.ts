@@ -28,6 +28,7 @@ const IpcChannels = {
   networkSetBinaryPath: 'network:set-binary-path',
   networkPickBinaryFolder: 'network:pick-binary-folder',
   networkRemoveConnection: 'network:remove-connection',
+  networkNewIdentity: 'network:new-identity',
   networkState: 'network:state',
 };
 vi.mock('@tepegoz/desktop-ipc', () => ({ IpcChannels }));
@@ -37,6 +38,7 @@ const schemas = vi.hoisted(() => ({
   BindGroupNetworkSchema: { parse: vi.fn() },
   BindTabNetworkSchema: { parse: vi.fn() },
   RemoveNetworkConnectionSchema: { parse: vi.fn() },
+  NewNetworkIdentitySchema: { parse: vi.fn() },
   SetBinaryPathSchema: { parse: vi.fn() },
   VpnBinarySchema: { parse: vi.fn() },
   SetConnectionActiveSchema: { parse: vi.fn() },
@@ -83,12 +85,16 @@ vi.mock('../network/wireguard-config', () => ({
 
 const tabs = vi.hoisted(() => ({
   forWindow: vi.fn((): unknown => ({ getState: () => ({ tabs: [], groups: [] }) })),
+  bindingStates: vi.fn((): { tabId: string; groupId: string | null }[] => []),
+  reloadTab: vi.fn<(id: string) => void>(),
 }));
 vi.mock('../tabs', () => ({ default: tabs }));
 
 const binding = vi.hoisted(() => ({
   prune: vi.fn(),
-  resolveFor: vi.fn(() => ({ resolved: { connectionId: null }, source: 'default' })),
+  resolveFor: vi.fn<
+    (tabId: string) => { resolved: { connectionId: string | null }; source: string }
+  >(() => ({ resolved: { connectionId: null }, source: 'default' })),
   resolveForGroup: vi.fn<(groupId: string) => { resolved: { connectionId: string | null } }>(
     () => ({
       resolved: { connectionId: null },
@@ -111,6 +117,7 @@ const pool = vi.hoisted(() => ({
   ensureUp: vi.fn(() => Promise.resolve()),
   takeDown: vi.fn(() => Promise.resolve()),
   remove: vi.fn(() => Promise.resolve()),
+  newIdentity: vi.fn(() => Promise.resolve({ reconnected: true })),
 }));
 vi.mock('../network/connection-pool.electron', () => ({ default: pool }));
 
@@ -147,6 +154,7 @@ beforeEach(() => {
   pool.get.mockReturnValue(undefined);
   pool.list.mockReturnValue([]);
   tabs.forWindow.mockReturnValue({ getState: () => ({ tabs: [], groups: [] }) });
+  tabs.bindingStates.mockReturnValue([]);
   prefs.getAll.mockReturnValue({ networkBinaries: { wireproxy: '', tor: '' } });
   dialog.showOpenDialog.mockResolvedValue({ canceled: true, filePaths: [] });
   bins.locateBinary.mockImplementation(() => {
@@ -267,6 +275,39 @@ describe('the remaining setters', () => {
     schemas.SetConnectionActiveSchema.parse.mockReturnValue({ id: 'c1', active: false });
     await call(IpcChannels.networkSetActive, {});
     expect(pool.takeDown).toHaveBeenCalledWith('c1');
+  });
+
+  it('networkNewIdentity reloads exactly the tabs on that connection, in every window', async () => {
+    // Cross-window on purpose: a reload list that stopped at the focused window would leave pages from
+    // the identity that was just burned still on screen elsewhere.
+    schemas.NewNetworkIdentitySchema.parse.mockReturnValue('t1');
+    tabs.bindingStates.mockReturnValue([
+      { tabId: 'a', groupId: null },
+      { tabId: 'b', groupId: null },
+      { tabId: 'c', groupId: null },
+    ]);
+    binding.resolveFor.mockImplementation((tabId: string) => ({
+      resolved: { connectionId: tabId === 'c' ? 'other' : 't1' },
+      source: 'group',
+    }));
+
+    await expect(call(IpcChannels.networkNewIdentity, 't1')).resolves.toEqual({
+      reconnected: true,
+    });
+    expect(pool.newIdentity).toHaveBeenCalledWith('t1');
+    expect(tabs.reloadTab.mock.calls.map((c) => c[0])).toEqual(['a', 'b']);
+  });
+
+  it('does NOT reload when the tunnel did not come back up', async () => {
+    // Reloading a tab whose connection is down just paints a kill-switch error over the page the user
+    // was reading, destroying the one thing they still had.
+    schemas.NewNetworkIdentitySchema.parse.mockReturnValue('t1');
+    tabs.bindingStates.mockReturnValue([{ tabId: 'a', groupId: null }]);
+    binding.resolveFor.mockReturnValue({ resolved: { connectionId: 't1' }, source: 'group' });
+    pool.newIdentity.mockResolvedValue({ reconnected: false });
+
+    await call(IpcChannels.networkNewIdentity, 't1');
+    expect(tabs.reloadTab).not.toHaveBeenCalled();
   });
 
   it('networkSetBinaryPath merges the path into the preference', async () => {

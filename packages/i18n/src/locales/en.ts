@@ -128,6 +128,8 @@ export const en = {
     networkBinaryNotFound:
       'That helper program was not found in the folder you picked. Pick the folder that directly contains the file.',
     networkTunnelFailed: 'The tunnel did not come up. Check the profile and try again.',
+    networkNewIdentityNotTor:
+      'A new identity resets Tor circuits, so it only applies to a Tor connection. Reconnecting a VPN or SOCKS endpoint lands on the same exit address.',
     badRequest: 'Invalid request',
     notFound: 'Not found',
     downloadNotFound: 'That download is no longer in the list.',

@@ -36,8 +36,21 @@ export default class TabManager extends TabManagerBase {
   static closeTab(id: string): void {
     TabManager.focused()?.closeTab(id);
   }
+  /**
+   * Reload a tab in whichever window holds it, not merely in the focused one.
+   *
+   * Routed by ownership for the same reason {@link rehostTab} is: Phase 5's "new identity" reloads
+   * every tab bound to one connection, and those can be spread across windows. Sending them to the
+   * focused window would silently reload none of the others — leaving pages from the identity that
+   * was just burned still on screen, which is the one outcome that action may not produce.
+   */
   static reloadTab(id: string): void {
-    TabManager.focused()?.reloadTab(id);
+    for (const wt of TabManager.all()) {
+      if (wt.hasTab(id)) {
+        wt.reloadTab(id);
+        return;
+      }
+    }
   }
   static openInternalPage(url: string): void {
     TabManager.focused()?.openInternalPage(url);

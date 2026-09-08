@@ -838,6 +838,21 @@ export const en = {
       'Direct and Tor traffic run in this browser at the same time. Activity correlated across the two can re-link an anonymous session — the pattern Tor Browser exists to prevent. For strong anonymity, use Tor Browser rather than routing a single tab.',
     torChainedCaveat:
       'Sending a VPN before Tor shifts trust onto the VPN operator, which can then see that you use Tor. Combining the two is generally not recommended.',
+    // "New identity" (Tor only). The body has to name BOTH halves and what it disturbs: an action that
+    // said only "new circuits" would leave a user believing their logged-in sessions survived it, and
+    // one that said only "clears site data" would hide that every tab on the connection reloads.
+    newIdentity: 'New identity',
+    newIdentityTitle: 'Take a new identity',
+    newIdentityBody:
+      'Builds new Tor circuits for {name} AND erases the cookies, storage and cache of every page that used it. You will be signed out of sites you were signed in to on this connection.',
+    newIdentityTabs:
+      '{count} open tab(s) are on this connection and will reload. Anything unsaved on them is lost.',
+    newIdentityNoTabs: 'No tab is on this connection right now.',
+    newIdentityGuards:
+      'Your entry guards are kept on purpose — rotating them every time would weaken anonymity, and they are not what links two sessions together.',
+    newIdentityDone: 'New identity taken.',
+    newIdentityDownAfter:
+      'Site data was cleared, but the tunnel did not come back up. Reconnect it before those tabs can load.',
     tunnelLimitsBody:
       'A tunnel changes the network address a site sees. It does not change your browser profile — cookies, logins and history stay with the tab — nor the browser’s own fingerprint: the TLS handshake, HTTP header order and request timing are the same through every tunnel here, so anti-bot and reputation systems still recognise the browser. Tepegöz does not normalise those in this version.',
     tunnelLimitsLink: 'Clear a site’s data',

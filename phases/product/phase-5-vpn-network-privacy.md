@@ -188,11 +188,42 @@ endpoint** (one loopback port per active connection), never an OS-level system p
         complaint corpus shows Turkish users' questions cluster on _finding_ the bridge/settings panel and
         knowing which option to pick — navigation, not cryptography. This is the one place where being
         Turkish-first is a functional advantage rather than a courtesy.
-- [ ] **A "new identity" affordance.** Per-connection circuit isolation is landed, but nothing lets a user
+- [x] **A "new identity" affordance.** Per-connection circuit isolation is landed, but nothing let a user
       say "burn this circuit and start clean" — Tor Browser's New Identity resets both the circuit and the
-      site state. Here the two halves already exist separately (a connection can be rebuilt; per-site data
+      site state. Here the two halves already existed separately (a connection can be rebuilt; per-site data
       clearing shipped in Phase 2), so the work is one honest action that does **both** and says which tabs
-      it will disturb.
+      it will disturb. _Built 2026-09-08._
+  - [x] _**Both halves or neither, in an order that cannot leak in between.** `ConnectionPool.newIdentity`
+        takes the connection DOWN first — the kill-switch then holds every tab bound to it, fail-closed at
+        the session's own proxy rules — wipes the partition while nothing can egress, and only then brings
+        it back up. Doing one half is the failure worth designing against: fresh circuits with the old
+        cookies is a new address presenting the same logged-in session, and a cleared jar over the same
+        circuit is re-linked at the network layer. A wipe that throws leaves the connection DOWN and
+        reports it, rather than handing back a tunnel still carrying the identity the user asked to
+        destroy._
+  - [x] _**Tor only, and that is a truth constraint rather than a scope cut.** Reconnecting WireGuard or
+        BYO-SOCKS lands on the same exit address, so offering "new identity" there would name something the
+        product cannot deliver. Refused in main (`networkNewIdentityNotTor`, en+tr), not merely hidden in
+        the UI._
+  - [x] _**`BrowsingSessions.wipe` is deliberately not `release`.** `release` forgets the registry entry,
+        which is right for a connection that is going away and wrong here: the tabs on this partition keep
+        running, and forgetting the entry would strand live `WebContents` on a `Session` the registry no
+        longer knows about — still serving them, no longer reachable for a wipe, a rebind or a release.
+        Both refuse the Direct partition; a wipe reaching it would be a silent mass sign-out._
+  - [x] _**Entry guards are KEPT.** Restarting `tor` re-uses its `DataDirectory` on purpose: rotating
+        guards on every new identity is the anonymity regression [ADR-0011](../../docs/adr/0011-vpn-network-privacy.md)
+        §7 warns about, bought for nothing — guards are not what links two sessions, circuits and cookies
+        are. The dialog says so._
+  - [x] _**"Says which tabs it will disturb" is a real count, profile-wide.** `NetworkConnectionView`
+        gained `boundTabs`, resolved across EVERY window rather than the one the state was sent to — a
+        count that stopped at the current window would understate it exactly when a user has several open
+        on a tunnel. `TabManager.reloadTab` is now routed by ownership like `rehostTab` for the same
+        reason, so the reload does not silently skip the other windows._
+  - [x] _**A tunnel that does not come back is not a failed new identity.** The circuits and the site state
+        are gone either way, so that outcome gets its own sentence instead of an error telling the user to
+        retry something that already happened — and the tabs are NOT reloaded then, because reloading over
+        a down tunnel just paints a kill-switch error over the page they were reading. 14 tests across the
+        pool, the session registry, the IPC handler and the settings row._
 - [x] **Write down what per-connection `DataDirectory` costs in entry guards.** Tor deliberately pins ~3
       long-lived **guard** nodes per client, because rotating the entry point raises the chance of eventually
       picking a hostile one. One `tor` process per connection, each with its own `DataDirectory`, means each

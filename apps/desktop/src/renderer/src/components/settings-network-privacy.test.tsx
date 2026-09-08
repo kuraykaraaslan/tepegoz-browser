@@ -26,6 +26,7 @@ function conn(over: Partial<NetworkConnectionView> = {}): NetworkConnectionView 
     connectedSince: null,
     lastCheckedAt: null,
     drops: 0,
+    boundTabs: 0,
     ...over,
   };
 }
@@ -52,6 +53,7 @@ const bridge = {
   onTabsState: vi.fn(() => () => undefined),
   setNetworkConnectionActive: vi.fn(() => Promise.resolve()),
   removeNetworkConnection: vi.fn(() => Promise.resolve()),
+  newNetworkIdentity: vi.fn(() => Promise.resolve({ reconnected: true })),
   setGeneralNetworkBinding: vi.fn(() => Promise.resolve()),
   pickBinaryFolder: vi.fn<(binary: string) => Promise<string | null>>(() => Promise.resolve(null)),
   setNetworkBinaryPath: vi.fn(() => Promise.resolve()),
@@ -200,6 +202,59 @@ describe('NetworkPrivacySection', () => {
     const confirm = screen.getAllByRole('button', { name: s.network.remove });
     fireEvent.click(confirm[confirm.length - 1]!);
     expect(bridge.removeNetworkConnection).toHaveBeenCalledWith('c1');
+  });
+
+  it('offers New identity on a Tor connection, and not on a VPN one', async () => {
+    // A VPN or SOCKS reconnect lands on the same exit address, so the button there would name
+    // something the product cannot deliver. Main refuses it too — this is the presentation half.
+    bridge.getNetworkState.mockResolvedValue(
+      netState({
+        connections: [conn(), conn({ id: 't1', label: 'Onion', kind: 'tor' })],
+      }),
+    );
+    render1();
+    const vpnRow = await rowFor('Mullvad');
+    expect(within(vpnRow).queryByRole('button', { name: s.network.newIdentity })).toBeNull();
+    const torRow = await rowFor('Onion');
+    expect(within(torRow).getByRole('button', { name: s.network.newIdentity })).toBeTruthy();
+  });
+
+  it('names how many tabs it will disturb before taking a new identity', async () => {
+    // The phase's own requirement: this action "says which tabs it will disturb". A confirmation that
+    // did not would replace an afternoon's reading with reloads as a surprise.
+    bridge.getNetworkState.mockResolvedValue(
+      netState({ connections: [conn({ id: 't1', label: 'Onion', kind: 'tor', boundTabs: 3 })] }),
+    );
+    render1();
+    const row = await rowFor('Onion');
+    fireEvent.click(within(row).getByRole('button', { name: s.network.newIdentity }));
+    expect(screen.getByText(s.network.newIdentityTabs.replace('{count}', '3'))).toBeTruthy();
+    // Both halves named, not just the circuits.
+    expect(screen.getByText(s.network.newIdentityBody.replace('{name}', 'Onion'))).toBeTruthy();
+
+    const buttons = screen.getAllByRole('button', { name: s.network.newIdentity });
+    fireEvent.click(buttons[buttons.length - 1]!);
+    expect(bridge.newNetworkIdentity).toHaveBeenCalledWith('t1');
+    await waitFor(() => {
+      expect(screen.getByText(s.network.newIdentityDone)).toBeTruthy();
+    });
+  });
+
+  it('says the site data was cleared even when the tunnel did not come back', async () => {
+    // Not a failed new identity — the circuits and the jar are gone either way. Reporting it as an
+    // error would tell the user to retry an action that already did what it promised.
+    bridge.newNetworkIdentity.mockResolvedValue({ reconnected: false });
+    bridge.getNetworkState.mockResolvedValue(
+      netState({ connections: [conn({ id: 't1', label: 'Onion', kind: 'tor' })] }),
+    );
+    render1();
+    const row = await rowFor('Onion');
+    fireEvent.click(within(row).getByRole('button', { name: s.network.newIdentity }));
+    const buttons = screen.getAllByRole('button', { name: s.network.newIdentity });
+    fireEvent.click(buttons[buttons.length - 1]!);
+    await waitFor(() => {
+      expect(screen.getByText(s.network.newIdentityDownAfter)).toBeTruthy();
+    });
   });
 
   it('sets the profile-wide default route', async () => {

@@ -32,6 +32,15 @@ export interface NetworkConnectionView {
   lastCheckedAt: number | null;
   /** Times this connection has dropped from `up` this session — a rising count means it is unstable. */
   drops: number;
+  /**
+   * How many tabs resolve to this connection right now, across EVERY window.
+   *
+   * Profile-wide on purpose, unlike `NetworkState.tabs`, which is scoped to the window it was sent to.
+   * An action that disturbs a connection's tabs has to be able to say how many there are, and a count
+   * that quietly stopped at the current window would understate it in exactly the case a user has
+   * several windows open on a tunnel.
+   */
+  boundTabs: number;
 }
 
 /** Where one tab's traffic actually goes, and which scope decided it (for the inherited/overridden mark). */
@@ -126,6 +135,14 @@ export interface NetworkApi {
   setGeneralNetworkBinding(binding: NetworkGeneralBinding): Promise<void>;
   addNetworkConnection(input: NetworkConnectionInput): Promise<void>;
   removeNetworkConnection(id: string): Promise<void>;
+  /**
+   * Tor "new identity": burn this connection's circuits and clear its site state, in one action.
+   *
+   * Rejects for a connection that is not Tor — a VPN or SOCKS reconnect lands on the same exit address,
+   * so the name would promise something the product cannot deliver. Resolves with whether the tunnel
+   * came back up, which is not the same question as whether the identity is clean.
+   */
+  newNetworkIdentity(id: string): Promise<{ reconnected: boolean }>;
   /** Open a file picker for a WireGuard `.conf` and parse it. `null` when the user cancelled; rejects
    *  with the parser's own message when the file is not a usable profile. */
   pickWireguardProfile(): Promise<PickedWireguardProfile | null>;

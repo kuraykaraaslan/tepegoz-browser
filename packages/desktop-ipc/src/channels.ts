@@ -205,6 +205,8 @@ export const IpcChannels = {
   networkSetBinaryPath: 'network:set-binary-path',
   networkPickBinaryFolder: 'network:pick-binary-folder',
   networkRemoveConnection: 'network:remove-connection',
+  /** Tor "new identity": new circuits AND a wipe of that connection's site state, in one action. */
+  networkNewIdentity: 'network:new-identity',
   // Browser downloads (`tepegoz://downloads`). State is pushed live from the main-process DownloadService.
   downloadsList: 'downloads:list',
   downloadsCommand: 'downloads:command',

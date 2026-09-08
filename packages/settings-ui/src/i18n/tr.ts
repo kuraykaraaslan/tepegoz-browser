@@ -830,6 +830,21 @@ export const tr: SettingsStrings = {
       'Doğrudan trafik ve Tor trafiği bu tarayıcıda aynı anda çalışır. İkisi arasında ilişkilendirilen etkinlik, anonim bir oturumu yeniden ilişkilendirebilir — Tor Browser’ın tam da önlemek için var olduğu durum. Güçlü anonimlik için tek bir sekmeyi yönlendirmek yerine Tor Browser kullanın.',
     torChainedCaveat:
       'Tor’dan önce bir VPN kullanmak, güveni VPN operatörüne kaydırır; operatör Tor kullandığınızı görebilir. İkisini birleştirmek genellikle önerilmez.',
+    // "Yeni kimlik" (yalnızca Tor). Metin HER İKİ yarıyı ve neyi böldüğünü söylemek zorunda:
+    // yalnızca "yeni devreler" diyen bir eylem, kullanıcıyı açık oturumlarının sürdüğüne inandırır;
+    // yalnızca "site verilerini siler" diyen ise her sekmenin yeniden yükleneceğini gizler.
+    newIdentity: 'Yeni kimlik',
+    newIdentityTitle: 'Yeni kimlik al',
+    newIdentityBody:
+      '{name} için yeni Tor devreleri kurar VE bu bağlantıyı kullanan her sayfanın çerezlerini, deposunu ve önbelleğini siler. Bu bağlantıda oturum açtığınız sitelerden çıkış yapmış olursunuz.',
+    newIdentityTabs:
+      'Bu bağlantıda açık {count} sekme var ve yeniden yüklenecek. Üzerlerinde kaydedilmemiş her şey kaybolur.',
+    newIdentityNoTabs: 'Şu anda bu bağlantıda hiç sekme yok.',
+    newIdentityGuards:
+      'Giriş muhafızlarınız bilerek korunur — her seferinde değiştirmek anonimliği zayıflatır ve iki oturumu birbirine bağlayan şey onlar değildir.',
+    newIdentityDone: 'Yeni kimlik alındı.',
+    newIdentityDownAfter:
+      'Site verileri temizlendi ama tünel yeniden açılmadı. O sekmeler yüklenebilmeden önce bağlantıyı yeniden kurun.',
     tunnelLimitsBody:
       'Bir tünel, bir sitenin gördüğü ağ adresini değiştirir. Tarayıcı profilinizi değiştirmez — çerezler, oturum açma bilgileri ve geçmiş sekmede kalır — tarayıcının kendi parmak izini de değiştirmez: TLS el sıkışması, HTTP başlık sırası ve istek zamanlaması buradaki her tünelde aynıdır; bu yüzden bot önleme ve itibar sistemleri tarayıcıyı yine tanır. Tepegöz bu sürümde bunları normalleştirmez.',
     tunnelLimitsLink: 'Bir sitenin verilerini temizle',

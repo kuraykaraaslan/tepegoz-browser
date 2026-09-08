@@ -11,6 +11,7 @@ const h = vi.hoisted(() => ({
   invalidateTunnelVerification: vi.fn(),
   blackholeTunnelSession: vi.fn(),
   release: vi.fn(),
+  wipe: vi.fn(),
   wgCtor: vi.fn(),
   torCtor: vi.fn<(id: string, resolver: (() => Promise<number>) | null) => void>(),
 }));
@@ -60,7 +61,9 @@ vi.mock('./tunnel-session.electron', () => ({
   invalidateTunnelVerification: h.invalidateTunnelVerification,
   blackholeTunnelSession: h.blackholeTunnelSession,
 }));
-vi.mock('./browsing-sessions.electron', () => ({ default: { release: h.release } }));
+vi.mock('./browsing-sessions.electron', () => ({
+  default: { release: h.release, wipe: h.wipe },
+}));
 
 const { default: ConnectionPool } = await import('./connection-pool.electron');
 
@@ -86,6 +89,7 @@ beforeEach(() => {
     h.invalidateTunnelVerification,
     h.blackholeTunnelSession,
     h.release,
+    h.wipe,
     h.wgCtor,
     h.torCtor,
   ]) {
@@ -101,6 +105,7 @@ beforeEach(() => {
     session: {},
   });
   h.release.mockResolvedValue(undefined);
+  h.wipe.mockResolvedValue(undefined);
 });
 
 describe('loading', () => {
@@ -420,5 +425,79 @@ describe('small surface still worth pinning', () => {
       ConnectionPool.stopHealthPolling();
       vi.useRealTimers();
     }
+  });
+});
+
+describe('newIdentity — new circuits AND a clean jar, or neither', () => {
+  /**
+   * The order is the security property, not a detail. Between "burn the circuits" and "wipe the site
+   * state" there is a window where a tab could still egress on the connection, and a wipe racing a
+   * live page is a wipe that misses what the page writes next. Taking the connection DOWN first closes
+   * it: the kill-switch holds every tab bound to it while the jar is emptied.
+   */
+  it('goes down, wipes the partition, and only then comes back up', async () => {
+    const order: string[] = [];
+    h.disconnect.mockImplementation(() => {
+      order.push('down');
+      return Promise.resolve();
+    });
+    h.wipe.mockImplementation(() => {
+      order.push('wipe');
+      return Promise.resolve();
+    });
+    h.connect.mockImplementation(() => {
+      order.push('up');
+      return Promise.resolve({ socksPort: 9050 });
+    });
+
+    h.prefs.networkConnections = [torConn('t1', null)];
+    ConnectionPool.init();
+    await ConnectionPool.ensureUp('t1');
+    order.length = 0;
+
+    await expect(ConnectionPool.newIdentity('t1')).resolves.toEqual({ reconnected: true });
+    expect(order).toEqual(['down', 'wipe', 'up']);
+    expect(h.wipe).toHaveBeenCalledWith('persist:tepegoz-web--conn-t1');
+    expect(ConnectionPool.get('t1')?.status).toBe('up');
+  });
+
+  it('does NOT dial a connection the user had left down — it only cleans it', async () => {
+    // A privacy action must not become a reason the browser opened a tunnel nobody asked it to open.
+    h.prefs.networkConnections = [torConn('t1', null)];
+    ConnectionPool.init();
+    await expect(ConnectionPool.newIdentity('t1')).resolves.toEqual({ reconnected: false });
+    expect(h.wipe).toHaveBeenCalledTimes(1);
+    expect(h.connect).not.toHaveBeenCalled();
+    expect(ConnectionPool.get('t1')?.status).toBe('down');
+  });
+
+  it('refuses a non-Tor connection rather than renaming a reconnect', async () => {
+    // A WireGuard or SOCKS reconnect lands on the same exit address, so "new identity" there would be
+    // a claim the product cannot keep. Refused in main, not merely hidden in the UI.
+    h.prefs.networkConnections = [wgConn('wg1')];
+    ConnectionPool.init();
+    await expect(ConnectionPool.newIdentity('wg1')).rejects.toMatchObject({
+      code: 'networkNewIdentityNotTor',
+      statusCode: 400,
+    });
+    expect(h.wipe).not.toHaveBeenCalled();
+  });
+
+  it('refuses an unknown connection', async () => {
+    ConnectionPool.init();
+    await expect(ConnectionPool.newIdentity('nope')).rejects.toMatchObject({ statusCode: 404 });
+  });
+
+  it('does not bring the connection back when the wipe fails — a dirty jar is not a new identity', async () => {
+    h.prefs.networkConnections = [torConn('t1', null)];
+    ConnectionPool.init();
+    await ConnectionPool.ensureUp('t1');
+    h.wipe.mockRejectedValue(new Error('locked'));
+    h.connect.mockClear();
+    await expect(ConnectionPool.newIdentity('t1')).rejects.toThrow('locked');
+    // Left DOWN on purpose: coming back up would hand the user a connection carrying the identity
+    // they just asked to destroy, with nothing on screen saying the wipe did not happen.
+    expect(h.connect).not.toHaveBeenCalled();
+    expect(ConnectionPool.get('t1')?.status).toBe('down');
   });
 });

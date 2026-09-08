@@ -117,6 +117,8 @@ export const tr: Resources = {
     networkBinaryNotFound:
       'Bu yardımcı program seçtiğiniz klasörde bulunamadı. Dosyayı doğrudan içeren klasörü seçin.',
     networkTunnelFailed: 'Tünel açılamadı. Profili kontrol edip yeniden deneyin.',
+    networkNewIdentityNotTor:
+      'Yeni kimlik, Tor devrelerini sıfırlar; bu yüzden yalnızca bir Tor bağlantısı için geçerlidir. VPN veya SOCKS uç noktasını yeniden bağlamak aynı çıkış adresine düşer.',
     badRequest: 'Geçersiz istek',
     notFound: 'Bulunamadı',
     downloadNotFound: 'Bu indirme artık listede yok.',

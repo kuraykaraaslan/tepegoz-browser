@@ -21,6 +21,7 @@ export const networkApi: Pick<
   | 'setGeneralNetworkBinding'
   | 'addNetworkConnection'
   | 'removeNetworkConnection'
+  | 'newNetworkIdentity'
   | 'pickWireguardProfile'
   | 'setNetworkConnectionActive'
   | 'setNetworkBinaryPath'
@@ -45,6 +46,8 @@ export const networkApi: Pick<
   addNetworkConnection: (input: NetworkConnectionInput) =>
     invoke<void>(IpcChannels.networkAddConnection, input),
   removeNetworkConnection: (id: string) => invoke<void>(IpcChannels.networkRemoveConnection, id),
+  newNetworkIdentity: (id: string) =>
+    invoke<{ reconnected: boolean }>(IpcChannels.networkNewIdentity, id),
   pickWireguardProfile: () =>
     invoke<PickedWireguardProfile | null>(IpcChannels.networkPickWireguard),
   setNetworkConnectionActive: (id: string, active: boolean) =>

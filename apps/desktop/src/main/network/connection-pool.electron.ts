@@ -301,6 +301,51 @@ const ConnectionPool = {
     await entry.provider.disconnect();
   },
 
+  /**
+   * "New identity" — burn this Tor connection's circuits AND the site state that would re-link them.
+   *
+   * Tor Browser's New Identity is two acts, and doing only one of them is the failure worth designing
+   * against. Fresh circuits with the old cookies still in the jar is a new IP presenting the same
+   * logged-in session, which is not a new identity by any definition a user would accept; clearing
+   * cookies while the same circuit carries the next request re-links them at the network layer. So this
+   * does both, in an order that cannot leak in between: the connection goes DOWN first (the kill-switch
+   * then holds every tab bound to it, fail-closed at the session's own proxy rules), the partition is
+   * wiped while nothing can egress, and only then does it come back up.
+   *
+   * **Tor connections only, and that is a truth constraint rather than a scope cut.** Reconnecting a
+   * WireGuard or BYO-SOCKS endpoint lands on the same exit address it had a moment ago, so offering
+   * "new identity" there would name something the product cannot deliver. The circuits are what make
+   * the claim true, and only Tor has them.
+   *
+   * Restarting `tor` deliberately KEEPS the `DataDirectory`, so the connection's entry guards survive:
+   * rotating guards on every new identity would be the anonymity regression ADR-0011 §7 warns about,
+   * bought for nothing — guards are not what links two sessions together, circuits and cookies are.
+   *
+   * Returns whether the connection was brought back up, so the caller can tell "clean and carrying
+   * traffic" from "clean, and the tunnel did not come back".
+   */
+  async newIdentity(id: string): Promise<{ reconnected: boolean }> {
+    const entry = entries.get(id);
+    if (entry === undefined) {
+      throw new AppError(`No such connection: ${id}`, 404, 'networkNoSuchConnection');
+    }
+    if (entry.config.kind !== 'tor') {
+      throw new AppError(
+        `New identity is a Tor circuit reset; ${id} is a ${entry.config.kind} connection`,
+        400,
+        'networkNewIdentityNotTor',
+      );
+    }
+    // Whether to bring it back is decided BEFORE anything is torn down: a connection the user had
+    // deliberately left down should not be silently dialled by a privacy action.
+    const wasUp = entry.status === 'up';
+    await ConnectionPool.takeDown(id);
+    await BrowsingSessions.wipe(partitionKeyFor({ connectionId: id }));
+    if (!wasUp) return { reconnected: false };
+    await ConnectionPool.ensureUp(id);
+    return { reconnected: true };
+  },
+
   /** Add (or replace) a configured connection and persist it. */
   add(config: NetworkConnection): void {
     entries.set(config.id, {

@@ -7,6 +7,7 @@ import {
   IpcChannels,
   type BinaryStatus,
   type GroupNetworkRoute,
+  type NetworkConnectionView,
   type NetworkState,
   type PickedWireguardProfile,
   type TabNetworkRoute,
@@ -15,6 +16,7 @@ import {
   AddNetworkConnectionSchema,
   BindGroupNetworkSchema,
   BindTabNetworkSchema,
+  NewNetworkIdentitySchema,
   RemoveNetworkConnectionSchema,
   SetBinaryPathSchema,
   VpnBinarySchema,
@@ -69,6 +71,38 @@ function freshConnectionId(label: string): string {
     n += 1;
   }
   return candidate;
+}
+
+/**
+ * Which tabs, in EVERY window, resolve to each connection.
+ *
+ * One pass over the tab list rather than one resolve per connection: `resolveFor` walks the group
+ * table on each call, so asking it connections × tabs times would make opening Settings quadratic on a
+ * heavy profile for a number that fits in one sweep.
+ *
+ * Profile-wide, unlike `NetworkState.tabs` — an action that disturbs a connection's tabs has to be able
+ * to say how many there really are, and a count that stopped at the current window would understate it
+ * exactly when the user has several windows open on a tunnel.
+ */
+function tabsByConnection(): Map<string, string[]> {
+  const byConnection = new Map<string, string[]>();
+  for (const { tabId } of TabManager.bindingStates()) {
+    const id = BindingService.resolveFor(tabId).resolved.connectionId;
+    if (id === null) continue;
+    const list = byConnection.get(id) ?? [];
+    list.push(tabId);
+    byConnection.set(id, list);
+  }
+  return byConnection;
+}
+
+/** The pool's views, each carrying how many tabs are currently riding on it. */
+function connectionViews(): NetworkConnectionView[] {
+  const byConnection = tabsByConnection();
+  return ConnectionPool.list().map((c) => ({
+    ...c,
+    boundTabs: byConnection.get(c.id)?.length ?? 0,
+  }));
 }
 
 function routeFor(tabId: string): TabNetworkRoute {
@@ -138,7 +172,7 @@ export function networkStateFor(win: BrowserWindow): NetworkState {
   }
 
   return {
-    connections: ConnectionPool.list(),
+    connections: connectionViews(),
     general: BindingService.general(),
     tabs,
     groups,
@@ -336,6 +370,28 @@ export function registerNetworkIpc(): void {
     },
   );
 
+  handleAsync(
+    IpcChannels.networkNewIdentity,
+    async (_event, payload): Promise<{ reconnected: boolean }> => {
+      const id = NewNetworkIdentitySchema.parse(payload);
+      // Captured before the action so the reload list is the one the user was shown a count for, and
+      // cannot be re-derived from a binding table something else changed meanwhile.
+      const affected = tabsByConnection().get(id) ?? [];
+      const result = await ConnectionPool.newIdentity(id);
+      // Reload only when the tunnel actually came back. Reloading a tab whose connection is down just
+      // paints a kill-switch error over the page the user was reading, and destroys the one thing they
+      // still had — the rendered document — to no benefit.
+      if (result.reconnected) for (const tabId of affected) TabManager.reloadTab(tabId);
+      Logger.info('New identity taken', {
+        id,
+        tabs: affected.length,
+        reconnected: result.reconnected,
+      });
+      broadcastNetworkState();
+      return result;
+    },
+  );
+
   handleAsync(IpcChannels.networkRemoveConnection, async (_event, payload): Promise<void> => {
     const id = RemoveNetworkConnectionSchema.parse(payload);
     // Bindings first: a tab still pointing at a removed connection would be blocked forever with no way
@@ -348,7 +404,7 @@ export function registerNetworkIpc(): void {
 
 function emptyState(): NetworkState {
   return {
-    connections: ConnectionPool.list(),
+    connections: connectionViews(),
     general: BindingService.general(),
     tabs: {},
     groups: {},

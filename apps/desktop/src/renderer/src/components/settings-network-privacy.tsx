@@ -67,6 +67,65 @@ function statusBadge(c: NetworkConnectionView, s: SettingsStrings) {
   );
 }
 
+/**
+ * "New identity" — Tor only, and it says what it will disturb before it runs.
+ *
+ * Two halves in one action (new circuits + a wipe of this connection's site state), because doing
+ * either alone is not a new identity: fresh circuits with the old cookies is a new address presenting
+ * the same logged-in session, and cleared cookies over the same circuit are re-linked at the network
+ * layer. The dialog therefore names both, plus the count of tabs that will reload — the phase's own
+ * requirement that this action "says which tabs it will disturb", rather than surprising the user with
+ * an afternoon's reading replaced by reloads.
+ *
+ * Only rendered for Tor. A VPN or SOCKS reconnect lands on the same exit address, so the button would
+ * be a promise the product cannot keep (main refuses it too, so this is presentation, not the rule).
+ */
+function NewIdentityAction({
+  c,
+  s,
+  onChanged,
+  onOutcome,
+}: {
+  c: NetworkConnectionView;
+  s: SettingsStrings;
+  onChanged: () => void;
+  /** Reported up so the outcome line renders BELOW the row rather than inside its flex, next to the
+   *  connection error it sits alongside. */
+  onOutcome: (outcome: 'done' | 'downAfter') => void;
+}) {
+  return (
+    <ConfirmAction
+      label={s.network.newIdentity}
+      title={s.network.newIdentityTitle}
+      body={
+        <>
+          <p>{s.network.newIdentityBody.replace('{name}', c.label)}</p>
+          <p className="mt-2">
+            {c.boundTabs === 0
+              ? s.network.newIdentityNoTabs
+              : s.network.newIdentityTabs.replace('{count}', String(c.boundTabs))}
+          </p>
+          <p className="mt-2 text-text-disabled">{s.network.newIdentityGuards}</p>
+        </>
+      }
+      confirmLabel={s.network.newIdentity}
+      onConfirm={() => {
+        void window.tepegoz.newNetworkIdentity(c.id).then(
+          (r) => {
+            // The tunnel failing to come back is NOT a failed new identity — the circuits and the site
+            // state are gone either way — so it gets its own sentence rather than an error.
+            onOutcome(r.reconnected ? 'done' : 'downAfter');
+            onChanged();
+          },
+          () => {
+            onChanged();
+          },
+        );
+      }}
+    />
+  );
+}
+
 function protocolLabel(c: NetworkConnectionView, s: SettingsStrings): string {
   if (c.kind === 'wireguard') return s.network.protocolWireguard;
   if (c.kind === 'tor') return s.network.protocolTor;
@@ -90,6 +149,7 @@ function ConnectionRow({
   onChanged: () => void;
 }) {
   const [busy, setBusy] = useState(false);
+  const [identityOutcome, setIdentityOutcome] = useState<'done' | 'downAfter' | null>(null);
   const upstream = connections.find((x) => x.id === c.upstreamConnectionId);
 
   const toggle = (): void => {
@@ -124,6 +184,9 @@ function ConnectionRow({
         <Button size="sm" variant="outline" disabled={busy} onClick={toggle}>
           {c.status === 'up' ? s.network.disconnect : s.network.connect}
         </Button>
+        {c.kind === 'tor' && (
+          <NewIdentityAction c={c} s={s} onChanged={onChanged} onOutcome={setIdentityOutcome} />
+        )}
         <ConfirmAction
           label={s.network.remove}
           title={s.network.removeTitle}
@@ -138,6 +201,16 @@ function ConnectionRow({
           }}
         />
       </div>
+      {identityOutcome !== null && (
+        <p
+          className={cn(
+            'mt-1 text-xs',
+            identityOutcome === 'done' ? 'text-text-secondary' : 'text-error-fg',
+          )}
+        >
+          {identityOutcome === 'done' ? s.network.newIdentityDone : s.network.newIdentityDownAfter}
+        </p>
+      )}
       {c.lastError !== null && c.status !== 'up' && (
         // One localized sentence with a next step — never the raw provider stderr (Phase 5). The raw
         // string stays one hover away for a bug report.

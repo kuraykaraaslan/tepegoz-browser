@@ -219,6 +219,33 @@ describe('release + discardPrivate', () => {
     expect(BrowsingSessions.all()).toEqual([]);
   });
 
+  it('wipe clears a tunnel partition but KEEPS it registered', async () => {
+    // The difference from `release` is the whole reason both exist. `wipe` serves Tor's "new identity",
+    // where the tabs on the partition keep running: forgetting the entry would strand those live
+    // WebContents on a Session this registry no longer knows about — still serving them, no longer
+    // reachable for a later wipe, rebind or release.
+    const part = `${DIRECT_PARTITION}--conn-t1`;
+    const ses = BrowsingSessions.ensure(part) as unknown as Record<
+      string,
+      ReturnType<typeof vi.fn>
+    >;
+    await BrowsingSessions.wipe(part);
+    expect(ses.clearStorageData).toHaveBeenCalled();
+    expect(ses.clearCache).toHaveBeenCalled();
+    expect(ses.clearAuthCache).toHaveBeenCalled();
+    expect(ses.clearHostResolverCache).toHaveBeenCalled();
+    expect(BrowsingSessions.all().map((e) => e.partition)).toEqual([part]);
+  });
+
+  it('wipe refuses the Direct partition — that would be a silent mass sign-out', async () => {
+    await expect(BrowsingSessions.wipe(DIRECT_PARTITION)).rejects.toThrow(/non-tunnel/);
+  });
+
+  it('wipe on a partition that was never created is not an error', async () => {
+    // Nothing on disk to clear IS the state the caller wanted.
+    await expect(BrowsingSessions.wipe(`${DIRECT_PARTITION}--conn-never`)).resolves.toBeUndefined();
+  });
+
   it('discardPrivate clears every private session and drops it from the registry', async () => {
     BrowsingSessions.setPrivatePartitionProvider(() => 'tepegoz-private--conn-7');
     const ses = BrowsingSessions.private() as unknown as Record<string, ReturnType<typeof vi.fn>>;

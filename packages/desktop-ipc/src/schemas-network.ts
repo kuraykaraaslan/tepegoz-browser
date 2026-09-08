@@ -62,6 +62,9 @@ export const AddNetworkConnectionSchema = z.discriminatedUnion('kind', [
 
 export const RemoveNetworkConnectionSchema = ConnectionIdSchema;
 
+/** "New identity" on one Tor connection: burn its circuits and clear its site state. */
+export const NewNetworkIdentitySchema = ConnectionIdSchema;
+
 /** Connect / disconnect one connection on the spot, from the manager. */
 export const SetConnectionActiveSchema = z.object({
   id: ConnectionIdSchema,

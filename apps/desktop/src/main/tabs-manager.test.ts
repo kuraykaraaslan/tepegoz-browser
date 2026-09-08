@@ -49,7 +49,6 @@ const FORWARDS: Row[] = [
   ['viewlessActiveTabId', []],
   ['activate', ['t1']],
   ['closeTab', ['t1']],
-  ['reloadTab', ['t1']],
   ['openInternalPage', ['tepegoz://settings']],
   ['createTabRight', ['t1']],
   ['duplicateTab', ['t1']],
@@ -99,6 +98,29 @@ describe('forwards to the focused window with the same name + args', () => {
   it.each(FORWARDS)('%s', (name, args) => {
     (TabManager as unknown as Record<string, (...a: unknown[]) => unknown>)[name]!(...args);
     expect(state.focused![name]).toHaveBeenCalledWith(...args);
+  });
+});
+
+describe('reloadTab — scans every window, not just the focused one', () => {
+  it('delegates to the window that actually owns the tab', () => {
+    // Phase 5's "new identity" reloads every tab bound to one connection, and those can be spread
+    // across windows. Forwarding to the focused one would leave pages from the identity that was just
+    // burned still on screen in every other window.
+    const other = stubWindow();
+    other.hasTab!.mockReturnValue(true);
+    state.all = [state.focused!, other];
+    state.focused!.hasTab!.mockReturnValue(false);
+
+    TabManager.reloadTab('t9');
+    expect(other.reloadTab).toHaveBeenCalledWith('t9');
+    expect(state.focused!.reloadTab).not.toHaveBeenCalled();
+  });
+
+  it('does nothing when no window owns the tab', () => {
+    state.all = [state.focused!];
+    state.focused!.hasTab!.mockReturnValue(false);
+    TabManager.reloadTab('gone');
+    expect(state.focused!.reloadTab).not.toHaveBeenCalled();
   });
 });
 
