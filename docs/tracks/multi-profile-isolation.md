@@ -106,7 +106,12 @@ via `@tepegoz/json-store` rules out a torn read, and mutations are only ever exp
 
 PRs kept small and each a no-user-visible-change checkpoint until the last.
 
-1. **PR1 — foundation, no behaviour change.**
+**Progress (2026-09-08, on `main`):** PR1 `6d22287` · PR2 `7cb6130` · PR3 `a74e1ca` — all landed,
+typecheck / lint / test / build / depcruise green (the one pre-existing `PermissionsCenter` site-
+permissions failure is unrelated). PR4–PR5 and ADR-0045 outstanding. The app still boots as one
+`default` profile; nothing user-visible has changed yet.
+
+1. **PR1 — foundation, no behaviour change.** ✅ `6d22287`
    - New `@tepegoz/profiles` (Electron-free): `Profile` / `ProfilesFile` types, zod schemas
      (`ProfileIdSchema = /^(default|profile-\d+)$/`, 8-colour palette), pure reducers
      (`addProfile` / `renameProfile` / `removeProfile` / `touchLastUsed`, Chrome-style id + colour
@@ -119,23 +124,29 @@ PRs kept small and each a no-user-visible-change checkpoint until the last.
    - Repoint every `userData`-derived path (DB connector, `stores.electron.ts`, adblock, translate host,
      typo-dictionary manager, download service + lifecycle, model manager) through `profile-paths.ts`.
    - `dependency-cruiser.cjs` allow-rules for the new package; `docs/package-map.md` row.
-2. **PR2 — the profile launcher / boot resolver.**
-   - `profiles/profile-launcher.ts` (spawn with `--user-data-dir`), `profiles/profile-boot.ts` (resolve
-     which profile to open from `profiles.json`'s `lastActiveProfileId` **before** `app.whenReady()`; no
-     forced picker on cold start).
-   - Single-instance-lock `second-instance` handler focuses the running profile's window.
-   - Still one profile in practice (`default`), just launched through the new path.
-3. **PR3 — partitions + session hooks per profile.**
-   - Adopt the profile-scoped partition names (decision 2): `persist:tepegoz-profile-<id>` (browsing) /
-     `persist:tepegoz-profile-<id>--app` (chrome). A single `profilePartition(id)` / `appPartition(id)`
-     helper is the only construction site; thread the boot profile's `id` into `window.ts`, `tabs`, the
-     Phase 5 network layer (`binding-service`, `browsing-sessions`, `connection-pool` — all speak
-     `persist:tepegoz-web[--conn-<id>]` today), the download service, and the site-data IPC. Tunnels
-     compose as `persist:tepegoz-profile-<id>--conn-<connId>`; update
-     `BrowsingSessions.isBrowsingPartition` / the tunnel-partition parser for the new prefix.
-   - Re-register session-level hooks (CSP in `security.ts`, the shared `webRequest` multiplexer in
-     `browsing-web-request-service`, download interception, `user-agent-host`) per process — most of this
-     falls out for free once each profile is its own process.
+2. **PR2 — the boot resolver + migration.** ✅ `7cb6130`
+   - `profiles/profile-boot.ts` — `resolveAndPinProfile()` reads `profiles.json`'s `lastActiveProfileId`
+     **before** `app.whenReady()` and pins `userData` to `Profiles/<id>/`; no forced picker on cold
+     start. Honours `--user-data-dir` (eval harness) and a launcher child's `--profile-id`.
+   - `profiles/profile-paths.ts` — the shared-root layout helpers.
+   - `migrate-legacy-profile.ts` — flat install → `Profiles/default/`, **including `tepegoz.db-wal` /
+     `-shm`, `Partitions/`, and the VPN secrets/binaries**. Existence-guarded per entry.
+   - `index.ts` — the inline userData pin + pre-rename carry-over fold into `resolveAndPinProfile()`.
+   - `profiles/profile-launcher.ts` (spawn with `--user-data-dir`) deferred to PR4 — its only caller is
+     the `switchProfile` IPC.
+   - Still one profile in practice (`default`), just booted through the new path.
+3. **PR3 — profile-scoped partition names.** ✅ `a74e1ca`
+   - `@tepegoz/tab-engine/partition-scope.ts` — one process-wide scope, set once at boot.
+     `directBrowsingPartition()` → `persist:tepegoz-profile-<id>`, `appChromePartition()` →
+     `…--app`; `partitionKeyFor` composes tunnels as `…--conn-<connId>` on the bare base. Unset =
+     the pre-multi-profile `persist:tepegoz-web` / `persist:tepegoz-app` (tests, opted-out runs).
+   - `DIRECT_PARTITION` / `APP_PARTITION` / `CHROME_WEB_PREFERENCES` consts → accessor functions so
+     the scoped name resolves at call time, not module load. `browsing-sessions` `TUNNEL_PREFIX`
+     likewise. Dead `BROWSING_PARTITION` re-export dropped.
+   - `migrate-legacy-profile.ts` renames the on-disk `Partitions/` directories to the scoped names, so
+     an existing user's cookies / logins are not orphaned.
+   - Session-level hooks (CSP, the `webRequest` multiplexer, download interception, `user-agent-host`)
+     need no per-process re-registration — process-per-profile gives each its own copy for free.
 4. **PR4 — IPC + UI.**
    - `@tepegoz/desktop-ipc`: `contract-profiles.ts` / `api-profiles.ts` / `schemas.ts` — `listProfiles`,
      `getActiveProfile` (**sender-window-resolved**, not process-global), `createProfile`,
