@@ -1,12 +1,11 @@
 # Track — Chrome-style multi-profile data & session isolation
 
 - **Status:** ✅ **Landed on `main` (2026-09-08)** — five PRs (`6d22287` · `7cb6130` · `a74e1ca` ·
-  `<PR4>` · `<PR5>`) plus [ADR-0045](../adr/0045-multi-profile-isolation.md). Chrome-style profiles are
+  `edc2446` · `dff3ce1`) plus [ADR-0045](../adr/0045-multi-profile-isolation.md). Chrome-style profiles are
   created / renamed / deleted / switched from the profile menu and `tepegoz://profiles`; each runs as
   its own Electron process over `Profiles/<id>/`; a pre-existing flat install migrates on first run.
-  typecheck / lint / test / build / depcruise green (the one pre-existing `PermissionsCenter` failure is
-  unrelated); unit + E2E coverage. Superseded the abandoned `feat/multi-profile-windows` branch — its
-  intent, rebuilt against a `main` ~945 commits further along.
+  typecheck / lint / test / build / depcruise all green; unit + E2E coverage. Superseded the abandoned
+  `feat/multi-profile-windows` branch — its intent, rebuilt against a `main` ~945 commits further along.
 - **Owner decisions (settled 2026-09-08):**
   1. **Process-per-profile.** Accept ~200–300 MB RAM per open profile; cross-profile bleed becomes
      structurally impossible rather than a routing invariant to uphold at ~50 call sites.
@@ -107,10 +106,10 @@ via `@tepegoz/json-store` rules out a torn read, and mutations are only ever exp
 
 PRs kept small and each a no-user-visible-change checkpoint until the last.
 
-**Progress (2026-09-08, on `main`):** PR1 `6d22287` · PR2 `7cb6130` · PR3 `a74e1ca` — all landed,
-typecheck / lint / test / build / depcruise green (the one pre-existing `PermissionsCenter` site-
-permissions failure is unrelated). PR4–PR5 and ADR-0045 outstanding. The app still boots as one
-`default` profile; nothing user-visible has changed yet.
+**Progress (2026-09-08, on `main`):** PR1 `6d22287` · PR2 `7cb6130` · PR3 `a74e1ca` · PR4 `edc2446` ·
+PR5 `dff3ce1` — all landed, plus [ADR-0045](../adr/0045-multi-profile-isolation.md). typecheck / lint /
+test / build / depcruise all green. Profiles are user-visible as of PR4 (the profile menu +
+`tepegoz://profiles`).
 
 1. **PR1 — foundation, no behaviour change.** ✅ `6d22287`
    - New `@tepegoz/profiles` (Electron-free): `Profile` / `ProfilesFile` types, zod schemas
