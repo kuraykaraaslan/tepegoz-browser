@@ -27,6 +27,8 @@ function renderHeader(tokens: TokenUsageSnapshot | null) {
       api={api}
       activeGroupId="g1"
       tokens={tokens}
+      provider={undefined}
+      model={undefined}
       turnCount={1}
       logExported={false}
       exportError={null}
@@ -50,6 +52,7 @@ describe('PanelHeader — token chip breakdown is localized', () => {
       totalTokens: 154,
       quota: 1000,
       lifetimeTokens: 500,
+      contextTokens: 0,
     });
     const expected = `${a.tokens}: ${a.tokenUsage.breakdownThisRun
       .replace('{in}', '120')
@@ -64,6 +67,7 @@ describe('PanelHeader — token chip breakdown is localized', () => {
       totalTokens: 10,
       quota: 0,
       lifetimeTokens: 0,
+      contextTokens: 0,
     });
     const expected = `${a.tokens}: ${a.tokenUsage.breakdown
       .replace('{in}', '7')
