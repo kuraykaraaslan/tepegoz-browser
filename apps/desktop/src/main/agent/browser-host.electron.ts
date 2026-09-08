@@ -194,12 +194,17 @@ async function historyGo(
  *
  * An unsatisfied wait is a RESULT, never an error: the model needs to know it waited and the thing did
  * not arrive, so it can act differently instead of retrying blind.
+ *
+ * A `text` wait matches against the page's visible text, so it must read the UNTRANSLATED source
+ * (ADR-0042 §3) — the model reasons in the page's own language, and a run that waits for a
+ * source-language string would never match a page the user had translated in place. `selector` and
+ * `network_idle` are structural and unaffected.
  */
 async function waitForCondition(
   condition: { kind: 'text' | 'selector' | 'network_idle'; value?: string; timeoutMs: number },
   tabId?: string,
 ): Promise<{ satisfied: boolean; waitedMs: number }> {
-  const wc = requireWc(tabId);
+  const wc = condition.kind === 'text' ? await requireWcUntranslated(tabId) : requireWc(tabId);
   const timeoutMs = clampWaitMs(condition.timeoutMs);
   const started = Date.now();
   if (condition.kind === 'network_idle') {

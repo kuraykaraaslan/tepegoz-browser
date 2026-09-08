@@ -86,6 +86,7 @@ const h = vi.hoisted(() => {
       getContentBounds: vi.fn<() => { x: number; y: number }>(() => ({ x: 0, y: 0 })),
     },
     openTab: vi.fn<(group: string, url?: string) => string>(() => 'web-2'),
+    ensureUntranslatedForAgent: vi.fn<(wc: WebContents) => Promise<void>>(() => Promise.resolve()),
   };
 });
 
@@ -110,6 +111,9 @@ vi.mock('./cdp-driver.electron', () => ({
     consoleSince: h.cdp.consoleSince,
     selectOption: h.cdp.selectOption,
   },
+}));
+vi.mock('../extensions/translate-page-injector-controller.electron', () => ({
+  default: { ensureUntranslatedForAgent: h.ensureUntranslatedForAgent },
 }));
 vi.mock('./page-cursor.electron', () => ({
   showPageCursor: vi.fn(),
@@ -481,6 +485,20 @@ describe('waitForCondition', () => {
     );
 
     expect(res.satisfied).toBe(true);
+  });
+
+  it('a text wait reads the untranslated source (ADR-0042 §3); a structural wait does not', async () => {
+    h.tabs.webContentsForTab.mockReturnValue(
+      richWc({ executeJavaScript: () => Promise.resolve({ satisfied: true, waitedMs: 1 }) }),
+    );
+
+    await browserHost.waitForCondition({ kind: 'text', value: 'Merhaba', timeoutMs: 1000 }, 'tab-1');
+    expect(h.ensureUntranslatedForAgent).toHaveBeenCalledTimes(1);
+
+    h.ensureUntranslatedForAgent.mockClear();
+    await browserHost.waitForCondition({ kind: 'selector', value: '#ok', timeoutMs: 1000 }, 'tab-1');
+    await browserHost.waitForCondition({ kind: 'network_idle', timeoutMs: 1000 }, 'tab-1');
+    expect(h.ensureUntranslatedForAgent).not.toHaveBeenCalled();
   });
 
   it('an empty target value is unsatisfiable without polling the page', async () => {

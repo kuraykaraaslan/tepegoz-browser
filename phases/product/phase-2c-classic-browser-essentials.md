@@ -107,9 +107,11 @@ permissions reuse the single Policy/PermissionGuard (no parallel permission flow
   _**[ADR-0042](../../docs/adr/0042-page-translation-provider-boundary.md) accepted** (owner call
   2026-09-01: hybrid — local model default, cloud per-origin opt-in, sensitive sites never reach
   cloud). Ratifies the shipped `@tepegoz/ext-translate` hybrid engine; the sensitive-site cloud lockout
-  **and** the agent-run untranslated-source guarantee (`ensureUntranslatedForAgent` on `readPage` +
-  `snapshotElements`) are wired. **Owed for the box:** the remaining agent DOM readers +
-  auto-translate suppression for a run's duration._ ·
+  **and** the agent-run untranslated-source guarantee are wired: `requireWcUntranslated` covers
+  `readPage`, `readArticleText`, `snapshotElements`, `runExtractionScript` and — 2026-09-08 — the
+  `browser_wait` text-match path; `maybeAutoTranslate` bails while `hasActiveAgentRun()` (auto-translate
+  suppression for a run's duration). **Owed for the box:** an explicit end-to-end pass (needs a
+  translation provider — folded into the same UAT as Safe Browsing)._ ·
   **Safe-Browsing provider** — _**[ADR-0043](../../docs/adr/0043-safe-browsing-service-and-egress.md)
   accepted** (owner call 2026-09-01: direct to Google Safe Browsing v5, on by default, one
   Settings switch to disable). **Shipped 2026-09-01, all unit-tested:** `SafeBrowsingProvider` +
@@ -573,9 +575,11 @@ permissions reuse the single Policy/PermissionGuard (no parallel permission flow
       reach cloud). The hybrid engine, per-origin session consent, translation memory and glossary in
       `@tepegoz/ext-translate` + `translate-host.electron.ts`; the **sensitive-site cloud lockout**
       (`isSensitiveOrigin` port → `runEngine` refuses cloud before any consent prompt); and the
-      **agent-run untranslated-source guarantee** (`requireWcUntranslated` on every DOM read path +
-      `maybeAutoTranslate` bailing while `hasActiveAgentRun()`). All three ADR-0042 conditions met;
-      full turbo + unit tests green. (The DoD line above bundles translation with find/print/PDF/reader/
+      **agent-run untranslated-source guarantee** (`requireWcUntranslated` on every DOM read path —
+      `readPage`, `readArticleText`, `snapshotElements`, `runExtractionScript`, and (2026-09-08) the
+      `browser_wait` **text**-match path, which searches `body.innerText` and so has to read the
+      source language — plus `maybeAutoTranslate` bailing while `hasActiveAgentRun()`). All three
+      ADR-0042 conditions met; full turbo + unit tests green. (The DoD line above bundles translation with find/print/PDF/reader/
       screenshot — those are individually done too, but that line stays open pending one explicit
       end-to-end pass over the set.)_
 - [x] User-facing **screenshot** (visible viewport + full-page) → stored as a **CAS blob** (reuse Phase 0/1b
