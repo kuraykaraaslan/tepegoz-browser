@@ -27,6 +27,7 @@ const CAP_FOR_TYPE: Partial<Record<ChatEvent['type'], keyof ChatAdapterCaps>> = 
   'message-edit': 'edits',
   'message-redact': 'edits',
   receipt: 'receipts',
+  reaction: 'reactions',
   typing: 'typing',
   presence: 'presence',
   'room-membership': 'rooms',

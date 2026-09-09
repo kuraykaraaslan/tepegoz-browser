@@ -38,6 +38,22 @@ describe('normalizeEvent', () => {
     expect(res.event?.type).toBe('message-edit');
   });
 
+  it('gates a reaction event on the reactions capability', () => {
+    const raw = {
+      type: 'reaction',
+      conversationId: 'c1',
+      protocolId: 'p1',
+      emoji: '👍',
+      senderAddress: 'bob@x',
+      add: true,
+    };
+    expect(normalizeEvent(raw, caps({ reactions: false }))).toEqual({
+      event: null,
+      dropped: 'unsupported-capability',
+    });
+    expect(normalizeEvent(raw, caps({ reactions: true })).event?.type).toBe('reaction');
+  });
+
   it('strips reactions/media/threads from a message rather than dropping it', () => {
     const res = normalizeEvent(
       {

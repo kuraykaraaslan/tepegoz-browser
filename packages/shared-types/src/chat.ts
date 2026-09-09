@@ -261,6 +261,16 @@ export const ChatEventSchema = z.discriminatedUnion('type', [
   }),
   z.object({ type: z.literal('receipt'), receipt: ChatReceiptSchema }),
   z.object({
+    type: z.literal('reaction'),
+    conversationId: z.string().min(1).max(128),
+    /** The protocol id of the message being reacted to. */
+    protocolId: z.string().min(1).max(512),
+    emoji: z.string().min(1).max(64),
+    senderAddress: z.string().min(1).max(512),
+    /** `true` adds the reaction, `false` removes it. */
+    add: z.boolean(),
+  }),
+  z.object({
     type: z.literal('typing'),
     conversationId: z.string().min(1).max(128),
     senderAddress: z.string().min(1).max(512),

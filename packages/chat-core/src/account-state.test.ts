@@ -98,6 +98,23 @@ describe('ChatAccountState — messages', () => {
     expect(cs.find((c) => c.kind === 'conversation')).toMatchObject({ unread: 0 });
   });
 
+  it('folds a reaction into the message and re-reports it as message-updated', () => {
+    const s = state();
+    s.applyRaw({ type: 'message', message: msg({ protocolId: 'm1' }) });
+    const cs = s.applyRaw({
+      type: 'reaction',
+      conversationId: 'bob@x.com',
+      protocolId: 'm1',
+      emoji: '🎉',
+      senderAddress: 'bob@x.com',
+      add: true,
+    });
+    expect(kinds(cs)).toContain('message-updated');
+    expect(s.conversationView('bob@x.com').messages[0]?.reactions).toEqual([
+      { emoji: '🎉', count: 1, me: false },
+    ]);
+  });
+
   it('drops an invalid raw event and reports it', () => {
     const s = state();
     expect(s.applyRaw({ type: 'exec' })).toEqual([{ kind: 'dropped', reason: 'invalid' }]);

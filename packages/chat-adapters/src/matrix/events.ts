@@ -6,7 +6,8 @@ import type { ChatEvent, ChatMessage } from '@tepegoz/shared-types';
  * event shape we do not model returns `null` (or `[]`), never a throw. `@tepegoz/chat-core`'s
  * `normalizeEvent` re-validates before anything downstream trusts it.
  *
- * Reactions (`m.reaction`) are handled once `ChatEvent` grows a reaction variant (next slice).
+ * An `m.reaction` maps to a `reaction` add; a reaction *removal* (a redaction of the reaction event)
+ * needs the adapter to remember reaction-event ids, so it is handled a layer up.
  */
 
 /** The subset of a Matrix room event this layer reads. */
@@ -95,6 +96,23 @@ export function matrixTimelineEvent(
       conversationId: roomId,
       protocolId: target,
       redactedAt: ev.origin_server_ts,
+    };
+  }
+
+  if (ev.type === 'm.reaction') {
+    const rel = relatesTo(ev.content);
+    const target = str(rel.event_id);
+    const emoji = str(rel.key);
+    if (str(rel.rel_type) !== 'm.annotation' || target.length === 0 || emoji.length === 0) {
+      return null;
+    }
+    return {
+      type: 'reaction',
+      conversationId: roomId,
+      protocolId: target,
+      emoji,
+      senderAddress: ev.sender,
+      add: true,
     };
   }
 

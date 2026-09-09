@@ -110,6 +110,30 @@ describe('matrixTimelineEvent — messages', () => {
     ).toMatchObject({ protocolId: '$2' });
   });
 
+  it('m.reaction → a reaction add event', () => {
+    expect(
+      matrixTimelineEvent(
+        ev({
+          type: 'm.reaction',
+          content: { 'm.relates_to': { rel_type: 'm.annotation', event_id: '$1', key: '👍' } },
+        }),
+        ROOM,
+        ctx,
+      ),
+    ).toEqual({
+      type: 'reaction',
+      conversationId: ROOM,
+      protocolId: '$1',
+      emoji: '👍',
+      senderAddress: '@bob:s',
+      add: true,
+    });
+    // a malformed relation is dropped
+    expect(
+      matrixTimelineEvent(ev({ type: 'm.reaction', content: { 'm.relates_to': { key: 'x' } } }), ROOM, ctx),
+    ).toBeNull();
+  });
+
   it('m.room.member join/leave → room-membership', () => {
     expect(
       matrixTimelineEvent(ev({ type: 'm.room.member', sender: '@me:s', content: { membership: 'join' } }), ROOM, ctx),

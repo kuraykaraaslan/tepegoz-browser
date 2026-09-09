@@ -82,6 +82,7 @@ export class ChatAccountState {
       case 'message-edit':
       case 'message-redact':
       case 'receipt':
+      case 'reaction':
         return this.foldConversation(event);
       case 'typing':
         return [
@@ -127,7 +128,10 @@ export class ChatAccountState {
   }
 
   private foldConversation(
-    event: Extract<ChatEvent, { type: 'message' | 'message-edit' | 'message-redact' | 'receipt' }>,
+    event: Extract<
+      ChatEvent,
+      { type: 'message' | 'message-edit' | 'message-redact' | 'receipt' | 'reaction' }
+    >,
   ): ChatStateChange[] {
     const conversationId =
       event.type === 'message' ? event.message.conversationId
@@ -141,7 +145,11 @@ export class ChatAccountState {
     const changes: ChatStateChange[] = [];
     if (event.type === 'message') {
       changes.push({ kind: 'message', conversationId, message: event.message });
-    } else if (event.type === 'message-edit' || event.type === 'message-redact') {
+    } else if (
+      event.type === 'message-edit' ||
+      event.type === 'message-redact' ||
+      event.type === 'reaction'
+    ) {
       const message = after.messages.find((m) => m.protocolId === event.protocolId) ?? null;
       changes.push({ kind: 'message-updated', conversationId, protocolId: event.protocolId, message });
     }

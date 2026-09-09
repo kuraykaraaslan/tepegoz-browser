@@ -188,4 +188,31 @@ describe('window limit & echo reconciliation', () => {
     );
     expect(v.messages[0]?.deliveryState).toBe('read');
   });
+
+  it('folds reaction add / remove into the message reaction list', () => {
+    let v = emptyConversation();
+    v = foldEvent(v, message({ protocolId: 'a', originTs: 1 }), opts);
+
+    const react = (add: boolean, sender: string): ChatEvent => ({
+      type: 'reaction',
+      conversationId: 'c1',
+      protocolId: 'a',
+      emoji: '👍',
+      senderAddress: sender,
+      add,
+    });
+
+    v = foldEvent(v, react(true, 'bob@x.com'), opts);
+    v = foldEvent(v, react(true, 'me@x.com'), opts);
+    expect(v.messages[0]?.reactions).toEqual([{ emoji: '👍', count: 2, me: true }]);
+
+    v = foldEvent(v, react(false, 'me@x.com'), opts);
+    expect(v.messages[0]?.reactions).toEqual([{ emoji: '👍', count: 1, me: false }]);
+
+    v = foldEvent(v, react(false, 'bob@x.com'), opts);
+    expect(v.messages[0]?.reactions).toEqual([]);
+
+    // a remove for an unknown emoji is a no-op
+    expect(foldEvent(v, react(false, 'bob@x.com'), opts).messages[0]?.reactions).toEqual([]);
+  });
 });

@@ -117,9 +117,40 @@ export function foldEvent(
       );
       return { ...view, messages };
     }
+    case 'reaction': {
+      const mine = event.senderAddress === opts.selfAddress;
+      const messages = view.messages.map((m) =>
+        m.protocolId === event.protocolId
+          ? { ...m, reactions: applyReaction(m.reactions, event.emoji, event.add, mine) }
+          : m,
+      );
+      return { ...view, messages };
+    }
     default:
       return view;
   }
+}
+
+/** Add / remove one reactor's emoji from a message's aggregated reaction list. */
+function applyReaction(
+  reactions: ChatMessage['reactions'],
+  emoji: string,
+  add: boolean,
+  mine: boolean,
+): ChatMessage['reactions'] {
+  const existing = reactions.find((r) => r.emoji === emoji);
+  if (add) {
+    if (existing === undefined) return [...reactions, { emoji, count: 1, me: mine }];
+    return reactions.map((r) =>
+      r.emoji === emoji ? { emoji, count: r.count + 1, me: r.me || mine } : r,
+    );
+  }
+  if (existing === undefined) return reactions;
+  const count = existing.count - 1;
+  if (count <= 0) return reactions.filter((r) => r.emoji !== emoji);
+  return reactions.map((r) =>
+    r.emoji === emoji ? { emoji, count, me: mine ? false : r.me } : r,
+  );
 }
 
 export function foldEvents(
