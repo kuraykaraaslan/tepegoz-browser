@@ -236,7 +236,9 @@ wrong is expensive later.
 
 ## X-chat.1 — XMPP adapter + connection spine
 
-**Status:** 🟡 In progress (~90%, 2026-09-09) — **everything except the desktop host is done**:
+**Status:** 🟢 Code-complete (2026-09-09) — the full stack is landed on `main`; only the runtime DoD
+(two live accounts, XEP-0198 resumption, kill-switch behaviour) and the DoD-template close-out remain,
+and those need a real server to exercise. **The renderer has no chat UI yet — that is X-chat.2.**
 - `@tepegoz/chat-adapters` — the full pure XMPP client: `XmlStreamParser` (incremental, bounded,
   fail-closed) · stanza↔`ChatEvent` mapping (message/presence/roster/receipts/chat-states/correction/
   retraction/MAM) · `<stream:features>` + SASL (PLAIN + SCRAM-SHA-1/256 via Web Crypto, RFC 5802
@@ -251,8 +253,7 @@ wrong is expensive later.
   scaffold (manifest + en/tr i18n + placeholder surfaces + `comments` icon) ·
   `ExtensionPermissionSchema` extended · [ADR-0047](../../docs/adr/0047-chat-protocol-adapter-and-bridge-trust-model.md).
 
-**Status (2026-09-09):** ~97% — the desktop host's testable core is landed in
-`apps/desktop/src/main/chat/`:
+**The desktop host** — landed in `apps/desktop/src/main/chat/`:
 - `egress-dialer.ts` — `NodeTransportPorts.dial`: direct route → `net.connect`; tunnel route →
   loopback SOCKS port + `@tepegoz/socks5` CONNECT; bound-but-down → fail-closed 503.
 - `account-runner.ts` — `ChatAccountRunner`: one account's `ChatConnectionManager` + `ChatAccountState`
@@ -261,46 +262,52 @@ wrong is expensive later.
 - `chat-service.ts` — `ChatService`: the runner map + the lifecycle that gates it (extension enabled ·
   profile in force · Phase-5 kill switch fans out to every runner); `addAccount` / `removeAccount` /
   `setEnabled` / `stop`; delegates the actions; default adapter = `XmppAdapter` for xmpp.
+- `chat-secrets.electron.ts` — `safeStorage`-backed `ChatSecretStore` (encrypted files under
+  `userData/chat/`, refuses to write when the keychain is unavailable — mirrors `vpn-secrets`).
+- `chat-store-adapter.ts` — `makeRunnerStore` / account projections over the `Db`.
+- `chat-service.electron.ts` — the process singleton: composes `ChatService` with the real store,
+  secrets, `currentEgressRoute` kill-switch, a `NodeChatTransport` on the egress-dialer, and the
+  prefs-driven enabled check; exposes `chatIpcService` (the `ChatIpcService` impl) + a `ChatMessenger`
+  facade (`init`/`stop`/`reconcile`/`notifyEgressChange`).
 
-Also landed: `@tepegoz/desktop-ipc` `chat:*` channels + `schemas-chat.ts` (the renderer→main payload
-guards), and `main/ipc/ipc-chat.ts` — the nine `chat:*` handlers over an injected `ChatIpcService`
-(unit-tested: schema-gate before the service, `{protocolId}` result shape, untrusted-frame refusal).
+Also landed: `@tepegoz/desktop-ipc` `chat:*` channels + `schemas-chat.ts` (renderer→main payload
+guards); `main/ipc/ipc-chat.ts` — the nine `chat:*` handlers over an injected `ChatIpcService`;
+**bootstrap** — `registerChatIpc(chatIpcService)` in the IPC facade, `ChatMessenger.init()` in deferred
+init (off in safe mode), `.stop()` in `before-quit`, `.reconcile()` on the extension toggle,
+`.notifyEgressChange()` from `broadcastNetworkState`; and the **preload bridge** —
+`@tepegoz/desktop-ipc` `ChatApi` + `apps/desktop/src/preload/api-chat.ts` (`window.tepegoz` chat.*
+methods + the `chat:state` subscription).
 
-**Remaining (all Electron glue — no new logic):** `chat-service.electron.ts` — the singleton that
-implements `ChatIpcService` by composing `ChatService` with the real `ChatStore` (over the `Db`), a
-`safeStorage`-backed `ChatSecretStore`, `BindingService.mayEgress` / `currentEgressRoute`, a
-`NodeChatTransport` on the egress-dialer, and the prefs-driven extension-enabled check; the
-`chat:state` push + preload `api-chat.ts` bridge; and the bootstrap (`registerChatIpc` +
-`chatService.start()` at ready, `.stop()` on quit / profile switch). Best done on a clean
-`apps/desktop` tree — it currently carries pre-existing typecheck breakage from parallel work.
-· **Branch:** `feat/ext-chat-xmpp-adapter` · **Risk:** low.
+**Remaining:** the runtime Functional DoD below (needs a live XMPP server) and the DoD-template
+close-out. · **Branch:** `main` · **Risk:** low.
 
 ### Deliverables
-- [ ] **`extensions/ext-chat` scaffold** — manifest (`com.tepegoz.chat`, surfaces `sidebar`+`page`,
+- [x] **`extensions/ext-chat` scaffold** — manifest (`com.tepegoz.chat`, surfaces `sidebar`+`page`,
       permissions `accounts`/`background-connection`/`notifications`/`contacts`), `src/i18n/`,
       catalog pickup, surface-loader thunk.
-- [ ] **`ChatStore` + migration** (appendix): `chat_accounts`, `chat_contacts`,
+- [x] **`ChatStore` + migration** (appendix): `chat_accounts`, `chat_contacts`,
       `chat_conversations`, `chat_messages`, `chat_attachments`, `chat_receipts`,
       `chat_e2ee_sessions` (wrapped blobs), `chat_send_queue`, `chat_search` (FTS5). Sync-meta on
       `chat_accounts`.
-- [ ] **`@tepegoz/chat-adapters` package** — `ChatAdapter` contract, `ChatTransport` port
+- [x] **`@tepegoz/chat-adapters` package** — `ChatAdapter` contract, `ChatTransport` port
       (`openTCP`/`openTLS`/`openWebSocket`), normalized event types, dependency-cruiser rule,
       coverage registration.
-- [ ] **XMPP adapter** (`xmpp/`) — XML stream parser (incremental, namespace-aware), SASL
+- [x] **XMPP adapter** (`xmpp/`) — XML stream parser (incremental, namespace-aware), SASL
       (`SCRAM-SHA-1/256`, `PLAIN`, `EXTERNAL`), STARTTLS + direct TLS, resource binding, session,
       **XEP-0198** stream management (h-acks, resumption), roster get/push (`jabber:iq:roster`),
       presence (`0012` last-activity optional), `0280` carbons, `0313` MAM (paged history),
       `0085` chat states (typing), `0184` delivery receipts, `0363` HTTP file upload, service
       discovery (`0030`), `0198`-driven reconnect with exponential backoff. Stanza handling is
       **pure** + fixture-tested; only the socket is injected.
-- [ ] **desktop `ChatService`** — account CRUD, credential vault resolve (`SecretCrypto`),
+- [x] **desktop `ChatService`** — account CRUD, credential vault resolve (`safeStorage`),
       `ChatTransport` over Node `net`/`tls`/WebSocket bound to the profile egress, adapter lifecycle,
-      DB writes, redacted Journal events (`ChatAccountAdded`, `ChatMessageSent` — conv-id hash only),
-      IPC surface (zod-gated channels + preload bridge).
-- [ ] **`background-connection` supervisor integration** — keep-alive, backoff, drop on disable /
+      DB writes, IPC surface (zod-gated channels + preload bridge).
+      _Deferred to X-chat.2/.10:_ redacted Journal events (`ChatAccountAdded`, `ChatMessageSent` —
+      conv-id hash only).
+- [x] **`background-connection` supervisor integration** — keep-alive, backoff, drop on disable /
       profile switch / kill-switch; per-account state machine pushed to the renderer.
-- [ ] **Offline send queue** wired to `chat-core/send-queue`.
-- [ ] **Autodiscover** — XMPP `SRV` (`_xmpp-client._tcp`), host-meta for WebSocket/BOSH endpoints,
+- [x] **Offline send queue** wired to `chat-core/send-queue`.
+- [x] **Autodiscover** — XMPP `SRV` (`_xmpp-client._tcp`), host-meta for WebSocket/BOSH endpoints,
       manual override.
 
 ### Functional DoD
