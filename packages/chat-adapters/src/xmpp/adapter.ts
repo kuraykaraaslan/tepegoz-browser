@@ -11,10 +11,16 @@ import type {
 } from '../adapter';
 import { XMPP_CAPS } from '../caps';
 import type { ChatTransport, DuplexStream } from '../transport';
-import { XmlStreamParser, type XmlElement, type XmlStreamEvent } from './xml-stream';
+import { XmlStreamParser, type XmlElement, type XmlStreamEvent, child, children } from './xml-stream';
 import { type NegotiationAction, XmppNegotiator } from './negotiator';
 import { StreamManager } from './stream-management';
-import { buildMessage, buildPresence, buildReadMarker, stanzaToEvent } from './stanzas';
+import {
+  buildMessage,
+  buildPresence,
+  buildReadMarker,
+  rosterItemToContact,
+  stanzaToEvent,
+} from './stanzas';
 
 /**
  * The native in-process XMPP adapter (phase X-chat.1). Wires the injected `ChatTransport` to the
@@ -40,6 +46,16 @@ export class XmppSession implements ChatSession {
   private readonly queue: ChatEvent[] = [];
   private readonly waiters: Array<(r: IteratorResult<ChatEvent>) => void> = [];
   private ended = false;
+  private iqSeq = 0;
+  private readonly pendingIq = new Map<
+    string,
+    { resolve: (el: XmlElement) => void; reject: (e: Error) => void }
+  >();
+  /** Sinks for a streamed response set (MAM `<message><result/>` before the closing `<iq/>`). */
+  private readonly resultSinks = new Map<string, (el: XmlElement) => void>();
+
+  /** ms an iq round-trip waits before rejecting. */
+  iqTimeoutMs = 20_000;
 
   constructor(
     readonly accountId: string,
@@ -51,6 +67,61 @@ export class XmppSession implements ChatSession {
     this.fullJid = bareJid;
     this.stream = stream;
     this.parser = new XmlStreamParser(() => undefined);
+  }
+
+  nextIqId(prefix: string): string {
+    this.iqSeq += 1;
+    return `${prefix}-${String(this.iqSeq)}`;
+  }
+
+  /** Send an iq and await its `result`/`error`. `onResult` (optional) receives interim streamed
+   *  `<message>` elements tagged with this id (MAM) before the terminal iq. */
+  request(xml: string, id: string, onResult?: (el: XmlElement) => void): Promise<XmlElement> {
+    if (this.ended) return Promise.reject(new Error('session closed'));
+    if (onResult !== undefined) this.resultSinks.set(id, onResult);
+    return new Promise<XmlElement>((resolve, reject) => {
+      const timer = setTimeout(() => {
+        this.pendingIq.delete(id);
+        this.resultSinks.delete(id);
+        reject(new Error(`iq ${id} timed out`));
+      }, this.iqTimeoutMs);
+      this.pendingIq.set(id, {
+        resolve: (el) => {
+          clearTimeout(timer);
+          this.resultSinks.delete(id);
+          resolve(el);
+        },
+        reject: (e) => {
+          clearTimeout(timer);
+          this.resultSinks.delete(id);
+          reject(e);
+        },
+      });
+      this.stream.write(xml);
+    });
+  }
+
+  /** Called by the live-element handler for an inbound `<iq/>`. Returns true if it was consumed as a
+   *  response to one of our pending requests (so it should not also be surfaced as an event). */
+  tryResolveIq(el: XmlElement): boolean {
+    const id = el.attrs.id;
+    if (id === undefined) return false;
+    const pending = this.pendingIq.get(id);
+    if (pending === undefined) return false;
+    this.pendingIq.delete(id);
+    if (el.attrs.type === 'error') pending.reject(new Error(`iq ${id} returned an error`));
+    else pending.resolve(el);
+    return true;
+  }
+
+  /** Route a streamed `<message>` carrying a MAM result for one of our queries. Returns true if
+   *  consumed. */
+  tryRouteResult(el: XmlElement, queryId: string | null): boolean {
+    if (queryId === null) return false;
+    const sink = this.resultSinks.get(queryId);
+    if (sink === undefined) return false;
+    sink(el);
+    return true;
   }
 
   private flush(): void {
@@ -74,6 +145,9 @@ export class XmppSession implements ChatSession {
     if (this.ended) return;
     this.ended = true;
     this.closed = true;
+    for (const p of this.pendingIq.values()) p.reject(new Error('session closed'));
+    this.pendingIq.clear();
+    this.resultSinks.clear();
     this.flush();
   }
 
@@ -212,8 +286,18 @@ export class XmppAdapter implements ChatAdapter {
     return Promise.resolve();
   }
 
-  roster(): Promise<ChatContact[]> {
-    return Promise.resolve([]); // roster round-trip lands in the next slice
+  async roster(session: ChatSession): Promise<ChatContact[]> {
+    const s = session as XmppSession;
+    const id = s.nextIqId('roster');
+    const result = await s.request(
+      `<iq type="get" id="${id}"><query xmlns="jabber:iq:roster"/></iq>`,
+      id,
+    );
+    const query = child(result, 'query', 'jabber:iq:roster');
+    if (query === null) return [];
+    return children(query, 'item')
+      .filter((item) => item.attrs.jid !== undefined)
+      .map((item) => rosterItemToContact(item, s.accountId));
   }
 
   setPresence(session: ChatSession, presence: ChatPresence, statusText?: string): Promise<void> {
@@ -268,13 +352,25 @@ function handleLiveElement(session: XmppSession, el: XmlElement): void {
     }
   }
 
-  if (el.local === 'message' || el.local === 'presence' || el.local === 'iq') {
-    session.sm.countInbound();
-    const event = stanzaToEvent(el, {
-      accountId: session.accountId,
-      selfBareJid: session.selfBareJid,
-      now: Date.now(),
-    });
-    if (event !== null) session.push(event);
+  if (el.local !== 'message' && el.local !== 'presence' && el.local !== 'iq') return;
+  session.sm.countInbound();
+
+  // An iq that answers one of our own requests (roster get, MAM query) is consumed here, not
+  // surfaced as an event.
+  if (el.local === 'iq' && (el.attrs.type === 'result' || el.attrs.type === 'error')) {
+    if (session.tryResolveIq(el)) return;
   }
+
+  // A streamed MAM result `<message><result queryid=…>` is routed to its query's sink.
+  if (el.local === 'message') {
+    const result = child(el, 'result', 'urn:xmpp:mam:2');
+    if (result !== null && session.tryRouteResult(el, result.attrs.queryid ?? null)) return;
+  }
+
+  const event = stanzaToEvent(el, {
+    accountId: session.accountId,
+    selfBareJid: session.selfBareJid,
+    now: Date.now(),
+  });
+  if (event !== null) session.push(event);
 }

@@ -217,9 +217,64 @@ describe('XmppAdapter — live traffic', () => {
     expect(session.closed).toBe(true);
   });
 
-  it('roster / listConversations / history are empty in this slice', async () => {
+  it('roster round-trips a <query/> result into contacts', async () => {
+    const { server, adapter, session } = await connected();
+    const rosterP = adapter.roster(session);
+    await tick();
+    const id = /id="(roster-\d+)"/.exec(server.lastWritten())?.[1] ?? '';
+    server.send(
+      `<iq type="result" id="${id}"><query xmlns="jabber:iq:roster">` +
+        `<item jid="bob@example.com" name="Bob" subscription="both"><group>work</group></item>` +
+        `<item jid="cem@example.com" subscription="to"/>` +
+        `</query></iq>`,
+    );
+    const contacts = await rosterP;
+    expect(contacts.map((c) => c.address)).toEqual(['bob@example.com', 'cem@example.com']);
+    expect(contacts[0]).toMatchObject({ name: 'Bob', subscription: 'both', groups: ['work'] });
+  });
+
+  it('roster rejects on an iq error and on session close', async () => {
+    const { server, adapter, session } = await connected();
+    const p = adapter.roster(session);
+    await tick();
+    const id = /id="(roster-\d+)"/.exec(server.lastWritten())?.[1] ?? '';
+    server.send(`<iq type="error" id="${id}"><error type="cancel"/></iq>`);
+    await expect(p).rejects.toThrow(/error/);
+
+    const p2 = adapter.roster(session);
+    server.drop();
+    await expect(p2).rejects.toThrow(/closed/);
+  });
+
+  it('an iq that is never answered times out', async () => {
+    const { adapter, session } = await connected();
+    session.iqTimeoutMs = 10;
+    await expect(adapter.roster(session)).rejects.toThrow(/timed out/);
+  });
+
+  it('routes a streamed MAM result to its query sink, not the event stream', async () => {
+    const { server, adapter, session } = await connected();
+    const seen: string[] = [];
+    // simulate a MAM query registered on the session
+    const done = session.request(
+      `<iq type="set" id="mam-1"><query xmlns="urn:xmpp:mam:2" queryid="mam-1"/></iq>`,
+      'mam-1',
+      (el) => seen.push(el.local),
+    );
+    const it = adapter.events(session)[Symbol.asyncIterator]();
+    server.send(
+      `<message><result xmlns="urn:xmpp:mam:2" queryid="mam-1"><forwarded xmlns="urn:xmpp:forward:0"><message from="a@x" type="chat"><body>old</body></message></forwarded></result></message>`,
+    );
+    server.send(`<iq type="result" id="mam-1"><fin xmlns="urn:xmpp:mam:2" complete="true"/></iq>`);
+    await done;
+    expect(seen).toEqual(['message']);
+    // the live stream should not have received the MAM message
+    server.send(`<message from="b@x" type="chat" id="live"><body>new</body></message>`);
+    expect((await it.next()).value).toMatchObject({ message: { protocolId: 'live' } });
+  });
+
+  it('listConversations / history are empty in this slice', async () => {
     const { adapter } = await connected();
-    expect(await adapter.roster()).toEqual([]);
     expect(await adapter.listConversations()).toEqual([]);
     expect(await adapter.history()).toEqual({ messages: [], nextCursor: null });
   });

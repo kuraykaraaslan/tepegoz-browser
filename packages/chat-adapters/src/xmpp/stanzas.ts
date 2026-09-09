@@ -1,5 +1,5 @@
 import { bareJid, parseJid } from '@tepegoz/chat-core';
-import type { ChatEvent, ChatMessage, ChatPresence } from '@tepegoz/shared-types';
+import type { ChatContact, ChatEvent, ChatMessage, ChatPresence } from '@tepegoz/shared-types';
 import { type XmlElement, child, childText, encodeXmlText, text } from './xml-stream';
 
 /**
@@ -168,38 +168,42 @@ function presenceEvent(el: XmlElement, ctx: StanzaContext): ChatEvent | null {
   };
 }
 
+/** Map a `<item/>` from `jabber:iq:roster` (a get result or a push) to a `ChatContact`. */
+export function rosterItemToContact(item: XmlElement, accountId: string): ChatContact {
+  const jid = item.attrs.jid ?? '';
+  const subscription = item.attrs.subscription ?? 'none';
+  const removed = subscription === 'remove';
+  const groups = item.children
+    .filter((c): c is XmlElement => typeof c !== 'string' && c.local === 'group')
+    .map((g) => text(g))
+    .filter((g) => g.length > 0)
+    .slice(0, 64);
+  return {
+    id: `${accountId}:${jid}`,
+    accountId,
+    address: jid,
+    name: item.attrs.name ?? '',
+    groups,
+    presence: 'offline',
+    statusText: '',
+    subscription: removed
+      ? 'none'
+      : subscription === 'both' || subscription === 'to' || subscription === 'from'
+        ? subscription
+        : 'none',
+  };
+}
+
 function rosterPushEvent(el: XmlElement, ctx: StanzaContext): ChatEvent | null {
   if ((el.attrs.type ?? '') !== 'set') return null;
   const query = child(el, 'query', NS.roster);
   if (query === null) return null;
   const item = child(query, 'item');
   if (item === null || item.attrs.jid === undefined) return null;
-  const subscription = item.attrs.subscription ?? 'none';
-  const removed = subscription === 'remove';
-  const groups = child(item, 'group') !== null
-    ? item.children
-        .filter((c): c is XmlElement => typeof c !== 'string' && c.local === 'group')
-        .map((g) => text(g))
-        .filter((g) => g.length > 0)
-        .slice(0, 64)
-    : [];
   return {
     type: 'roster-change',
-    removed,
-    contact: {
-      id: `${ctx.accountId}:${item.attrs.jid}`,
-      accountId: ctx.accountId,
-      address: item.attrs.jid,
-      name: item.attrs.name ?? '',
-      groups,
-      presence: 'offline',
-      statusText: '',
-      subscription: removed
-        ? 'none'
-        : subscription === 'both' || subscription === 'to' || subscription === 'from'
-          ? subscription
-          : 'none',
-    },
+    removed: (item.attrs.subscription ?? '') === 'remove',
+    contact: rosterItemToContact(item, ctx.accountId),
   };
 }
 
