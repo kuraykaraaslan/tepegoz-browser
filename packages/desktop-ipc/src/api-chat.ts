@@ -110,6 +110,11 @@ export interface ChatApi {
     conversationId: string,
     level: RoomNotifyLevel,
   ): Promise<void>;
+  /**
+   * Resolve a message's `mediaRef` to a quarantined `data:` URL. The main process performs the
+   * egress-bound download and size-caps it; `null` when the ref is unresolvable or too large.
+   */
+  resolveChatMedia(accountId: string, mediaRef: string): Promise<{ dataUrl: string } | null>;
   /** Subscribe to the `chat:state` push. Returns an unsubscribe. */
   onChatState(callback: (event: ChatStateEvent) => void): () => void;
 }

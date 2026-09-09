@@ -75,3 +75,9 @@ export const ChatSetRoomNotifyLevelSchema = z.object({
   conversationId: z.string().min(1).max(128),
   level: z.enum(CHAT_ROOM_NOTIFY_LEVELS),
 });
+
+/** `chat:resolve-media` — turn a message `mediaRef` (a protocol URI) into a quarantined data URL. */
+export const ChatResolveMediaSchema = z.object({
+  accountId: z.string().min(1).max(64),
+  mediaRef: z.string().min(1).max(2048),
+});

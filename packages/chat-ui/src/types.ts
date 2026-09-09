@@ -65,4 +65,9 @@ export interface ChatClientPort {
     conversationId: string,
     level: RoomNotifyLevel,
   ) => Promise<void>;
+  /**
+   * Resolve a message `mediaRef` to a quarantined `data:` URL — optional; when present,
+   * {@link ChatWorkspace} feeds it to `<MessageMedia>` so attachments render inline.
+   */
+  resolveChatMedia?: (accountId: string, mediaRef: string) => Promise<{ dataUrl: string } | null>;
 }

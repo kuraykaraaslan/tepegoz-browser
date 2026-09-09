@@ -123,6 +123,14 @@ describe('account + message commands', () => {
       protocolId: 'm-9',
     });
   });
+
+  it('resolveChatMedia → { accountId, mediaRef }', () => {
+    void chatApi.resolveChatMedia('work', 'mxc://s/abc');
+    expect(invoke).toHaveBeenCalledWith(IpcChannels.chatResolveMedia, {
+      accountId: 'work',
+      mediaRef: 'mxc://s/abc',
+    });
+  });
 });
 
 describe('onChatState', () => {

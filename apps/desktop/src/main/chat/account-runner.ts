@@ -294,6 +294,43 @@ export class ChatAccountRunner {
     this.deps.store.upsertConversation({ ...existing, notifyLevel: level });
     return Promise.resolve();
   }
+
+  /**
+   * Resolve a message `mediaRef` to a quarantined `data:` URL: the adapter turns the ref into a
+   * fetchable {@link MediaLocator}, this runner performs the egress-bound GET (the kill-switch
+   * applies), caps the size, and base64s the bytes. `null` when the protocol has no media repo, the
+   * ref is malformed, the download fails, or it is over {@link MEDIA_MAX_BYTES}.
+   */
+  async resolveMedia(mediaRef: string): Promise<{ dataUrl: string } | null> {
+    if (this.deps.adapter.resolveMedia === undefined) return null;
+    const locator = this.deps.adapter.resolveMedia(this.requireSession(), mediaRef);
+    if (locator === null) return null;
+    if (!this.deps.mayEgress()) throw new Error('chat egress is blocked by the kill-switch');
+
+    const res = await this.deps.transport.fetch(locator.url, {
+      method: 'GET',
+      headers: locator.headers,
+      timeoutMs: MEDIA_FETCH_TIMEOUT_MS,
+    });
+    if (res.status >= 400) return null;
+    const bytes = await res.bytes();
+    if (bytes.byteLength === 0 || bytes.byteLength > MEDIA_MAX_BYTES) return null;
+
+    const mime = sanitizeMediaMime(res.headers['content-type']);
+    const base64 = Buffer.from(bytes).toString('base64');
+    return { dataUrl: `data:${mime};base64,${base64}` };
+  }
+}
+
+const MEDIA_MAX_BYTES = 12 * 1024 * 1024;
+const MEDIA_FETCH_TIMEOUT_MS = 20_000;
+
+/** Keep only a sane `type/subtype` from the server's `content-type`; default to a safe octet-stream. */
+function sanitizeMediaMime(raw: string | undefined): string {
+  const first = (raw ?? '').split(';', 1)[0]?.trim().toLowerCase() ?? '';
+  return /^[a-z0-9][a-z0-9!#$&^_.+-]*\/[a-z0-9][a-z0-9!#$&^_.+-]*$/.test(first)
+    ? first
+    : 'application/octet-stream';
 }
 
 function deriveBareJid(account: ChatAccount): string {

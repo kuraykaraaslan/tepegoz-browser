@@ -42,6 +42,7 @@ const svc = {
   discoverRooms: vi.fn(() => Promise.resolve([])),
   joinRoom: vi.fn(() => Promise.resolve()),
   setRoomNotifyLevel: vi.fn(() => Promise.resolve()),
+  resolveMedia: vi.fn(() => Promise.resolve({ dataUrl: 'data:image/png;base64,AAAA' })),
 };
 
 const ev = { senderFrame: { url: TRUSTED }, sender: {} };
@@ -64,7 +65,7 @@ beforeEach(() => {
 });
 
 it('registers every chat channel', () => {
-  expect(h.handlers.size).toBe(12);
+  expect(h.handlers.size).toBe(13);
 });
 
 describe('rooms', () => {
@@ -94,6 +95,15 @@ describe('rooms', () => {
         level: 'loud',
       }),
     ).rejects.toBeDefined();
+  });
+});
+
+describe('media', () => {
+  it('chat:resolve-media validates + delegates + returns the data url', async () => {
+    const out = await call(IpcChannels.chatResolveMedia, { accountId: 'work', mediaRef: 'mxc://s/abc' });
+    expect(svc.resolveMedia).toHaveBeenCalledWith('work', 'mxc://s/abc');
+    expect(out).toEqual({ dataUrl: 'data:image/png;base64,AAAA' });
+    await expect(call(IpcChannels.chatResolveMedia, { accountId: 'work' })).rejects.toBeDefined();
   });
 });
 

@@ -82,6 +82,11 @@ class FakeAdapter {
       updatedAt: 1,
     }),
   );
+  resolveMedia?= vi.fn((_s: unknown, ref: string) =>
+    ref.startsWith('mxc://')
+      ? { url: `https://hs.example/media/${ref.slice(6)}`, headers: { authorization: 'Bearer t' } }
+      : null,
+  );
 }
 
 class FakeStore implements ChatRunnerStore {
@@ -132,7 +137,7 @@ function makeDeps(over: Partial<Deps> & { adapter: FakeAdapter; store: ChatRunne
     account,
     secret: 'pencil',
     adapter: over.adapter,
-    transport: {} as Deps['transport'],
+    transport: over.transport ?? ({} as Deps['transport']),
     store: over.store,
     now: over.now ?? (() => now),
     setTimer: over.setTimer ?? ((fn) => fn),
@@ -143,10 +148,12 @@ function makeDeps(over: Partial<Deps> & { adapter: FakeAdapter; store: ChatRunne
   return { deps, emitted };
 }
 
-function harness() {
+type DepsOverride = Partial<Omit<Deps, 'adapter' | 'store'>>;
+
+function harness(over: DepsOverride = {}) {
   const adapter = new FakeAdapter();
   const store = new FakeStore();
-  const { deps, emitted } = makeDeps({ adapter, store });
+  const { deps, emitted } = makeDeps({ adapter, store, ...over });
   const notifications: Array<{ conversationId: string; title: string; body: string }> = [];
   deps.notify = (n) => notifications.push(n);
   return { runner: new ChatAccountRunner(deps), adapter, store, emitted, notifications };
@@ -218,8 +225,8 @@ describe('ChatAccountRunner — connect + ingest', () => {
 });
 
 describe('ChatAccountRunner — actions', () => {
-  async function online() {
-    const h = harness();
+  async function online(over: DepsOverride = {}) {
+    const h = harness(over);
     h.runner.start();
     await tick();
     return h;
@@ -320,6 +327,59 @@ describe('ChatAccountRunner — actions', () => {
     await expect(runner.roster()).rejects.toThrow(/not connected/);
   });
 
+  describe('resolveMedia', () => {
+    const png = new Uint8Array([0x89, 0x50, 0x4e, 0x47]);
+    const fetchOk = vi.fn(() =>
+      Promise.resolve({
+        status: 200,
+        headers: { 'content-type': 'image/png; charset=binary' },
+        text: () => Promise.resolve(''),
+        bytes: () => Promise.resolve(png),
+      }),
+    );
+
+    it('resolves an mxc ref to a size-capped, sanitized data URL via the egress-bound transport', async () => {
+      const { runner, adapter } = await online({ transport: { fetch: fetchOk } as unknown as Deps['transport'] });
+      const out = await runner.resolveMedia('mxc://hs.example/AbC');
+      expect(adapter.resolveMedia).toHaveBeenCalledWith(expect.anything(), 'mxc://hs.example/AbC');
+      expect(fetchOk).toHaveBeenCalledWith(
+        'https://hs.example/media/hs.example/AbC',
+        expect.objectContaining({ method: 'GET', headers: { authorization: 'Bearer t' } }),
+      );
+      expect(out).toEqual({ dataUrl: `data:image/png;base64,${Buffer.from(png).toString('base64')}` });
+    });
+
+    it('returns null when the adapter cannot resolve the ref', async () => {
+      const { runner } = await online({ transport: { fetch: fetchOk } as unknown as Deps['transport'] });
+      expect(await runner.resolveMedia('https://not-a-ref/x')).toBeNull();
+    });
+
+    it('returns null on an oversized download', async () => {
+      const big = new Uint8Array(13 * 1024 * 1024);
+      const fetchBig = vi.fn(() =>
+        Promise.resolve({ status: 200, headers: {}, text: () => Promise.resolve(''), bytes: () => Promise.resolve(big) }),
+      );
+      const { runner } = await online({ transport: { fetch: fetchBig } as unknown as Deps['transport'] });
+      expect(await runner.resolveMedia('mxc://hs.example/big')).toBeNull();
+    });
+
+    it('throws when the kill-switch trips after connect', async () => {
+      let egress = true;
+      const { runner } = await online({
+        transport: { fetch: fetchOk } as unknown as Deps['transport'],
+        mayEgress: () => egress,
+      });
+      egress = false;
+      await expect(runner.resolveMedia('mxc://hs.example/AbC')).rejects.toThrow(/kill-switch/);
+    });
+
+    it('returns null when the adapter has no media repo', async () => {
+      const { runner, adapter } = await online({ transport: { fetch: fetchOk } as unknown as Deps['transport'] });
+      Reflect.deleteProperty(adapter, 'resolveMedia');
+      expect(await runner.resolveMedia('mxc://hs.example/AbC')).toBeNull();
+    });
+  });
+
   it('stop() disconnects and notifyEgressChange delegates', async () => {
     const { runner, adapter } = await online();
     await runner.stop();
@@ -366,8 +426,8 @@ describe('ChatAccountRunner — actions', () => {
 });
 
 describe('ChatAccountRunner — notifications', () => {
-  async function online() {
-    const h = harness();
+  async function online(over: DepsOverride = {}) {
+    const h = harness(over);
     h.runner.start();
     await tick();
     return h;

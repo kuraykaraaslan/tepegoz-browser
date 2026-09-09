@@ -33,3 +33,9 @@ export function isLocalMediaUrl(url: string): boolean {
 export function isSafeMediaResource(resource: MediaResource): boolean {
   return isLocalMediaUrl(resource.url) && resource.mime.trim() !== '';
 }
+
+/** The MIME type declared in a `data:` URL (`data:<mime>[;base64],…`), or `''` if there is none. */
+export function dataUrlMime(url: string): string {
+  const m = /^data:([^;,]+)[;,]/i.exec(url.trim());
+  return m?.[1]?.toLowerCase() ?? '';
+}

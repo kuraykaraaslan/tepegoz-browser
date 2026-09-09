@@ -8,6 +8,7 @@ import {
   ChatGetHistorySchema,
   ChatJoinRoomSchema,
   ChatMarkReadSchema,
+  ChatResolveMediaSchema,
   ChatSendMessageSchema,
   ChatSetPresenceSchema,
   ChatSetRoomNotifyLevelSchema,
@@ -78,6 +79,7 @@ export interface ChatIpcService {
     conversationId: string,
     level: 'all' | 'mentions' | 'none',
   ) => Promise<void>;
+  resolveMedia: (accountId: string, mediaRef: string) => Promise<{ dataUrl: string } | null>;
 }
 
 export function registerChatIpc(service: ChatIpcService): void {
@@ -137,6 +139,11 @@ export function registerChatIpc(service: ChatIpcService): void {
   handleAsync(IpcChannels.chatSetRoomNotifyLevel, async (_event, payload): Promise<void> => {
     const { accountId, conversationId, level } = ChatSetRoomNotifyLevelSchema.parse(payload);
     await service.setRoomNotifyLevel(accountId, conversationId, level);
+  });
+
+  handleAsync(IpcChannels.chatResolveMedia, async (_event, payload) => {
+    const { accountId, mediaRef } = ChatResolveMediaSchema.parse(payload);
+    return service.resolveMedia(accountId, mediaRef);
   });
 
   // Handled but not asserted here: `chat:state` is a MAIN→renderer push (webContents.send), not a

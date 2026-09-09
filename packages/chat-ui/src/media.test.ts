@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isLocalMediaUrl, isSafeMediaResource, mediaCategory } from './media';
+import { dataUrlMime, isLocalMediaUrl, isSafeMediaResource, mediaCategory } from './media';
 
 describe('mediaCategory', () => {
   it('classifies by MIME top-level type, case-insensitively', () => {
@@ -8,6 +8,16 @@ describe('mediaCategory', () => {
     expect(mediaCategory('audio/ogg')).toBe('audio');
     expect(mediaCategory('application/pdf')).toBe('file');
     expect(mediaCategory('')).toBe('file');
+  });
+});
+
+describe('dataUrlMime', () => {
+  it('reads the MIME from a data URL, base64 or not, and is empty otherwise', () => {
+    expect(dataUrlMime('data:image/png;base64,AAAA')).toBe('image/png');
+    expect(dataUrlMime('data:text/plain,hi')).toBe('text/plain');
+    expect(dataUrlMime('DATA:IMAGE/JPEG;base64,AAAA')).toBe('image/jpeg');
+    expect(dataUrlMime('blob:abc')).toBe('');
+    expect(dataUrlMime('data:base64stuff')).toBe('');
   });
 });
 

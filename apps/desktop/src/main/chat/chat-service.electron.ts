@@ -138,6 +138,7 @@ export const chatIpcService: ChatIpcService = {
   joinRoom: (accountId, roomJid) => requireService().joinRoom(accountId, roomJid),
   setRoomNotifyLevel: (accountId, conversationId, level) =>
     requireService().setRoomNotifyLevel(accountId, conversationId, level),
+  resolveMedia: (accountId, mediaRef) => requireService().resolveMedia(accountId, mediaRef),
 };
 
 /** Test seam. */

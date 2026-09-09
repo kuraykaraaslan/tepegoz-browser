@@ -34,6 +34,7 @@ export const chatApi: Pick<
   | 'discoverChatRooms'
   | 'joinChatRoom'
   | 'setChatRoomNotifyLevel'
+  | 'resolveChatMedia'
   | 'onChatState'
 > = {
   listChatAccounts: () => invoke<ChatAccountsSnapshot>(IpcChannels.chatListAccounts),
@@ -67,6 +68,8 @@ export const chatApi: Pick<
     invoke<void>(IpcChannels.chatJoinRoom, { accountId, roomJid }),
   setChatRoomNotifyLevel: (accountId: string, conversationId: string, level: RoomNotifyLevel) =>
     invoke<void>(IpcChannels.chatSetRoomNotifyLevel, { accountId, conversationId, level }),
+  resolveChatMedia: (accountId: string, mediaRef: string) =>
+    invoke<{ dataUrl: string } | null>(IpcChannels.chatResolveMedia, { accountId, mediaRef }),
   onChatState: (callback: (event: ChatStateEvent) => void) => {
     const listener = (_event: unknown, payload: ChatStateEvent): void => {
       callback(payload);

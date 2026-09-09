@@ -13,6 +13,7 @@ import { RoomMemberList } from './RoomMemberList';
 import { RosterPanel } from './RosterPanel';
 import { conversationTitle, type ChatAccountRef } from './conversation-list';
 import type { ResolveMedia } from './MessageMedia';
+import { dataUrlMime } from './media';
 import { useChatState } from './useChatState';
 import type { ChatClientPort } from './types';
 
@@ -42,6 +43,20 @@ export function ChatWorkspace({
   const chat = useChatState(port);
   const [tab, setTab] = useState<LeftTab>('chats');
   const [membersOpen, setMembersOpen] = useState(false);
+
+  // Prefer an explicit `resolveMedia` prop; otherwise adapt the port's `resolveChatMedia` for the
+  // active account. The host still returns a LOCAL `data:` URL — `<MessageMedia>` re-checks.
+  const { resolveChatMedia } = port;
+  const activeAccountId = chat.activeAccountId;
+  const effectiveResolveMedia = useMemo<ResolveMedia | undefined>(() => {
+    if (resolveMedia !== undefined) return resolveMedia;
+    if (resolveChatMedia === undefined || activeAccountId === null) return undefined;
+    return async (mediaRef: string) => {
+      const out = await resolveChatMedia(activeAccountId, mediaRef);
+      if (out === null) return null;
+      return { url: out.dataUrl, mime: dataUrlMime(out.dataUrl), name: 'attachment' };
+    };
+  }, [resolveMedia, resolveChatMedia, activeAccountId]);
 
   const accountRefs: ChatAccountRef[] = chat.accounts.map((a) => ({
     id: a.id,
@@ -200,7 +215,7 @@ export function ChatWorkspace({
                   messages={messages}
                   lastReadId={selected.lastReadId}
                   isOwn={(m) => selected.kind === 'dm' && m.senderAddress !== selected.address}
-                  resolveMedia={resolveMedia}
+                  resolveMedia={effectiveResolveMedia}
                   onOpenMedia={onOpenMedia}
                 />
                 {selected.kind === 'room' && membersOpen && selectedRoom !== undefined && (

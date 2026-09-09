@@ -205,4 +205,11 @@ export class ChatService {
   ): Promise<void> {
     return this.require(accountId).setRoomNotifyLevel(conversationId, level);
   }
+
+  async resolveMedia(
+    accountId: string,
+    mediaRef: string,
+  ): Promise<{ dataUrl: string } | null> {
+    return this.require(accountId).resolveMedia(mediaRef);
+  }
 }
