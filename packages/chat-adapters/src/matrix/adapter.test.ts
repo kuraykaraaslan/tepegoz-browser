@@ -200,4 +200,14 @@ describe('MatrixAdapter — actions', () => {
     expect(await adapter.listConversations()).toEqual([]);
     await adapter.disconnect(session);
   });
+
+  it('resolveMedia turns an mxc ref into an authenticated download locator', async () => {
+    const { adapter, session } = await connected();
+    expect(adapter.resolveMedia(session, 'mxc://m.example/pic1')).toEqual({
+      url: 'https://m.example/_matrix/client/v1/media/download/m.example/pic1',
+      headers: { authorization: 'Bearer tok' },
+    });
+    expect(adapter.resolveMedia(session, 'http://evil/x')).toBeNull();
+    await adapter.disconnect(session);
+  });
 });

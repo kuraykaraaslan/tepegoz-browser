@@ -50,6 +50,12 @@ export interface SendReceipt {
   ts: number;
 }
 
+/** Where the host can fetch an attachment's bytes: an absolute URL plus the headers to send. */
+export interface MediaLocator {
+  url: string;
+  headers: Record<string, string>;
+}
+
 /** One room a directory / conference service advertises (XEP-0030 disco for XMPP). */
 export interface RoomSummary {
   /** Bare room JID (`room@service`). */
@@ -88,6 +94,13 @@ export interface ChatAdapter {
 
   /** Upload a file from the file-operations sandbox; returns a `mediaRef` for `sendMessage`. */
   uploadMedia?(session: ChatSession, sandboxPath: string): Promise<string>;
+
+  /**
+   * Resolve a message `mediaRef` (a protocol URI, e.g. `mxc://…`) to a fetchable location. The host
+   * performs the egress-bound GET with these headers and quarantines the bytes — the Node-free
+   * adapter never handles them. `null` when the ref is malformed or the protocol has no media repo.
+   */
+  resolveMedia?(session: ChatSession, mediaRef: string): MediaLocator | null;
 
   /** The live event stream. Yields **raw** (unvalidated) events shaped like `ChatEvent`. */
   events(session: ChatSession): AsyncIterable<unknown>;

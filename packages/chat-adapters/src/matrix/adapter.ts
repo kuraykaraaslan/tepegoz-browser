@@ -12,12 +12,14 @@ import type {
   ChatSession,
   ConvId,
   HistoryPage,
+  MediaLocator,
   MsgId,
   SendReceipt,
 } from '../adapter';
 import { MATRIX_CAPS } from '../caps';
 import type { ChatFetchInit, ChatTransport } from '../transport';
 import { matrixTimelineEvent, type MatrixContext, type MatrixRoomEvent } from './events';
+import { mxcDownloadUrl } from './media';
 import { parseSyncResponse } from './sync';
 
 const CS = '/_matrix/client/v3';
@@ -383,6 +385,13 @@ export class MatrixAdapter implements ChatAdapter {
   async leaveRoom(session: ChatSession, conv: ConvId): Promise<void> {
     const s = session as MatrixSession;
     await this.request(s, 'POST', `${CS}/rooms/${encodeURIComponent(conv)}/leave`, {});
+  }
+
+  resolveMedia(session: ChatSession, mediaRef: string): MediaLocator | null {
+    const s = session as MatrixSession;
+    const url = mxcDownloadUrl(s.homeserverUrl, mediaRef);
+    if (url === null) return null;
+    return { url, headers: { authorization: `Bearer ${s.accessToken}` } };
   }
 
   async *events(session: ChatSession): AsyncIterable<unknown> {

@@ -22,6 +22,7 @@ export type {
   MsgId,
   HistoryPage,
   SendReceipt,
+  MediaLocator,
   RoomSummary,
   RawEventSink,
   ChatEvent,
@@ -173,6 +174,15 @@ export {
 } from './matrix/sync';
 
 export { MatrixAdapter, MatrixSession, MATRIX_ADAPTER_CAPS } from './matrix/adapter';
+
+export {
+  MATRIX_MEDIA_UPLOAD_PATH,
+  parseMxc,
+  mxcDownloadUrl,
+  mxcThumbnailUrl,
+  type MxcRef,
+  type ThumbnailOptions,
+} from './matrix/media';
 
 export {
   bytesToB64,
