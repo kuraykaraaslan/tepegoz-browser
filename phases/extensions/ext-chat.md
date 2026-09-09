@@ -251,14 +251,24 @@ wrong is expensive later.
   scaffold (manifest + en/tr i18n + placeholder surfaces + `comments` icon) ·
   `ExtensionPermissionSchema` extended · [ADR-0047](../../docs/adr/0047-chat-protocol-adapter-and-bridge-trust-model.md).
 
-**Remaining:** the desktop `ChatService` host — compose the reusable packages
-(`NodeChatTransport` [`@tepegoz/chat-transport-node`, done] · `ChatConnectionManager` +
-`ChatAccountState` · `XmppAdapter` · `ChatStore`) with credential-vault resolution, an **egress-bound
-SOCKS dialer** injected into `NodeTransportPorts.dial` (Phase-5 binding), the IPC surface + preload
-bridge, and the `background-connection` supervisor (enable/disable · profile switch · kill-switch).
-Every other layer — the transport, the protocol engine, reconnect, presence, folding — is a
-finished, unit-tested `@tepegoz/*` package; the host is composition. Best done on a clean
-`apps/desktop` tree. · **Branch:** `feat/ext-chat-xmpp-adapter` · **Risk:** low.
+**Status (2026-09-09):** ~97% — the desktop host's testable core is landed in
+`apps/desktop/src/main/chat/`:
+- `egress-dialer.ts` — `NodeTransportPorts.dial`: direct route → `net.connect`; tunnel route →
+  loopback SOCKS port + `@tepegoz/socks5` CONNECT; bound-but-down → fail-closed 503.
+- `account-runner.ts` — `ChatAccountRunner`: one account's `ChatConnectionManager` + `ChatAccountState`
+  + `ChatStore` glue; `sendMessage` (optimistic echo → reconcile), `setPresence`, `markRead`,
+  `history` (MAM), `roster`; per-protocol self identity.
+- `chat-service.ts` — `ChatService`: the runner map + the lifecycle that gates it (extension enabled ·
+  profile in force · Phase-5 kill switch fans out to every runner); `addAccount` / `removeAccount` /
+  `setEnabled` / `stop`; delegates the actions; default adapter = `XmppAdapter` for xmpp.
+
+**Remaining (all Electron glue — no new logic):** a `chat-service.electron.ts` adapter wiring the real
+`ChatStore` (over the `Db`), a `safeStorage`-backed `ChatSecretStore`, `BindingService.mayEgress` /
+`currentEgressRoute`, a `NodeChatTransport` built on the egress-dialer, and the extension-enabled
+check; the `chat:*` IPC channels + `@tepegoz/desktop-ipc` schemas + preload bridge; and the bootstrap
+(`chatService.start()` at ready, `.stop()` on quit / profile switch). Best done on a clean
+`apps/desktop` tree — it currently carries pre-existing typecheck breakage from parallel work.
+· **Branch:** `feat/ext-chat-xmpp-adapter` · **Risk:** low.
 
 ### Deliverables
 - [ ] **`extensions/ext-chat` scaffold** — manifest (`com.tepegoz.chat`, surfaces `sidebar`+`page`,
