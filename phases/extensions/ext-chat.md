@@ -409,9 +409,12 @@ XEP-0045 primitives — `buildMucJoin` (nick + password + history control), `bui
 `buildMucChangeSubject`, `buildMucInvite`; `parseMucPresence` → `MucOccupant` (nick from the resource,
 affiliation/role, real JID when non-anonymous, self from status 110, raw status codes),
 `parseMucSubject` (topic vs message), `parseMucError` (wrong-password / banned / nick-conflict /
-… classification). 20 tests, S100/B90/F100/L100. Next: wire into `XmppAdapter` (join/leave + occupant
-→ roster-in-a-room events), then room state in `chat-core`, then the room UI. · **Depends on:**
-X-chat.2 · **Branch:** `main` · **Risk:** low-medium.
+… classification). Then `@tepegoz/chat-core` `room.ts` — `RoomView` (joined / selfNick / subject /
+occupants-by-nick) with `applyOccupant` (offline removes; status-110 self sets selfNick + joined,
+self-offline marks left), `applySubject`, `leaveRoom`, `occupantList` (role rank then
+`turkishCompare`). **27 tests, S100/B95+/F100/L100.** Next: wire both into `XmppAdapter` (join/leave
+drives room `<presence>` traffic; occupant → a room-membership event), then the room UI. ·
+**Depends on:** X-chat.2 · **Branch:** `main` · **Risk:** low-medium.
 
 ### Deliverables
 - [ ] **XMPP MUC (XEP-0045)** — join/leave by JID, nickname, room roster + affiliations/roles,

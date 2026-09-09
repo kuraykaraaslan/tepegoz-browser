@@ -63,3 +63,19 @@ export {
   type ChatAccountStateOptions,
   type ChatStateChange,
 } from './account-state';
+
+export {
+  ROOM_AFFILIATIONS,
+  ROOM_ROLES,
+  emptyRoom,
+  applyOccupant,
+  applySubject,
+  leaveRoom,
+  occupantList,
+  occupantCount,
+  type RoomAffiliation,
+  type RoomRole,
+  type RoomOccupant,
+  type RoomOccupantUpdate,
+  type RoomView,
+} from './room';
