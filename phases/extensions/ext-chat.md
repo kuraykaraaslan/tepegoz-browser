@@ -323,8 +323,9 @@ close-out. · **Branch:** `main` · **Risk:** low.
 
 ## X-chat.2 — Roster & conversation UI
 
-**Status:** 🟢 Code-complete bar media (2026-09-09) — `@tepegoz/chat-ui` built and wired into
-`extensions/ext-chat`; only media rendering + the runtime DoD remain. `@tepegoz/chat-ui` scaffolded
+**Status:** 🟢 Code-complete (2026-09-09) — `@tepegoz/chat-ui` built (incl. safe media rendering) and
+wired into `extensions/ext-chat`; only the runtime Functional DoD + the desktop `resolveMedia` bridge
+method (X-chat.1 follow-up) remain. `@tepegoz/chat-ui` scaffolded
 (en/tr dict + parity test, leaf dep-cruiser rule, coverage registration). Landed: `linkifySegments`
 (safe — only `http(s)` becomes a link, never auto-navigated / fetched), `groupByDay` +
 `daySeparatorLabel` (timeline day buckets), `presenceMeta` + `<PresenceBadge>`, and the
@@ -384,15 +385,19 @@ Functional DoD. · **Depends on:** X-chat.1 · **Branch:** `main` · **Risk:** l
       "new messages" divider. _Reply quoting + "jump to unread" scroll: deferred._
 - [x] **Composer** — text, attachment hook (`OutgoingMessage.mediaPath`), reply/edit affordances,
       send on Enter / newline on Shift-Enter. _Emoji picker + per-conversation mute: deferred._
-- [ ] **Media rendering** — image/video thumbnails from local (quarantined) parts; click →
-      open-into-sandbox; no autoplay; no remote fetch for previews.
+- [x] **Media rendering** — `<MessageMedia>` loads strictly through an injected `resolveMedia` (host
+      reads the quarantined part); inline image / `controls`-no-autoplay video / audio, click-to-open
+      chip otherwise; `isSafeMediaResource` rejects any URL that is not `blob:` / `data:` so a preview
+      can never become a beacon. Wired through `<MessageTimeline>` + `<ChatWorkspace>` (optional prop;
+      the desktop `resolveMedia` bridge method is X-chat.1 follow-up work). _No remote fetch — tested._
 - [x] IPC read channels: conversation list, history page, roster, account live state; write channels
       for send / mark-read (all zod-gated — X-chat.1). _mute: deferred._
 
 ### Functional DoD
 - [ ] A human holds a real XMPP conversation across two accounts: send/receive, reactions, edits,
       typing, read receipts, an image attachment round-trips through the sandbox.
-- [ ] `@tepegoz/chat-ui` component tests; the media path asserts no remote fetch.
+- [x] `@tepegoz/chat-ui` component tests (125); the media path asserts no remote fetch
+      (`MessageMedia` / `MessageTimeline` tests).
 - [ ] Sub-phase DoD template ✔.
 
 ---

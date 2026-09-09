@@ -12,6 +12,13 @@ export const en = {
     today: 'Today',
     yesterday: 'Yesterday',
   },
+  media: {
+    loading: 'Loading attachment…',
+    /** The quarantined part could not be read (missing / not a local file). */
+    unavailable: 'Attachment unavailable',
+    /** Accessible name for the "open this file" action. */
+    open: 'Open attachment',
+  },
   timeline: {
     /** Marks a message the sender later edited. */
     edited: 'edited',

@@ -128,6 +128,29 @@ describe('MessageTimeline', () => {
     expect(screen.getByText('ghost@x.example')).toBeDefined();
   });
 
+  it('renders an attachment through resolveMedia and passes mediaRef only as an opaque key', async () => {
+    const resolveMedia = vi.fn(() =>
+      Promise.resolve({ url: 'blob:local-1', mime: 'image/png', name: 'pic.png' }),
+    );
+    wrap(
+      <MessageTimeline
+        messages={[msg({ body: '', kind: 'media', mediaRef: 'https://evil.example/beacon.png' })]}
+        resolveMedia={resolveMedia}
+        now={T0}
+      />,
+    );
+    const img = await screen.findByRole('img');
+    expect(img.getAttribute('src')).toBe('blob:local-1');
+    // the message's "mediaRef" URL is never used as a src — only handed to resolveMedia verbatim
+    expect(resolveMedia).toHaveBeenCalledWith('https://evil.example/beacon.png');
+    expect(document.querySelector('img[src^="http"]')).toBeNull();
+  });
+
+  it('does not render attachments when no resolveMedia is supplied', () => {
+    wrap(<MessageTimeline messages={[msg({ body: '', kind: 'media', mediaRef: 'ref' })]} now={T0} />);
+    expect(screen.queryByText('Loading attachment…')).toBeNull();
+  });
+
   it('renders a reactions row', () => {
     wrap(
       <MessageTimeline

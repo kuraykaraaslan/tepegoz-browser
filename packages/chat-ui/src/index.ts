@@ -18,6 +18,14 @@ export {
 export { buildTimeline, type TimelineItem, type BuildTimelineOptions } from './timeline';
 export { MessageTimeline, type MessageTimelineProps } from './MessageTimeline';
 export {
+  mediaCategory,
+  isLocalMediaUrl,
+  isSafeMediaResource,
+  type MediaCategory,
+  type MediaResource,
+} from './media';
+export { MessageMedia, type MessageMediaProps, type ResolveMedia } from './MessageMedia';
+export {
   isSendKey,
   draftToBody,
   canSend,

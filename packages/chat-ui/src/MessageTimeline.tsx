@@ -2,6 +2,7 @@ import { useLocale, useT } from '@tepegoz/i18n/react';
 import type { ChatMessage } from '@tepegoz/shared-types';
 import { chatUiDict, type ChatUiStrings } from './i18n';
 import { linkifySegments } from './linkify';
+import { MessageMedia, type ResolveMedia } from './MessageMedia';
 import { buildTimeline, type BuildTimelineOptions } from './timeline';
 import { daySeparatorLabel, formatClockTime } from './time';
 
@@ -18,6 +19,12 @@ export interface MessageTimelineProps {
    * absent this callback, links render as inert text.
    */
   onOpenLink?: (href: string) => void;
+  /**
+   * Resolve a message's `mediaRef` to a LOCAL resource (host reads the quarantined part). Absent ⇒
+   * attachments are not rendered. The timeline never fetches a remote URL for a preview.
+   */
+  resolveMedia?: ResolveMedia | undefined;
+  onOpenMedia?: ((mediaRef: string) => void) | undefined;
   groupWindowMs?: BuildTimelineOptions<ChatMessage>['groupWindowMs'];
 }
 
@@ -84,6 +91,8 @@ export function MessageTimeline({
   now = Date.now(),
   isOwn,
   onOpenLink,
+  resolveMedia,
+  onOpenMedia,
   groupWindowMs,
 }: Readonly<MessageTimelineProps>) {
   const s = useT(chatUiDict);
@@ -129,7 +138,16 @@ export function MessageTimeline({
                 </time>
               </span>
             )}
-            <MessageBody message={message} strings={s} onOpenLink={onOpenLink} />
+            {(message.body !== '' || message.redacted) && (
+              <MessageBody message={message} strings={s} onOpenLink={onOpenLink} />
+            )}
+            {message.mediaRef !== null && resolveMedia !== undefined && (
+              <MessageMedia
+                mediaRef={message.mediaRef}
+                resolveMedia={resolveMedia}
+                onOpenMedia={onOpenMedia}
+              />
+            )}
             <Reactions message={message} />
             {own && (
               <span className="chat-msg__delivery" data-state={message.deliveryState}>

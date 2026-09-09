@@ -12,6 +12,11 @@ export const tr: ChatUiStrings = {
     today: 'Bugün',
     yesterday: 'Dün',
   },
+  media: {
+    loading: 'Ek yükleniyor…',
+    unavailable: 'Ek kullanılamıyor',
+    open: 'Eki aç',
+  },
   timeline: {
     edited: 'düzenlendi',
     redacted: 'Mesaj silindi',

@@ -7,6 +7,7 @@ import { ConversationList } from './ConversationList';
 import { MessageTimeline } from './MessageTimeline';
 import { RosterPanel } from './RosterPanel';
 import { conversationTitle, type ChatAccountRef } from './conversation-list';
+import type { ResolveMedia } from './MessageMedia';
 import { useChatState } from './useChatState';
 import type { ChatClientPort } from './types';
 
@@ -14,6 +15,9 @@ export interface ChatWorkspaceProps {
   port: ChatClientPort;
   /** Open the add-account flow (owned by the host — it collects the secret). */
   onAddAccount?: () => void;
+  /** Resolve an attachment's `mediaRef` to a LOCAL resource; absent ⇒ attachments are not shown. */
+  resolveMedia?: ResolveMedia | undefined;
+  onOpenMedia?: ((mediaRef: string) => void) | undefined;
 }
 
 type LeftTab = 'chats' | 'contacts';
@@ -23,7 +27,12 @@ type LeftTab = 'chats' | 'contacts';
  * chats / contacts left column, and the open conversation (timeline + composer). Presentational glue
  * only — every side effect goes through the injected {@link ChatClientPort}.
  */
-export function ChatWorkspace({ port, onAddAccount }: Readonly<ChatWorkspaceProps>) {
+export function ChatWorkspace({
+  port,
+  onAddAccount,
+  resolveMedia,
+  onOpenMedia,
+}: Readonly<ChatWorkspaceProps>) {
   const s = useT(chatUiDict);
   const chat = useChatState(port);
   const [tab, setTab] = useState<LeftTab>('chats');
@@ -145,6 +154,8 @@ export function ChatWorkspace({ port, onAddAccount }: Readonly<ChatWorkspaceProp
                 messages={messages}
                 lastReadId={selected.lastReadId}
                 isOwn={(m) => selected.kind === 'dm' && m.senderAddress !== selected.address}
+                resolveMedia={resolveMedia}
+                onOpenMedia={onOpenMedia}
               />
               <Composer
                 onSubmit={(draft) => chat.send(draft.text, { replyToId: draft.replyToId })}
