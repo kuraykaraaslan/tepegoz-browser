@@ -51,15 +51,22 @@ a star the reader cannot check is the same unearned-superlative move the rest of
   trusted**, and a redacted audit record for every transfer
 - ★ **Upload activity** — a redacted view of what left your machine, with cancel. Most browsers have
   no such surface at all
-- **Find in page**, **profiles** with isolated storage, **native context menus**, per-site zoom
+- **Find in page**, **native context menus**, per-site zoom
+- **Profiles** — a Chrome-style profile menu and switcher and a `tepegoz://profiles` manager, over
+  real isolation: each profile is its own process with its own cookies, logins, history and cache
+- **Reader mode** — a distraction-free reading view built from the page's extracted content as
+  structured blocks rather than re-rendered HTML, with adjustable text size and a light / sepia / dark
+  reading theme
 - **One keyboard-shortcut registry** — every shortcut is defined in a single place, so the same key
   cannot mean two things in two windows
+- **Data you can take with you** — bookmarks, saved logins, browsing history and the downloads list
+  export to CSV; preferences and macros export to re-importable JSON
 - **Tray and hide-tabs modes** for work that should keep running without occupying your screen
 - **Internal pages** for settings, downloads, uploads, bookmarks, history, extensions and tasks
 
 ### Planned
 
-- Reader mode, print preview and built-in PDF viewing
+- Print preview and built-in PDF viewing
 - Split view and workspaces
 - Vertical tabs
 - Chrome MV3 extension support, with an honest compatibility matrix rather than a blanket promise
@@ -70,9 +77,19 @@ a star the reader cannot check is the same unearned-superlative move the rest of
 
 ### Available
 
-- **Command palette** (`Ctrl+K`) with four modes: Chat, Do, Make, Tasks
+- **Command palette** (`Ctrl+K`, from the browser chrome or while a page has focus) — runs browser
+  commands, and lists and searches every keyboard shortcut; also reachable from the address bar with
+  `@command`
 - **Live agent console** — the page, the action, the observation, progress, token cost and errors, as
   they happen
+- **A transcript that stays legible after the run** — each turn carries the provider, model and
+  autonomy it ran with and the skill that produced it; a context-fullness gauge, the run's step
+  budget and per-step timing; a permanent card for every approval you granted; one-click copy of any
+  message; and Retry on a turn that failed
+- **A plain-language reason when a run stops** — "the run reached its step limit before finishing",
+  not a raw `max_steps` code
+- **Read-only page diagnostics** — the agent can read a tab's recent console messages and network
+  requests to work out why a task stalled, through tools that only ever read
 - **Editable plans** with each step tagged read / state-changing / destructive / financial
 - ★ **Risk-tiered approvals** — six tiers derived from the tool, its **validated arguments** and its
   target, not from a declared label the tool author supplied
@@ -100,6 +117,12 @@ a star the reader cannot check is the same unearned-superlative move the rest of
   before the request reaches any provider
 - ★ **Provider-agnostic by construction** — Anthropic, OpenAI, Gemini, Kimi and local models normalize
   to one canonical shape, so nothing above the gateway is written against a vendor
+
+### In progress
+
+- The command palette's **Do, Make and Tasks modes** — all four tabs are there and `Tab` cycles them,
+  but only Chat carries commands today, and typing a goal into the palette does not start a run. The
+  agent console is what drives the agent
 
 ### Planned
 

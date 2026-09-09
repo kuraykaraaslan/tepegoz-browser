@@ -45,18 +45,20 @@ its own.
 
 ## Section 2 — What it supports
 
-| Capability                         | Status                  |
-| ---------------------------------- | ----------------------- |
-| WireGuard, userspace               | Available               |
-| Tor                                | Available               |
-| Tor over VPN, chained              | Available               |
-| Per-tab binding                    | Available               |
-| Per-group binding                  | Available               |
-| Profile-wide default               | Available               |
-| Multiple tunnels up simultaneously | Available               |
-| Fail-closed kill switch            | Available               |
-| OpenVPN                            | Planned                 |
-| Managed exit nodes                 | Only if there is demand |
+| Capability                                                   | Status                  |
+| ------------------------------------------------------------ | ----------------------- |
+| WireGuard, userspace                                         | Available               |
+| Tor                                                          | Available               |
+| Tor over VPN, chained                                        | Available               |
+| Per-tab binding                                              | Available               |
+| Per-group binding                                            | Available               |
+| Profile-wide default                                         | Available               |
+| Multiple tunnels up simultaneously                           | Available               |
+| Fail-closed kill switch                                      | Available               |
+| Tor "new identity" — fresh circuits and a cleared cookie jar | Available               |
+| Per-connection health (uptime, drop count)                   | Available               |
+| OpenVPN                                                      | Planned                 |
+| Managed exit nodes                                           | Only if there is demand |
 
 **Nothing is bundled and nothing needs administrator rights.** Tepegöz does not ship a VPN, does not
 resell one, and does not run exit nodes. You bring a configuration from a provider you already trust —
@@ -81,6 +83,21 @@ trade-off is that re-binding reloads the tab, and the browser tells you that bef
 
 **[CLAIM]** Both properties are verified end-to-end against the built application, by killing a live
 endpoint and confirming that a proven-reachable clear path records nothing.
+
+### Starting over
+
+For a Tor connection, one action rotates the circuits **and** wipes that partition's cookie jar —
+both halves or neither. Doing one alone is the failure worth designing against: fresh circuits over
+old cookies is a new address carrying the same logged-in session, and a cleared jar over the same
+circuit is re-linked at the network layer. The connection goes down first, the kill switch holds
+every bound tab while the wipe runs, and it comes back only after — and you are told which tabs it
+will disturb before it starts.
+
+### Drops you would otherwise miss
+
+A tunnel that dies and reconnects on its own is easy not to notice. The connections overview counts
+drops per session and shows how long the current tunnel has held, so a flapping route is visible
+without waiting for a leak to reveal it.
 
 ---
 
@@ -111,6 +128,14 @@ page will keep saying so.
 
 It also cannot help with what you type. Logging into an account through a tunnel identifies you to that
 account.
+
+Tepegöz says all of this where you configure it, not only here. The connections overview carries a
+permanent line spelling out that a tunnel changes the address a site sees and nothing else — not your
+cookies or logins, not your browser's fingerprint — and that this version normalises none of that.
+When any connection is Tor it adds two more: a Tor-routed tab is not a Tor Browser session, and
+chaining a VPN in front of Tor shifts trust to the VPN operator. And when a tunnelled tab loads a
+page over plain `http://`, Site Info warns that the exit — a Tor node, your VPN, a proxy — can read
+and change everything on it.
 
 ---
 
