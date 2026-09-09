@@ -1,6 +1,6 @@
 import type { ChatAccount, ChatContact, ChatMessage } from '@tepegoz/shared-types';
 import type { ChatAdapter, ChatTransport, RoomSummary } from '@tepegoz/chat-adapters';
-import { XmppAdapter } from '@tepegoz/chat-adapters';
+import { IrcAdapter, XmppAdapter } from '@tepegoz/chat-adapters';
 import type { ChatConnState } from '@tepegoz/chat-core';
 import { AppError } from '@tepegoz/libs';
 import {
@@ -103,6 +103,7 @@ export class ChatService {
   private makeAdapter(account: ChatAccount): ChatAdapter {
     if (this.deps.makeAdapter !== undefined) return this.deps.makeAdapter(account);
     if (account.server.protocol === 'xmpp') return new XmppAdapter();
+    if (account.server.protocol === 'irc') return new IrcAdapter();
     throw new AppError(`Chat: no adapter for protocol "${account.server.protocol}" yet`, 501);
   }
 

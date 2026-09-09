@@ -215,9 +215,13 @@ describe('ChatService — delegation', () => {
 describe('ChatService — default adapter selection', () => {
   it('refuses an unimplemented protocol with an error state and no runner', async () => {
     const emit = vi.fn();
-    const secrets = fakeSecrets({ 'chat:irc-acc': 's' });
+    const secrets = fakeSecrets({ 'chat:mx-acc': 's' });
+    const mxAccount: ChatAccount = {
+      ...account('mx-acc'),
+      server: { protocol: 'matrix', homeserverUrl: 'https://m.example', userId: '@a:m.example' },
+    };
     const service = new ChatService({
-      loadAccounts: () => [account('irc-acc', 'irc')],
+      loadAccounts: () => [mxAccount],
       secrets,
       persistAccount: () => undefined,
       deleteAccount: () => undefined,
@@ -233,8 +237,29 @@ describe('ChatService — default adapter selection', () => {
     await service.start();
     expect(service.accountStates()).toEqual({});
     expect(emit).toHaveBeenCalledWith(
-      expect.objectContaining({ accountId: 'irc-acc', state: 'error' }),
+      expect.objectContaining({ accountId: 'mx-acc', state: 'error' }),
     );
+  });
+
+  it('builds a real IrcAdapter for an irc account', async () => {
+    const secrets = fakeSecrets({ 'chat:irc-acc': 's' });
+    const service = new ChatService({
+      loadAccounts: () => [account('irc-acc', 'irc')],
+      secrets,
+      persistAccount: () => undefined,
+      deleteAccount: () => undefined,
+      makeRunnerStore: () => new FakeStore(),
+      transport: { openTCP: () => new Promise(() => undefined) } as never,
+      mayEgress: () => true,
+      now: () => 1,
+      setTimer: (fn) => fn,
+      clearTimer: () => undefined,
+      emit: vi.fn(),
+      isEnabled: () => true,
+    });
+    await service.start();
+    await tick();
+    expect(service.accountStates()).toHaveProperty('irc-acc');
   });
 
   it('builds a real XmppAdapter when none is injected', async () => {

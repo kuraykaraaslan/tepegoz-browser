@@ -523,9 +523,10 @@ queue): `connect` drives `IrcRegistration` over `transport.openTCP` (6697/6667 d
 reads `CHANTYPES` from `005`; live lines → `ircMessageToEvent`; own `JOIN`/`PART` tracked in
 `session.joined` for auto-rejoin; `sendMessage` / `joinRoom` / `leaveRoom` / `setPresence` (→ `AWAY`)
 / `changeNick`; `roster` / `history` / `markRead` inert (IRC has none / `chathistory` is a later
-slice). 15 tests. Next: `chathistory` backfill + a recorded-trace fixture suite + wire `IrcAdapter`
-into the desktop `ChatService.makeAdapter`. · **Depends on:** X-chat.1 (contract) + X-chat.2/.3 (UI) ·
-**Branch:** `main` · **Risk:** low-medium.
+slice). 15 tests. Then **wired into the desktop** — `ChatService.makeAdapter` returns `new IrcAdapter()` for
+an `irc` account (was a 501); `chat-service.test.ts` now proves an IRC account spins up a runner and a
+`matrix` account still errors. Next: IRCv3 `chathistory` backfill + a recorded-trace fixture suite. ·
+**Depends on:** X-chat.1 (contract) + X-chat.2/.3 (UI) · **Branch:** `main` · **Risk:** low-medium.
 
 ### Deliverables
 - [ ] **IRC adapter** (`irc/`) — RFC 2812 message parser, connection registration (`PASS`/`NICK`/
