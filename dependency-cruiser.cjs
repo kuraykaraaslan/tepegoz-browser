@@ -138,6 +138,16 @@ module.exports = {
       to: { path: ['^apps/', 'node_modules/electron'] },
     },
     {
+      name: 'chat-core-no-app-no-electron',
+      severity: 'error',
+      comment:
+        '@tepegoz/chat-core is the Electron-free, protocol-agnostic messenger core (ext-chat X-chat.0): ' +
+        'normalize / fold / order / send-queue over injected adapter events. No Electron, no app imports — ' +
+        'the desktop ChatService owns the sockets and injects them. See docs/package-map.md.',
+      from: { path: '^packages/chat-core/' },
+      to: { path: ['^apps/', 'node_modules/electron'] },
+    },
+    {
       name: 'cert-warning-ui-is-a-leaf',
       severity: 'error',
       comment:
