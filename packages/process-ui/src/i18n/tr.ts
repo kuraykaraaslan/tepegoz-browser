@@ -19,6 +19,7 @@ export const tr: ProcessStrings = {
   noProcess: '—',
   discarded: 'Uyuyor',
   total: 'Toplam',
+  tableCaption: 'Çalışan işlemler',
   endProcess: 'İşlemi sonlandır',
   endProcessConfirm:
     'Bu sekmenin işlemi sonlandırılsın mı? Geri döndüğünüzde sayfa yeniden yüklenir.',

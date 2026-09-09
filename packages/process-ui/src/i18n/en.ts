@@ -22,6 +22,8 @@ export const en = {
   discarded: 'Sleeping',
   /** The row that sums every process. */
   total: 'Total',
+  /** Visually-hidden `<caption>` naming the table for screen-reader table navigation. */
+  tableCaption: 'Running processes',
   /** "End process" action + its confirm. */
   endProcess: 'End process',
   endProcessConfirm: 'End this tab’s process? The page will reload when you return to it.',

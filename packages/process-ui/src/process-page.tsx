@@ -206,6 +206,7 @@ export function ProcessPage({ poll, end, intervalMs = 1500 }: Readonly<ProcessPa
           )}
           {orderedRows !== null && orderedRows.length > 0 && (
             <table className="w-full text-sm">
+              <caption className="sr-only">{t.tableCaption}</caption>
               <thead>
                 <tr className="border-b border-border text-left text-xs text-text-secondary">
                   <th aria-sort={ariaSortFor(sort, 'task')} className="py-2 font-medium">

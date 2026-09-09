@@ -170,6 +170,8 @@ work lives in Phase 2; agent orchestration (multi-tab parallelism) stays in Phas
       calls `end` on a confirming second click. Blur or Escape disarms it, and the page drops a pending
       confirm if that tab leaves the snapshot — so a destructive renderer kill can no longer happen on a
       single stray click._
+      — _a11y: the process table now carries a visually-hidden `<caption>` (localized `tableCaption`,
+      en+tr) so screen-reader table navigation announces a name instead of an anonymous grid._
 
 ### L9 — Everyday-UX toggles with no current home
 

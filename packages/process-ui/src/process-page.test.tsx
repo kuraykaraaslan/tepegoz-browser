@@ -64,6 +64,12 @@ describe('ProcessPage', () => {
     expect(screen.getByText('Total')).toBeDefined();
   });
 
+  it('gives the table an accessible name via a visually-hidden caption', async () => {
+    renderPage();
+    await waitFor(() => expect(screen.getByText('Example')).toBeDefined());
+    expect(screen.getByRole('table', { name: /Running processes/ })).toBeDefined();
+  });
+
   it('shows “—” for a discarded tab and no End-process button on it', async () => {
     renderPage();
     await waitFor(() => expect(screen.getByText('Sleeping tab')).toBeDefined());
