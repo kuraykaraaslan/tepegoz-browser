@@ -252,6 +252,19 @@ export const IpcChannels = {
   tasksListRuns: 'tasks:list-runs',
   tasksListArtifacts: 'tasks:list-artifacts',
   tasksState: 'tasks:state',
+  // Multi-protocol messenger (`com.tepegoz.chat`). Accounts + conversations + roster live in the
+  // profile DB; the main-process ChatService owns every socket and pushes state/changes live.
+  chatListAccounts: 'chat:list-accounts',
+  chatAddAccount: 'chat:add-account',
+  chatRemoveAccount: 'chat:remove-account',
+  chatListConversations: 'chat:list-conversations',
+  chatGetHistory: 'chat:get-history',
+  chatGetRoster: 'chat:get-roster',
+  chatSendMessage: 'chat:send-message',
+  chatSetPresence: 'chat:set-presence',
+  chatMarkRead: 'chat:mark-read',
+  /** Main→renderer push: per-account connection state + folded conversation/roster changes. */
+  chatState: 'chat:state',
   /** Renderer→main: the identity of every built-in extension (from the validated on-disk catalog). */
   extensionsListManifests: 'extensions:list-manifests',
   /** Main→renderer push: run this extension's click action (relayed from the Extensions panel popup,

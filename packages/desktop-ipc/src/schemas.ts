@@ -15,6 +15,7 @@ export * from './schemas-extensions';
 export * from './schemas-ui';
 export * from './schemas-logins';
 export * from './schemas-macros';
+export * from './schemas-chat';
 
 export { DownloadCommandInputSchema, DownloadCreateInputSchema } from '@tepegoz/downloads/schemas';
 export { UploadCommandInputSchema, UploadCreateInputSchema } from '@tepegoz/uploads/schemas';
