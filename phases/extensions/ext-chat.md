@@ -262,11 +262,16 @@ wrong is expensive later.
   profile in force · Phase-5 kill switch fans out to every runner); `addAccount` / `removeAccount` /
   `setEnabled` / `stop`; delegates the actions; default adapter = `XmppAdapter` for xmpp.
 
-**Remaining (all Electron glue — no new logic):** a `chat-service.electron.ts` adapter wiring the real
-`ChatStore` (over the `Db`), a `safeStorage`-backed `ChatSecretStore`, `BindingService.mayEgress` /
-`currentEgressRoute`, a `NodeChatTransport` built on the egress-dialer, and the extension-enabled
-check; the `chat:*` IPC channels + `@tepegoz/desktop-ipc` schemas + preload bridge; and the bootstrap
-(`chatService.start()` at ready, `.stop()` on quit / profile switch). Best done on a clean
+Also landed: `@tepegoz/desktop-ipc` `chat:*` channels + `schemas-chat.ts` (the renderer→main payload
+guards), and `main/ipc/ipc-chat.ts` — the nine `chat:*` handlers over an injected `ChatIpcService`
+(unit-tested: schema-gate before the service, `{protocolId}` result shape, untrusted-frame refusal).
+
+**Remaining (all Electron glue — no new logic):** `chat-service.electron.ts` — the singleton that
+implements `ChatIpcService` by composing `ChatService` with the real `ChatStore` (over the `Db`), a
+`safeStorage`-backed `ChatSecretStore`, `BindingService.mayEgress` / `currentEgressRoute`, a
+`NodeChatTransport` on the egress-dialer, and the prefs-driven extension-enabled check; the
+`chat:state` push + preload `api-chat.ts` bridge; and the bootstrap (`registerChatIpc` +
+`chatService.start()` at ready, `.stop()` on quit / profile switch). Best done on a clean
 `apps/desktop` tree — it currently carries pre-existing typecheck breakage from parallel work.
 · **Branch:** `feat/ext-chat-xmpp-adapter` · **Risk:** low.
 
