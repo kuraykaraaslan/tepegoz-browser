@@ -16,6 +16,11 @@ export function isSameDay(a: number, b: number): boolean {
   return startOfDay(a) === startOfDay(b);
 }
 
+/** Wall-clock time (no date) for a message stamp, in the given locale — e.g. "14:05" / "2:05 PM". */
+export function formatClockTime(ts: number, locale?: string): string {
+  return new Date(ts).toLocaleTimeString(locale, { hour: 'numeric', minute: '2-digit' });
+}
+
 export interface DayGroup<M> {
   /** Local-midnight timestamp — the separator key. */
   readonly day: number;

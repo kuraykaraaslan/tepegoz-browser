@@ -330,7 +330,11 @@ test, leaf dep-cruiser rule, coverage registration). Landed so far: `linkifySegm
 **conversation list** — `sortConversations` (recency, id-tiebroken) / `groupConversationsByAccount`
 (account order, trailing unknown bucket) / `conversationTitle` + `<ConversationList>` (recency-first,
 per-account grouping when >1 account, unread/mention badges capped at 99+, DM presence dots, muted
-marker). **31 tests, S99.7/B96/F100/L99.7.** Next: message timeline → composer → account setup
+marker); and the **message timeline** — `buildTimeline` (day separators, one "new messages" divider
+positioned from `lastReadId`, consecutive same-sender grouping with a time window, system messages
+never grouped) + `<MessageTimeline>` (linkified body — links routed through an `onOpenLink` callback,
+never auto-navigated, inert text without one; redacted placeholder; edited marker; reactions row;
+own-message delivery state). **49 tests, S100/B96/F100/L100.** Next: composer → account setup
 wizard, then wire into `extensions/ext-chat` replacing the placeholder surfaces. · **Depends on:**
 X-chat.1 · **Branch:** `main` · **Risk:** medium.
 

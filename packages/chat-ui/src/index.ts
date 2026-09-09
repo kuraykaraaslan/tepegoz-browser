@@ -10,10 +10,13 @@ export { linkifySegments, MAX_LINK_SEGMENTS, type LinkSegment } from './linkify'
 export {
   startOfDay,
   isSameDay,
+  formatClockTime,
   groupByDay,
   daySeparatorLabel,
   type DayGroup,
 } from './time';
+export { buildTimeline, type TimelineItem, type BuildTimelineOptions } from './timeline';
+export { MessageTimeline, type MessageTimelineProps } from './MessageTimeline';
 export { presenceMeta, type PresenceMeta, type PresenceTone } from './presence';
 export { PresenceBadge, type PresenceBadgeProps } from './PresenceBadge';
 export {
