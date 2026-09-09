@@ -236,14 +236,20 @@ wrong is expensive later.
 
 ## X-chat.1 — XMPP adapter + connection spine
 
-**Status:** 🟡 In progress (~35%, 2026-09-09) — done: `ExtensionPermissionSchema` extended
-(`accounts`/`background-connection`/`notifications`/`contacts`); `@tepegoz/chat-adapters`
-(`ChatAdapter` contract + `ChatTransport` port + `XMPP_CAPS`/`IRC_CAPS`/`MATRIX_CAPS` +
-`negotiateCaps`); `ChatStore` + persistence migration 21; [ADR-0047](../../docs/adr/0047-chat-protocol-adapter-and-bridge-trust-model.md)
-written. Remaining: `ext-chat` extension scaffold + i18n, the XMPP stanza engine, desktop
-`ChatService` + IPC + preload, `background-connection` supervisor, autodiscover. · **Branch:**
-`feat/ext-chat-xmpp-adapter` · **Risk:** high — the XMPP stanza engine + reconnect + the
-`ChatService` host are the core risk.
+**Status:** 🟡 In progress (~60%, 2026-09-09) — done: `ExtensionPermissionSchema` extended;
+`@tepegoz/chat-adapters` — the `ChatAdapter` contract + `ChatTransport` port + caps presets, **and
+the full pure XMPP protocol layer**: `XmlStreamParser` (incremental, bounded, fail-closed),
+stanza↔`ChatEvent` mapping (message/presence/roster/receipts/chat-states/correction/retraction/MAM
+delay), `<stream:features>` parsing + SASL (PLAIN + SCRAM-SHA-1/256 via Web Crypto, RFC 5802 vector
+passes), the `XmppNegotiator` state machine (STARTTLS/direct-TLS → SASL → bind → SM), XEP-0198
+`StreamManager` (h-count + ack + resumption), and **`XmppAdapter`** wiring transport → parser →
+negotiator → SM → live events (`sendMessage`/`setPresence`/`markRead`/`disconnect`, ~200 tests).
+`ChatStore` + persistence migration 21;
+[ADR-0047](../../docs/adr/0047-chat-protocol-adapter-and-bridge-trust-model.md) written. Remaining:
+roster + MAM history round-trips in `XmppAdapter`; `ext-chat` extension scaffold + i18n; desktop
+`ChatService` host + IPC + preload; `background-connection` supervisor; autodiscover. · **Branch:**
+`feat/ext-chat-xmpp-adapter` · **Risk:** medium — the protocol engine (the core risk) is done and
+tested; the host wiring remains.
 
 ### Deliverables
 - [ ] **`extensions/ext-chat` scaffold** — manifest (`com.tepegoz.chat`, surfaces `sidebar`+`page`,
