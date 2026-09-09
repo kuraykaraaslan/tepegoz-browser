@@ -29,7 +29,8 @@ export interface OpenTcpOptions {
 export interface ChatFetchInit {
   method?: 'GET' | 'POST' | 'PUT' | 'DELETE';
   headers?: Record<string, string>;
-  body?: string;
+  /** A UTF-8 string, or raw bytes for a media-repository upload. */
+  body?: string | Uint8Array;
   /** Abort the request after this many ms. */
   timeoutMs?: number;
 }

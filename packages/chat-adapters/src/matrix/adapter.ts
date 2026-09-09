@@ -14,12 +14,13 @@ import type {
   HistoryPage,
   MediaLocator,
   MsgId,
+  OutgoingMedia,
   SendReceipt,
 } from '../adapter';
 import { MATRIX_CAPS } from '../caps';
 import type { ChatFetchInit, ChatTransport } from '../transport';
 import { matrixTimelineEvent, type MatrixContext, type MatrixRoomEvent } from './events';
-import { mxcDownloadUrl } from './media';
+import { MATRIX_MEDIA_UPLOAD_PATH, mxcDownloadUrl } from './media';
 import { parseSyncResponse } from './sync';
 
 const CS = '/_matrix/client/v3';
@@ -394,6 +395,34 @@ export class MatrixAdapter implements ChatAdapter {
     const url = mxcDownloadUrl(s.homeserverUrl, mediaRef);
     if (url === null) return null;
     return { url, headers: { authorization: `Bearer ${s.accessToken}` } };
+  }
+
+  async uploadMedia(session: ChatSession, media: OutgoingMedia): Promise<string> {
+    const s = session as MatrixSession;
+    const q = new URLSearchParams({ filename: media.filename });
+    const res = await s.fetch(`${MATRIX_MEDIA_UPLOAD_PATH}?${q.toString()}`, {
+      method: 'POST',
+      headers: {
+        'content-type': media.mime.length > 0 ? media.mime : 'application/octet-stream',
+        authorization: `Bearer ${s.accessToken}`,
+      },
+      body: media.bytes,
+      timeoutMs: 60_000,
+    });
+    const json: unknown = safeParse(await res.text());
+    if (res.status >= 400) {
+      const e = json as { errcode?: unknown; error?: unknown };
+      throw new MatrixApiError(
+        res.status,
+        typeof e.errcode === 'string' ? e.errcode : 'M_UNKNOWN',
+        typeof e.error === 'string' ? e.error : `HTTP ${String(res.status)}`,
+      );
+    }
+    const uri = (json as { content_uri?: unknown }).content_uri;
+    if (typeof uri !== 'string' || !uri.startsWith('mxc://')) {
+      throw new MatrixApiError(res.status, 'M_UNKNOWN', 'upload returned no content_uri');
+    }
+    return uri;
   }
 
   async *events(session: ChatSession): AsyncIterable<unknown> {

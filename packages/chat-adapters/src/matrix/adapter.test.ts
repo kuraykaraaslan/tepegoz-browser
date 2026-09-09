@@ -251,4 +251,28 @@ describe('MatrixAdapter — actions', () => {
     expect(adapter.resolveMedia(session, 'http://evil/x')).toBeNull();
     await adapter.disconnect(session);
   });
+
+  it('uploadMedia POSTs the bytes and returns the content_uri', async () => {
+    const t = baseTransport().on(/\/media\/v3\/upload\?/, () => ({ body: { content_uri: 'mxc://m.example/newpic' } }));
+    const adapter = new MatrixAdapter();
+    const session = (await adapter.connect(creds(), t)) as MatrixSession;
+    const bytes = new Uint8Array([1, 2, 3, 4]);
+    const ref = await adapter.uploadMedia(session, { bytes, mime: 'image/png', filename: 'p.png' });
+    expect(ref).toBe('mxc://m.example/newpic');
+    const call = t.calls.find((c) => /\/media\/v3\/upload\?/.test(c.url));
+    expect(call?.url).toContain('filename=p.png');
+    expect(call?.init.body).toBe(bytes);
+    expect(call?.init.headers).toMatchObject({ 'content-type': 'image/png' });
+    await adapter.disconnect(session);
+  });
+
+  it('uploadMedia throws a MatrixApiError when the server has no content_uri', async () => {
+    const t = baseTransport().on(/\/media\/v3\/upload\?/, () => ({ status: 413, body: { errcode: 'M_TOO_LARGE', error: 'too big' } }));
+    const adapter = new MatrixAdapter();
+    const session = (await adapter.connect(creds(), t)) as MatrixSession;
+    await expect(
+      adapter.uploadMedia(session, { bytes: new Uint8Array([0]), mime: '', filename: 'x' }),
+    ).rejects.toThrow(/too big/);
+    await adapter.disconnect(session);
+  });
 });

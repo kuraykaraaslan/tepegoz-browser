@@ -23,6 +23,7 @@ export type {
   HistoryPage,
   SendReceipt,
   MediaLocator,
+  OutgoingMedia,
   RoomSummary,
   RawEventSink,
   ChatEvent,

@@ -56,6 +56,13 @@ export interface MediaLocator {
   headers: Record<string, string>;
 }
 
+/** Attachment bytes the host read from the sandbox, ready for a protocol media-repository upload. */
+export interface OutgoingMedia {
+  bytes: Uint8Array;
+  mime: string;
+  filename: string;
+}
+
 /** One room a directory / conference service advertises (XEP-0030 disco for XMPP). */
 export interface RoomSummary {
   /** Bare room JID (`room@service`). */
@@ -92,8 +99,11 @@ export interface ChatAdapter {
   /** Discover the rooms a conference / directory service advertises. */
   discoverRooms?(session: ChatSession, service: string): Promise<RoomSummary[]>;
 
-  /** Upload a file from the file-operations sandbox; returns a `mediaRef` for `sendMessage`. */
-  uploadMedia?(session: ChatSession, sandboxPath: string): Promise<string>;
+  /**
+   * Upload attachment bytes (the host has already read them from the file-operations sandbox);
+   * returns a protocol `mediaRef` (e.g. `mxc://…`) to pass to `sendMessage`.
+   */
+  uploadMedia?(session: ChatSession, media: OutgoingMedia): Promise<string>;
 
   /**
    * Resolve a message `mediaRef` (a protocol URI, e.g. `mxc://…`) to a fetchable location. The host
