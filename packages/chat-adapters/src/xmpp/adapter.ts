@@ -9,6 +9,7 @@ import type {
   MsgId,
   SendReceipt,
 } from '../adapter';
+import { bareJid, parseJid } from '@tepegoz/chat-core';
 import { XMPP_CAPS } from '../caps';
 import type { ChatTransport, DuplexStream } from '../transport';
 import { XmlStreamParser, type XmlElement, type XmlStreamEvent, child, children } from './xml-stream';
@@ -22,6 +23,7 @@ import {
   stanzaToEvent,
 } from './stanzas';
 import { buildMamQuery, parseMamFin, parseMamResult } from './mam';
+import { buildMucJoin, buildMucLeave, parseMucError, parseMucPresence } from './muc';
 
 /**
  * The native in-process XMPP adapter (phase X-chat.1). Wires the injected `ChatTransport` to the
@@ -29,7 +31,8 @@ import { buildMamQuery, parseMamFin, parseMamResult } from './mam';
  * (XEP-0198) → `stanzaToEvent` (live stanzas → raw `ChatEvent`s).
  *
  * Scope here: connect (direct-TLS or STARTTLS), the live event stream, `sendMessage`, `setPresence`,
- * `markRead`, `disconnect`. Roster and MAM history land in the next slice.
+ * `markRead`, `disconnect`, roster, MAM history, and MUC join/leave (XEP-0045 — a joined room's
+ * `<presence>` becomes a `room-membership` / `error` event rather than a JID-leaking `presence`).
  */
 
 const DEFAULT_PORT_TLS = 5223;
@@ -54,6 +57,9 @@ export class XmppSession implements ChatSession {
   >();
   /** Sinks for a streamed response set (MAM `<message><result/>` before the closing `<iq/>`). */
   private readonly resultSinks = new Map<string, (el: XmlElement) => void>();
+
+  /** MUC rooms this session has joined — bare room JID → our nick + the occupant nicks seen. */
+  readonly rooms = new Map<string, { nick: string; occupants: Set<string> }>();
 
   /** ms an iq round-trip waits before rejecting. */
   iqTimeoutMs = 20_000;
@@ -355,6 +361,41 @@ export class XmppAdapter implements ChatAdapter {
     return Promise.resolve();
   }
 
+  /** Join a MUC room (XEP-0045). Nick defaults to the local part of the account JID. */
+  joinRoom(session: ChatSession, address: string): Promise<ChatConversation> {
+    const s = session as XmppSession;
+    const roomJid = bareJid(address) ?? address;
+    const nick = parseJid(s.selfBareJid)?.local ?? s.accountId;
+    if (!s.rooms.has(roomJid)) s.rooms.set(roomJid, { nick, occupants: new Set() });
+    s.stream.write(buildMucJoin(roomJid, nick, { historyMaxStanzas: 30 }));
+    return Promise.resolve({
+      id: roomJid,
+      accountId: s.accountId,
+      kind: 'room',
+      address: roomJid,
+      name: parseJid(roomJid)?.local ?? roomJid,
+      topic: '',
+      memberCount: 0,
+      unread: 0,
+      mentions: 0,
+      lastReadId: null,
+      muted: false,
+      isKnownContact: true,
+      updatedAt: Date.now(),
+    });
+  }
+
+  leaveRoom(session: ChatSession, conv: ConvId): Promise<void> {
+    const s = session as XmppSession;
+    const roomJid = bareJid(conv) ?? conv;
+    const room = s.rooms.get(roomJid);
+    if (room !== undefined) {
+      s.stream.write(buildMucLeave(roomJid, room.nick));
+      s.rooms.delete(roomJid);
+    }
+    return Promise.resolve();
+  }
+
   async *events(session: ChatSession): AsyncIterable<unknown> {
     const s = session as XmppSession;
     for (;;) {
@@ -392,10 +433,48 @@ function handleLiveElement(session: XmppSession, el: XmlElement): void {
     if (result !== null && session.tryRouteResult(el, result.attrs.queryid ?? null)) return;
   }
 
+  // A room `<presence>` for a room we have joined → a room-membership / error event, not a plain
+  // presence (which would carry the occupant's real JID as an address).
+  if (el.local === 'presence' && handleRoomPresence(session, el)) return;
+
   const event = stanzaToEvent(el, {
     accountId: session.accountId,
     selfBareJid: session.selfBareJid,
     now: Date.now(),
   });
   if (event !== null) session.push(event);
+}
+
+/** Turn a joined room's `<presence>` into a `room-membership` (or `error`) event. Returns whether it
+ *  was consumed — an unjoined room, or a non-MUC presence, falls through to `stanzaToEvent`. */
+function handleRoomPresence(session: XmppSession, el: XmlElement): boolean {
+  const roomJid = bareJid(el.attrs.from ?? '');
+  if (roomJid === null) return false;
+  const room = session.rooms.get(roomJid);
+  if (room === undefined) return false;
+
+  const err = parseMucError(el);
+  if (err !== null) {
+    session.push({
+      type: 'error',
+      scope: 'conversation',
+      message: `room ${err.condition}`,
+      conversationId: roomJid,
+    });
+    return true;
+  }
+
+  const occ = parseMucPresence(el);
+  if (occ === null) return true; // a room presence we don't model — swallow it, don't leak a JID
+  if (occ.presence === 'offline') room.occupants.delete(occ.nick);
+  else room.occupants.add(occ.nick);
+
+  session.push({
+    type: 'room-membership',
+    conversationId: roomJid,
+    address: `${roomJid}/${occ.nick}`,
+    joined: occ.presence !== 'offline',
+    memberCount: room.occupants.size,
+  });
+  return true;
 }

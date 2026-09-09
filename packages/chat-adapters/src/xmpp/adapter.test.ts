@@ -278,6 +278,76 @@ describe('XmppAdapter — live traffic', () => {
     expect(await adapter.listConversations()).toEqual([]);
   });
 
+  it('joinRoom writes a MUC join with our nick + history control and returns a room conversation', async () => {
+    const { server, adapter, session } = await connected();
+    const conv = await adapter.joinRoom(session, 'general@conf.example.com');
+    expect(conv).toMatchObject({ id: 'general@conf.example.com', kind: 'room', name: 'general' });
+    const sent = server.lastWritten();
+    expect(sent).toContain('to="general@conf.example.com/ada"');
+    expect(sent).toContain('<x xmlns="http://jabber.org/protocol/muc">');
+    expect(sent).toContain('<history maxstanzas="30"/>');
+    expect(session.rooms.get('general@conf.example.com')?.nick).toBe('ada');
+  });
+
+  it('a room presence becomes a room-membership event and tracks the occupant count', async () => {
+    const { server, adapter, session } = await connected();
+    await adapter.joinRoom(session, 'general@conf.example.com');
+    const it = adapter.events(session)[Symbol.asyncIterator]();
+
+    server.send(
+      `<presence from="general@conf.example.com/Bea"><x xmlns="http://jabber.org/protocol/muc#user">` +
+        `<item affiliation="member" role="participant"/></x></presence>`,
+    );
+    expect((await it.next()).value).toMatchObject({
+      type: 'room-membership',
+      conversationId: 'general@conf.example.com',
+      address: 'general@conf.example.com/Bea',
+      joined: true,
+      memberCount: 1,
+    });
+
+    server.send(
+      `<presence from="general@conf.example.com/Bea" type="unavailable">` +
+        `<x xmlns="http://jabber.org/protocol/muc#user"><item/></x></presence>`,
+    );
+    expect((await it.next()).value).toMatchObject({ joined: false, memberCount: 0 });
+  });
+
+  it('a room join error surfaces as a conversation-scoped error event', async () => {
+    const { server, adapter, session } = await connected();
+    await adapter.joinRoom(session, 'locked@conf.example.com');
+    const it = adapter.events(session)[Symbol.asyncIterator]();
+    server.send(
+      `<presence type="error" from="locked@conf.example.com/ada">` +
+        `<error type="auth"><not-authorized xmlns="urn:ietf:params:xml:ns:xmpp-stanzas"/></error></presence>`,
+    );
+    expect((await it.next()).value).toMatchObject({
+      type: 'error',
+      scope: 'conversation',
+      conversationId: 'locked@conf.example.com',
+      message: 'room not-authorized',
+    });
+  });
+
+  it('leaveRoom sends an unavailable presence and forgets the room', async () => {
+    const { server, adapter, session } = await connected();
+    await adapter.joinRoom(session, 'general@conf.example.com');
+    await adapter.leaveRoom(session, 'general@conf.example.com');
+    expect(server.lastWritten()).toBe(
+      '<presence to="general@conf.example.com/ada" type="unavailable"></presence>',
+    );
+    expect(session.rooms.has('general@conf.example.com')).toBe(false);
+    // leaving an unknown room is a no-op
+    await adapter.leaveRoom(session, 'never@conf.example.com');
+  });
+
+  it('a presence from a room we have NOT joined falls through to a normal presence event', async () => {
+    const { server, adapter, session } = await connected();
+    const it = adapter.events(session)[Symbol.asyncIterator]();
+    server.send(`<presence from="bob@example.com/phone"><show>away</show></presence>`);
+    expect((await it.next()).value).toMatchObject({ type: 'presence', address: 'bob@example.com/phone' });
+  });
+
   it('history() runs a MAM query and returns messages oldest-first with a cursor', async () => {
     const { server, adapter, session } = await connected();
     const p = adapter.history(session, 'bob@example.com', null);

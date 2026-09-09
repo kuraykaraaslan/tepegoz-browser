@@ -424,14 +424,21 @@ password / members-only / hidden flags, description — recognising a room by th
 own echo → silent; **a direct nick mention always notifies (even muted, even "mentions", even
 "none")** — `isMention` was split so `isDirectMention` excludes the room ping; a room-wide ping
 notifies at "all" / "mentions" but respects "none"; a plain room message follows level then the mute
-flag; a DM notifies unless muted. 8 tests. Next: wire the MUC stanza layer + `RoomView` + disco +
-`decideNotification` into `XmppAdapter` / the desktop host. · **Depends on:** X-chat.2 · **Branch:**
-`main` · **Risk:** low-medium.
+flag; a DM notifies unless muted. 8 tests. Then **`XmppAdapter` MUC wiring** — `joinRoom` (writes a
+XEP-0045 join with our nick + `<history maxstanzas="30"/>`, returns a room `ChatConversation`),
+`leaveRoom` (unavailable presence, forgets the room); `handleLiveElement` now routes a **joined**
+room's `<presence>` through `handleRoomPresence` → a `room-membership` event (tracking the occupant
+nick set / count) or a conversation-scoped `error` event — a room we have not joined still falls
+through to a normal `presence`, and an unmodelled room presence is swallowed rather than leaking a
+JID. **6 adapter tests (27 total).** Next: consume `room-membership` downstream (`chat-core`
+`account-state` + desktop `account-runner`) + the room-browser UI + `decideNotification` in the host.
+· **Depends on:** X-chat.2 · **Branch:** `main` · **Risk:** low-medium.
 
 ### Deliverables
 - [ ] **XMPP MUC (XEP-0045)** — join/leave by JID, nickname, room roster + affiliations/roles,
       subject, invites, kick/ban surfacing (read), history-on-join limit, `0secret`/password rooms.
-      _Pure stanza layer (`xmpp/muc.ts`) + `chat-core` `RoomView` done; adapter wiring next._
+      _Pure stanza layer (`xmpp/muc.ts`) + `chat-core` `RoomView` + `XmppAdapter` join/leave/presence
+      routing done; downstream consumption of `room-membership` next._
 - [ ] **Room browser** — service discovery of a MUC service's public rooms, search, join-by-address.
       _XEP-0030 stanza layer (`xmpp/disco.ts`) done; adapter method + UI next._
 - [ ] **UI for rooms** — member list, mention autocomplete, per-room notification level
