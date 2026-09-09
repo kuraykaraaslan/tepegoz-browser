@@ -25,11 +25,11 @@ import {
 
 /** The narrow slice of `ChatStore` a runner writes. */
 export interface ChatRunnerStore {
-  upsertMessage(message: ChatMessage): void;
-  redactMessage(conversationId: string, protocolId: string): void;
-  upsertConversation(conversation: ChatConversation): void;
-  upsertContact(contact: ChatContact): void;
-  getConversation(id: string): ChatConversation | null;
+  upsertMessage: (message: ChatMessage) => void;
+  redactMessage: (conversationId: string, protocolId: string) => void;
+  upsertConversation: (conversation: ChatConversation) => void;
+  upsertContact: (contact: ChatContact) => void;
+  getConversation: (id: string) => ChatConversation | null;
 }
 
 /** What the runner pushes to the renderer (the desktop maps these onto an IPC channel). */
