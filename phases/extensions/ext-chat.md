@@ -553,9 +553,15 @@ through to the live stream. 4 tests. Next: a recorded-trace fixture suite + runt
 
 ## X-chat.5 — Matrix adapter
 
-**Status:** ⬜ Not started · **Depends on:** X-chat.1 (contract) + X-chat.2/.3 (UI); E2EE is
-X-chat.7 · **Branch:** `feat/chat-matrix-adapter` · **Risk:** medium-high — `/sync` state
-management + the media repo.
+**Status:** 🟡 In progress (2026-09-10) — `@tepegoz/chat-adapters` `matrix/events.ts` landed: the pure
+CS-API event mapping. `matrixTimelineEvent` → `m.room.message` (text / `m.emote` → `/me` / `m.notice`
+→ system / image·file·video·audio → `media` + `mxc://` ref from `content.url` or `content.file.url`),
+reply relations → `replyToId`, `m.replace` → `message-edit`, `m.room.redaction` → `message-redact`,
+`m.room.member` join/leave/ban → `room-membership`; `matrixEphemeralEvents` → `m.typing` /
+`m.receipt`. Lenient — an unmodelled shape returns `null` / `[]`. 14 tests, S100/B91/F100/L100.
+Reactions wait on a `ChatEvent` reaction variant (next slice). Next: the `/sync` loop + the
+`MatrixAdapter` over `transport.fetch`. · **Depends on:** X-chat.1 (contract) + X-chat.2/.3 (UI);
+E2EE is X-chat.7 · **Branch:** `main` · **Risk:** medium-high — `/sync` state + the media repo.
 
 ### Deliverables
 - [ ] **Matrix adapter** (`matrix/`) — login (password / token / SSO-token), `/sync` loop with

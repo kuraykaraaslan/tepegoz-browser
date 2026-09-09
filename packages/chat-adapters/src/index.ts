@@ -159,6 +159,13 @@ export {
 export { IrcAdapter, IrcSession } from './irc/adapter';
 
 export {
+  matrixTimelineEvent,
+  matrixEphemeralEvents,
+  type MatrixRoomEvent,
+  type MatrixContext,
+} from './matrix/events';
+
+export {
   bytesToB64,
   b64ToBytes,
   saslPlain,
