@@ -150,6 +150,13 @@ export {
 } from './irc/messages';
 
 export {
+  IRC_WANTED_CAPS,
+  IrcRegistration,
+  type RegistrationConfig as IrcRegistrationConfig,
+  type RegistrationAction as IrcRegistrationAction,
+} from './irc/registration';
+
+export {
   bytesToB64,
   b64ToBytes,
   saslPlain,

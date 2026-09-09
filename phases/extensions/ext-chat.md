@@ -513,9 +513,13 @@ S100/B94/F100/L100. Then `irc/messages.ts` — `ircMessageToEvent` (PRIVMSG / NO
 channel-vs-DM keyed by an RFC-1459-folded conversation id, `server-time` → originTs, `msgid` →
 protocolId with a `time~nick~body` fallback, CTCP ACTION → `/me`, other CTCP dropped; JOIN / PART /
 KICK → `room-membership`, `self` from the nick, KICK attributed to the kicked nick) + line builders
-(`buildIrcPrivmsg` / `Action` / `Join` / `Part` / `Nick` / `Away`). 14 tests. Next: IRCv3 CAP
-negotiation + SASL, then the connection state machine (`PASS`/`NICK`/`USER`, auto-rejoin), then the
-`IrcAdapter` over the injected transport. · **Depends on:** X-chat.1 (contract) + X-chat.2/.3 (UI) ·
+(`buildIrcPrivmsg` / `Action` / `Join` / `Part` / `Nick` / `Away`). 14 tests. Then
+`irc/registration.ts` — `IrcRegistration`, a pure handshake state machine: `CAP LS 302` (multi-line
+aware) → `CAP REQ` the offered subset of `IRC_WANTED_CAPS` → optional SASL PLAIN (`AUTHENTICATE
+PLAIN` → base64 creds → 903 / 904) → `CAP END` → `PASS`/`NICK`/`USER`, `433 ERR_NICKNAMEINUSE` retry
+(3×, `_`-suffixed), `registered` on `001`. 13 tests. Next: the connection runtime (`ManagedAdapter`
+seam — ping/pong, auto-rejoin, ISUPPORT, flood queue) + the `IrcAdapter` over the injected transport,
+then a recorded-trace fixture suite. · **Depends on:** X-chat.1 (contract) + X-chat.2/.3 (UI) ·
 **Branch:** `main` · **Risk:** low-medium.
 
 ### Deliverables
