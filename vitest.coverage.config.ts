@@ -262,6 +262,7 @@ export default defineConfig({
         'packages/recipe-compiler/src/**',
         'packages/screenshots/src/**',
         'packages/security-policy/src/**',
+        'packages/socks5/src/**',
         'packages/settings-ui/src/**',
         'packages/shared-types/src/**',
         'packages/tab-engine/src/**',

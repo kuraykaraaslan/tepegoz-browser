@@ -159,6 +159,16 @@ module.exports = {
       to: { path: ['^apps/', 'node_modules/electron', '^node:'] },
     },
     {
+      name: 'socks5-no-app-no-electron-no-node',
+      severity: 'error',
+      comment:
+        '@tepegoz/socks5 is a pure, incremental SOCKS5 CONNECT client (RFC 1928, no-auth). Electron-, ' +
+        'app- AND Node-free: the caller drives it over an injected duplex. Used by the desktop to put ' +
+        'raw chat/mail sockets on the Phase-5 loopback SOCKS binding. See docs/package-map.md.',
+      from: { path: '^packages/socks5/' },
+      to: { path: ['^apps/', 'node_modules/electron', '^node:'] },
+    },
+    {
       name: 'chat-transport-node-no-app-no-electron',
       severity: 'error',
       comment:
