@@ -27,6 +27,21 @@ export const en = {
     read: 'Read',
     failed: 'Not sent',
   },
+  roster: {
+    title: 'Contacts',
+    search: 'Search contacts',
+    /** Header for contacts that belong to no roster group. */
+    ungrouped: 'Other contacts',
+    /** Suffix on a group's connected count, e.g. "3 online". */
+    online: 'online',
+    empty: 'No contacts yet',
+    noMatch: 'No contacts match your search.',
+    add: 'Add contact',
+    addPlaceholder: 'user@example.org',
+    remove: 'Remove',
+    /** Marker on a contact who can see the user's presence but is not yet mutual. */
+    pending: 'Awaiting response',
+  },
   setup: {
     title: 'Add an XMPP account',
     label: 'Account name',

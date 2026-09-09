@@ -343,8 +343,12 @@ near the limit, over-limit block + error); and the **account setup form** — `a
 checks then a `ChatAccountSchema` safeParse backstop, produces a persist-ready draft + the plaintext
 secret that crosses once) + `<AccountSetupForm>` (label / JID / password, collapsible connection
 settings for host / port / STARTTLS-vs-TLS / WebSocket URL, per-field `role="alert"` errors, busy
-lock). XMPP-only for now (the single shipped adapter). **75 tests, S99.8/B95.4/F94.8/L99.8.** Next:
-roster panel, then wire into `extensions/ext-chat` replacing the placeholder surfaces + bind the
+lock; XMPP-only for now); and the **roster panel** — `roster` (`groupRoster` — a contact in each of
+its groups, named groups Turkish-sorted, ungrouped bucket last; within a group connected-first by
+presence rank then `turkishCompare`; `filterRoster` fold-matches name/address) + `<RosterPanel>`
+(grouped list with per-group online count, presence dots, `search` box + no-match line, add-contact
+row, per-row remove, `from`-subscription "awaiting response" marker). **87 tests, S99.7/B95.2/F95.8/
+L99.7.** Next: wire into `extensions/ext-chat` replacing the placeholder surfaces + bind the
 `window.tepegoz` chat.* channels. · **Depends on:** X-chat.1 · **Branch:** `main` · **Risk:** medium.
 
 ### Deliverables

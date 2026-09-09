@@ -24,6 +24,18 @@ export const tr: ChatUiStrings = {
     read: 'Okundu',
     failed: 'Gönderilemedi',
   },
+  roster: {
+    title: 'Kişiler',
+    search: 'Kişilerde ara',
+    ungrouped: 'Diğer kişiler',
+    online: 'çevrimiçi',
+    empty: 'Henüz kişi yok',
+    noMatch: 'Aramanızla eşleşen kişi yok.',
+    add: 'Kişi ekle',
+    addPlaceholder: 'kullanici@ornek.org',
+    remove: 'Kaldır',
+    pending: 'Yanıt bekleniyor',
+  },
   setup: {
     title: 'XMPP hesabı ekle',
     label: 'Hesap adı',
