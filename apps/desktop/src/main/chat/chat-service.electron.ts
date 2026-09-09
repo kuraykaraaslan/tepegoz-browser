@@ -1,4 +1,4 @@
-import { BrowserWindow } from 'electron';
+import { app, BrowserWindow } from 'electron';
 import { IpcChannels, isExtensionEnabled } from '@tepegoz/desktop-ipc';
 import { currentEgressRoute } from '@tepegoz/http';
 import { NodeChatTransport } from '@tepegoz/chat-transport-node';
@@ -8,6 +8,7 @@ import PreferenceStore from '@tepegoz/preferences';
 import { getDb } from '../db/database.electron';
 import NotificationHost from '../notifications/notification-host';
 import { createChatDialer } from './egress-dialer';
+import { seedChatAccountsFromEnv } from './chat-seed.electron';
 import ChatSecrets from './chat-secrets.electron';
 import {
   deleteAccount,
@@ -91,6 +92,13 @@ export function buildChatService(over: Partial<ChatServiceDeps> = {}): ChatServi
 export async function init(): Promise<void> {
   if (service !== null) return;
   service = buildChatService();
+  await seedChatAccountsFromEnv(
+    {
+      listAccounts: () => (getDb() === null ? [] : listAccounts(requireDb())),
+      addAccount: (account, plainSecret) => requireService().addAccount(account, plainSecret),
+    },
+    { isPackaged: app.isPackaged },
+  );
   await service.start();
 }
 

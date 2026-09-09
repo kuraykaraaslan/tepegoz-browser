@@ -18,6 +18,7 @@ vi.mock('@tepegoz/http', () => ({ currentEgressRoute: () => route.current }));
 const win = vi.hoisted(() => ({ isDestroyed: () => false, webContents: { send: vi.fn() } }));
 const deadWin = vi.hoisted(() => ({ isDestroyed: () => true, webContents: { send: vi.fn() } }));
 vi.mock('electron', () => ({
+  app: { isPackaged: true },
   BrowserWindow: { getAllWindows: () => [win, deadWin] },
 }));
 
