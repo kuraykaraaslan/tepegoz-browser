@@ -76,6 +76,11 @@ describe('iconNodeFor', () => {
     expect(container.querySelector('svg[data-icon="language"]')).not.toBeNull();
   });
 
+  it('maps the chat "comments" slug', () => {
+    const { container } = render(<span>{iconNodeFor('comments')}</span>);
+    expect(container.querySelector('svg[data-icon="comments"]')).not.toBeNull();
+  });
+
   it('falls back to the puzzle-piece icon for an unknown slug', () => {
     const { container } = render(<span>{iconNodeFor('not-a-real-slug')}</span>);
     expect(container.querySelector('svg[data-icon="puzzle-piece"]')).not.toBeNull();
