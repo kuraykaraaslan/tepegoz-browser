@@ -639,6 +639,137 @@ const MIGRATIONS: Migration[] = [
       db.exec('ALTER TABLE history ADD COLUMN favicon TEXT;');
     },
   },
+  {
+    version: 21,
+    up: (db) => {
+      // Multi-protocol messenger (`@tepegoz/ext-chat`, phase X-chat.1). Profile-scoped like every
+      // other store. `chat_accounts` carries sync-meta (updated_at/version/tombstone) from day 0 so
+      // Phase-3 account sync owes no migration. NO key material anywhere here: `secret_ref` is a
+      // vault key; `chat_e2ee_sessions.wrapped_blob` is safeStorage-wrapped, never plaintext.
+      //
+      // `chat_messages` is deduped by (conversation_id, protocol_id) — the wire id — so a
+      // re-delivered stanza / re-synced Matrix event updates in place instead of duplicating.
+      // `body_fold` is the Turkish-aware search fold (never SQLite LOWER(); migrations v16–v18 record
+      // why). FTS5 is created here but populated by the sync engine's writer, not a trigger, so the
+      // fold and the FTS row stay in one code path.
+      db.exec(`
+        CREATE TABLE chat_accounts (
+          id           TEXT PRIMARY KEY,
+          label        TEXT NOT NULL,
+          protocol     TEXT NOT NULL,
+          display_name TEXT NOT NULL DEFAULT '',
+          server_json  TEXT NOT NULL,
+          secret_ref   TEXT NOT NULL,
+          color        TEXT,
+          "order"      INTEGER NOT NULL DEFAULT 0,
+          updated_at   INTEGER NOT NULL,
+          version      INTEGER NOT NULL DEFAULT 1,
+          tombstone    INTEGER NOT NULL DEFAULT 0
+        );
+
+        CREATE TABLE chat_contacts (
+          id           TEXT PRIMARY KEY,
+          account_id   TEXT NOT NULL REFERENCES chat_accounts(id) ON DELETE CASCADE,
+          address      TEXT NOT NULL,
+          name         TEXT NOT NULL DEFAULT '',
+          groups_json  TEXT NOT NULL DEFAULT '[]',
+          presence     TEXT NOT NULL DEFAULT 'offline',
+          status_text  TEXT NOT NULL DEFAULT '',
+          subscription TEXT NOT NULL DEFAULT 'none',
+          UNIQUE (account_id, address)
+        );
+
+        CREATE TABLE chat_conversations (
+          id               TEXT PRIMARY KEY,
+          account_id       TEXT NOT NULL REFERENCES chat_accounts(id) ON DELETE CASCADE,
+          kind             TEXT NOT NULL,
+          address          TEXT NOT NULL,
+          name             TEXT NOT NULL DEFAULT '',
+          topic            TEXT NOT NULL DEFAULT '',
+          member_count     INTEGER NOT NULL DEFAULT 0,
+          unread           INTEGER NOT NULL DEFAULT 0,
+          mentions         INTEGER NOT NULL DEFAULT 0,
+          last_read_id     TEXT,
+          muted            INTEGER NOT NULL DEFAULT 0,
+          is_known_contact INTEGER NOT NULL DEFAULT 0,
+          updated_at       INTEGER NOT NULL,
+          UNIQUE (account_id, address)
+        );
+        CREATE INDEX idx_chat_conv_recent ON chat_conversations (account_id, updated_at DESC);
+
+        CREATE TABLE chat_messages (
+          id             TEXT PRIMARY KEY,
+          conversation_id TEXT NOT NULL REFERENCES chat_conversations(id) ON DELETE CASCADE,
+          account_id     TEXT NOT NULL,
+          protocol_id    TEXT NOT NULL,
+          sender_address TEXT NOT NULL,
+          sender_name    TEXT NOT NULL DEFAULT '',
+          kind           TEXT NOT NULL DEFAULT 'text',
+          body           TEXT NOT NULL DEFAULT '',
+          body_fold      TEXT NOT NULL DEFAULT '',
+          media_ref      TEXT,
+          reply_to_id    TEXT,
+          reactions_json TEXT NOT NULL DEFAULT '[]',
+          edited_at      INTEGER,
+          redacted       INTEGER NOT NULL DEFAULT 0,
+          origin_ts      INTEGER NOT NULL,
+          received_at    INTEGER NOT NULL,
+          delivery_state TEXT NOT NULL DEFAULT 'delivered',
+          UNIQUE (conversation_id, protocol_id)
+        );
+        CREATE INDEX idx_chat_messages_conv ON chat_messages (conversation_id, origin_ts DESC);
+
+        CREATE TABLE chat_attachments (
+          id         TEXT PRIMARY KEY,
+          message_id TEXT NOT NULL REFERENCES chat_messages(id) ON DELETE CASCADE,
+          filename   TEXT NOT NULL DEFAULT '',
+          mime_type  TEXT NOT NULL DEFAULT 'application/octet-stream',
+          size       INTEGER NOT NULL DEFAULT 0,
+          blob_ref   TEXT,
+          quarantine TEXT NOT NULL DEFAULT 'pending'
+        );
+
+        CREATE TABLE chat_receipts (
+          conversation_id TEXT NOT NULL,
+          message_id      TEXT NOT NULL,
+          by_address      TEXT NOT NULL,
+          kind            TEXT NOT NULL,
+          ts              INTEGER NOT NULL,
+          PRIMARY KEY (conversation_id, message_id, by_address, kind)
+        );
+
+        CREATE TABLE chat_e2ee_sessions (
+          account_id   TEXT NOT NULL,
+          peer         TEXT NOT NULL,
+          device       TEXT NOT NULL,
+          wrapped_blob TEXT NOT NULL,
+          trust        TEXT NOT NULL DEFAULT 'untrusted',
+          updated_at   INTEGER NOT NULL,
+          PRIMARY KEY (account_id, peer, device)
+        );
+
+        CREATE TABLE chat_send_queue (
+          id              TEXT PRIMARY KEY,
+          account_id      TEXT NOT NULL,
+          conversation_id TEXT NOT NULL,
+          body_json       TEXT NOT NULL,
+          status          TEXT NOT NULL,
+          attempts        INTEGER NOT NULL DEFAULT 0,
+          last_error      TEXT,
+          retry_after     INTEGER NOT NULL DEFAULT 0,
+          created_at      INTEGER NOT NULL,
+          updated_at      INTEGER NOT NULL
+        );
+
+        CREATE VIRTUAL TABLE chat_search USING fts5 (
+          message_id UNINDEXED,
+          body,
+          sender,
+          tokenize = 'unicode61 remove_diacritics 2'
+        );
+      `);
+    },
+  },
 ];
 
 /**

@@ -17,3 +17,4 @@ export * from './agent-conversation-store';
 export * from './token-store';
 export { AgentMemoryStore } from './agent-memory-store';
 export { TrustProfileStore } from './trust-profile-store';
+export { ChatStore } from './chat-store';
