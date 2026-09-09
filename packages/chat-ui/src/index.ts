@@ -59,6 +59,14 @@ export {
   applyChatChanges,
   type ChatClientState,
 } from './chat-store';
+export { useChatState, type UseChatState } from './useChatState';
+export type {
+  ChatAccountSummary,
+  ChatAccountsSnapshot,
+  ChatHistoryPage,
+  ChatStateEvent,
+  ChatClientPort,
+} from './types';
 export { presenceMeta, type PresenceMeta, type PresenceTone } from './presence';
 export { PresenceBadge, type PresenceBadgeProps } from './PresenceBadge';
 export {

@@ -352,9 +352,16 @@ reducer** — `chat-store` (`ChatClientState` = conversations / roster / windowe
 `seedConversations` / `seedRoster` / `seedHistory` from the IPC reads; `applyChatChange` folds a
 main-pushed `ChatStateChange` — message upsert+dedup, edit/redact, unread-count patch, roster
 add/remove, presence-by-address, idempotent typing sets — immutably, same-ref on no-op).
-**100 tests, S99.7/B93.8/F96.3/L99.7.** Next: the `useChatState` hook + wire into `extensions/ext-chat`
-replacing the placeholder surfaces (bind `window.tepegoz` chat.* + the `chat:state` push). ·
-**Depends on:** X-chat.1 · **Branch:** `main` · **Risk:** medium.
+and the **`useChatState` hook** — binds a `ChatClientPort` (the bridge, or a fake) to a live view:
+accounts (order-sorted) + per-account `ChatConnState`, the active account's conversations
+(recency-sorted), lazy per-conversation history load + auto mark-read on open, `chat:state`
+subscription for the hook's lifetime, `send()` / `setActiveAccount()` / `refresh()`. Port shapes
+(`ChatClientPort`, `ChatStateEvent`, `ChatAccountsSnapshot`) are defined in `chat-ui` itself
+(structurally mirroring `@tepegoz/desktop-ipc`'s `ChatApi`) so the leaf takes no IPC-contract
+dependency. **106 tests, S99.8/B93.3/F96.4/L99.8.** Next: wire into `extensions/ext-chat` replacing
+the placeholder surfaces — a real layout (roster + list + timeline + composer) over `useChatState`,
+plus the desktop adapter from `window.tepegoz`. · **Depends on:** X-chat.1 · **Branch:** `main` ·
+**Risk:** medium.
 
 ### Deliverables
 - [ ] **`@tepegoz/chat-ui`** — conversation list (virtualized, unread/mention badges, account
