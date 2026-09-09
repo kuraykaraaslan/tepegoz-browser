@@ -27,6 +27,16 @@ export const en = {
     read: 'Read',
     failed: 'Not sent',
   },
+  composer: {
+    placeholder: 'Write a message…',
+    send: 'Send',
+    /** Precedes the quoted author in the reply banner: "Replying to" + name. */
+    replyingTo: 'Replying to',
+    editing: 'Editing message',
+    cancel: 'Cancel',
+    /** Shown when the draft exceeds the protocol's body limit. */
+    tooLong: 'This message is too long to send.',
+  },
   list: {
     empty: 'No conversations yet',
     /** Screen-reader suffix on the unread count badge, e.g. "3 unread". */

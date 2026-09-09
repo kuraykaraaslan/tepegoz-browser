@@ -17,6 +17,16 @@ export {
 } from './time';
 export { buildTimeline, type TimelineItem, type BuildTimelineOptions } from './timeline';
 export { MessageTimeline, type MessageTimelineProps } from './MessageTimeline';
+export {
+  isSendKey,
+  draftToBody,
+  canSend,
+  isOverLimit,
+  remainingChars,
+  CHAT_COMPOSER_WARN_REMAINING,
+  type SendKeyEvent,
+} from './composer-draft';
+export { Composer, type ComposerProps, type ComposerSubmission } from './Composer';
 export { presenceMeta, type PresenceMeta, type PresenceTone } from './presence';
 export { PresenceBadge, type PresenceBadgeProps } from './PresenceBadge';
 export {

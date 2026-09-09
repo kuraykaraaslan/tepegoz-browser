@@ -334,7 +334,11 @@ marker); and the **message timeline** — `buildTimeline` (day separators, one "
 positioned from `lastReadId`, consecutive same-sender grouping with a time window, system messages
 never grouped) + `<MessageTimeline>` (linkified body — links routed through an `onOpenLink` callback,
 never auto-navigated, inert text without one; redacted placeholder; edited marker; reactions row;
-own-message delivery state). **49 tests, S100/B96/F100/L100.** Next: composer → account setup
+own-message delivery state); and the **composer** — `composer-draft` (`isSendKey` — plain Enter sends,
+Shift/Alt/Ctrl/Meta-Enter and Enter-during-IME newline; `draftToBody` trim/reject-empty; `canSend` /
+`isOverLimit` / `remainingChars` against `CHAT_MESSAGE_BODY_MAX`) + `<Composer>` (auto-growing
+textarea, Enter-to-send, reply / edit context banners with cancel-on-✕-or-Escape, live char countdown
+near the limit, over-limit block + error). **64 tests, S99.3/B96.5/F94.7/L99.3.** Next: account setup
 wizard, then wire into `extensions/ext-chat` replacing the placeholder surfaces. · **Depends on:**
 X-chat.1 · **Branch:** `main` · **Risk:** medium.
 

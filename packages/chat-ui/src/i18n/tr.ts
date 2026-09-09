@@ -24,6 +24,14 @@ export const tr: ChatUiStrings = {
     read: 'Okundu',
     failed: 'Gönderilemedi',
   },
+  composer: {
+    placeholder: 'Bir mesaj yaz…',
+    send: 'Gönder',
+    replyingTo: 'Yanıtlanan:',
+    editing: 'Mesaj düzenleniyor',
+    cancel: 'Vazgeç',
+    tooLong: 'Bu mesaj göndermek için çok uzun.',
+  },
   list: {
     empty: 'Henüz konuşma yok',
     unread: 'okunmamış',
