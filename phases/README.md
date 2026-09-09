@@ -19,14 +19,15 @@ them** with `- [ ]` / `- [x]`. This keeps the process resumable across sessions.
 ## Folder map
 
 Everything in this folder's root is either this index or a directory — planning documents live in
-exactly one of the four, chosen by **truth status**. Put a new document in the folder whose status it
-actually has; do not start a fifth pile.
+exactly one of the five, chosen by **truth status**. Put a new document in the folder whose status it
+actually has; do not start a sixth pile.
 
 | Folder                                | What it holds                                                                                                            | Truth status                                             |
 | ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------- |
 | [`product/`](product/)                | The numbered product roadmap — Phases 0–12 plus M (Macros) and E (Extras)                                                | Committed · sequenced · DoD-gated                        |
 | [`ai-agent/`](ai-agent/README.md)     | The sole authoritative AI agent competence program (v3, S0–S12)                                                          | Committed · sequenced · measurement-gated                |
 | [`tracks/`](../docs/tracks/README.md) | One-off plans outside the numbered roadmap — two complete, one in progress, one deferred, one superseded, three proposed | **Mixed — read that folder's index first. Not roadmap.** |
+| [`extensions/`](extensions/README.md) | Design docs for net-new first-class internal extensions large enough to need their own DoD (mail client, multi-protocol messenger) | **📋 Proposed — not scheduled. Not roadmap.**            |
 | [`ai/`](ai-agent/README.md)           | The retired v2 AI track                                                                                                  | Tombstone stub — redirects only, add nothing             |
 
 ## Phase index & status
@@ -175,6 +176,23 @@ everywhere — not re-litigated per phase.
 > that count 62 → 63.
 >
 > Ratchet these up as coverage lands. Never widen the exclusion list to protect a number.
+
+## Extension roadmap (`extensions/`)
+
+Design docs for net-new first-class internal extensions large enough to need their own DoD-gated plan
+— the precedent is [Phase M — Macros](product/phase-macros.md), which lives in `product/` only because
+it predates this folder. **Everything in [`extensions/`](extensions/README.md) is 📋 Proposed — not
+scheduled, not in the v1 ship line.** An extension doc earns roadmap status the same way a `tracks/`
+doc does: promotion into a product `phase-*.md` DoD or an ADR.
+
+| Doc | Extension | Sub-phases | Goal | Status |
+| --- | --- | --- | --- | --- |
+| [extensions/ext-mail.md](extensions/ext-mail.md) | `@tepegoz/ext-mail` | 9 (X-mail.0–.8) | Full **multi-account** mail client — IMAP/SMTP + JMAP + (Phase 3) OAuth Gmail/Graph, reader, compose, filters, and a complete agent capability set behind the one PEP. ADR-0046 owed. | 📋 Proposed |
+| [extensions/ext-chat.md](extensions/ext-chat.md) | `@tepegoz/ext-chat` | 11 (X-chat.0–.10) | **Multi-account, multi-protocol** messenger on a Pidgin/libpurple protocol-plugin model — native XMPP/IRC/Matrix, out-of-process bridges for Telegram/Slack/Discord/(caveated) WhatsApp, agent-drivable behind the one PEP. ADR-0047 owed. | 📋 Proposed |
+
+Shared prerequisites (block both): extend `ExtensionPermissionSchema`, a `background-connection`
+supervisor in `@tepegoz/extension-host`, and generalising `manifest.mcpServer` into an out-of-process
+**adapter / bridge** contract. See [`extensions/README.md`](extensions/README.md).
 
 ## Completed hardening track (folded into Phases 1a / 1b / 2c)
 
