@@ -72,6 +72,8 @@ export {
   type NegotiationAction,
 } from './xmpp/negotiator';
 
+export { StreamManager, type StreamManagerOptions } from './xmpp/stream-management';
+
 export {
   bytesToB64,
   b64ToBytes,
