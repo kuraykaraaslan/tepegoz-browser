@@ -29,6 +29,8 @@ export const tr: ChatUiStrings = {
   },
   room: {
     members: 'Üyeler',
+    showMembers: 'Üyeler',
+    noTopicHeader: 'Konu yok',
     moderator: 'Mod',
     owner: 'Sahip',
     admin: 'Yönetici',

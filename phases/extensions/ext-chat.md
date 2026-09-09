@@ -443,9 +443,13 @@ with occupant counts + password / members-only flags + description, and a "join 
 **43 tests, S99.6/B93.4/F95.7/L99.6.** Then **`XmppAdapter.discoverRooms`** — `disco#items` for the
 service's room list (capped at 80), then a bounded parallel `disco#info` per room for occupant count /
 flags / description; a room whose info errors still lists with defaults. Added `RoomSummary` to the
-`ChatAdapter` contract. 4 adapter tests. Next: a room header (topic + member count) + the
-`discoverRooms` / `decideNotification` desktop bridge wiring. · **Depends on:** X-chat.2 · **Branch:**
-`main` · **Risk:** low-medium.
+`ChatAdapter` contract. 4 adapter tests. Then **`<RoomHeader>`** (room name + live subject with a
+stored-topic fallback + occupant count + a members toggle) wired into `<ChatWorkspace>`: a room
+conversation now shows the header instead of the plain title, and toggling reveals `<RoomMemberList>`
+from `chat.client.rooms[id]`. **46 chat-ui tests for rooms; S99.8/B94.4/F95.7/L99.8.** Next:
+`discoverRooms` / `<RoomBrowser>` into the workspace + the desktop bridge (`chat:discover-rooms`
+channel, `decideNotification` on inbound). · **Depends on:** X-chat.2 · **Branch:** `main` · **Risk:**
+low-medium.
 
 ### Deliverables
 - [ ] **XMPP MUC (XEP-0045)** — join/leave by JID, nickname, room roster + affiliations/roles,
@@ -457,7 +461,8 @@ flags / description; a room whose info errors still lists with defaults. Added `
       method + desktop bridge wiring next._
 - [ ] **UI for rooms** — member list, mention autocomplete, per-room notification level
       (all / mentions / none), topic display, "who's typing" for rooms.
-      _`<RoomMemberList>` + mention autocomplete done; notification level + topic + typing next._
+      _`<RoomMemberList>` + mention autocomplete + `<RoomHeader>` (topic + member count, wired into
+      `<ChatWorkspace>`) done; per-room notification-level picker + room typing next._
 - [ ] **Mention routing** — a room-ping / nick-highlight raises a notification even when the room is
       muted for "all messages". _`chat-core/notify.ts` `decideNotification` done; host wiring next._
 

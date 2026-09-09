@@ -5,6 +5,8 @@ import { chatUiDict } from './i18n';
 import { Composer } from './Composer';
 import { ConversationList } from './ConversationList';
 import { MessageTimeline } from './MessageTimeline';
+import { RoomHeader } from './RoomHeader';
+import { RoomMemberList } from './RoomMemberList';
 import { RosterPanel } from './RosterPanel';
 import { conversationTitle, type ChatAccountRef } from './conversation-list';
 import type { ResolveMedia } from './MessageMedia';
@@ -36,6 +38,7 @@ export function ChatWorkspace({
   const s = useT(chatUiDict);
   const chat = useChatState(port);
   const [tab, setTab] = useState<LeftTab>('chats');
+  const [membersOpen, setMembersOpen] = useState(false);
 
   const accountRefs: ChatAccountRef[] = chat.accounts.map((a) => ({
     id: a.id,
@@ -61,6 +64,7 @@ export function ChatWorkspace({
     ? chat.client.messages[selected.id] ?? []
     : [];
   const typing = selected ? chat.client.typing[selected.id] ?? [] : [];
+  const selectedRoom = selected ? chat.client.rooms[selected.id] : undefined;
 
   if (!chat.loading && chat.accounts.length === 0) {
     return (
@@ -144,19 +148,34 @@ export function ChatWorkspace({
             <p className="chat-workspace__no-selection">{s.workspace.noSelection}</p>
           ) : (
             <>
-              <header className="chat-workspace__conv-head">
-                <h2>{conversationTitle(selected)}</h2>
-                {typing.length > 0 && (
-                  <span className="chat-workspace__typing">{s.workspace.typing}</span>
+              {selected.kind === 'room' ? (
+                <RoomHeader
+                  name={conversationTitle(selected)}
+                  {...(selectedRoom !== undefined ? { room: selectedRoom } : {})}
+                  topicFallback={selected.topic}
+                  membersOpen={membersOpen}
+                  onToggleMembers={() => setMembersOpen((v) => !v)}
+                />
+              ) : (
+                <header className="chat-workspace__conv-head">
+                  <h2>{conversationTitle(selected)}</h2>
+                  {typing.length > 0 && (
+                    <span className="chat-workspace__typing">{s.workspace.typing}</span>
+                  )}
+                </header>
+              )}
+              <div className="chat-workspace__conv-body">
+                <MessageTimeline
+                  messages={messages}
+                  lastReadId={selected.lastReadId}
+                  isOwn={(m) => selected.kind === 'dm' && m.senderAddress !== selected.address}
+                  resolveMedia={resolveMedia}
+                  onOpenMedia={onOpenMedia}
+                />
+                {selected.kind === 'room' && membersOpen && selectedRoom !== undefined && (
+                  <RoomMemberList room={selectedRoom} />
                 )}
-              </header>
-              <MessageTimeline
-                messages={messages}
-                lastReadId={selected.lastReadId}
-                isOwn={(m) => selected.kind === 'dm' && m.senderAddress !== selected.address}
-                resolveMedia={resolveMedia}
-                onOpenMedia={onOpenMedia}
-              />
+              </div>
               <Composer
                 onSubmit={(draft) => chat.send(draft.text, { replyToId: draft.replyToId })}
               />

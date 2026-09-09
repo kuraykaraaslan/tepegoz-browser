@@ -35,6 +35,10 @@ export const en = {
   room: {
     /** Heading over the occupant list (a count precedes it: "12 Members"). */
     members: 'Members',
+    /** Toggle button that shows / hides the member list. */
+    showMembers: 'Members',
+    /** Placeholder in the room header when no topic is set. */
+    noTopicHeader: 'No topic',
     /** Badge on a room moderator. */
     moderator: 'Mod',
     /** Badge on the room owner. */

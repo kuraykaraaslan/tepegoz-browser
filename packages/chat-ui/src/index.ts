@@ -32,6 +32,7 @@ export {
   type MentionQuery,
 } from './mention-autocomplete';
 export { RoomMemberList, type RoomMemberListProps } from './RoomMemberList';
+export { RoomHeader, type RoomHeaderProps } from './RoomHeader';
 export {
   filterRoomListings,
   sortRoomListings,

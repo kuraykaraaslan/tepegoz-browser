@@ -168,6 +168,43 @@ describe('ChatWorkspace', () => {
     expect(screen.getByText('Pick a conversation.')).toBeDefined();
   });
 
+  it('renders a room header + toggles the member list for a room conversation', async () => {
+    const { port, emit } = makePort({
+      listChatConversations: () =>
+        Promise.resolve([conv({ id: 'room@conf', kind: 'room', address: 'room@conf', name: 'Room', topic: 'Weekly' })]),
+    });
+    wrap(<ChatWorkspace port={port} />);
+    fireEvent.click(await screen.findByRole('button', { name: /Room/ }));
+    await screen.findByText('hi there');
+
+    // stored topic shows until a live subject / occupants arrive
+    expect(screen.getByText('Weekly')).toBeDefined();
+
+    act(() => {
+      emit({
+        kind: 'change',
+        accountId: 'work',
+        change: {
+          kind: 'room',
+          conversationId: 'room@conf',
+          room: {
+            joined: true,
+            selfNick: 'me',
+            subject: 'Weekly',
+            occupants: {
+              Bea: { nick: 'Bea', realJid: null, affiliation: 'member', role: 'participant', presence: 'online', statusText: '' },
+            },
+          },
+        },
+      } as never);
+    });
+
+    const toggle = screen.getByRole('button', { name: '1 Members' });
+    expect(screen.queryByText('Bea')).toBeNull();
+    fireEvent.click(toggle);
+    expect(screen.getByText('Bea')).toBeDefined();
+  });
+
   it('reflects a pushed typing change in the conversation header', async () => {
     const { port, emit } = makePort();
     wrap(<ChatWorkspace port={port} />);
