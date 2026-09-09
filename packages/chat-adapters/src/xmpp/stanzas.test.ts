@@ -154,7 +154,7 @@ describe('stanzaToEvent — presence & roster', () => {
   it('maps presence show/status across all show values', () => {
     expect(
       stanzaToEvent(parseOne(`<presence from="b@x.com/p"><show>dnd</show><status>busy</status></presence>`), ctx),
-    ).toMatchObject({ type: 'presence', address: 'b@x.com', presence: 'dnd', statusText: 'busy' });
+    ).toMatchObject({ type: 'presence', address: 'b@x.com/p', presence: 'dnd', statusText: 'busy' });
     expect(
       stanzaToEvent(parseOne(`<presence from="b@x.com/p"><show>away</show></presence>`), ctx),
     ).toMatchObject({ presence: 'away' });

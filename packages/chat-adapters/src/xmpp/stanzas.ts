@@ -162,7 +162,9 @@ function presenceEvent(el: XmlElement, ctx: StanzaContext): ChatEvent | null {
   return {
     type: 'presence',
     accountId: ctx.accountId,
-    address: bare,
+    // The FULL JID (resource included) — a contact may have several connected resources; the
+    // presence tracker in @tepegoz/chat-core folds them into one effective presence per bare JID.
+    address: from,
     presence: presenceFromShow(childText(el, 'show'), unavailable),
     statusText: childText(el, 'status').slice(0, 512),
   };

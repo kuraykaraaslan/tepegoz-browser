@@ -331,7 +331,7 @@ describe('XmppAdapter — live traffic', () => {
     server.send(`<iq type="result" id="x"/>`); // modelled as nothing
     server.send(`<presence from="bob@example.com/p"><show>away</show></presence>`);
     const evt = await it.next();
-    expect(evt.value).toMatchObject({ type: 'presence', presence: 'away', address: 'bob@example.com' });
+    expect(evt.value).toMatchObject({ type: 'presence', presence: 'away', address: 'bob@example.com/p' });
     // a server <a/> is consumed silently
     server.send(`<a xmlns="urn:xmpp:sm:3" h="0"/>`);
     await tick();

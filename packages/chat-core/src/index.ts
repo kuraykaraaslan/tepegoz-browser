@@ -55,3 +55,5 @@ export {
   type ManagedAdapter,
   type ManagedSession,
 } from './connection-manager';
+
+export { PresenceTracker, type EffectivePresence } from './presence';
