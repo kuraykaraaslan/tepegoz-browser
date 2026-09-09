@@ -12,8 +12,6 @@ export const en = {
   /** The shortcuts grid below the search box (the user's own list, independent of bookmarks). */
   favorites: {
     urlPlaceholder: 'https://',
-    /** aria-label for the shortcuts grid (arrow keys move between tiles). */
-    gridLabel: 'Shortcuts',
     empty: 'No shortcuts yet. Add one to see it here.',
     /** The "+" tile that opens the add-shortcut dialog. */
     add: 'Add shortcut',
