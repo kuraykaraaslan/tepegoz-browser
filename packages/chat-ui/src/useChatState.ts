@@ -11,6 +11,7 @@ import {
 } from './chat-store';
 import { sortConversations } from './conversation-list';
 import type { ChatAccountSummary, ChatClientPort } from './types';
+import type { RoomListing } from './room-browser';
 
 export interface UseChatState {
   accounts: readonly ChatAccountSummary[];
@@ -26,6 +27,13 @@ export interface UseChatState {
   loading: boolean;
   send: (text: string, opts?: { replyToId?: string | null }) => Promise<void>;
   refresh: () => Promise<void>;
+  /** MUC — present only when the port supports rooms. */
+  rooms:
+    | {
+        discover: (service: string) => Promise<RoomListing[]>;
+        join: (roomJid: string) => Promise<void>;
+      }
+    | null;
 }
 
 /**
@@ -134,6 +142,23 @@ export function useChatState(port: ChatClientPort): UseChatState {
     );
   }, [client.conversations, activeAccountId]);
 
+  const { discoverRooms, joinRoom } = port;
+  const rooms = useMemo(() => {
+    if (discoverRooms === undefined || joinRoom === undefined) return null;
+    return {
+      discover: (service: string): Promise<RoomListing[]> =>
+        activeAccountId === null
+          ? Promise.resolve([])
+          : discoverRooms(activeAccountId, service),
+      join: async (roomJid: string): Promise<void> => {
+        if (activeAccountId === null) return;
+        await joinRoom(activeAccountId, roomJid);
+        await refresh();
+        setSelectedConversationId(roomJid);
+      },
+    };
+  }, [discoverRooms, joinRoom, activeAccountId, refresh]);
+
   return {
     accounts,
     connectionStates,
@@ -146,5 +171,6 @@ export function useChatState(port: ChatClientPort): UseChatState {
     loading,
     send,
     refresh,
+    rooms,
   };
 }

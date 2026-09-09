@@ -1,4 +1,5 @@
 import type { ChatConnState, ChatStateChange } from '@tepegoz/chat-core';
+import type { RoomListing } from './room-browser';
 import type {
   ChatContact,
   ChatConversation,
@@ -55,4 +56,7 @@ export interface ChatClientPort {
   setChatPresence(accountId: string, presence: ChatPresence, statusText?: string): Promise<void>;
   markChatRead(accountId: string, conversationId: string, protocolId: string): Promise<void>;
   onChatState(callback: (event: ChatStateEvent) => void): () => void;
+  /** MUC support — optional; the room browser is shown only when both are provided. */
+  discoverRooms?: (accountId: string, service: string) => Promise<RoomListing[]>;
+  joinRoom?: (accountId: string, roomJid: string) => Promise<void>;
 }

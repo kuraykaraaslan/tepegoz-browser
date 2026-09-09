@@ -446,10 +446,13 @@ flags / description; a room whose info errors still lists with defaults. Added `
 `ChatAdapter` contract. 4 adapter tests. Then **`<RoomHeader>`** (room name + live subject with a
 stored-topic fallback + occupant count + a members toggle) wired into `<ChatWorkspace>`: a room
 conversation now shows the header instead of the plain title, and toggling reveals `<RoomMemberList>`
-from `chat.client.rooms[id]`. **46 chat-ui tests for rooms; S99.8/B94.4/F95.7/L99.8.** Next:
-`discoverRooms` / `<RoomBrowser>` into the workspace + the desktop bridge (`chat:discover-rooms`
-channel, `decideNotification` on inbound). · **Depends on:** X-chat.2 · **Branch:** `main` · **Risk:**
-low-medium.
+from `chat.client.rooms[id]`. **46 chat-ui tests for rooms; S99.8/B94.4/F95.7/L99.8.** Then **`<RoomBrowser>` into the workspace** —
+`ChatClientPort` gained optional `discoverRooms` / `joinRoom`; `useChatState` exposes a `rooms`
+handle (`discover` / `join` — join `refresh()`es and selects the new room) only when the port
+supports MUC; `<ChatWorkspace>` shows a third "Find a room" left-column tab in that case, and joining
+from it switches back to the chats list. **148 chat-ui tests.** Next: the desktop bridge
+(`chat:discover-rooms` + `chat:join-room` channels, `decideNotification` on inbound) + a per-room
+notification-level picker. · **Depends on:** X-chat.2 · **Branch:** `main` · **Risk:** low-medium.
 
 ### Deliverables
 - [ ] **XMPP MUC (XEP-0045)** — join/leave by JID, nickname, room roster + affiliations/roles,
@@ -457,8 +460,8 @@ low-medium.
       _Pure stanza layer (`xmpp/muc.ts`) + `chat-core` `RoomView` + `XmppAdapter` join/leave/presence
       routing done; downstream consumption of `room-membership` next._
 - [ ] **Room browser** — service discovery of a MUC service's public rooms, search, join-by-address.
-      _XEP-0030 stanza layer (`xmpp/disco.ts`) + `<RoomBrowser>` UI done; the adapter `discoverRooms`
-      method + desktop bridge wiring next._
+      _`xmpp/disco.ts` + `XmppAdapter.discoverRooms` + `<RoomBrowser>` + workspace wiring done; the
+      desktop `chat:discover-rooms` / `chat:join-room` bridge channels next._
 - [ ] **UI for rooms** — member list, mention autocomplete, per-room notification level
       (all / mentions / none), topic display, "who's typing" for rooms.
       _`<RoomMemberList>` + mention autocomplete + `<RoomHeader>` (topic + member count, wired into

@@ -5,6 +5,7 @@ import { chatUiDict } from './i18n';
 import { Composer } from './Composer';
 import { ConversationList } from './ConversationList';
 import { MessageTimeline } from './MessageTimeline';
+import { RoomBrowser } from './RoomBrowser';
 import { RoomHeader } from './RoomHeader';
 import { RoomMemberList } from './RoomMemberList';
 import { RosterPanel } from './RosterPanel';
@@ -22,7 +23,7 @@ export interface ChatWorkspaceProps {
   onOpenMedia?: ((mediaRef: string) => void) | undefined;
 }
 
-type LeftTab = 'chats' | 'contacts';
+type LeftTab = 'chats' | 'contacts' | 'rooms';
 
 /**
  * The whole messenger surface composed over {@link useChatState}: an account switcher, a
@@ -117,9 +118,19 @@ export function ChatWorkspace({
             >
               {s.workspace.contactsTab}
             </button>
+            {chat.rooms !== null && (
+              <button
+                type="button"
+                role="tab"
+                aria-selected={tab === 'rooms'}
+                onClick={() => setTab('rooms')}
+              >
+                {s.roomBrowser.title}
+              </button>
+            )}
           </div>
 
-          {tab === 'chats' ? (
+          {tab === 'chats' && (
             <ConversationList
               conversations={chat.conversations}
               accounts={accountRefs}
@@ -129,7 +140,8 @@ export function ChatWorkspace({
                 c.kind === 'dm' ? contactByAddress.get(c.address)?.presence ?? null : null
               }
             />
-          ) : (
+          )}
+          {tab === 'contacts' && (
             <RosterPanel
               contacts={rosterList}
               onOpenContact={(contact) => {
@@ -138,6 +150,15 @@ export function ChatWorkspace({
                   setTab('chats');
                   chat.selectConversation(existing.id);
                 }
+              }}
+            />
+          )}
+          {tab === 'rooms' && chat.rooms !== null && (
+            <RoomBrowser
+              discoverRooms={chat.rooms.discover}
+              onJoin={(jid) => {
+                void chat.rooms?.join(jid);
+                setTab('chats');
               }}
             />
           )}

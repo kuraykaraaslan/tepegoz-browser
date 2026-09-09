@@ -205,6 +205,36 @@ describe('ChatWorkspace', () => {
     expect(screen.getByText('Bea')).toBeDefined();
   });
 
+  it('shows a Rooms tab only when the port supports MUC, and joins from it', async () => {
+    const plain = makePort();
+    wrap(<ChatWorkspace port={plain.port} />);
+    await screen.findByRole('button', { name: /Bob/ });
+    expect(screen.queryByRole('tab', { name: 'Find a room' })).toBeNull();
+    cleanup();
+
+    const joinRoom = vi.fn(() => Promise.resolve());
+    const { port } = makePort({
+      discoverRooms: () =>
+        Promise.resolve([
+          {
+            jid: 'general@conf.example',
+            name: 'General',
+            description: null,
+            occupants: 4,
+            passwordProtected: false,
+            membersOnly: false,
+          },
+        ]),
+      joinRoom,
+    });
+    wrap(<ChatWorkspace port={port} />);
+    fireEvent.click(await screen.findByRole('tab', { name: 'Find a room' }));
+    fireEvent.change(screen.getByLabelText('Room service'), { target: { value: 'conf.example' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Browse' }));
+    fireEvent.click(await screen.findByText('General'));
+    await waitFor(() => expect(joinRoom).toHaveBeenCalledWith('work', 'general@conf.example'));
+  });
+
   it('reflects a pushed typing change in the conversation header', async () => {
     const { port, emit } = makePort();
     wrap(<ChatWorkspace port={port} />);
