@@ -17,6 +17,8 @@ export interface MatrixRoomEvent {
   event_id: string;
   origin_server_ts: number;
   content: Record<string, unknown>;
+  /** Pre-room-v11 redaction target (moved into `content.redacts` from v11 on). */
+  redacts?: string;
   unsigned?: { redacted_because?: unknown; 'm.relations'?: unknown };
 }
 
@@ -89,7 +91,8 @@ export function matrixTimelineEvent(
   if (roomId.length === 0 || ev.sender.length === 0 || ev.event_id.length === 0) return null;
 
   if (ev.type === 'm.room.redaction') {
-    const target = str(ev.content.redacts) || str(relatesTo(ev.content).event_id);
+    const target =
+      str(ev.content.redacts) || str(ev.redacts) || str(relatesTo(ev.content).event_id);
     if (target.length === 0) return null;
     return {
       type: 'message-redact',

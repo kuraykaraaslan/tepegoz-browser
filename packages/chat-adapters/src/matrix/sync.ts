@@ -38,6 +38,7 @@ function asRoomEvent(v: unknown): MatrixRoomEvent | null {
     content: rec(o.content),
   };
   if (o.unsigned !== undefined) event.unsigned = rec(o.unsigned);
+  if (typeof o.redacts === 'string') event.redacts = o.redacts;
   return event;
 }
 
