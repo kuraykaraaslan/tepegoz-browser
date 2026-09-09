@@ -461,9 +461,12 @@ channels + `schemas-chat` guards; `ChatIpcService` / `ChatService` / `ChatAccoun
 `ChatConversation`); `ChatApi` + `apps/desktop/src/preload/api-chat.ts` gained `discoverChatRooms` /
 `joinChatRoom`. `chat-ui`'s `ChatClientPort` optional MUC methods were renamed to match (so
 `window.tepegoz` satisfies them structurally and the ext-chat panel needs no adapter). Coverage held
-(`apps/desktop/**` F floor met by new `chat-service` / `account-runner` tests). Next: `decideNotification`
-wired on inbound + a per-room notification-level picker. · **Depends on:** X-chat.2 · **Branch:**
-`main` · **Risk:** low-medium.
+(`apps/desktop/**` F floor met by new `chat-service` / `account-runner` tests). Then the **per-room notification-level picker** — `<RoomHeader>` gains a `notifyLevel` select
+(all / mentions / none) shown when an `onSetNotifyLevel` handler is passed; `useChatState`'s
+`setRoomNotifyLevel` patches `client.conversations[id].notifyLevel` optimistically then calls the
+optional `port.setChatRoomNotifyLevel`; `chat-store` `patchConversation` merges local edits. **151
+chat-ui tests.** Next: `decideNotification` on inbound + the `chat:set-room-notify-level` desktop
+bridge channel. · **Depends on:** X-chat.2 · **Branch:** `main` · **Risk:** low-medium.
 
 ### Deliverables
 - [ ] **XMPP MUC (XEP-0045)** — join/leave by JID, nickname, room roster + affiliations/roles,

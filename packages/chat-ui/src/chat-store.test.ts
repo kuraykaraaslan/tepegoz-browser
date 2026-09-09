@@ -5,6 +5,7 @@ import {
   applyChatChange,
   applyChatChanges,
   emptyChatClientState,
+  patchConversation,
   seedConversations,
   seedHistory,
   seedRoster,
@@ -211,6 +212,13 @@ describe('applyChatChange', () => {
   it('dropped is a no-op', () => {
     const s = opened();
     expect(applyChatChange(s, { kind: 'dropped', reason: 'invalid' })).toBe(s);
+  });
+
+  it('patchConversation merges fields for a known row, no-ops otherwise', () => {
+    const state = seedConversations(emptyChatClientState(), [conv({ id: 'c1' })]);
+    const patched = patchConversation(state, 'c1', { notifyLevel: 'mentions', muted: true });
+    expect(patched.conversations.c1).toMatchObject({ notifyLevel: 'mentions', muted: true });
+    expect(patchConversation(state, 'ghost', { muted: true })).toBe(state);
   });
 
   it('room stores the pushed RoomView by conversation id', () => {

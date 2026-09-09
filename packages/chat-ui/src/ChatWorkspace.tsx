@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useT } from '@tepegoz/i18n/react';
 import './chat-ui.css';
+import type { RoomNotifyLevel } from '@tepegoz/chat-core';
 import type { ChatContact, ChatConversation, ChatMessage } from '@tepegoz/shared-types';
 import { chatUiDict } from './i18n';
 import { Composer } from './Composer';
@@ -177,6 +178,14 @@ export function ChatWorkspace({
                   topicFallback={selected.topic}
                   membersOpen={membersOpen}
                   onToggleMembers={() => setMembersOpen((v) => !v)}
+                  notifyLevel={selected.notifyLevel}
+                  {...(chat.setRoomNotifyLevel !== null
+                    ? {
+                        onSetNotifyLevel: (level: RoomNotifyLevel) => {
+                          void chat.setRoomNotifyLevel?.(selected.id, level);
+                        },
+                      }
+                    : {})}
                 />
               ) : (
                 <header className="chat-workspace__conv-head">

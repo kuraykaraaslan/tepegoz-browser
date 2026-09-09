@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { ChatConnState } from '@tepegoz/chat-core';
+import type { ChatConnState, RoomNotifyLevel } from '@tepegoz/chat-core';
 import type { ChatConversation } from '@tepegoz/shared-types';
 import {
   applyChatChange,
   emptyChatClientState,
+  patchConversation,
   seedConversations,
   seedHistory,
   seedRoster,
@@ -26,6 +27,8 @@ export interface UseChatState {
   /** True until the first accounts + conversations load resolves. */
   loading: boolean;
   send: (text: string, opts?: { replyToId?: string | null }) => Promise<void>;
+  /** Change a room's notification level — `null` when the port does not support it. */
+  setRoomNotifyLevel: ((conversationId: string, level: RoomNotifyLevel) => Promise<void>) | null;
   refresh: () => Promise<void>;
   /** MUC — present only when the port supports rooms. */
   rooms:
@@ -135,6 +138,16 @@ export function useChatState(port: ChatClientPort): UseChatState {
     setSelectedConversationId(null);
   }, []);
 
+  const { setChatRoomNotifyLevel } = port;
+  const setRoomNotifyLevel = useMemo(() => {
+    if (setChatRoomNotifyLevel === undefined) return null;
+    return async (conversationId: string, level: RoomNotifyLevel): Promise<void> => {
+      if (activeAccountId === null) return;
+      setClient((prev) => patchConversation(prev, conversationId, { notifyLevel: level }));
+      await setChatRoomNotifyLevel(activeAccountId, conversationId, level);
+    };
+  }, [setChatRoomNotifyLevel, activeAccountId]);
+
   const conversations = useMemo(() => {
     if (activeAccountId === null) return [];
     return sortConversations(
@@ -170,6 +183,7 @@ export function useChatState(port: ChatClientPort): UseChatState {
     selectConversation,
     loading,
     send,
+    setRoomNotifyLevel,
     refresh,
     rooms,
   };

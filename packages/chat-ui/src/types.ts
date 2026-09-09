@@ -1,4 +1,4 @@
-import type { ChatConnState, ChatStateChange } from '@tepegoz/chat-core';
+import type { ChatConnState, ChatStateChange, RoomNotifyLevel } from '@tepegoz/chat-core';
 import type { RoomListing } from './room-browser';
 import type {
   ChatContact,
@@ -59,4 +59,10 @@ export interface ChatClientPort {
   /** MUC support — optional; the room browser is shown only when both are provided. */
   discoverChatRooms?: (accountId: string, service: string) => Promise<RoomListing[]>;
   joinChatRoom?: (accountId: string, roomJid: string) => Promise<void>;
+  /** Persist a room's notification level — optional; the header picker needs it. */
+  setChatRoomNotifyLevel?: (
+    accountId: string,
+    conversationId: string,
+    level: RoomNotifyLevel,
+  ) => Promise<void>;
 }

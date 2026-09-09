@@ -39,6 +39,11 @@ export const en = {
     showMembers: 'Members',
     /** Placeholder in the room header when no topic is set. */
     noTopicHeader: 'No topic',
+    /** Accessible label for the notification-level control. */
+    notify: 'Notifications',
+    notifyAll: 'All messages',
+    notifyMentions: 'Only mentions',
+    notifyNone: 'Nothing',
     /** Badge on a room moderator. */
     moderator: 'Mod',
     /** Badge on the room owner. */

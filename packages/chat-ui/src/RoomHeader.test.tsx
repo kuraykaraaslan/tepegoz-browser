@@ -43,6 +43,30 @@ describe('RoomHeader', () => {
     expect(onToggleMembers).toHaveBeenCalled();
   });
 
+  it('shows the notify-level picker only with a handler, and reports a change', () => {
+    const { rerender } = wrap(
+      <RoomHeader name="r" membersOpen onToggleMembers={vi.fn()} notifyLevel="mentions" />,
+    );
+    expect(screen.queryByLabelText('Notifications')).toBeNull();
+
+    const onSetNotifyLevel = vi.fn();
+    rerender(
+      <I18nProvider locale="en">
+        <RoomHeader
+          name="r"
+          membersOpen
+          onToggleMembers={vi.fn()}
+          notifyLevel="mentions"
+          onSetNotifyLevel={onSetNotifyLevel}
+        />
+      </I18nProvider>,
+    );
+    const picker = screen.getByLabelText('Notifications');
+    expect(picker).toHaveProperty('value', 'mentions');
+    fireEvent.change(picker, { target: { value: 'none' } });
+    expect(onSetNotifyLevel).toHaveBeenCalledWith('none');
+  });
+
   it('falls back to the stored topic, then to a placeholder', () => {
     const { rerender } = wrap(
       <RoomHeader name="r" topicFallback="stored topic" membersOpen onToggleMembers={vi.fn()} />,

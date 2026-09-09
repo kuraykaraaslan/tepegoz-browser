@@ -206,6 +206,28 @@ describe('useChatState', () => {
     await waitFor(() => expect(result.current.selectedConversationId).toBe('room@conf'));
   });
 
+  it('setRoomNotifyLevel is null without port support; otherwise patches optimistically + calls the port', async () => {
+    const plain = makePort();
+    const { result: noSupport } = renderHook(() => useChatState(plain.port));
+    await waitFor(() => expect(noSupport.current.loading).toBe(false));
+    expect(noSupport.current.setRoomNotifyLevel).toBeNull();
+
+    const setChatRoomNotifyLevel = vi.fn(() => Promise.resolve());
+    const { port } = makePort({
+      setChatRoomNotifyLevel,
+      listChatConversations: () =>
+        Promise.resolve([conv({ id: 'room@conf', accountId: 'home', kind: 'room' })]),
+    });
+    const { result } = renderHook(() => useChatState(port));
+    await waitFor(() => expect(result.current.conversations.length).toBe(1));
+
+    await act(async () => {
+      await result.current.setRoomNotifyLevel?.('room@conf', 'mentions');
+    });
+    expect(setChatRoomNotifyLevel).toHaveBeenCalledWith('home', 'room@conf', 'mentions');
+    expect(result.current.client.conversations['room@conf']?.notifyLevel).toBe('mentions');
+  });
+
   it('switching accounts clears the selection', async () => {
     const { port } = makePort();
     const { result } = renderHook(() => useChatState(port));

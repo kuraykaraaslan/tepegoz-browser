@@ -39,6 +39,20 @@ export function seedRoster(state: ChatClientState, contacts: readonly ChatContac
   return { ...state, roster: byId(contacts) };
 }
 
+/** Merge fields into one conversation row (optimistic local edits — mute, notify level). */
+export function patchConversation(
+  state: ChatClientState,
+  conversationId: string,
+  patch: Partial<ChatConversation>,
+): ChatClientState {
+  const existing = state.conversations[conversationId];
+  if (existing === undefined) return state;
+  return {
+    ...state,
+    conversations: { ...state.conversations, [conversationId]: { ...existing, ...patch } },
+  };
+}
+
 function orderMessages(list: readonly ChatMessage[]): ChatMessage[] {
   return [...list].sort(
     (a, b) =>

@@ -78,6 +78,7 @@ export {
   seedConversations,
   seedRoster,
   seedHistory,
+  patchConversation,
   applyChatChange,
   applyChatChanges,
   type ChatClientState,
