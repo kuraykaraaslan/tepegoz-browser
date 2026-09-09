@@ -86,6 +86,16 @@ export {
 } from './xmpp/mam';
 
 export {
+  discoverXmpp,
+  discoverWebSocketEndpoints,
+  explicitCandidate,
+  sortSrv,
+  type DiscoveryPorts,
+  type SrvRecord,
+  type ConnectionCandidate,
+} from './xmpp/autodiscover';
+
+export {
   bytesToB64,
   b64ToBytes,
   saslPlain,
