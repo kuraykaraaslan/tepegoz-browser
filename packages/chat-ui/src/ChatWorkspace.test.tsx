@@ -105,7 +105,7 @@ describe('ChatWorkspace', () => {
     });
     wrap(<ChatWorkspace port={port} onAddAccount={onAddAccount} />);
     await screen.findByText('Add a chat account to get started.');
-    fireEvent.click(screen.getByRole('button', { name: 'Add contact' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Add account' }));
     expect(onAddAccount).toHaveBeenCalled();
   });
 

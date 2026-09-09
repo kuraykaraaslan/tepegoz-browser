@@ -90,7 +90,7 @@ export function ChatWorkspace({
         <p>{s.workspace.noAccounts}</p>
         {onAddAccount !== undefined && (
           <button type="button" onClick={onAddAccount}>
-            {s.roster.add}
+            {s.workspace.addAccount}
           </button>
         )}
       </div>

@@ -61,6 +61,7 @@ export const tr: ChatUiStrings = {
     chatsTab: 'Sohbetler',
     contactsTab: 'Kişiler',
     noAccounts: 'Başlamak için bir sohbet hesabı ekleyin.',
+    addAccount: 'Hesap ekle',
     noSelection: 'Bir konuşma seçin.',
     accountSwitcher: 'Hesap',
     typing: 'yazıyor…',

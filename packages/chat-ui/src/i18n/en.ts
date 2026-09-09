@@ -82,6 +82,8 @@ export const en = {
     contactsTab: 'Contacts',
     /** Shown when no account is configured yet. */
     noAccounts: 'Add a chat account to get started.',
+    /** Button under {@link noAccounts}. */
+    addAccount: 'Add account',
     /** Shown in the message pane when nothing is selected. */
     noSelection: 'Pick a conversation.',
     /** Accessible label for the account switcher. */
