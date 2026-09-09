@@ -236,20 +236,27 @@ wrong is expensive later.
 
 ## X-chat.1 — XMPP adapter + connection spine
 
-**Status:** 🟡 In progress (~60%, 2026-09-09) — done: `ExtensionPermissionSchema` extended;
-`@tepegoz/chat-adapters` — the `ChatAdapter` contract + `ChatTransport` port + caps presets, **and
-the full pure XMPP protocol layer**: `XmlStreamParser` (incremental, bounded, fail-closed),
-stanza↔`ChatEvent` mapping (message/presence/roster/receipts/chat-states/correction/retraction/MAM
-delay), `<stream:features>` parsing + SASL (PLAIN + SCRAM-SHA-1/256 via Web Crypto, RFC 5802 vector
-passes), the `XmppNegotiator` state machine (STARTTLS/direct-TLS → SASL → bind → SM), XEP-0198
-`StreamManager` (h-count + ack + resumption), and **`XmppAdapter`** wiring transport → parser →
-negotiator → SM → live events (`sendMessage`/`setPresence`/`markRead`/`disconnect`, ~200 tests).
-`ChatStore` + persistence migration 21;
-[ADR-0047](../../docs/adr/0047-chat-protocol-adapter-and-bridge-trust-model.md) written. Remaining:
-roster + MAM history round-trips in `XmppAdapter`; `ext-chat` extension scaffold + i18n; desktop
-`ChatService` host + IPC + preload; `background-connection` supervisor; autodiscover. · **Branch:**
-`feat/ext-chat-xmpp-adapter` · **Risk:** medium — the protocol engine (the core risk) is done and
-tested; the host wiring remains.
+**Status:** 🟡 In progress (~90%, 2026-09-09) — **everything except the desktop host is done**:
+- `@tepegoz/chat-adapters` — the full pure XMPP client: `XmlStreamParser` (incremental, bounded,
+  fail-closed) · stanza↔`ChatEvent` mapping (message/presence/roster/receipts/chat-states/correction/
+  retraction/MAM) · `<stream:features>` + SASL (PLAIN + SCRAM-SHA-1/256 via Web Crypto, RFC 5802
+  vector passes) · `XmppNegotiator` (STARTTLS/direct-TLS → SASL → bind → SM) · XEP-0198
+  `StreamManager` · `XmppAdapter` (transport wiring, live events, sendMessage/setPresence/markRead/
+  roster round-trip/MAM history) · connection autodiscovery (SRV + XEP-0156 host-meta). **132 tests.**
+- `@tepegoz/chat-core` — `normalizeEvent`/`foldEvent`/`send-queue`/`mentions`/`address`/`search-fold`
+  (X-chat.0) · `ChatConnectionManager` (per-account lifecycle + jittered-backoff reconnect +
+  kill-switch) · `PresenceTracker` (multi-resource fold) · `ChatAccountState` (raw stream →
+  conversations/roster/presence → `ChatStateChange[]`). **90 tests.**
+- `@tepegoz/shared-types` chat model · `ChatStore` + persistence migration 21 · `extensions/ext-chat`
+  scaffold (manifest + en/tr i18n + placeholder surfaces + `comments` icon) ·
+  `ExtensionPermissionSchema` extended · [ADR-0047](../../docs/adr/0047-chat-protocol-adapter-and-bridge-trust-model.md).
+
+**Remaining:** the desktop `ChatService` host — a `node:net`/`node:tls`/WebSocket `ChatTransport`
+implementation bound to the profile egress, credential-vault resolution, `ChatStore` wiring, a
+`ChatConnectionManager` + `ChatAccountState` per account, the IPC surface + preload bridge, and the
+`background-connection` supervisor (enable/disable · profile switch · kill-switch). Best done on a
+clean `apps/desktop` tree. · **Branch:** `feat/ext-chat-xmpp-adapter` · **Risk:** low-medium — every
+hard part (protocol engine, reconnect, presence, folding) is done and unit-tested; the host is glue.
 
 ### Deliverables
 - [ ] **`extensions/ext-chat` scaffold** — manifest (`com.tepegoz.chat`, surfaces `sidebar`+`page`,
