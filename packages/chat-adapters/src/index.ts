@@ -58,3 +58,22 @@ export {
   type StanzaContext,
   type OutgoingChatMessage,
 } from './xmpp/stanzas';
+
+export {
+  parseStreamFeatures,
+  pickSaslMechanism,
+  type StreamFeatures,
+} from './xmpp/features';
+
+export {
+  bytesToB64,
+  b64ToBytes,
+  saslPlain,
+  startScram,
+  scramClientFirst,
+  scramFinal,
+  scramVerify,
+  type ScramState,
+  type ScramHash,
+  type ScramFinalResult,
+} from './xmpp/sasl';
