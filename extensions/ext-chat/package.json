@@ -8,6 +8,7 @@
     ".": "./src/index.ts",
     "./manifest": "./src/manifest.ts",
     "./panel": "./src/panel.tsx",
+    "./capabilities": "./src/capabilities.ts",
     "./i18n": "./src/i18n/index.ts"
   },
   "main": "./src/index.ts",

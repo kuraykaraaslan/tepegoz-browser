@@ -38,7 +38,7 @@ describe('ext-chat panel', () => {
     const addChatAccount = vi.fn<ChatHostApi['addChatAccount']>(() => Promise.resolve());
     wrap(<ChatPage api={fakeApi({ addChatAccount })} onClose={vi.fn()} />);
 
-    fireEvent.click(await screen.findByRole('button', { name: 'Add contact' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Add account' }));
     fireEvent.change(await screen.findByLabelText('Account name'), { target: { value: 'Work' } });
     fireEvent.change(screen.getByLabelText('Jabber ID (JID)'), { target: { value: 'ada@x.org' } });
     fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'pencil' } });
@@ -52,7 +52,7 @@ describe('ext-chat panel', () => {
 
   it('cancels back out of the setup form', async () => {
     wrap(<ChatSidebar api={fakeApi()} onClose={vi.fn()} />);
-    fireEvent.click(await screen.findByRole('button', { name: 'Add contact' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Add account' }));
     fireEvent.click(await screen.findByRole('button', { name: 'Cancel' }));
     await screen.findByText('Add a chat account to get started.');
   });
