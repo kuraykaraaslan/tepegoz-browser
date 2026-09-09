@@ -110,6 +110,46 @@ describe('MatrixAdapter — connect', () => {
     await adapter.disconnect(session);
   });
 
+  it('does not surface a space as a conversation', async () => {
+    const t = new FakeTransport()
+      .on(/\/login$/, () => ({ body: { access_token: 'tok', user_id: '@ada:m.example' } }))
+      .on(/\/sync\?/, (_init, url) => {
+        if (!/timeout=0/.test(url)) return 'hang';
+        return {
+          body: {
+            next_batch: 's1',
+            rooms: {
+              join: {
+                '!space:m.example': {
+                  timeline: {
+                    events: [
+                      { type: 'm.room.create', sender: '@ada:m.example', event_id: '$c', origin_server_ts: 1, content: { type: 'm.space' } },
+                      { type: 'm.room.message', sender: '@ada:m.example', event_id: '$s', origin_server_ts: 2, content: { msgtype: 'm.text', body: 'space noise' } },
+                    ],
+                  },
+                  state: { events: [] },
+                },
+                '!room:m.example': {
+                  timeline: {
+                    events: [
+                      { type: 'm.room.message', sender: '@bob:m.example', event_id: '$1', origin_server_ts: 5, content: { msgtype: 'm.text', body: 'hi' } },
+                    ],
+                  },
+                  state: { events: [] },
+                },
+              },
+            },
+          },
+        };
+      });
+    const adapter = new MatrixAdapter();
+    const session = (await adapter.connect(creds(), t)) as MatrixSession;
+    const it = adapter.events(session)[Symbol.asyncIterator]();
+    expect((await it.next()).value).toMatchObject({ type: 'message', message: { body: 'hi' } });
+    expect((await it.next()).value).toMatchObject({ type: 'room-membership', conversationId: '!room:m.example' });
+    await adapter.disconnect(session);
+  });
+
   it('rejects a non-matrix account', async () => {
     await expect(
       new MatrixAdapter().connect(

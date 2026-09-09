@@ -51,7 +51,7 @@ describe('parseSyncResponse', () => {
     expect(result.nextBatch).toBe('s2');
     expect(result.events.map((e) => e.type)).toEqual(['message', 'typing']);
     expect(result.rooms).toEqual([
-      { roomId: '!r:s', name: 'General', topic: '', memberCount: 2, limited: true, prevBatch: 'p1' },
+      { roomId: '!r:s', name: 'General', topic: '', memberCount: 2, isSpace: false, limited: true, prevBatch: 'p1' },
     ]);
   });
 
@@ -71,6 +71,28 @@ describe('parseSyncResponse', () => {
       ctx,
     );
     expect(r.rooms[0]?.memberCount).toBe(42);
+  });
+
+  it('flags a room whose m.room.create carries type m.space', () => {
+    const r = parseSyncResponse(
+      {
+        next_batch: 's',
+        rooms: {
+          join: {
+            '!space:s': {
+              timeline: { events: [] },
+              state: {
+                events: [
+                  { type: 'm.room.create', sender: '@me:s', event_id: '$c', origin_server_ts: 1, content: { type: 'm.space' } },
+                ],
+              },
+            },
+          },
+        },
+      },
+      ctx,
+    );
+    expect(r.rooms[0]?.isSpace).toBe(true);
   });
 
   it('reads invites and leaves', () => {

@@ -46,6 +46,8 @@ export interface SyncRoom {
   name: string;
   topic: string;
   memberCount: number;
+  /** `m.room.create` carried `type: 'm.space'` — a space, not a chat conversation. */
+  isSpace: boolean;
   /** The room's timeline had a gap — the adapter should backfill from `prevBatch`. */
   limited: boolean;
   prevBatch: string | null;
@@ -78,10 +80,12 @@ function roomSummary(roomId: string, joined: Record<string, unknown>): SyncRoom 
   let name = '';
   let topic = '';
   let members = 0;
+  let isSpace = false;
   for (const e of stateEvents) {
     if (e.type === 'm.room.name' && str(e.content.name).length > 0) name = str(e.content.name);
     else if (e.type === 'm.room.topic') topic = str(e.content.topic);
     else if (e.type === 'm.room.member' && str(e.content.membership) === 'join') members += 1;
+    else if (e.type === 'm.room.create' && str(e.content.type) === 'm.space') isSpace = true;
   }
   const summary = rec(joined['m.room.summary'] ?? rec(joined.summary));
   const joinedCount = summary['m.joined_member_count'];
@@ -92,6 +96,7 @@ function roomSummary(roomId: string, joined: Record<string, unknown>): SyncRoom 
     name,
     topic,
     memberCount: members,
+    isSpace,
     limited: timeline.limited === true,
     prevBatch: typeof timeline.prev_batch === 'string' ? timeline.prev_batch : null,
   };
@@ -110,6 +115,10 @@ export function parseSyncResponse(body: unknown, ctx: MatrixContext): SyncResult
 
   for (const [roomId, raw] of Object.entries(rec(rooms.join))) {
     const joined = rec(raw);
+    const summary = roomSummary(roomId, joined);
+    out.rooms.push(summary);
+    // A space is room-shaped but is not a chat conversation — surface it, but not its timeline.
+    if (summary.isSpace) continue;
     for (const raw2 of arr(rec(joined.timeline).events)) {
       const e = asRoomEvent(raw2);
       if (e === null) continue;
@@ -120,7 +129,6 @@ export function parseSyncResponse(body: unknown, ctx: MatrixContext): SyncResult
       const o = rec(raw2);
       out.events.push(...matrixEphemeralEvents({ type: str(o.type), content: rec(o.content) }, roomId, ctx));
     }
-    out.rooms.push(roomSummary(roomId, joined));
   }
 
   for (const [roomId, raw] of Object.entries(rec(rooms.invite))) {

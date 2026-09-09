@@ -177,6 +177,8 @@ export class MatrixAdapter implements ChatAdapter {
     session.nextBatch = result.nextBatch.length > 0 ? result.nextBatch : session.nextBatch;
     for (const event of result.events) session.push(event);
     for (const room of result.rooms) {
+      // Spaces are room-shaped but are not chat conversations (their timeline is dropped upstream).
+      if (room.isSpace) continue;
       session.push({
         type: 'room-membership',
         conversationId: room.roomId,
