@@ -27,6 +27,15 @@ export const en = {
     read: 'Read',
     failed: 'Not sent',
   },
+  list: {
+    empty: 'No conversations yet',
+    /** Screen-reader suffix on the unread count badge, e.g. "3 unread". */
+    unread: 'unread',
+    /** Screen-reader suffix on the mention count badge, e.g. "2 mentions". */
+    mentions: 'mentions',
+    /** Title on the muted-conversation icon. */
+    muted: 'Muted',
+  },
 };
 
 export type ChatUiStrings = typeof en;

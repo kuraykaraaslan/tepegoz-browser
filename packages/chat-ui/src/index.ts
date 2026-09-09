@@ -16,3 +16,13 @@ export {
 } from './time';
 export { presenceMeta, type PresenceMeta, type PresenceTone } from './presence';
 export { PresenceBadge, type PresenceBadgeProps } from './PresenceBadge';
+export {
+  conversationTitle,
+  sortConversations,
+  totalUnread,
+  totalMentions,
+  groupConversationsByAccount,
+  type ChatAccountRef,
+  type AccountGroup,
+} from './conversation-list';
+export { ConversationList, type ConversationListProps } from './ConversationList';

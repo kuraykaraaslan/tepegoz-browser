@@ -24,4 +24,10 @@ export const tr: ChatUiStrings = {
     read: 'Okundu',
     failed: 'Gönderilemedi',
   },
+  list: {
+    empty: 'Henüz konuşma yok',
+    unread: 'okunmamış',
+    mentions: 'bahsetme',
+    muted: 'Sessize alındı',
+  },
 };

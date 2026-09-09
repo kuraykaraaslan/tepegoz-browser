@@ -324,12 +324,15 @@ close-out. · **Branch:** `main` · **Risk:** low.
 ## X-chat.2 — Roster & conversation UI
 
 **Status:** 🟡 In progress (2026-09-09) — `@tepegoz/chat-ui` package scaffolded (en/tr dict + parity
-test, leaf dep-cruiser rule, coverage registration). First primitives landed: `linkifySegments`
+test, leaf dep-cruiser rule, coverage registration). Landed so far: `linkifySegments`
 (safe — only `http(s)` becomes a link, never auto-navigated / fetched), `groupByDay` +
-`daySeparatorLabel` (timeline day buckets), `presenceMeta` + `<PresenceBadge>`. **19 tests, S100/B97/
-F100/L100.** Next: conversation list → message timeline → composer → account setup wizard, then wire
-into `extensions/ext-chat` replacing the placeholder surfaces. · **Depends on:** X-chat.1 ·
-**Branch:** `main` · **Risk:** medium.
+`daySeparatorLabel` (timeline day buckets), `presenceMeta` + `<PresenceBadge>`, and the
+**conversation list** — `sortConversations` (recency, id-tiebroken) / `groupConversationsByAccount`
+(account order, trailing unknown bucket) / `conversationTitle` + `<ConversationList>` (recency-first,
+per-account grouping when >1 account, unread/mention badges capped at 99+, DM presence dots, muted
+marker). **31 tests, S99.7/B96/F100/L99.7.** Next: message timeline → composer → account setup
+wizard, then wire into `extensions/ext-chat` replacing the placeholder surfaces. · **Depends on:**
+X-chat.1 · **Branch:** `main` · **Risk:** medium.
 
 ### Deliverables
 - [ ] **`@tepegoz/chat-ui`** — conversation list (virtualized, unread/mention badges, account
