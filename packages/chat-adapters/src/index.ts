@@ -66,6 +66,13 @@ export {
 } from './xmpp/features';
 
 export {
+  XmppNegotiator,
+  type NegotiatorConfig,
+  type NegotiatorInput,
+  type NegotiationAction,
+} from './xmpp/negotiator';
+
+export {
   bytesToB64,
   b64ToBytes,
   saslPlain,
