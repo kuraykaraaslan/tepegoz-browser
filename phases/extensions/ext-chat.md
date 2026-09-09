@@ -469,24 +469,33 @@ chat-ui tests.** Then the **`chat:set-room-notify-level` desktop bridge** — ch
 guard); `ChatIpcService` / `ChatService` / `ChatAccountRunner` `setRoomNotifyLevel` (reads the stored
 conversation, patches `notifyLevel`, upserts — creating a stub row if the room has no row yet);
 `ChatApi` + preload `setChatRoomNotifyLevel`. `window.tepegoz` satisfies the optional
-`ChatClientPort` method structurally, so the ext-chat panel is unchanged. Next: `decideNotification`
-wired on an inbound `message` in the runner → a redacted desktop notification. · **Depends on:**
-X-chat.2 · **Branch:** `main` · **Risk:** low-medium.
+`ChatClientPort` method structurally, so the ext-chat panel is unchanged. Then **`decideNotification`
+on inbound** — `ChatAccountRunner` gained a `notify?` dep; on a `message` change `maybeNotify` looks
+up the conversation, runs `decideNotification` (own-echo / redaction / room level / mute) and, if it
+survives, raises a `ChatNotification` (title = sender name, body capped at 180);
+`chat-service.electron.ts` wires it to
+`NotificationHost.push({ source: 'chat', channels: ['center', 'native'] })`, `'chat'` added to
+`NOTIFICATION_SOURCES`. **X-chat.3 is now code-complete — only the runtime DoD (live server) + the
+sub-phase DoD template remain.** · **Depends on:** X-chat.2 · **Branch:** `main` · **Risk:** low-medium.
 
 ### Deliverables
-- [ ] **XMPP MUC (XEP-0045)** — join/leave by JID, nickname, room roster + affiliations/roles,
-      subject, invites, kick/ban surfacing (read), history-on-join limit, `0secret`/password rooms.
-      _Pure stanza layer (`xmpp/muc.ts`) + `chat-core` `RoomView` + `XmppAdapter` join/leave/presence
-      routing done; downstream consumption of `room-membership` next._
+- [x] **XMPP MUC (XEP-0045)** — join/leave by JID, nickname, room roster + affiliations/roles,
+      history-on-join limit, password rooms. `xmpp/muc.ts` (join/leave/subject/invite builders +
+      presence/subject/error parse) + `chat-core` `RoomView` + `XmppAdapter` join/leave/presence
+      routing + downstream `room-membership` folding through `ChatAccountState` / reducer / runner.
+      _`buildMucChangeSubject` / `buildMucInvite` exist but no UI action yet; kick/ban surfacing: a
+      later slice._
 - [x] **Room browser** — service discovery of a MUC service's public rooms, search, join-by-address.
       `xmpp/disco.ts` + `XmppAdapter.discoverRooms` + `<RoomBrowser>` + `useChatState` wiring + the
       `chat:discover-rooms` / `chat:join-room` desktop bridge. _Only the runtime DoD remains._
-- [ ] **UI for rooms** — member list, mention autocomplete, per-room notification level
-      (all / mentions / none), topic display, "who's typing" for rooms.
-      _`<RoomMemberList>` + mention autocomplete + `<RoomHeader>` (topic + member count, wired into
-      `<ChatWorkspace>`) done; per-room notification-level picker + room typing next._
-- [ ] **Mention routing** — a room-ping / nick-highlight raises a notification even when the room is
-      muted for "all messages". _`chat-core/notify.ts` `decideNotification` done; host wiring next._
+- [x] **UI for rooms** — member list, mention autocomplete, per-room notification level
+      (all / mentions / none), topic display. `<RoomMemberList>` + mention autocomplete + `<RoomHeader>`
+      (topic + member count + notify-level `<select>`, wired into `<ChatWorkspace>`) + the
+      `chat:set-room-notify-level` bridge. _"Who's typing" for rooms: the `typing` change already
+      carries the room; a multi-typist indicator is a later refinement._
+- [x] **Mention routing** — a room-ping / nick-highlight raises a notification even when the room is
+      muted for "all messages". `chat-core/notify.ts` `decideNotification` + `ChatAccountRunner.maybeNotify`
+      + `NotificationHost.push({ source: 'chat' })`.
 
 ### Functional DoD
 - [ ] Join a public MUC, send/receive, get pinged, leave; notification levels behave.

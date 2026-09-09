@@ -11,7 +11,14 @@ export const NOTIFICATION_KINDS = ['info', 'success', 'warning', 'error'] as con
 export type NotificationKind = (typeof NOTIFICATION_KINDS)[number];
 
 /** Who raised the notification (drives grouping/filtering and default channels). */
-export const NOTIFICATION_SOURCES = ['agent', 'download', 'security', 'system', 'site'] as const;
+export const NOTIFICATION_SOURCES = [
+  'agent',
+  'download',
+  'security',
+  'system',
+  'site',
+  'chat',
+] as const;
 export type NotificationSource = (typeof NOTIFICATION_SOURCES)[number];
 
 /**

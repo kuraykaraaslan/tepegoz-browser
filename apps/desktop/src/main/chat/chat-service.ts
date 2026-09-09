@@ -5,6 +5,7 @@ import type { ChatConnState } from '@tepegoz/chat-core';
 import { AppError } from '@tepegoz/libs';
 import {
   ChatAccountRunner,
+  type ChatNotification,
   type ChatRunnerStore,
   type RunnerEmit,
 } from './account-runner';
@@ -41,6 +42,8 @@ export interface ChatServiceDeps {
   setTimer: (fn: () => void, ms: number) => unknown;
   clearTimer: (handle: unknown) => void;
   emit: (event: RunnerEmit) => void;
+  /** Raise a notification for a message that survived `decideNotification`. Optional. */
+  notify?: (notification: ChatNotification) => void;
   /** Whether the `com.tepegoz.chat` extension is enabled. */
   isEnabled: () => boolean;
 }
@@ -87,6 +90,7 @@ export class ChatService {
       clearTimer: this.deps.clearTimer,
       mayEgress: this.deps.mayEgress,
       emit: this.deps.emit,
+      ...(this.deps.notify !== undefined ? { notify: this.deps.notify } : {}),
     });
     this.runners.set(account.id, runner);
     runner.start();

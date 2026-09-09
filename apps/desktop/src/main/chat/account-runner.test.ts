@@ -147,7 +147,9 @@ function harness() {
   const adapter = new FakeAdapter();
   const store = new FakeStore();
   const { deps, emitted } = makeDeps({ adapter, store });
-  return { runner: new ChatAccountRunner(deps), adapter, store, emitted };
+  const notifications: Array<{ conversationId: string; title: string; body: string }> = [];
+  deps.notify = (n) => notifications.push(n);
+  return { runner: new ChatAccountRunner(deps), adapter, store, emitted, notifications };
 }
 
 const incomingMessage = (
@@ -360,5 +362,61 @@ describe('ChatAccountRunner — actions', () => {
       await tick();
       expect(store.conversations.get('bob@example.com')?.mentions).toBe(1);
     }
+  });
+});
+
+describe('ChatAccountRunner — notifications', () => {
+  async function online() {
+    const h = harness();
+    h.runner.start();
+    await tick();
+    return h;
+  }
+
+  it('raises a notification for an inbound DM message, titled by the sender', async () => {
+    const { adapter, notifications } = await online();
+    adapter.channel.push(incomingMessage('m1', 'ping'));
+    await tick();
+    expect(notifications).toEqual([
+      { accountId: 'acc', conversationId: 'bob@example.com', title: 'Bob', body: 'ping' },
+    ]);
+  });
+
+  it('does not notify for the account\'s own echo or a redacted message', async () => {
+    const { adapter, notifications } = await online();
+    const own = incomingMessage('m1', 'mine');
+    own.message.senderAddress = 'ada@example.com';
+    adapter.channel.push(own);
+    adapter.channel.push({
+      type: 'message-redact',
+      conversationId: 'bob@example.com',
+      protocolId: 'm2',
+      redactedAt: 9,
+    });
+    await tick();
+    expect(notifications).toEqual([]);
+  });
+
+  it('respects a room set to "mentions" — a plain line is silent, a nick ping is not', async () => {
+    const { runner, adapter, store, notifications } = await online();
+    store.conversations.set('room@conf', {
+      id: 'room@conf', accountId: 'acc', kind: 'room', address: 'room@conf', name: 'Room', topic: '',
+      memberCount: 3, unread: 0, mentions: 0, lastReadId: null, muted: false, notifyLevel: 'mentions',
+      isKnownContact: true, updatedAt: 1,
+    });
+    const roomMsg = (protocolId: string, body: string) => {
+      const m = incomingMessage(protocolId, body);
+      m.message.conversationId = 'room@conf';
+      m.message.senderAddress = 'room@conf/Bea';
+      m.message.senderName = 'Bea';
+      return m;
+    };
+    adapter.channel.push(roomMsg('r1', 'just chatting'));
+    await tick();
+    expect(notifications).toHaveLength(0);
+    adapter.channel.push(roomMsg('r2', 'hey Ada can you look'));
+    await tick();
+    expect(notifications.map((n) => n.body)).toEqual(['hey Ada can you look']);
+    void runner;
   });
 });

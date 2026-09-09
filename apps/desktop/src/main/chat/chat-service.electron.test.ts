@@ -22,6 +22,8 @@ vi.mock('electron', () => ({
 }));
 
 vi.mock('@tepegoz/chat-transport-node', () => ({ NodeChatTransport: vi.fn(() => ({})) }));
+const notificationPush = vi.hoisted(() => vi.fn());
+vi.mock('../notifications/notification-host', () => ({ default: { push: notificationPush } }));
 vi.mock('./egress-dialer', () => ({ createChatDialer: () => vi.fn() }));
 vi.mock('./chat-secrets.electron', () => ({ default: { get: vi.fn(), set: vi.fn(), delete: vi.fn() } }));
 
@@ -129,6 +131,13 @@ describe('helpers', () => {
 
   it('chatExtensionEnabled reads the preference', () => {
     expect(mod.chatExtensionEnabled()).toBe(true);
+  });
+
+  it('chatNotify pushes a redacted chat notification', () => {
+    mod.chatNotify({ accountId: 'a', conversationId: 'c', title: 'Bea', body: 'yo' });
+    expect(notificationPush).toHaveBeenCalledWith(
+      expect.objectContaining({ source: 'chat', title: 'Bea', body: 'yo', channels: ['center', 'native'] }),
+    );
   });
 
   it('broadcastChatEvent sends chat:state to every live window', () => {

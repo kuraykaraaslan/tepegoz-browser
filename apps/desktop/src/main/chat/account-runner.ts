@@ -9,6 +9,7 @@ import type { ChatTransport } from '@tepegoz/chat-adapters';
 import {
   ChatAccountState,
   ChatConnectionManager,
+  decideNotification,
   type ChatConnState,
   type ChatStateChange,
 } from '@tepegoz/chat-core';
@@ -37,6 +38,16 @@ export type RunnerEmit =
   | { kind: 'state'; accountId: string; state: ChatConnState; detail?: string }
   | { kind: 'change'; accountId: string; change: ChatStateChange };
 
+/** A message worth surfacing — the host maps it to a redacted OS / center notification. */
+export interface ChatNotification {
+  accountId: string;
+  conversationId: string;
+  /** Sender display name / room name — never a raw JID where a name is known. */
+  title: string;
+  /** Message body, already length-capped. */
+  body: string;
+}
+
 export interface AccountRunnerDeps {
   account: ChatAccount;
   /** Plaintext secret, resolved from the vault by `ChatService`. */
@@ -49,22 +60,30 @@ export interface AccountRunnerDeps {
   clearTimer: (h: unknown) => void;
   mayEgress: () => boolean;
   emit: (event: RunnerEmit) => void;
+  /** Raise a notification for an inbound message (after `decideNotification`). Optional. */
+  notify?: (notification: ChatNotification) => void;
 }
+
+const NOTIFY_BODY_MAX = 180;
 
 export class ChatAccountRunner {
   private readonly accountId: string;
   private readonly state: ChatAccountState;
   private readonly manager: ChatConnectionManager;
+  private readonly selfBareJid: string;
+  private readonly selfNames: string[];
   private session: ChatSession | null = null;
   private tempSeq = 0;
 
   constructor(private readonly deps: AccountRunnerDeps) {
     this.accountId = deps.account.id;
     const bareJid = deriveBareJid(deps.account);
+    this.selfBareJid = bareJid;
+    this.selfNames = selfNames(deps.account, bareJid);
     this.state = new ChatAccountState({
       accountId: this.accountId,
       selfBareJid: bareJid,
-      selfNames: selfNames(deps.account, bareJid),
+      selfNames: this.selfNames,
       caps: deps.adapter.capabilities,
     });
     this.manager = new ChatConnectionManager({
@@ -121,6 +140,7 @@ export class ChatAccountRunner {
     switch (change.kind) {
       case 'message':
         this.deps.store.upsertMessage(change.message);
+        this.maybeNotify(change.message);
         break;
       case 'message-updated':
         if (change.message === null || change.message.redacted) {
@@ -157,6 +177,26 @@ export class ChatAccountRunner {
         break;
     }
     this.deps.emit({ kind: 'change', accountId: this.accountId, change });
+  }
+
+  /** Route an inbound message through `decideNotification` and raise one if it survives. */
+  private maybeNotify(message: ChatMessage): void {
+    if (this.deps.notify === undefined || message.redacted || message.body === '') return;
+    const conversation = this.deps.store.getConversation(message.conversationId);
+    const decision = decideNotification({
+      isRoom: conversation?.kind === 'room',
+      ...(conversation !== null ? { level: conversation.notifyLevel, muted: conversation.muted } : {}),
+      fromSelf: message.senderAddress === this.selfBareJid,
+      selfNames: this.selfNames,
+      body: message.body,
+    });
+    if (!decision.notify) return;
+    this.deps.notify({
+      accountId: this.accountId,
+      conversationId: message.conversationId,
+      title: message.senderName.trim() || (conversation?.name ?? '').trim() || message.senderAddress,
+      body: message.body.slice(0, NOTIFY_BODY_MAX),
+    });
   }
 
   private requireSession(): ChatSession {

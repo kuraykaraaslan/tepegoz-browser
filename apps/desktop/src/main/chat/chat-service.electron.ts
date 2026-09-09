@@ -6,6 +6,7 @@ import type { ChatAccount } from '@tepegoz/shared-types';
 import type { Db } from '@tepegoz/persistence';
 import PreferenceStore from '@tepegoz/preferences';
 import { getDb } from '../db/database.electron';
+import NotificationHost from '../notifications/notification-host';
 import { createChatDialer } from './egress-dialer';
 import ChatSecrets from './chat-secrets.electron';
 import {
@@ -42,6 +43,22 @@ export function chatExtensionEnabled(): boolean {
   return isExtensionEnabled(PreferenceStore.getAll().extensions, CHAT_EXTENSION_ID);
 }
 
+/** Raise a redacted messenger notification for a message that survived `decideNotification`. */
+export function chatNotify(n: {
+  accountId: string;
+  conversationId: string;
+  title: string;
+  body: string;
+}): void {
+  NotificationHost.push({
+    source: 'chat',
+    kind: 'info',
+    title: n.title,
+    body: n.body,
+    channels: ['center', 'native'],
+  });
+}
+
 function requireDb(): Db {
   const handle = getDb();
   if (handle === null) throw new Error('chat: the profile database is not open');
@@ -64,6 +81,7 @@ export function buildChatService(over: Partial<ChatServiceDeps> = {}): ChatServi
     setTimer: (fn, ms) => setTimeout(fn, ms),
     clearTimer: (h) => clearTimeout(h as ReturnType<typeof setTimeout>),
     emit: broadcastChatEvent,
+    notify: chatNotify,
     isEnabled: chatExtensionEnabled,
     ...over,
   });
