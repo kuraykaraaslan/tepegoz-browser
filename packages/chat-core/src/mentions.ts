@@ -32,14 +32,14 @@ export function scanMentions(body: string): MentionScan {
   return { names: [...names], roomPing: ROOM_PING.test(body) };
 }
 
-/** True when a message pings `self` — any of the user's names appears as a `@mention`, as an IRC
- *  address prefix, or as a standalone whole word in the body; or it is a room-wide ping. */
-export function isMention(body: string, selfNames: readonly string[]): boolean {
+/** True when one of the user's own names appears as a `@mention`, an IRC address prefix, or a
+ *  standalone whole word in the body. A room-wide ping (`@room` …) is NOT a direct mention — see
+ *  {@link isMention}, which is the OR of this and the room ping. */
+export function isDirectMention(body: string, selfNames: readonly string[]): boolean {
   const folded = selfNames.map(foldForSearch).filter((n) => n.length > 0);
   if (folded.length === 0) return false;
 
   const scan = scanMentions(body);
-  if (scan.roomPing) return true;
   if (scan.names.some((n) => folded.includes(n))) return true;
 
   const foldedBody = foldForSearch(body);
@@ -47,6 +47,13 @@ export function isMention(body: string, selfNames: readonly string[]): boolean {
     const re = new RegExp(`(^|[^\\p{L}\\p{N}])${escapeRegExp(name)}([^\\p{L}\\p{N}]|$)`, 'u');
     return re.test(foldedBody);
   });
+}
+
+/** True when a message pings `self` — a direct mention ({@link isDirectMention}) or a room-wide ping.
+ *  With no usable self names, nothing counts (matches the historical guard). */
+export function isMention(body: string, selfNames: readonly string[]): boolean {
+  if (!selfNames.some((n) => foldForSearch(n).length > 0)) return false;
+  return scanMentions(body).roomPing || isDirectMention(body, selfNames);
 }
 
 function escapeRegExp(input: string): string {

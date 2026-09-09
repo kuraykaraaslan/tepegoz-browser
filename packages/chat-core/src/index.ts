@@ -43,7 +43,16 @@ export {
   type ChatSendState,
 } from './send-queue';
 
-export { scanMentions, isMention, type MentionScan } from './mentions';
+export { scanMentions, isMention, isDirectMention, type MentionScan } from './mentions';
+
+export {
+  ROOM_NOTIFY_LEVELS,
+  decideNotification,
+  type RoomNotifyLevel,
+  type NotifyReason,
+  type NotifyContext,
+  type NotifyDecision,
+} from './notify';
 
 export { foldForSearch, tokenize, foldedIncludes } from './search-fold';
 

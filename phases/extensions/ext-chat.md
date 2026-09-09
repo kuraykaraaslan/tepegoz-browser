@@ -420,9 +420,13 @@ S99.8/B94/F96/L99.8.** Then `@tepegoz/chat-adapters` `xmpp/disco.ts` — XEP-003
 `buildDiscoInfo` requests, `parseDiscoItems` (a MUC service's advertised room list),
 `parseDiscoInfo` (identities + features + the XEP-0045 `muc#roominfo` extras — occupant count,
 password / members-only / hidden flags, description — recognising a room by the `muc` feature or a
-`conference/text` identity). 7 tests. Next: wire the MUC stanza layer + `RoomView` + disco into
-`XmppAdapter` (join/leave drives room `<presence>`; occupant → a room-membership event; disco backs
-the room browser). · **Depends on:** X-chat.2 · **Branch:** `main` · **Risk:** low-medium.
+`conference/text` identity). 7 tests. Then `@tepegoz/chat-core` `notify.ts` — `decideNotification`:
+own echo → silent; **a direct nick mention always notifies (even muted, even "mentions", even
+"none")** — `isMention` was split so `isDirectMention` excludes the room ping; a room-wide ping
+notifies at "all" / "mentions" but respects "none"; a plain room message follows level then the mute
+flag; a DM notifies unless muted. 8 tests. Next: wire the MUC stanza layer + `RoomView` + disco +
+`decideNotification` into `XmppAdapter` / the desktop host. · **Depends on:** X-chat.2 · **Branch:**
+`main` · **Risk:** low-medium.
 
 ### Deliverables
 - [ ] **XMPP MUC (XEP-0045)** — join/leave by JID, nickname, room roster + affiliations/roles,
@@ -434,7 +438,7 @@ the room browser). · **Depends on:** X-chat.2 · **Branch:** `main` · **Risk:*
       (all / mentions / none), topic display, "who's typing" for rooms.
       _`<RoomMemberList>` + mention autocomplete done; notification level + topic + typing next._
 - [ ] **Mention routing** — a room-ping / nick-highlight raises a notification even when the room is
-      muted for "all messages".
+      muted for "all messages". _`chat-core/notify.ts` `decideNotification` done; host wiring next._
 
 ### Functional DoD
 - [ ] Join a public MUC, send/receive, get pinged, leave; notification levels behave.
