@@ -57,3 +57,9 @@ export {
 } from './connection-manager';
 
 export { PresenceTracker, type EffectivePresence } from './presence';
+
+export {
+  ChatAccountState,
+  type ChatAccountStateOptions,
+  type ChatStateChange,
+} from './account-state';
