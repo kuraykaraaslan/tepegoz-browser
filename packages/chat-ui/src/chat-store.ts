@@ -1,0 +1,170 @@
+import type { ChatStateChange } from '@tepegoz/chat-core';
+import type { ChatContact, ChatConversation, ChatMessage } from '@tepegoz/shared-types';
+
+/**
+ * The renderer's in-memory projection of one account's chat state. Main does the protocol work and
+ * pushes already-folded {@link ChatStateChange}s over `chat:state`; this reducer keeps the panel's
+ * view of conversations, roster, open-conversation messages and typing in sync. Pure and immutable —
+ * every `apply*` returns a new object (or the same one when nothing changed) so React bails cheaply.
+ */
+
+export interface ChatClientState {
+  /** Conversation rows, by id — seeded from `listChatConversations`, patched by change events. */
+  readonly conversations: Readonly<Record<string, ChatConversation>>;
+  /** Roster contacts, by contact id — seeded from `getChatRoster`, patched by roster/presence events. */
+  readonly roster: Readonly<Record<string, ChatContact>>;
+  /** Windowed, ordered message lists by conversation id — seeded on open, appended by message events. */
+  readonly messages: Readonly<Record<string, readonly ChatMessage[]>>;
+  /** Sender addresses currently typing, by conversation id. */
+  readonly typing: Readonly<Record<string, readonly string[]>>;
+}
+
+export function emptyChatClientState(): ChatClientState {
+  return { conversations: {}, roster: {}, messages: {}, typing: {} };
+}
+
+const byId = <T extends { id: string }>(rows: readonly T[]): Record<string, T> =>
+  Object.fromEntries(rows.map((r) => [r.id, r]));
+
+export function seedConversations(
+  state: ChatClientState,
+  conversations: readonly ChatConversation[],
+): ChatClientState {
+  return { ...state, conversations: byId(conversations) };
+}
+
+export function seedRoster(state: ChatClientState, contacts: readonly ChatContact[]): ChatClientState {
+  return { ...state, roster: byId(contacts) };
+}
+
+function orderMessages(list: readonly ChatMessage[]): ChatMessage[] {
+  return [...list].sort(
+    (a, b) =>
+      a.originTs - b.originTs ||
+      a.receivedAt - b.receivedAt ||
+      (a.protocolId < b.protocolId ? -1 : a.protocolId > b.protocolId ? 1 : 0),
+  );
+}
+
+export function seedHistory(
+  state: ChatClientState,
+  conversationId: string,
+  history: readonly ChatMessage[],
+): ChatClientState {
+  const existing = state.messages[conversationId] ?? [];
+  const merged = new Map<string, ChatMessage>();
+  for (const m of history) merged.set(m.protocolId, m);
+  for (const m of existing) merged.set(m.protocolId, m);
+  return {
+    ...state,
+    messages: { ...state.messages, [conversationId]: orderMessages([...merged.values()]) },
+  };
+}
+
+function upsertMessage(
+  list: readonly ChatMessage[],
+  message: ChatMessage,
+): readonly ChatMessage[] {
+  const idx = list.findIndex((m) => m.protocolId === message.protocolId);
+  if (idx >= 0) {
+    const next = [...list];
+    next[idx] = message;
+    return next;
+  }
+  return orderMessages([...list, message]);
+}
+
+export function applyChatChange(state: ChatClientState, change: ChatStateChange): ChatClientState {
+  switch (change.kind) {
+    case 'message': {
+      const list = state.messages[change.conversationId];
+      // Only track messages for a conversation the panel has opened (its window is seeded).
+      if (list === undefined) return bumpConversation(state, change.conversationId, change.message);
+      return bumpConversation(
+        { ...state, messages: { ...state.messages, [change.conversationId]: upsertMessage(list, change.message) } },
+        change.conversationId,
+        change.message,
+      );
+    }
+    case 'message-updated': {
+      const list = state.messages[change.conversationId];
+      if (list === undefined) return state;
+      const updated = change.message;
+      const next =
+        updated === null
+          ? list.filter((m) => m.protocolId !== change.protocolId)
+          : list.map((m) => (m.protocolId === change.protocolId ? updated : m));
+      return { ...state, messages: { ...state.messages, [change.conversationId]: next } };
+    }
+    case 'conversation': {
+      const existing = state.conversations[change.conversationId];
+      if (existing === undefined) return state;
+      return {
+        ...state,
+        conversations: {
+          ...state.conversations,
+          [change.conversationId]: {
+            ...existing,
+            unread: change.unread,
+            mentions: change.mentions,
+            lastReadId: change.lastReadId,
+          },
+        },
+      };
+    }
+    case 'roster': {
+      const roster = { ...state.roster };
+      if (change.removed) delete roster[change.contact.id];
+      else roster[change.contact.id] = change.contact;
+      return { ...state, roster };
+    }
+    case 'presence': {
+      let touched = false;
+      const roster = { ...state.roster };
+      for (const [id, contact] of Object.entries(state.roster)) {
+        if (contact.address !== change.address) continue;
+        roster[id] = {
+          ...contact,
+          presence: change.effective.presence,
+          statusText: change.effective.statusText,
+        };
+        touched = true;
+      }
+      return touched ? { ...state, roster } : state;
+    }
+    case 'typing': {
+      const current = state.typing[change.conversationId] ?? [];
+      const has = current.includes(change.senderAddress);
+      if (change.active === has) return state;
+      const next = change.active
+        ? [...current, change.senderAddress]
+        : current.filter((a) => a !== change.senderAddress);
+      return { ...state, typing: { ...state.typing, [change.conversationId]: next } };
+    }
+    case 'dropped':
+      return state;
+  }
+}
+
+/** Nudge a conversation's `updatedAt` (and its stub, if we have no row) so the list reorders. */
+function bumpConversation(
+  state: ChatClientState,
+  conversationId: string,
+  message: ChatMessage,
+): ChatClientState {
+  const existing = state.conversations[conversationId];
+  if (existing === undefined) return state;
+  const at = message.receivedAt || message.originTs;
+  if (at <= existing.updatedAt) return state;
+  return {
+    ...state,
+    conversations: { ...state.conversations, [conversationId]: { ...existing, updatedAt: at } },
+  };
+}
+
+export function applyChatChanges(
+  state: ChatClientState,
+  changes: readonly ChatStateChange[],
+): ChatClientState {
+  return changes.reduce(applyChatChange, state);
+}

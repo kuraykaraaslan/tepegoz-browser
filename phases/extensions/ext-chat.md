@@ -347,9 +347,14 @@ lock; XMPP-only for now); and the **roster panel** — `roster` (`groupRoster` �
 its groups, named groups Turkish-sorted, ungrouped bucket last; within a group connected-first by
 presence rank then `turkishCompare`; `filterRoster` fold-matches name/address) + `<RosterPanel>`
 (grouped list with per-group online count, presence dots, `search` box + no-match line, add-contact
-row, per-row remove, `from`-subscription "awaiting response" marker). **87 tests, S99.7/B95.2/F95.8/
-L99.7.** Next: wire into `extensions/ext-chat` replacing the placeholder surfaces + bind the
-`window.tepegoz` chat.* channels. · **Depends on:** X-chat.1 · **Branch:** `main` · **Risk:** medium.
+row, per-row remove, `from`-subscription "awaiting response" marker); and the **renderer state
+reducer** — `chat-store` (`ChatClientState` = conversations / roster / windowed messages / typing;
+`seedConversations` / `seedRoster` / `seedHistory` from the IPC reads; `applyChatChange` folds a
+main-pushed `ChatStateChange` — message upsert+dedup, edit/redact, unread-count patch, roster
+add/remove, presence-by-address, idempotent typing sets — immutably, same-ref on no-op).
+**100 tests, S99.7/B93.8/F96.3/L99.7.** Next: the `useChatState` hook + wire into `extensions/ext-chat`
+replacing the placeholder surfaces (bind `window.tepegoz` chat.* + the `chat:state` push). ·
+**Depends on:** X-chat.1 · **Branch:** `main` · **Risk:** medium.
 
 ### Deliverables
 - [ ] **`@tepegoz/chat-ui`** — conversation list (virtualized, unread/mention badges, account

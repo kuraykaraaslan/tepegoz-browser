@@ -16,6 +16,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@tepegoz/chat-core": "workspace:*",
     "@tepegoz/i18n": "workspace:*",
     "@tepegoz/shared-types": "workspace:*"
   },

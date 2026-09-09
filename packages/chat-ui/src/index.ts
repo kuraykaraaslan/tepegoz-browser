@@ -50,6 +50,15 @@ export {
   type RosterGroup,
 } from './roster';
 export { RosterPanel, type RosterPanelProps } from './RosterPanel';
+export {
+  emptyChatClientState,
+  seedConversations,
+  seedRoster,
+  seedHistory,
+  applyChatChange,
+  applyChatChanges,
+  type ChatClientState,
+} from './chat-store';
 export { presenceMeta, type PresenceMeta, type PresenceTone } from './presence';
 export { PresenceBadge, type PresenceBadgeProps } from './PresenceBadge';
 export {

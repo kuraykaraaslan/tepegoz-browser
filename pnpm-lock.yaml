@@ -1120,6 +1120,9 @@ importers:
 
   packages/chat-ui:
     dependencies:
+      '@tepegoz/chat-core':
+        specifier: workspace:*
+        version: link:../chat-core
       '@tepegoz/i18n':
         specifier: workspace:*
         version: link:../i18n
