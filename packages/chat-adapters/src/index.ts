@@ -172,6 +172,8 @@ export {
   type SyncInvite,
 } from './matrix/sync';
 
+export { MatrixAdapter, MatrixSession, MATRIX_ADAPTER_CAPS } from './matrix/adapter';
+
 export {
   bytesToB64,
   b64ToBytes,
