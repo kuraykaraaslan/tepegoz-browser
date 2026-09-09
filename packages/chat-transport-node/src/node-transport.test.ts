@@ -131,6 +131,16 @@ describe('NodeChatTransport — fetch', () => {
     expect(init?.body).toBe('q');
   });
 
+  it('exposes the raw response body as bytes', async () => {
+    const payload = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a]);
+    const fetchMock = vi
+      .fn<FetchFn>()
+      .mockResolvedValue(new Response(payload, { status: 200, headers: { 'content-type': 'image/png' } }));
+    const t = new NodeChatTransport({ fetch: fetchMock as unknown as typeof fetch });
+    const res = await t.fetch('https://x.com/pic.png');
+    expect(Array.from(await res.bytes())).toEqual(Array.from(payload));
+  });
+
   it('aborts on timeout', async () => {
     const fetchMock = vi.fn<FetchFn>((_url, opts) =>
       new Promise<Response>((_resolve, reject) => {

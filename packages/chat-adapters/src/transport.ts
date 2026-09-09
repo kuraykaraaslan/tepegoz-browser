@@ -38,6 +38,8 @@ export interface ChatFetchResponse {
   status: number;
   headers: Record<string, string>;
   text(): Promise<string>;
+  /** The raw response body — for media-repository downloads (`mxc://` etc.). */
+  bytes(): Promise<Uint8Array>;
 }
 
 /** An open server-sent-events / long-poll stream for JMAP/Matrix-style push. */

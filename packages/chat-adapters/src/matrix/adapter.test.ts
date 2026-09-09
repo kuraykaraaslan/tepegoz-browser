@@ -28,6 +28,7 @@ class FakeTransport implements ChatTransport {
       status: out.status ?? 200,
       headers: {},
       text: () => Promise.resolve(JSON.stringify(out.body)),
+      bytes: () => Promise.resolve(new TextEncoder().encode(JSON.stringify(out.body))),
     });
   }
   openTCP(): never {

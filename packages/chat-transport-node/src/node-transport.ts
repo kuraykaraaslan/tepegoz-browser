@@ -97,7 +97,12 @@ export class NodeChatTransport implements ChatTransport {
       res.headers.forEach((v, k) => {
         headers[k] = v;
       });
-      return { status: res.status, headers, text: () => res.text() };
+      return {
+        status: res.status,
+        headers,
+        text: () => res.text(),
+        bytes: async () => new Uint8Array(await res.arrayBuffer()),
+      };
     } finally {
       if (timer !== undefined) clearTimeout(timer);
     }
