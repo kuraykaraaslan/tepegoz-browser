@@ -68,14 +68,18 @@ export class XmppNegotiator {
   private scram: ScramState | null = null;
   private scramServerSig: string | null = null;
   private smOffered = false;
+  /** Tracks whether the transport is TLS *now* — starts at the config value, flips true once
+   *  STARTTLS completes, so PLAIN is never chosen before the link is encrypted. */
+  private tlsActive: boolean;
 
   constructor(private readonly cfg: NegotiatorConfig) {
     this.domain = parseJid(cfg.jid)?.domain ?? '';
+    this.tlsActive = cfg.tlsActive;
   }
 
   /** The opening `<stream:stream>` — the adapter sends this right after the socket connects. */
   start(): NegotiationAction[] {
-    this.phase = this.cfg.tlsActive ? 'await-features-pre-auth' : 'await-features-pre-tls';
+    this.phase = this.tlsActive ? 'await-features-pre-auth' : 'await-features-pre-tls';
     return [{ kind: 'send', xml: this.openStreamXml() }];
   }
 
@@ -96,6 +100,7 @@ export class XmppNegotiator {
     if (this.phase === 'failed' || this.phase === 'ready') return [];
     if (input.t === 'stream-open') return [];
     if (input.t === 'tls-established') {
+      this.tlsActive = true;
       this.phase = 'await-features-pre-auth';
       return [{ kind: 'restart-stream', xml: this.openStreamXml() }];
     }
@@ -146,7 +151,7 @@ export class XmppNegotiator {
   private handlePreAuthFeatures(el: XmlElement): NegotiationAction[] {
     if (el.local !== 'features') return [];
     const f = parseStreamFeatures(el);
-    const mech = pickSaslMechanism(f.mechanisms, { tlsActive: this.cfg.tlsActive });
+    const mech = pickSaslMechanism(f.mechanisms, { tlsActive: this.tlsActive });
     if (mech === null) return this.fail(`no acceptable SASL mechanism in [${f.mechanisms.join(', ')}]`);
 
     this.phase = 'await-sasl';

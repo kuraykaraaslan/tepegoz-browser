@@ -49,6 +49,12 @@ export interface EventStream {
 
 export interface ChatTransport {
   openTCP(opts: OpenTcpOptions): Promise<DuplexStream>;
+  /**
+   * Upgrade an already-open plaintext TCP stream to TLS in place (XMPP STARTTLS, RFC 6120 §5). The
+   * returned stream replaces the old one — the caller re-registers its `onData` / `onClose`. `host`
+   * is the certificate-verification hostname (the XMPP domain, not a resolved A record).
+   */
+  upgradeTLS(stream: DuplexStream, opts: { host: string }): Promise<DuplexStream>;
   openWebSocket(url: string, protocols?: string[]): Promise<DuplexStream>;
   fetch(url: string, init?: ChatFetchInit): Promise<ChatFetchResponse>;
   openEventStream(url: string, init?: ChatFetchInit): Promise<EventStream>;

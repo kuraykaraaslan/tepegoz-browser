@@ -74,6 +74,8 @@ export {
 
 export { StreamManager, type StreamManagerOptions } from './xmpp/stream-management';
 
+export { XmppAdapter } from './xmpp/adapter';
+
 export {
   bytesToB64,
   b64ToBytes,
