@@ -60,6 +60,7 @@ export {
   type ChatClientState,
 } from './chat-store';
 export { useChatState, type UseChatState } from './useChatState';
+export { ChatWorkspace, type ChatWorkspaceProps } from './ChatWorkspace';
 export type {
   ChatAccountSummary,
   ChatAccountsSnapshot,

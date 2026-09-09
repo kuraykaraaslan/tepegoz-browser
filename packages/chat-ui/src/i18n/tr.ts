@@ -24,6 +24,14 @@ export const tr: ChatUiStrings = {
     read: 'Okundu',
     failed: 'Gönderilemedi',
   },
+  workspace: {
+    chatsTab: 'Sohbetler',
+    contactsTab: 'Kişiler',
+    noAccounts: 'Başlamak için bir sohbet hesabı ekleyin.',
+    noSelection: 'Bir konuşma seçin.',
+    accountSwitcher: 'Hesap',
+    typing: 'yazıyor…',
+  },
   roster: {
     title: 'Kişiler',
     search: 'Kişilerde ara',

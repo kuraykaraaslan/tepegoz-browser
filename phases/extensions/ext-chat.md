@@ -358,10 +358,13 @@ accounts (order-sorted) + per-account `ChatConnState`, the active account's conv
 subscription for the hook's lifetime, `send()` / `setActiveAccount()` / `refresh()`. Port shapes
 (`ChatClientPort`, `ChatStateEvent`, `ChatAccountsSnapshot`) are defined in `chat-ui` itself
 (structurally mirroring `@tepegoz/desktop-ipc`'s `ChatApi`) so the leaf takes no IPC-contract
-dependency. **106 tests, S99.8/B93.3/F96.4/L99.8.** Next: wire into `extensions/ext-chat` replacing
-the placeholder surfaces — a real layout (roster + list + timeline + composer) over `useChatState`,
-plus the desktop adapter from `window.tepegoz`. · **Depends on:** X-chat.1 · **Branch:** `main` ·
-**Risk:** medium.
+dependency; and **`<ChatWorkspace>`** — the whole surface composed over `useChatState`: account
+switcher (>1 account), a chats / contacts left column, and the open conversation (title + typing
+indicator + `<MessageTimeline>` + `<Composer>`); no-account state invites adding one. Presentational
+glue — every effect goes through the injected port. **113 tests, S99.8/B93.8/F95.6/L99.8.** Next:
+wire `<ChatWorkspace>` into `extensions/ext-chat` (replace the placeholder surfaces) + the desktop
+adapter mapping `window.tepegoz` chat.* → `ChatClientPort`. · **Depends on:** X-chat.1 · **Branch:**
+`main` · **Risk:** medium.
 
 ### Deliverables
 - [ ] **`@tepegoz/chat-ui`** — conversation list (virtualized, unread/mention badges, account

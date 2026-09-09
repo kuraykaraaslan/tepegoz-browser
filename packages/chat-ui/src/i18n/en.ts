@@ -27,6 +27,19 @@ export const en = {
     read: 'Read',
     failed: 'Not sent',
   },
+  workspace: {
+    /** Left-column tab: the conversation list. */
+    chatsTab: 'Chats',
+    /** Left-column tab: the roster. */
+    contactsTab: 'Contacts',
+    /** Shown when no account is configured yet. */
+    noAccounts: 'Add a chat account to get started.',
+    /** Shown in the message pane when nothing is selected. */
+    noSelection: 'Pick a conversation.',
+    /** Accessible label for the account switcher. */
+    accountSwitcher: 'Account',
+    typing: 'typing…',
+  },
   roster: {
     title: 'Contacts',
     search: 'Search contacts',
