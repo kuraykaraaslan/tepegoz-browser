@@ -279,6 +279,7 @@ function blankConversation(accountId: string, id: string): ChatConversation {
     mentions: 0,
     lastReadId: null,
     muted: false,
+    notifyLevel: 'all',
     isKnownContact: false,
     updatedAt: 0,
   };

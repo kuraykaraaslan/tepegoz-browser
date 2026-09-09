@@ -41,6 +41,7 @@ const conversation = (id: string): ChatConversation => ({
   mentions: 0,
   lastReadId: null,
   muted: false,
+  notifyLevel: 'all',
   isKnownContact: true,
   updatedAt: 1,
 });

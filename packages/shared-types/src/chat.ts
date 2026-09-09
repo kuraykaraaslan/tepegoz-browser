@@ -168,6 +168,10 @@ export const ChatConversationSchema = z.object({
   mentions: z.number().int().nonnegative().default(0),
   lastReadId: z.string().max(128).nullable().default(null),
   muted: z.boolean().default(false),
+  /** Room notification level — `all` every message, `mentions` only a nick/room ping, `none` silent.
+   *  A direct nick mention still notifies at `mentions`; only `none` fully silences (see
+   *  `@tepegoz/chat-core` `decideNotification`). Ignored for DMs, which use `muted`. */
+  notifyLevel: z.enum(['all', 'mentions', 'none']).default('all'),
   /** The peer is a roster contact (DM) or the user explicitly opted this conversation in. Gates
    *  whether the agent may read it (`chat_get_history` withholds unknown-contact conversations). */
   isKnownContact: z.boolean().default(false),

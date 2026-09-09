@@ -104,6 +104,7 @@ interface ChatConversationRow {
   mentions: number;
   last_read_id: string | null;
   muted: number;
+  notify_level: ChatConversation['notifyLevel'];
   is_known_contact: number;
   updated_at: number;
 }
@@ -121,6 +122,7 @@ function rowToConversation(row: ChatConversationRow): ChatConversation {
     mentions: row.mentions,
     lastReadId: row.last_read_id,
     muted: row.muted === 1,
+    notifyLevel: row.notify_level,
     isKnownContact: row.is_known_contact === 1,
     updatedAt: row.updated_at,
   };
@@ -299,10 +301,10 @@ export class ChatStore {
     db.prepare(
       `INSERT INTO chat_conversations (
         id, account_id, kind, address, name, topic, member_count, unread, mentions,
-        last_read_id, muted, is_known_contact, updated_at
+        last_read_id, muted, notify_level, is_known_contact, updated_at
       ) VALUES (
         @id, @accountId, @kind, @address, @name, @topic, @memberCount, @unread, @mentions,
-        @lastReadId, @muted, @isKnownContact, @updatedAt
+        @lastReadId, @muted, @notifyLevel, @isKnownContact, @updatedAt
       )
       ON CONFLICT(account_id, address) DO UPDATE SET
         kind = excluded.kind,
@@ -313,6 +315,7 @@ export class ChatStore {
         mentions = excluded.mentions,
         last_read_id = excluded.last_read_id,
         muted = excluded.muted,
+        notify_level = excluded.notify_level,
         is_known_contact = excluded.is_known_contact,
         updated_at = excluded.updated_at`,
     ).run({
@@ -327,6 +330,7 @@ export class ChatStore {
       mentions: conv.mentions,
       lastReadId: conv.lastReadId,
       muted: conv.muted ? 1 : 0,
+      notifyLevel: conv.notifyLevel,
       isKnownContact: conv.isKnownContact ? 1 : 0,
       updatedAt: conv.updatedAt,
     });

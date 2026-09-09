@@ -21,6 +21,7 @@ function conv(over: Partial<ChatConversation> = {}): ChatConversation {
     mentions: 0,
     lastReadId: null,
     muted: false,
+    notifyLevel: 'all',
     isKnownContact: true,
     updatedAt: 1000,
     ...over,

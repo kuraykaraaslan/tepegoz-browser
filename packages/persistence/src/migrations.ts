@@ -770,6 +770,15 @@ const MIGRATIONS: Migration[] = [
       `);
     },
   },
+  {
+    version: 22,
+    up: (db) => {
+      // Per-room notification level (ext-chat X-chat.3): `all` (default) | `mentions` | `none`.
+      // A direct nick mention still notifies at `mentions`; only `none` fully silences — the routing
+      // rule lives in `@tepegoz/chat-core` `decideNotification`. DMs keep using `muted`.
+      db.exec("ALTER TABLE chat_conversations ADD COLUMN notify_level TEXT NOT NULL DEFAULT 'all';");
+    },
+  },
 ];
 
 /**

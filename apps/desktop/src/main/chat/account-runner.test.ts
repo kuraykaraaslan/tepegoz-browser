@@ -77,6 +77,7 @@ class FakeAdapter {
       mentions: 0,
       lastReadId: null,
       muted: false,
+      notifyLevel: 'all' as const,
       isKnownContact: true,
       updatedAt: 1,
     }),

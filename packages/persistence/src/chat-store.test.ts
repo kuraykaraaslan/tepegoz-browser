@@ -39,6 +39,7 @@ const conversation = (id: string, accountId: string, address: string): ChatConve
   mentions: 0,
   lastReadId: null,
   muted: false,
+  notifyLevel: 'all',
   isKnownContact: true,
   updatedAt: 1000,
 });
@@ -145,6 +146,25 @@ describe('ChatStore — contacts & conversations', () => {
     expect(ChatStore.listConversations(db)).toHaveLength(2);
     expect(ChatStore.listConversations(db, 'acc2').map((c) => c.id)).toEqual(['cv2']);
     expect(ChatStore.getConversation(db, 'cv1')?.address).toBe('a@example.com');
+  });
+
+  it('round-trips the per-room notify level; defaults to "all"', () => {
+    ChatStore.upsertConversation(db, conversation('cv0', 'acc', 'bob@example.com'));
+    expect(ChatStore.getConversation(db, 'cv0')?.notifyLevel).toBe('all');
+
+    ChatStore.upsertConversation(db, {
+      ...conversation('cv1', 'acc', 'room@conf'),
+      kind: 'room',
+      notifyLevel: 'mentions',
+    });
+    expect(ChatStore.getConversation(db, 'cv1')?.notifyLevel).toBe('mentions');
+
+    ChatStore.upsertConversation(db, {
+      ...conversation('cv1', 'acc', 'room@conf'),
+      kind: 'room',
+      notifyLevel: 'none',
+    });
+    expect(ChatStore.getConversation(db, 'cv1')?.notifyLevel).toBe('none');
   });
 
   it('tolerates a corrupt server_json / groups_json row (falls back, never throws)', () => {

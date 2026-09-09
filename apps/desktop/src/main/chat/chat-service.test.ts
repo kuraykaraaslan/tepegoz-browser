@@ -30,7 +30,7 @@ class FakeAdapter {
   joinRoom = vi.fn(() =>
     Promise.resolve({
       id: 'r@conf', accountId: 'a', kind: 'room' as const, address: 'r@conf', name: 'r', topic: '',
-      memberCount: 0, unread: 0, mentions: 0, lastReadId: null, muted: false, isKnownContact: true, updatedAt: 1,
+      memberCount: 0, unread: 0, mentions: 0, lastReadId: null, muted: false, notifyLevel: 'all' as const, isKnownContact: true, updatedAt: 1,
     }),
   );
 }
