@@ -348,6 +348,109 @@ describe('XmppAdapter — live traffic', () => {
     expect((await it.next()).value).toMatchObject({ type: 'presence', address: 'bob@example.com/phone' });
   });
 
+  it('discoverRooms lists a service then enriches each room from disco#info', async () => {
+    const { server, adapter, session } = await connected();
+    const p = adapter.discoverRooms(session, 'conf.example.com');
+    await tick();
+
+    const listId = /id="(disco-\d+)"/.exec(server.lastWritten())?.[1] ?? '';
+    server.send(
+      `<iq type="result" id="${listId}"><query xmlns="http://jabber.org/protocol/disco#items">` +
+        `<item jid="general@conf.example.com" name="General"/>` +
+        `<item jid="secret@conf.example.com"/>` +
+        `</query></iq>`,
+    );
+    await tick();
+
+    // two disco#info requests followed; answer both by their ids
+    const infoIds = server.written
+      .flatMap((w) => [...w.matchAll(/id="(disco-\d+)"/g)].map((m) => m[1]))
+      .filter((id): id is string => id !== undefined && id !== listId);
+    server.send(
+      `<iq type="result" id="${infoIds[0] ?? ''}"><query xmlns="http://jabber.org/protocol/disco#info">` +
+        `<identity category="conference" type="text"/><feature var="http://jabber.org/protocol/muc"/>` +
+        `<x xmlns="jabber:x:data"><field var="muc#roominfo_occupants"><value>9</value></field></x>` +
+        `</query></iq>`,
+    );
+    server.send(
+      `<iq type="result" id="${infoIds[1] ?? ''}"><query xmlns="http://jabber.org/protocol/disco#info">` +
+        `<identity category="conference" type="text"/><feature var="http://jabber.org/protocol/muc"/>` +
+        `<feature var="muc_membersonly"/></query></iq>`,
+    );
+
+    const rooms = await p;
+    expect(rooms).toEqual([
+      {
+        jid: 'general@conf.example.com',
+        name: 'General',
+        description: null,
+        occupants: 9,
+        passwordProtected: false,
+        membersOnly: false,
+      },
+      {
+        jid: 'secret@conf.example.com',
+        name: null,
+        description: null,
+        occupants: null,
+        passwordProtected: false,
+        membersOnly: true,
+      },
+    ]);
+  });
+
+  it('discoverRooms returns [] when the service advertises no items', async () => {
+    const { server, adapter, session } = await connected();
+    const p = adapter.discoverRooms(session, 'empty.example.com');
+    await tick();
+    const listId = /id="(disco-\d+)"/.exec(server.lastWritten())?.[1] ?? '';
+    server.send(`<iq type="result" id="${listId}"><query xmlns="jabber:iq:private"/></iq>`);
+    expect(await p).toEqual([]);
+  });
+
+  it('discoverRooms leaves a non-room entity with default flags', async () => {
+    const { server, adapter, session } = await connected();
+    const p = adapter.discoverRooms(session, 'conf.example.com');
+    await tick();
+    const listId = /id="(disco-\d+)"/.exec(server.lastWritten())?.[1] ?? '';
+    server.send(
+      `<iq type="result" id="${listId}"><query xmlns="http://jabber.org/protocol/disco#items">` +
+        `<item jid="gateway@conf.example.com" name="Gateway"/></query></iq>`,
+    );
+    await tick();
+    const infoId = /id="(disco-\d+)"/.exec(server.written.at(-1) ?? '')?.[1] ?? '';
+    server.send(
+      `<iq type="result" id="${infoId}"><query xmlns="http://jabber.org/protocol/disco#info">` +
+        `<identity category="gateway" type="xmpp"/></query></iq>`,
+    );
+    expect((await p)[0]).toMatchObject({ jid: 'gateway@conf.example.com', occupants: null, membersOnly: false });
+  });
+
+  it('discoverRooms keeps a room whose disco#info errors, with defaults', async () => {
+    const { server, adapter, session } = await connected();
+    session.iqTimeoutMs = 50;
+    const p = adapter.discoverRooms(session, 'conf.example.com');
+    await tick();
+    const listId = /id="(disco-\d+)"/.exec(server.lastWritten())?.[1] ?? '';
+    server.send(
+      `<iq type="result" id="${listId}"><query xmlns="http://jabber.org/protocol/disco#items">` +
+        `<item jid="broken@conf.example.com" name="Broken"/></query></iq>`,
+    );
+    await tick();
+    const infoId = /id="(disco-\d+)"/.exec(server.written.at(-1) ?? '')?.[1] ?? '';
+    server.send(`<iq type="error" id="${infoId}"><error type="cancel"/></iq>`);
+    expect(await p).toEqual([
+      {
+        jid: 'broken@conf.example.com',
+        name: 'Broken',
+        description: null,
+        occupants: null,
+        passwordProtected: false,
+        membersOnly: false,
+      },
+    ]);
+  });
+
   it('history() runs a MAM query and returns messages oldest-first with a cursor', async () => {
     const { server, adapter, session } = await connected();
     const p = adapter.history(session, 'bob@example.com', null);

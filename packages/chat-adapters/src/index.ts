@@ -22,6 +22,7 @@ export type {
   MsgId,
   HistoryPage,
   SendReceipt,
+  RoomSummary,
   RawEventSink,
   ChatEvent,
 } from './adapter';

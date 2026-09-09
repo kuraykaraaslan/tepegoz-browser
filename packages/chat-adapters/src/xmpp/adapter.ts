@@ -24,6 +24,8 @@ import {
 } from './stanzas';
 import { buildMamQuery, parseMamFin, parseMamResult } from './mam';
 import { buildMucJoin, buildMucLeave, parseMucError, parseMucPresence } from './muc';
+import { buildDiscoInfo, buildDiscoItems, parseDiscoInfo, parseDiscoItems } from './disco';
+import type { RoomSummary } from '../adapter';
 
 /**
  * The native in-process XMPP adapter (phase X-chat.1). Wires the injected `ChatTransport` to the
@@ -38,6 +40,8 @@ import { buildMucJoin, buildMucLeave, parseMucError, parseMucPresence } from './
 const DEFAULT_PORT_TLS = 5223;
 const DEFAULT_PORT_STARTTLS = 5222;
 const NS_SM = 'urn:xmpp:sm:3';
+/** Cap on how many rooms a single `discoverRooms` call probes for info (a busy MUC can list hundreds). */
+const DISCO_ROOM_LIMIT = 80;
 
 export class XmppSession implements ChatSession {
   readonly caps = XMPP_CAPS;
@@ -394,6 +398,44 @@ export class XmppAdapter implements ChatAdapter {
       s.rooms.delete(roomJid);
     }
     return Promise.resolve();
+  }
+
+  /** Browse a conference service's rooms (XEP-0030): `disco#items` for the list, then `disco#info`
+   *  per room (bounded, in parallel) for occupant count + flags + description. */
+  async discoverRooms(session: ChatSession, service: string): Promise<RoomSummary[]> {
+    const s = session as XmppSession;
+    const listId = s.nextIqId('disco');
+    const listIq = await s.request(buildDiscoItems(service, listId), listId);
+    const items = (parseDiscoItems(listIq) ?? []).slice(0, DISCO_ROOM_LIMIT);
+
+    return Promise.all(
+      items.map(async (item): Promise<RoomSummary> => {
+        const base: RoomSummary = {
+          jid: item.jid,
+          name: item.name,
+          description: null,
+          occupants: null,
+          passwordProtected: false,
+          membersOnly: false,
+        };
+        try {
+          const infoId = s.nextIqId('disco');
+          const info = parseDiscoInfo(await s.request(buildDiscoInfo(item.jid, infoId), infoId));
+          if (info?.room != null) {
+            return {
+              ...base,
+              description: info.room.description,
+              occupants: info.room.occupants,
+              passwordProtected: info.room.passwordProtected,
+              membersOnly: info.room.membersOnly,
+            };
+          }
+        } catch {
+          /* a room whose info we cannot read still shows in the list, with defaults */
+        }
+        return base;
+      }),
+    );
   }
 
   async *events(session: ChatSession): AsyncIterable<unknown> {

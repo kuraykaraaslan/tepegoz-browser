@@ -440,8 +440,12 @@ renderer (no room table yet). Then the **room-browser UI** — `room-browser` (`
 `filterRoomListings` fold-match on jid/name/description, `sortRoomListings` most-populated-first,
 `roomListingLabel`) + `<RoomBrowser>` (a service field → `discoverRooms` callback, a filterable list
 with occupant counts + password / members-only flags + description, and a "join by address" field).
-**43 tests, S99.6/B93.4/F95.7/L99.6.** Next: a room header (topic + member count) + `decideNotification`
-wired in the host. · **Depends on:** X-chat.2 · **Branch:** `main` · **Risk:** low-medium.
+**43 tests, S99.6/B93.4/F95.7/L99.6.** Then **`XmppAdapter.discoverRooms`** — `disco#items` for the
+service's room list (capped at 80), then a bounded parallel `disco#info` per room for occupant count /
+flags / description; a room whose info errors still lists with defaults. Added `RoomSummary` to the
+`ChatAdapter` contract. 4 adapter tests. Next: a room header (topic + member count) + the
+`discoverRooms` / `decideNotification` desktop bridge wiring. · **Depends on:** X-chat.2 · **Branch:**
+`main` · **Risk:** low-medium.
 
 ### Deliverables
 - [ ] **XMPP MUC (XEP-0045)** — join/leave by JID, nickname, room roster + affiliations/roles,

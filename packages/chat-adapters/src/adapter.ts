@@ -50,6 +50,18 @@ export interface SendReceipt {
   ts: number;
 }
 
+/** One room a directory / conference service advertises (XEP-0030 disco for XMPP). */
+export interface RoomSummary {
+  /** Bare room JID (`room@service`). */
+  jid: string;
+  name: string | null;
+  description: string | null;
+  /** Advertised occupant count, or `null` when the room does not publish it. */
+  occupants: number | null;
+  passwordProtected: boolean;
+  membersOnly: boolean;
+}
+
 export interface ChatAdapter {
   readonly id: string;
   /** The protocol's maximum capabilities (a connection may narrow them — see {@link ChatSession}). */
@@ -71,6 +83,8 @@ export interface ChatAdapter {
 
   joinRoom?(session: ChatSession, address: string): Promise<ChatConversation>;
   leaveRoom?(session: ChatSession, conv: ConvId): Promise<void>;
+  /** Discover the rooms a conference / directory service advertises. */
+  discoverRooms?(session: ChatSession, service: string): Promise<RoomSummary[]>;
 
   /** Upload a file from the file-operations sandbox; returns a `mediaRef` for `sendMessage`. */
   uploadMedia?(session: ChatSession, sandboxPath: string): Promise<string>;
