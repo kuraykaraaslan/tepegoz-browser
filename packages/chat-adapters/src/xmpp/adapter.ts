@@ -21,6 +21,7 @@ import {
   rosterItemToContact,
   stanzaToEvent,
 } from './stanzas';
+import { buildMamQuery, parseMamFin, parseMamResult } from './mam';
 
 /**
  * The native in-process XMPP adapter (phase X-chat.1). Wires the injected `ChatTransport` to the
@@ -312,8 +313,32 @@ export class XmppAdapter implements ChatAdapter {
     return Promise.resolve([]);
   }
 
-  history(): Promise<HistoryPage> {
-    return Promise.resolve({ messages: [], nextCursor: null });
+  async history(session: ChatSession, conv: ConvId, before: string | null): Promise<HistoryPage> {
+    const s = session as XmppSession;
+    if (!s.caps.historySync) return { messages: [], nextCursor: null };
+    const id = s.nextIqId('mam');
+    const collected: XmlElement[] = [];
+    const iq = await s.request(
+      buildMamQuery({
+        queryId: id,
+        withJid: conv,
+        max: 50,
+        ...(before !== null ? { before } : {}),
+      }),
+      id,
+      (el) => collected.push(el),
+    );
+    const fin = parseMamFin(iq);
+    const ctx = {
+      accountId: s.accountId,
+      selfBareJid: s.selfBareJid,
+      now: Date.now(),
+    };
+    const messages = collected
+      .map((el) => parseMamResult(el, ctx))
+      .filter((m): m is NonNullable<typeof m> => m !== null)
+      .sort((a, b) => a.originTs - b.originTs);
+    return { messages, nextCursor: fin.complete ? null : fin.firstCursor };
   }
 
   sendMessage(session: ChatSession, conv: ConvId, body: OutgoingMessage): Promise<SendReceipt> {

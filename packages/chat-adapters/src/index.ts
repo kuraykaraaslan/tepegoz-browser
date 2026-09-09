@@ -77,6 +77,15 @@ export { StreamManager, type StreamManagerOptions } from './xmpp/stream-manageme
 export { XmppAdapter } from './xmpp/adapter';
 
 export {
+  NS_MAM,
+  buildMamQuery,
+  parseMamResult,
+  parseMamFin,
+  type MamQuery,
+  type MamFin,
+} from './xmpp/mam';
+
+export {
   bytesToB64,
   b64ToBytes,
   saslPlain,

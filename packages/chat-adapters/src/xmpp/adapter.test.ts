@@ -273,10 +273,48 @@ describe('XmppAdapter — live traffic', () => {
     expect((await it.next()).value).toMatchObject({ message: { protocolId: 'live' } });
   });
 
-  it('listConversations / history are empty in this slice', async () => {
+  it('listConversations is empty in this slice', async () => {
     const { adapter } = await connected();
     expect(await adapter.listConversations()).toEqual([]);
-    expect(await adapter.history()).toEqual({ messages: [], nextCursor: null });
+  });
+
+  it('history() runs a MAM query and returns messages oldest-first with a cursor', async () => {
+    const { server, adapter, session } = await connected();
+    const p = adapter.history(session, 'bob@example.com', null);
+    await tick();
+    const q = server.lastWritten();
+    expect(q).toContain('urn:xmpp:mam:2');
+    expect(q).toContain('<field var="with"><value>bob@example.com</value></field>');
+    expect(q).toContain('<before/>');
+    const id = /id="(mam-\d+)"/.exec(q)?.[1] ?? '';
+
+    const mamMsg = (archiveId: string, ts: string, body: string) =>
+      `<message><result xmlns="urn:xmpp:mam:2" queryid="${id}" id="${archiveId}">` +
+      `<forwarded xmlns="urn:xmpp:forward:0"><delay xmlns="urn:xmpp:delay" stamp="${ts}"/>` +
+      `<message from="bob@example.com/p" to="ada@example.com" type="chat"><body>${body}</body></message>` +
+      `</forwarded></result></message>`;
+    server.send(mamMsg('a2', '2020-01-02T00:00:00Z', 'second'));
+    server.send(mamMsg('a1', '2020-01-01T00:00:00Z', 'first'));
+    server.send(
+      `<iq type="result" id="${id}"><fin xmlns="urn:xmpp:mam:2"><set xmlns="http://jabber.org/protocol/rsm"><first>a1</first><last>a2</last><count>7</count></set></fin></iq>`,
+    );
+
+    const page = await p;
+    expect(page.messages.map((m) => m.body)).toEqual(['first', 'second']);
+    expect(page.messages.map((m) => m.protocolId)).toEqual(['a1', 'a2']);
+    expect(page.messages[0]?.originTs).toBe(Date.parse('2020-01-01T00:00:00Z'));
+    expect(page.nextCursor).toBe('a1'); // not complete → page further back with <first>
+  });
+
+  it('history() returns nextCursor null when the archive says complete', async () => {
+    const { server, adapter, session } = await connected();
+    const p = adapter.history(session, 'bob@example.com', 'oldcursor');
+    await tick();
+    expect(server.lastWritten()).toContain('<before>oldcursor</before>');
+    const id = /id="(mam-\d+)"/.exec(server.lastWritten())?.[1] ?? '';
+    server.send(`<iq type="result" id="${id}"><fin xmlns="urn:xmpp:mam:2" complete="true"/></iq>`);
+    const page = await p;
+    expect(page).toEqual({ messages: [], nextCursor: null });
   });
 
   it('disconnect is idempotent', async () => {
