@@ -60,6 +60,7 @@
     "@tepegoz/downloads-ui": "workspace:*",
     "@tepegoz/ext-adblock": "workspace:*",
     "@tepegoz/ext-agent": "workspace:*",
+    "@tepegoz/ext-chat": "workspace:*",
     "@tepegoz/ext-macros": "workspace:*",
     "@tepegoz/ext-popup-blocker": "workspace:*",
     "@tepegoz/ext-tasks": "workspace:*",

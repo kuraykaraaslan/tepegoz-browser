@@ -141,6 +141,22 @@ export const SURFACE_LOADERS: Record<
           },
       ),
   },
+  'com.tepegoz.chat': {
+    sidebar: () =>
+      import('@tepegoz/ext-chat/panel').then(
+        (m) =>
+          function ChatSidebarSurface({ onClose }: ExtensionSurfaceProps) {
+            return <m.ChatSidebar api={window.tepegoz} onClose={onClose} />;
+          },
+      ),
+    page: () =>
+      import('@tepegoz/ext-chat/panel').then(
+        (m) =>
+          function ChatPageSurface({ onClose }: ExtensionSurfaceProps) {
+            return <m.ChatPage api={window.tepegoz} onClose={onClose} />;
+          },
+      ),
+  },
   'com.tepegoz.video-player': {
     popup: () =>
       import('@tepegoz/ext-video-player/panel').then(

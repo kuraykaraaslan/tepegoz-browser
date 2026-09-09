@@ -98,6 +98,16 @@ const mocks = {
       {String(p.api === window.tepegoz)}
     </div>
   )),
+  ChatSidebar: vi.fn((p: { api: unknown; onClose: () => void }) => (
+    <div data-testid="ChatSidebar" onClick={p.onClose}>
+      {String(p.api === window.tepegoz)}
+    </div>
+  )),
+  ChatPage: vi.fn((p: { api: unknown; onClose: () => void }) => (
+    <div data-testid="ChatPage" onClick={p.onClose}>
+      {String(p.api === window.tepegoz)}
+    </div>
+  )),
 };
 
 vi.mock('@tepegoz/ext-agent/panel', () => ({ AgentPanel: mocks.AgentPanel }));
@@ -131,6 +141,10 @@ vi.mock('@tepegoz/ext-video-player/panel', () => ({
   VideoPlayerPopup: mocks.VideoPlayerPopup,
   VideoPlayerPage: mocks.VideoPlayerPage,
 }));
+vi.mock('@tepegoz/ext-chat/panel', () => ({
+  ChatSidebar: mocks.ChatSidebar,
+  ChatPage: mocks.ChatPage,
+}));
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -157,6 +171,8 @@ const cases: Array<{ id: string; kind: ExtensionSurfaceKind; exportName: keyof t
   { id: 'com.tepegoz.tasks', kind: 'page', exportName: 'TasksPage' },
   { id: 'com.tepegoz.video-player', kind: 'popup', exportName: 'VideoPlayerPopup' },
   { id: 'com.tepegoz.video-player', kind: 'page', exportName: 'VideoPlayerPage' },
+  { id: 'com.tepegoz.chat', kind: 'sidebar', exportName: 'ChatSidebar' },
+  { id: 'com.tepegoz.chat', kind: 'page', exportName: 'ChatPage' },
 ];
 
 describe('SURFACE_LOADERS', () => {

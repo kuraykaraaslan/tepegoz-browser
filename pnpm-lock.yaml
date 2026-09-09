@@ -160,6 +160,9 @@ importers:
       '@tepegoz/ext-agent':
         specifier: workspace:*
         version: link:../../extensions/ext-agent
+      '@tepegoz/ext-chat':
+        specifier: workspace:*
+        version: link:../../extensions/ext-chat
       '@tepegoz/ext-macros':
         specifier: workspace:*
         version: link:../../extensions/ext-macros
@@ -419,6 +422,31 @@ importers:
       zod:
         specifier: 3.25.76
         version: 3.25.76
+    devDependencies:
+      '@types/react':
+        specifier: ^18.3.18
+        version: 18.3.31
+      typescript:
+        specifier: ^5.7.2
+        version: 5.9.3
+      vitest:
+        specifier: ^3.2.6
+        version: 3.2.7(@types/debug@4.1.13)(@types/node@24.13.3)(jiti@2.7.0)(jsdom@25.0.1)(lightningcss@1.32.0)
+
+  extensions/ext-chat:
+    dependencies:
+      '@tepegoz/extension-sdk':
+        specifier: workspace:*
+        version: link:../../packages/extension-sdk
+      '@tepegoz/i18n':
+        specifier: workspace:*
+        version: link:../../packages/i18n
+      '@tepegoz/ui':
+        specifier: workspace:*
+        version: link:../../packages/ui
+      react:
+        specifier: ^18 || ^19
+        version: 18.3.1
     devDependencies:
       '@types/react':
         specifier: ^18.3.18
