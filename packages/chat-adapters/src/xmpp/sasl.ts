@@ -93,13 +93,28 @@ export function scramClientFirst(state: ScramState): string {
   return bytesToB64(enc.encode(state.gs2Header + state.clientFirstBare));
 }
 
+/** A view whose backing buffer is a plain `ArrayBuffer` — what `crypto.subtle` (and the strictest
+ *  `BufferSource` typing, narrowed to `ArrayBufferView<ArrayBuffer>` in recent TS libs) wants.
+ *  `Uint8Array.prototype.slice` always copies into a fresh `ArrayBuffer`. */
+function bufferSource(view: Uint8Array): Uint8Array<ArrayBuffer> {
+  const copy = new Uint8Array(view.length);
+  copy.set(view);
+  return copy;
+}
+
 async function hmac(key: Uint8Array, data: Uint8Array, hash: ScramHash): Promise<Uint8Array> {
-  const k = await crypto.subtle.importKey('raw', key, { name: 'HMAC', hash }, false, ['sign']);
-  return new Uint8Array(await crypto.subtle.sign('HMAC', k, data));
+  const k = await crypto.subtle.importKey(
+    'raw',
+    bufferSource(key),
+    { name: 'HMAC', hash },
+    false,
+    ['sign'],
+  );
+  return new Uint8Array(await crypto.subtle.sign('HMAC', k, bufferSource(data)));
 }
 
 async function sha(data: Uint8Array, hash: ScramHash): Promise<Uint8Array> {
-  return new Uint8Array(await crypto.subtle.digest(hash, data));
+  return new Uint8Array(await crypto.subtle.digest(hash, bufferSource(data)));
 }
 
 function xor(a: Uint8Array, b: Uint8Array): Uint8Array {

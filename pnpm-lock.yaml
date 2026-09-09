@@ -139,6 +139,15 @@ importers:
       '@tepegoz/capability-plane':
         specifier: workspace:*
         version: link:../../packages/capability-plane
+      '@tepegoz/chat-adapters':
+        specifier: workspace:*
+        version: link:../../packages/chat-adapters
+      '@tepegoz/chat-core':
+        specifier: workspace:*
+        version: link:../../packages/chat-core
+      '@tepegoz/chat-transport-node':
+        specifier: workspace:*
+        version: link:../../packages/chat-transport-node
       '@tepegoz/clipboard':
         specifier: workspace:*
         version: link:../../packages/clipboard
@@ -298,6 +307,9 @@ importers:
       '@tepegoz/shared-types':
         specifier: workspace:*
         version: link:../../packages/shared-types
+      '@tepegoz/socks5':
+        specifier: workspace:*
+        version: link:../../packages/socks5
       '@tepegoz/tab-engine':
         specifier: workspace:*
         version: link:../../packages/tab-engine
