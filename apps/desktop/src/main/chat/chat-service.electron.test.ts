@@ -183,16 +183,24 @@ describe('chatIpcService — the "not initialised" guard', () => {
 });
 
 describe('lifecycle', () => {
-  it('init() builds + starts once; stop() clears; setEnabled/notifyEgressChange delegate', async () => {
+  it('init() builds + starts once; stop() clears; reconcile/notifyEgressChange delegate', async () => {
     await mod.init();
     await mod.init(); // idempotent
     await mod.stop();
     await mod.stop();
 
     mod.__setServiceForTest(fakeService as never);
-    await mod.setEnabled(false);
-    expect(fakeService.setEnabled).toHaveBeenCalledWith(false);
+    await mod.reconcile();
+    expect(fakeService.setEnabled).toHaveBeenCalledWith(true); // isExtensionEnabled mock → true
     mod.notifyEgressChange();
     expect(fakeService.notifyEgressChange).toHaveBeenCalled();
+
+    // the default-export facade forwards to the same module functions
+    mod.__setServiceForTest(fakeService as never);
+    await mod.default.init(); // no-op: a service is already set
+    await mod.default.reconcile();
+    mod.default.notifyEgressChange();
+    await mod.default.stop();
+    expect(fakeService.stop).toHaveBeenCalled();
   });
 });

@@ -36,6 +36,7 @@ import { parseWireGuardConfig, summarize } from '../network/wireguard-config';
 import TabManager from '../tabs';
 import BindingService from '../network/binding-service.electron';
 import ConnectionPool from '../network/connection-pool.electron';
+import ChatMessenger from '../chat/chat-service.electron';
 import { handleAsync } from './ipc-helpers';
 
 /**
@@ -202,6 +203,9 @@ function binaryStatus(binary: VpnBinary): BinaryStatus {
 
 /** Push the current picture to every open chrome window. Called on any change, including a tunnel drop. */
 export function broadcastNetworkState(): void {
+  // The General binding / a connection's up-down is also the chat messenger's kill switch: re-evaluate
+  // every live account's egress the moment the network picture changes (no-op until the service starts).
+  ChatMessenger.notifyEgressChange();
   for (const win of BrowserWindow.getAllWindows()) {
     if (win.isDestroyed()) continue;
     try {

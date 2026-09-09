@@ -11,6 +11,8 @@ import { registerPageInfoIpc } from './ipc-page-info';
 import { registerNetworkIpc } from './ipc-network';
 import { registerTrustIpc } from './ipc-trust';
 import { registerProfilesIpc } from './ipc-profiles';
+import { registerChatIpc } from './ipc-chat';
+import { chatIpcService } from '../chat/chat-service.electron';
 import { registerTabDragIpc } from '../tab-drag-coordinator';
 
 export { abortActiveAgentRuns } from './ipc-agent';
@@ -35,4 +37,5 @@ export function registerIpc(): void {
   registerNetworkIpc();
   registerTrustIpc();
   registerProfilesIpc();
+  registerChatIpc(chatIpcService);
 }

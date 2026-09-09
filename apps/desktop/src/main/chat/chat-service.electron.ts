@@ -88,9 +88,9 @@ export function notifyEgressChange(): void {
   service?.notifyEgressChange();
 }
 
-/** React to the extension being toggled in Settings. */
-export async function setEnabled(enabled: boolean): Promise<void> {
-  await service?.setEnabled(enabled);
+/** React to the extension being toggled in Settings (reads the live preference). */
+export async function reconcile(): Promise<void> {
+  await service?.setEnabled(chatExtensionEnabled());
 }
 
 function requireService(): ChatService {
@@ -121,4 +121,28 @@ export const chatIpcService: ChatIpcService = {
 /** Test seam. */
 export function __setServiceForTest(next: ChatService | null): void {
   service = next;
+}
+
+/**
+ * Thin facade over the messenger module functions, matching the `XService.*` static surface every other
+ * main-process service in this app presents (`TaskService`, `McpService`, …). `app` bootstrap calls
+ * {@link ChatMessenger.init} in deferred init and {@link ChatMessenger.stop} in `before-quit`; the
+ * `chat:*` IPC handlers are registered with {@link chatIpcService}.
+ */
+export default class ChatMessenger {
+  static init(): Promise<void> {
+    return init();
+  }
+
+  static stop(): Promise<void> {
+    return stop();
+  }
+
+  static notifyEgressChange(): void {
+    notifyEgressChange();
+  }
+
+  static reconcile(): Promise<void> {
+    return reconcile();
+  }
 }

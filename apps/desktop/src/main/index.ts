@@ -53,6 +53,7 @@ import BindingService from './network/binding-service.electron';
 import { broadcastNetworkState } from './ipc/ipc-network';
 import PopupWindowManager from './popup-window';
 import McpService from './mcp/supervisor.electron';
+import ChatMessenger from './chat/chat-service.electron';
 import ExtensionCapabilityService from './extensions/capability-supervisor.electron';
 import ActionInterceptorService from './extensions/action-interceptors.electron';
 import popupBlockerHost from './extensions/popup-blocker-host.electron';
@@ -390,6 +391,11 @@ if (!app.requestSingleInstanceLock()) {
         // startup). Their tools register into the CapabilityRegistry as they become ready (ADR-0018).
         // Off in safe mode — an MCP server is third-party code this process spawns.
         if (!safeMode) McpService.start();
+        // The messenger extension (`com.tepegoz.chat`): connect its enabled accounts in the background.
+        // `init()` builds the service unconditionally; `start()` inside it is what checks the extension
+        // preference, so a later enable-toggle (`ChatMessenger.reconcile()`) can spin the accounts up.
+        // Off in safe mode — a background socket to a chat server is third-party-reachable code.
+        if (!safeMode) void ChatMessenger.init();
         // The agent's built-in browser/tab/journal tools are always-on, package-owned builtins
         // (ADR-0021/0024 update), registered directly into the CapabilityRegistry behind the same
         // ToolGateway PEP — like the file_* tools — bound to their injected hosts. They belong to their
@@ -497,6 +503,7 @@ if (!app.requestSingleInstanceLock()) {
     TabDiscardService.stop();
     SafeBrowsingService.stop();
     void McpService.stop();
+    void ChatMessenger.stop();
     PopupWindowManager.close();
     TabManager.persistNow();
     // Fire-and-forget on purpose: Electron may take the process down mid-clear, and the startup

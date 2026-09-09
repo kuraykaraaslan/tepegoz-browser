@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
 /**
- * The top-level IPC facade — it owns no handlers, it composes the 13 per-domain registrars. The one
+ * The top-level IPC facade — it owns no handlers, it composes the per-domain registrars. The one
  * thing worth pinning is that composition: every registrar is invoked exactly once, so a domain
  * cannot silently drop out of the wiring when someone edits this file.
  */
@@ -23,6 +23,7 @@ const reg = vi.hoisted(() =>
       'network',
       'trust',
       'profiles',
+      'chat',
     ].map((k) => [k, vi.fn()]),
   ),
 );
@@ -41,6 +42,8 @@ vi.mock('./ipc-page-info', () => ({ registerPageInfoIpc: reg.pageInfo }));
 vi.mock('./ipc-network', () => ({ registerNetworkIpc: reg.network }));
 vi.mock('./ipc-trust', () => ({ registerTrustIpc: reg.trust }));
 vi.mock('./ipc-profiles', () => ({ registerProfilesIpc: reg.profiles }));
+vi.mock('./ipc-chat', () => ({ registerChatIpc: reg.chat }));
+vi.mock('../chat/chat-service.electron', () => ({ chatIpcService: {} }));
 
 const { registerIpc } = await import('./index');
 

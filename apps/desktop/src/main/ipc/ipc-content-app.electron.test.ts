@@ -98,6 +98,8 @@ const mcp = vi.hoisted(() => ({
   reconcile: vi.fn(() => Promise.resolve()),
 }));
 vi.mock('../mcp/supervisor.electron', () => ({ default: mcp }));
+const chatMessenger = vi.hoisted(() => ({ reconcile: vi.fn(), notifyEgressChange: vi.fn() }));
+vi.mock('../chat/chat-service.electron', () => ({ default: chatMessenger }));
 const extCaps = vi.hoisted(() => ({ reconcile: vi.fn() }));
 vi.mock('../extensions/capability-supervisor.electron', () => ({ default: extCaps }));
 const fileOps = vi.hoisted(() => ({ reconcile: vi.fn() }));

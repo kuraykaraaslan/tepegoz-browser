@@ -120,6 +120,9 @@ const pool = vi.hoisted(() => ({
   newIdentity: vi.fn(() => Promise.resolve({ reconnected: true })),
 }));
 vi.mock('../network/connection-pool.electron', () => ({ default: pool }));
+vi.mock('../chat/chat-service.electron', () => ({
+  default: { notifyEgressChange: vi.fn() },
+}));
 
 const readFileSync = vi.hoisted(() => vi.fn(() => '[Interface]\nPrivateKey=x'));
 vi.mock('node:fs', () => ({ readFileSync }));
