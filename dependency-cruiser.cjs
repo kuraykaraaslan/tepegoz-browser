@@ -159,6 +159,16 @@ module.exports = {
       to: { path: ['^apps/', 'node_modules/electron', '^node:'] },
     },
     {
+      name: 'chat-transport-node-no-app-no-electron',
+      severity: 'error',
+      comment:
+        '@tepegoz/chat-transport-node is the Node (net/tls) + global WebSocket/fetch implementation of ' +
+        'ChatTransport (ext-chat X-chat.1). Node builtins are allowed; Electron and the app are not — ' +
+        'the desktop ChatService injects the egress-bound dialer and instantiates it. See docs/package-map.md.',
+      from: { path: '^packages/chat-transport-node/' },
+      to: { path: ['^apps/', 'node_modules/electron'] },
+    },
+    {
       name: 'cert-warning-ui-is-a-leaf',
       severity: 'error',
       comment:

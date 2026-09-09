@@ -218,6 +218,7 @@ export default defineConfig({
         'packages/cert-warning-ui/src/**',
         'packages/chat-adapters/src/**',
         'packages/chat-core/src/**',
+        'packages/chat-transport-node/src/**',
         'packages/clipboard/src/**',
         'packages/credential-vault/src/**',
         'packages/downloads/src/**',
