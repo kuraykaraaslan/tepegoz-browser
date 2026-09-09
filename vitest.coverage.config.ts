@@ -216,6 +216,7 @@ export default defineConfig({
         'packages/browser-tools/src/**',
         'packages/capability-plane/src/**',
         'packages/cert-warning-ui/src/**',
+        'packages/chat-adapters/src/**',
         'packages/chat-core/src/**',
         'packages/clipboard/src/**',
         'packages/credential-vault/src/**',

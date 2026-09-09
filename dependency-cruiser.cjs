@@ -148,6 +148,17 @@ module.exports = {
       to: { path: ['^apps/', 'node_modules/electron'] },
     },
     {
+      name: 'chat-adapters-no-app-no-electron-no-node',
+      severity: 'error',
+      comment:
+        '@tepegoz/chat-adapters is the ChatAdapter contract + ChatTransport port + capability presets ' +
+        '(ext-chat X-chat.1). Electron-, app- AND Node-free: the desktop ChatService injects a concrete, ' +
+        'egress-bound ChatTransport. Native + sandboxed-bridge adapters implement the same interface. ' +
+        'See docs/package-map.md.',
+      from: { path: '^packages/chat-adapters/' },
+      to: { path: ['^apps/', 'node_modules/electron', '^node:'] },
+    },
+    {
       name: 'cert-warning-ui-is-a-leaf',
       severity: 'error',
       comment:

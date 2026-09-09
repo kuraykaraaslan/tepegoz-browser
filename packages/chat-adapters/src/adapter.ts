@@ -1,0 +1,87 @@
+import type {
+  ChatAdapterCaps,
+  ChatContact,
+  ChatConversation,
+  ChatEvent,
+  ChatMessage,
+  ChatPresence,
+  ChatServerConfig,
+  OutgoingMessage,
+} from '@tepegoz/shared-types';
+import type { ChatTransport } from './transport';
+
+/**
+ * The `ChatAdapter` contract — the Pidgin/libpurple "prpl" applied to the ADR-0021 injected-host
+ * seam. A native adapter (XMPP/IRC/Matrix) runs in-process in `ChatService`; a bridge
+ * (Telegram/Slack/…) implements the *same* interface over an RPC to a sandboxed child process.
+ *
+ * An adapter never touches the DB, the UI, or the vault. It receives the resolved secret at
+ * `connect`, speaks its wire, and emits **raw** events — `@tepegoz/chat-core`'s `normalizeEvent`
+ * validates and capability-gates them before anything downstream trusts them.
+ */
+
+export interface ChatAccountCreds {
+  accountId: string;
+  server: ChatServerConfig;
+  /** Plaintext secret, resolved from the vault by the host at connect time. The adapter uses it and
+   *  never persists it. */
+  secret: string;
+}
+
+export interface ChatSession {
+  readonly accountId: string;
+  /** The capabilities negotiated for THIS connection (may narrow the protocol preset — e.g. a server
+   *  without MAM drops `historySync`). */
+  readonly caps: ChatAdapterCaps;
+}
+
+export type ConvId = string;
+export type MsgId = string;
+
+export interface HistoryPage {
+  messages: ChatMessage[];
+  /** Opaque cursor for the next (older) page, or `null` at the start of history. */
+  nextCursor: string | null;
+}
+
+export interface SendReceipt {
+  /** The server-assigned protocol id — the host uses it to reconcile the optimistic echo. */
+  protocolId: string;
+  ts: number;
+}
+
+export interface ChatAdapter {
+  readonly id: string;
+  /** The protocol's maximum capabilities (a connection may narrow them — see {@link ChatSession}). */
+  readonly capabilities: ChatAdapterCaps;
+
+  connect(creds: ChatAccountCreds, transport: ChatTransport): Promise<ChatSession>;
+  disconnect(session: ChatSession): Promise<void>;
+
+  roster(session: ChatSession): Promise<ChatContact[]>;
+  setPresence(session: ChatSession, presence: ChatPresence, statusText?: string): Promise<void>;
+
+  listConversations(session: ChatSession): Promise<ChatConversation[]>;
+  history(session: ChatSession, conv: ConvId, before: string | null): Promise<HistoryPage>;
+
+  sendMessage(session: ChatSession, conv: ConvId, body: OutgoingMessage): Promise<SendReceipt>;
+  editMessage?(session: ChatSession, conv: ConvId, id: MsgId, body: OutgoingMessage): Promise<void>;
+  react?(session: ChatSession, conv: ConvId, id: MsgId, emoji: string, on: boolean): Promise<void>;
+  markRead(session: ChatSession, conv: ConvId, upTo: MsgId): Promise<void>;
+
+  joinRoom?(session: ChatSession, address: string): Promise<ChatConversation>;
+  leaveRoom?(session: ChatSession, conv: ConvId): Promise<void>;
+
+  /** Upload a file from the file-operations sandbox; returns a `mediaRef` for `sendMessage`. */
+  uploadMedia?(session: ChatSession, sandboxPath: string): Promise<string>;
+
+  /** The live event stream. Yields **raw** (unvalidated) events shaped like `ChatEvent`. */
+  events(session: ChatSession): AsyncIterable<unknown>;
+}
+
+/** A `ChatEvent` producer signature, for adapters that expose a callback rather than an async
+ *  iterable internally. */
+export type RawEventSink = (raw: unknown) => void;
+
+/** Re-exported for adapter authors composing their own event objects. */
+export type { ChatEvent };

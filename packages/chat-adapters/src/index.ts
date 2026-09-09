@@ -1,0 +1,36 @@
+/**
+ * `@tepegoz/chat-adapters` — the `ChatAdapter` contract + `ChatTransport` port + per-protocol
+ * capability presets for `@tepegoz/ext-chat` (phase X-chat.1). Electron- and Node-free: the desktop
+ * `ChatService` supplies a concrete transport whose streams are egress-bound. Native adapters
+ * (XMPP/IRC/Matrix) and sandboxed bridge adapters implement the same interface.
+ */
+
+export type {
+  DuplexStream,
+  EventStream,
+  OpenTcpOptions,
+  ChatFetchInit,
+  ChatFetchResponse,
+  ChatTransport,
+} from './transport';
+
+export type {
+  ChatAccountCreds,
+  ChatSession,
+  ChatAdapter,
+  ConvId,
+  MsgId,
+  HistoryPage,
+  SendReceipt,
+  RawEventSink,
+  ChatEvent,
+} from './adapter';
+
+export {
+  XMPP_CAPS,
+  IRC_CAPS,
+  MATRIX_CAPS,
+  BRIDGE_DEFAULT_CAPS,
+  capsFor,
+  negotiateCaps,
+} from './caps';
