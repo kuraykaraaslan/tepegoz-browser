@@ -505,8 +505,13 @@ sub-phase DoD template remain.** · **Depends on:** X-chat.2 · **Branch:** `mai
 
 ## X-chat.4 — IRC adapter
 
-**Status:** ⬜ Not started · **Depends on:** X-chat.1 (contract) + X-chat.2/.3 (UI) ·
-**Branch:** `feat/ext-chat-irc-adapter` · **Risk:** low-medium.
+**Status:** 🟡 In progress (2026-09-10) — `@tepegoz/chat-adapters` `irc/parse.ts` landed: the pure
+IRCv3 line parser (`parseIrcLine` — `@tags` with unescaping / `:prefix` / command uppercase-or-numeric
+/ params with `:trailing`, bounded at 8703 bytes / 15 params / 64 tags, `null` on anything malformed),
+`formatIrcLine` (round-trips), `parseIsupport` (005 `KEY=value` / bare / `-KEY`). 12 tests,
+S100/B94/F100/L100. Next: IRCv3 CAP negotiation + SASL, then the connection state machine, then the
+`IrcAdapter` over the injected transport. · **Depends on:** X-chat.1 (contract) + X-chat.2/.3 (UI) ·
+**Branch:** `main` · **Risk:** low-medium.
 
 ### Deliverables
 - [ ] **IRC adapter** (`irc/`) — RFC 2812 message parser, connection registration (`PASS`/`NICK`/

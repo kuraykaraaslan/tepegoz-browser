@@ -131,6 +131,14 @@ export {
 } from './xmpp/autodiscover';
 
 export {
+  IRC_MAX_LINE,
+  parseIrcLine,
+  formatIrcLine,
+  parseIsupport,
+  type IrcMessage,
+} from './irc/parse';
+
+export {
   bytesToB64,
   b64ToBytes,
   saslPlain,
