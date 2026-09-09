@@ -34,3 +34,27 @@ export {
   capsFor,
   negotiateCaps,
 } from './caps';
+
+export {
+  XmlStreamParser,
+  decodeXmlText,
+  encodeXmlText,
+  child,
+  children,
+  text,
+  childText,
+  type XmlElement,
+  type XmlStreamEvent,
+} from './xmpp/xml-stream';
+
+export {
+  NS as XMPP_NS,
+  stanzaToEvent,
+  buildMessage,
+  buildChatState,
+  buildReceipt,
+  buildReadMarker,
+  buildPresence,
+  type StanzaContext,
+  type OutgoingChatMessage,
+} from './xmpp/stanzas';
