@@ -16,6 +16,7 @@ import type { LoginsApi } from './api-logins';
 import type { NetworkApi } from './api-network';
 import type { TrustApi } from './api-trust';
 import type { ProfilesApi } from './api-profiles';
+import type { ChatApi } from './api-chat';
 
 /** The exact surface bridged to `window.tepegoz` in the renderer. */
 export interface TepegozApi
@@ -27,6 +28,7 @@ export interface TepegozApi
     LoginsApi,
     NetworkApi,
     TrustApi,
-    ProfilesApi {
+    ProfilesApi,
+    ChatApi {
   readonly platform: string;
 }

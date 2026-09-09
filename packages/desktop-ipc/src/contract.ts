@@ -39,4 +39,5 @@ export * from './api';
 export * from './api-network';
 export * from './api-trust';
 export * from './api-profiles';
+export * from './api-chat';
 export * from './contract-profiles';

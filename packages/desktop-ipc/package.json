@@ -16,6 +16,7 @@
   },
   "dependencies": {
     "@tepegoz/bookmarks": "workspace:*",
+    "@tepegoz/chat-core": "workspace:*",
     "@tepegoz/clipboard": "workspace:*",
     "@tepegoz/downloads": "workspace:*",
     "@tepegoz/ext-adblock": "workspace:*",

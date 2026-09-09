@@ -1167,6 +1167,9 @@ importers:
       '@tepegoz/bookmarks':
         specifier: workspace:*
         version: link:../bookmarks
+      '@tepegoz/chat-core':
+        specifier: workspace:*
+        version: link:../chat-core
       '@tepegoz/clipboard':
         specifier: workspace:*
         version: link:../clipboard
