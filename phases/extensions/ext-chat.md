@@ -563,9 +563,14 @@ Then a **`reaction` `ChatEvent` variant** — `{ type:'reaction', conversationId
 senderAddress, add }` in `@tepegoz/shared-types`, capability-gated on `reactions` in `normalizeEvent`,
 folded into `message.reactions[]` by `chat-core` `foldEvent`/`account-state` (count + `me`, drops at
 zero) and re-emitted as `message-updated`; Matrix `m.reaction` maps to it (removal — a redaction of
-the reaction event — is adapter-tracked, a later slice). 4 new tests across the stack. Next: the
-`/sync` loop + the `MatrixAdapter` over `transport.fetch`. · **Depends on:** X-chat.1 (contract) +
-X-chat.2/.3 (UI); E2EE is X-chat.7 · **Branch:** `main` · **Risk:** medium-high.
+the reaction event — is adapter-tracked, a later slice). 4 new tests across the stack. Then `matrix/sync.ts` — `parseSyncResponse`, the pure
+`/sync` walker: flattens every `rooms.join[id]` timeline + ephemeral block into `ChatEvent`s, reads
+each room's name / topic / member count from state (`m.room.name` / `m.room.topic` / `m.room.member`,
+`m.joined_member_count` wins when higher), reports `limited` + `prev_batch` for gappy backfill, plus
+`invites` and `left`; defensive coercion throughout. 6 tests, S100/B92/F100/L100. Next: the
+`MatrixAdapter` over `transport.fetch` — login, the `/sync` long-poll loop with `since` + a
+`M_UNKNOWN_TOKEN` re-login, `/rooms/{id}/send`, `mxc://` media resolve. · **Depends on:** X-chat.1
+(contract) + X-chat.2/.3 (UI); E2EE is X-chat.7 · **Branch:** `main` · **Risk:** medium-high.
 
 ### Deliverables
 - [ ] **Matrix adapter** (`matrix/`) — login (password / token / SSO-token), `/sync` loop with

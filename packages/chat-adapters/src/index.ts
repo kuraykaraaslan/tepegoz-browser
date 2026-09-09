@@ -166,6 +166,13 @@ export {
 } from './matrix/events';
 
 export {
+  parseSyncResponse,
+  type SyncResult,
+  type SyncRoom,
+  type SyncInvite,
+} from './matrix/sync';
+
+export {
   bytesToB64,
   b64ToBytes,
   saslPlain,
