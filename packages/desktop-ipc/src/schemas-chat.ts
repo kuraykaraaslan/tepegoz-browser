@@ -66,3 +66,12 @@ export const ChatJoinRoomSchema = z.object({
   accountId: z.string().min(1).max(64),
   roomJid: z.string().min(3).max(512),
 });
+
+export const CHAT_ROOM_NOTIFY_LEVELS = ['all', 'mentions', 'none'] as const;
+
+/** `chat:set-room-notify-level` — persist a room's notification level. */
+export const ChatSetRoomNotifyLevelSchema = z.object({
+  accountId: z.string().min(1).max(64),
+  conversationId: z.string().min(1).max(128),
+  level: z.enum(CHAT_ROOM_NOTIFY_LEVELS),
+});

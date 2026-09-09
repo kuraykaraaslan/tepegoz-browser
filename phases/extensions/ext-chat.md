@@ -465,8 +465,13 @@ channels + `schemas-chat` guards; `ChatIpcService` / `ChatService` / `ChatAccoun
 (all / mentions / none) shown when an `onSetNotifyLevel` handler is passed; `useChatState`'s
 `setRoomNotifyLevel` patches `client.conversations[id].notifyLevel` optimistically then calls the
 optional `port.setChatRoomNotifyLevel`; `chat-store` `patchConversation` merges local edits. **151
-chat-ui tests.** Next: `decideNotification` on inbound + the `chat:set-room-notify-level` desktop
-bridge channel. · **Depends on:** X-chat.2 · **Branch:** `main` · **Risk:** low-medium.
+chat-ui tests.** Then the **`chat:set-room-notify-level` desktop bridge** — channel + schema (enum
+guard); `ChatIpcService` / `ChatService` / `ChatAccountRunner` `setRoomNotifyLevel` (reads the stored
+conversation, patches `notifyLevel`, upserts — creating a stub row if the room has no row yet);
+`ChatApi` + preload `setChatRoomNotifyLevel`. `window.tepegoz` satisfies the optional
+`ChatClientPort` method structurally, so the ext-chat panel is unchanged. Next: `decideNotification`
+wired on an inbound `message` in the runner → a redacted desktop notification. · **Depends on:**
+X-chat.2 · **Branch:** `main` · **Risk:** low-medium.
 
 ### Deliverables
 - [ ] **XMPP MUC (XEP-0045)** — join/leave by JID, nickname, room roster + affiliations/roles,

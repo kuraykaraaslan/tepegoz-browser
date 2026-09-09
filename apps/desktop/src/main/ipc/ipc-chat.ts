@@ -10,6 +10,7 @@ import {
   ChatMarkReadSchema,
   ChatSendMessageSchema,
   ChatSetPresenceSchema,
+  ChatSetRoomNotifyLevelSchema,
 } from '@tepegoz/desktop-ipc/schemas';
 import { handle, handleAsync } from './ipc-helpers';
 
@@ -72,6 +73,11 @@ export interface ChatIpcService {
     }>
   >;
   joinRoom: (accountId: string, roomJid: string) => Promise<void>;
+  setRoomNotifyLevel: (
+    accountId: string,
+    conversationId: string,
+    level: 'all' | 'mentions' | 'none',
+  ) => Promise<void>;
 }
 
 export function registerChatIpc(service: ChatIpcService): void {
@@ -126,6 +132,11 @@ export function registerChatIpc(service: ChatIpcService): void {
   handleAsync(IpcChannels.chatJoinRoom, async (_event, payload): Promise<void> => {
     const { accountId, roomJid } = ChatJoinRoomSchema.parse(payload);
     await service.joinRoom(accountId, roomJid);
+  });
+
+  handleAsync(IpcChannels.chatSetRoomNotifyLevel, async (_event, payload): Promise<void> => {
+    const { accountId, conversationId, level } = ChatSetRoomNotifyLevelSchema.parse(payload);
+    await service.setRoomNotifyLevel(accountId, conversationId, level);
   });
 
   // Handled but not asserted here: `chat:state` is a MAIN→renderer push (webContents.send), not a

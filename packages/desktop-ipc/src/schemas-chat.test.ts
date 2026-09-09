@@ -6,6 +6,7 @@ import {
   ChatDiscoverRoomsSchema,
   ChatGetHistorySchema,
   ChatJoinRoomSchema,
+  ChatSetRoomNotifyLevelSchema,
   ChatMarkReadSchema,
   ChatSendMessageSchema,
   ChatSetPresenceSchema,
@@ -110,6 +111,17 @@ describe('room channels', () => {
   it('ChatJoinRoomSchema needs a plausible room JID', () => {
     expect(ChatJoinRoomSchema.safeParse({ accountId: 'a', roomJid: 'room@conf.example' }).success).toBe(true);
     expect(ChatJoinRoomSchema.safeParse({ accountId: 'a', roomJid: 'x' }).success).toBe(false);
+  });
+
+  it('ChatSetRoomNotifyLevelSchema accepts only the three levels', () => {
+    for (const level of ['all', 'mentions', 'none']) {
+      expect(
+        ChatSetRoomNotifyLevelSchema.safeParse({ accountId: 'a', conversationId: 'c', level }).success,
+      ).toBe(true);
+    }
+    expect(
+      ChatSetRoomNotifyLevelSchema.safeParse({ accountId: 'a', conversationId: 'c', level: 'loud' }).success,
+    ).toBe(false);
   });
 });
 

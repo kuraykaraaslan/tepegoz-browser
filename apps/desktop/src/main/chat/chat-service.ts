@@ -191,4 +191,12 @@ export class ChatService {
   async joinRoom(accountId: string, roomJid: string): Promise<void> {
     return this.require(accountId).joinRoom(roomJid);
   }
+
+  async setRoomNotifyLevel(
+    accountId: string,
+    conversationId: string,
+    level: 'all' | 'mentions' | 'none',
+  ): Promise<void> {
+    return this.require(accountId).setRoomNotifyLevel(conversationId, level);
+  }
 }

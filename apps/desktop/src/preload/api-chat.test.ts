@@ -106,6 +106,15 @@ describe('account + message commands', () => {
     });
   });
 
+  it('setChatRoomNotifyLevel → { accountId, conversationId, level }', () => {
+    void chatApi.setChatRoomNotifyLevel('work', 'room@conf', 'mentions');
+    expect(invoke).toHaveBeenCalledWith(IpcChannels.chatSetRoomNotifyLevel, {
+      accountId: 'work',
+      conversationId: 'room@conf',
+      level: 'mentions',
+    });
+  });
+
   it('markChatRead → { accountId, conversationId, protocolId }', () => {
     void chatApi.markChatRead('work', 'bob@x.com', 'm-9');
     expect(invoke).toHaveBeenCalledWith(IpcChannels.chatMarkRead, {

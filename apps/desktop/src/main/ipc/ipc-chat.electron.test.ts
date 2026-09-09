@@ -41,6 +41,7 @@ const svc = {
   markRead: vi.fn(() => Promise.resolve()),
   discoverRooms: vi.fn(() => Promise.resolve([])),
   joinRoom: vi.fn(() => Promise.resolve()),
+  setRoomNotifyLevel: vi.fn(() => Promise.resolve()),
 };
 
 const ev = { senderFrame: { url: TRUSTED }, sender: {} };
@@ -63,7 +64,7 @@ beforeEach(() => {
 });
 
 it('registers every chat channel', () => {
-  expect(h.handlers.size).toBe(11);
+  expect(h.handlers.size).toBe(12);
 });
 
 describe('rooms', () => {
@@ -77,6 +78,22 @@ describe('rooms', () => {
     await call(IpcChannels.chatJoinRoom, { accountId: 'work', roomJid: 'general@conf.example' });
     expect(svc.joinRoom).toHaveBeenCalledWith('work', 'general@conf.example');
     await expect(call(IpcChannels.chatJoinRoom, { accountId: 'work', roomJid: 'x' })).rejects.toBeDefined();
+  });
+
+  it('chat:set-room-notify-level validates the enum + delegates', async () => {
+    await call(IpcChannels.chatSetRoomNotifyLevel, {
+      accountId: 'work',
+      conversationId: 'room@conf',
+      level: 'mentions',
+    });
+    expect(svc.setRoomNotifyLevel).toHaveBeenCalledWith('work', 'room@conf', 'mentions');
+    await expect(
+      call(IpcChannels.chatSetRoomNotifyLevel, {
+        accountId: 'work',
+        conversationId: 'room@conf',
+        level: 'loud',
+      }),
+    ).rejects.toBeDefined();
   });
 });
 

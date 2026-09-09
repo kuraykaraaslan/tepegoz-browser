@@ -191,6 +191,7 @@ describe('ChatService — delegation', () => {
     await service.history('a', 'bob@x.com', null);
     await service.discoverRooms('a', 'conf.example');
     await service.joinRoom('a', 'general@conf.example');
+    await service.setRoomNotifyLevel('a', 'room@conf', 'none');
     expect(adapter.setPresence).toHaveBeenCalled();
     expect(adapter.roster).toHaveBeenCalled();
     expect(adapter.history).toHaveBeenCalled();

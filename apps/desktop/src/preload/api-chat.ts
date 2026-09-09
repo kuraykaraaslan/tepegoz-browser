@@ -9,6 +9,7 @@ import {
   type ChatPresence,
   type ChatRoomSummary,
   type ChatStateEvent,
+  type RoomNotifyLevel,
   type OutgoingMessage,
   type TepegozApi,
 } from '@tepegoz/desktop-ipc';
@@ -32,6 +33,7 @@ export const chatApi: Pick<
   | 'markChatRead'
   | 'discoverChatRooms'
   | 'joinChatRoom'
+  | 'setChatRoomNotifyLevel'
   | 'onChatState'
 > = {
   listChatAccounts: () => invoke<ChatAccountsSnapshot>(IpcChannels.chatListAccounts),
@@ -63,6 +65,8 @@ export const chatApi: Pick<
     invoke<ChatRoomSummary[]>(IpcChannels.chatDiscoverRooms, { accountId, service }),
   joinChatRoom: (accountId: string, roomJid: string) =>
     invoke<void>(IpcChannels.chatJoinRoom, { accountId, roomJid }),
+  setChatRoomNotifyLevel: (accountId: string, conversationId: string, level: RoomNotifyLevel) =>
+    invoke<void>(IpcChannels.chatSetRoomNotifyLevel, { accountId, conversationId, level }),
   onChatState: (callback: (event: ChatStateEvent) => void) => {
     const listener = (_event: unknown, payload: ChatStateEvent): void => {
       callback(payload);

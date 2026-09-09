@@ -246,6 +246,14 @@ export class ChatAccountRunner {
     const conversation = await this.deps.adapter.joinRoom(this.requireSession(), roomJid);
     this.deps.store.upsertConversation(conversation);
   }
+
+  setRoomNotifyLevel(conversationId: string, level: 'all' | 'mentions' | 'none'): Promise<void> {
+    const existing =
+      this.deps.store.getConversation(conversationId) ??
+      blankConversation(this.accountId, conversationId);
+    this.deps.store.upsertConversation({ ...existing, notifyLevel: level });
+    return Promise.resolve();
+  }
 }
 
 function deriveBareJid(account: ChatAccount): string {

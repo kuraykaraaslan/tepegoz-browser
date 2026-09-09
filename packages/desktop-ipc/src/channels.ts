@@ -267,6 +267,8 @@ export const IpcChannels = {
   chatDiscoverRooms: 'chat:discover-rooms',
   /** Renderer→main: join a MUC room by its bare JID. */
   chatJoinRoom: 'chat:join-room',
+  /** Renderer→main: set a room's notification level (all / mentions / none). */
+  chatSetRoomNotifyLevel: 'chat:set-room-notify-level',
   /** Main→renderer push: per-account connection state + folded conversation/roster changes. */
   chatState: 'chat:state',
   /** Renderer→main: the identity of every built-in extension (from the validated on-disk catalog). */

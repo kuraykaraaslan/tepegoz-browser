@@ -6,7 +6,7 @@ import type {
   ChatPresence,
   OutgoingMessage,
 } from '@tepegoz/shared-types';
-import type { ChatConnState, ChatStateChange } from '@tepegoz/chat-core';
+import type { ChatConnState, ChatStateChange, RoomNotifyLevel } from '@tepegoz/chat-core';
 
 // The messenger wire model is owned by @tepegoz/shared-types (the account/conversation/message/contact
 // schemas) and @tepegoz/chat-core (the connection state + folded change union). Type-only re-exports,
@@ -19,7 +19,7 @@ export type {
   ChatPresence,
   OutgoingMessage,
 } from '@tepegoz/shared-types';
-export type { ChatConnState, ChatStateChange } from '@tepegoz/chat-core';
+export type { ChatConnState, ChatStateChange, RoomNotifyLevel } from '@tepegoz/chat-core';
 
 /**
  * The multi-protocol messenger (`com.tepegoz.chat`, phase X-chat.1) bridge surface: the accounts the
@@ -104,6 +104,12 @@ export interface ChatApi {
   discoverChatRooms(accountId: string, service: string): Promise<ChatRoomSummary[]>;
   /** Join a MUC room by its bare JID. */
   joinChatRoom(accountId: string, roomJid: string): Promise<void>;
+  /** Persist a room's notification level. */
+  setChatRoomNotifyLevel(
+    accountId: string,
+    conversationId: string,
+    level: RoomNotifyLevel,
+  ): Promise<void>;
   /** Subscribe to the `chat:state` push. Returns an unsubscribe. */
   onChatState(callback: (event: ChatStateEvent) => void): () => void;
 }

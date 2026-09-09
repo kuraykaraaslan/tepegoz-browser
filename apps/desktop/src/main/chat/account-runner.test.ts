@@ -262,6 +262,18 @@ describe('ChatAccountRunner — actions', () => {
     expect(store.conversations.get('general@conf.example')?.kind).toBe('room');
   });
 
+  it('setRoomNotifyLevel patches the stored conversation (creating a stub if needed)', async () => {
+    const { runner, store } = await online();
+    await runner.setRoomNotifyLevel('room@conf', 'mentions');
+    expect(store.conversations.get('room@conf')?.notifyLevel).toBe('mentions');
+
+    store.upsertConversation({ ...store.conversations.get('room@conf')!, name: 'Kept' });
+    await runner.setRoomNotifyLevel('room@conf', 'none');
+    const row = store.conversations.get('room@conf');
+    expect(row?.notifyLevel).toBe('none');
+    expect(row?.name).toBe('Kept');
+  });
+
   it('discoverRooms / joinRoom no-op when the adapter lacks MUC support', async () => {
     const { runner, adapter } = await online();
     // @ts-expect-error deliberately drop the optional methods

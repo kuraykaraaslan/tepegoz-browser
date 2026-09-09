@@ -118,6 +118,8 @@ export const chatIpcService: ChatIpcService = {
     requireService().markRead(accountId, conversationId, protocolId),
   discoverRooms: (accountId, service) => requireService().discoverRooms(accountId, service),
   joinRoom: (accountId, roomJid) => requireService().joinRoom(accountId, roomJid),
+  setRoomNotifyLevel: (accountId, conversationId, level) =>
+    requireService().setRoomNotifyLevel(accountId, conversationId, level),
 };
 
 /** Test seam. */
