@@ -215,13 +215,13 @@ describe('ChatService — delegation', () => {
 describe('ChatService — default adapter selection', () => {
   it('refuses an unimplemented protocol with an error state and no runner', async () => {
     const emit = vi.fn();
-    const secrets = fakeSecrets({ 'chat:mx-acc': 's' });
-    const mxAccount: ChatAccount = {
-      ...account('mx-acc'),
-      server: { protocol: 'matrix', homeserverUrl: 'https://m.example', userId: '@a:m.example' },
+    const secrets = fakeSecrets({ 'chat:br-acc': 's' });
+    const brAccount: ChatAccount = {
+      ...account('br-acc'),
+      server: { protocol: 'bridge', bridgeId: 'telegram', config: {} },
     };
     const service = new ChatService({
-      loadAccounts: () => [mxAccount],
+      loadAccounts: () => [brAccount],
       secrets,
       persistAccount: () => undefined,
       deleteAccount: () => undefined,
@@ -237,8 +237,33 @@ describe('ChatService — default adapter selection', () => {
     await service.start();
     expect(service.accountStates()).toEqual({});
     expect(emit).toHaveBeenCalledWith(
-      expect.objectContaining({ accountId: 'mx-acc', state: 'error' }),
+      expect.objectContaining({ accountId: 'br-acc', state: 'error' }),
     );
+  });
+
+  it('builds a real MatrixAdapter for a matrix account', async () => {
+    const secrets = fakeSecrets({ 'chat:mx-acc': 's' });
+    const mxAccount: ChatAccount = {
+      ...account('mx-acc'),
+      server: { protocol: 'matrix', homeserverUrl: 'https://m.example', userId: '@a:m.example' },
+    };
+    const service = new ChatService({
+      loadAccounts: () => [mxAccount],
+      secrets,
+      persistAccount: () => undefined,
+      deleteAccount: () => undefined,
+      makeRunnerStore: () => new FakeStore(),
+      transport: { fetch: () => new Promise(() => undefined) } as never,
+      mayEgress: () => true,
+      now: () => 1,
+      setTimer: (fn) => fn,
+      clearTimer: () => undefined,
+      emit: vi.fn(),
+      isEnabled: () => true,
+    });
+    await service.start();
+    await tick();
+    expect(service.accountStates()).toHaveProperty('mx-acc');
   });
 
   it('builds a real IrcAdapter for an irc account', async () => {
