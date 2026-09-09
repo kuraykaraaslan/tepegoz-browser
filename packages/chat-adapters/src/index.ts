@@ -139,6 +139,17 @@ export {
 } from './irc/parse';
 
 export {
+  ircMessageToEvent,
+  buildIrcPrivmsg,
+  buildIrcAction,
+  buildIrcJoin,
+  buildIrcPart,
+  buildIrcNick,
+  buildIrcAway,
+  type IrcContext,
+} from './irc/messages';
+
+export {
   bytesToB64,
   b64ToBytes,
   saslPlain,

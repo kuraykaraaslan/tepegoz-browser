@@ -509,7 +509,12 @@ sub-phase DoD template remain.** · **Depends on:** X-chat.2 · **Branch:** `mai
 IRCv3 line parser (`parseIrcLine` — `@tags` with unescaping / `:prefix` / command uppercase-or-numeric
 / params with `:trailing`, bounded at 8703 bytes / 15 params / 64 tags, `null` on anything malformed),
 `formatIrcLine` (round-trips), `parseIsupport` (005 `KEY=value` / bare / `-KEY`). 12 tests,
-S100/B94/F100/L100. Next: IRCv3 CAP negotiation + SASL, then the connection state machine, then the
+S100/B94/F100/L100. Then `irc/messages.ts` — `ircMessageToEvent` (PRIVMSG / NOTICE → a `message`,
+channel-vs-DM keyed by an RFC-1459-folded conversation id, `server-time` → originTs, `msgid` →
+protocolId with a `time~nick~body` fallback, CTCP ACTION → `/me`, other CTCP dropped; JOIN / PART /
+KICK → `room-membership`, `self` from the nick, KICK attributed to the kicked nick) + line builders
+(`buildIrcPrivmsg` / `Action` / `Join` / `Part` / `Nick` / `Away`). 14 tests. Next: IRCv3 CAP
+negotiation + SASL, then the connection state machine (`PASS`/`NICK`/`USER`, auto-rejoin), then the
 `IrcAdapter` over the injected transport. · **Depends on:** X-chat.1 (contract) + X-chat.2/.3 (UI) ·
 **Branch:** `main` · **Risk:** low-medium.
 

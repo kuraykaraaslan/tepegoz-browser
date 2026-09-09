@@ -1,0 +1,171 @@
+import { parseIrcPrefix } from '@tepegoz/chat-core';
+import type { ChatEvent, ChatMessage } from '@tepegoz/shared-types';
+import { formatIrcLine, type IrcMessage } from './parse';
+
+/**
+ * IRC message ⇄ normalized model. Incoming: `ircMessageToEvent` maps `PRIVMSG` / `NOTICE` / `JOIN` /
+ * `PART` / `QUIT` / `KICK` / numeric replies to a **raw** `ChatEvent` — `@tepegoz/chat-core`'s
+ * `normalizeEvent` validates and capability-gates it, so this layer stays lenient (anything it does
+ * not model returns `null`, never throws). Outgoing: small line builders.
+ *
+ * IRC has no message ids without IRCv3 `message-tags`, so `protocolId` falls back to a synthetic
+ * `time~nick~body` key — best-effort dedup for a `chathistory` replay that overlaps the live stream.
+ */
+
+export interface IrcContext {
+  accountId: string;
+  /** The connected nick — used to mark a room-membership change as `self`. */
+  selfNick: string;
+  /** Channel-type prefixes from ISUPPORT `CHANTYPES` (default `#&`). */
+  chanTypes: string;
+  /** Wall-clock ms used when a line has no `server-time` tag. */
+  now: number;
+}
+
+const CTCP = String.fromCharCode(1);
+
+function tagTime(msg: IrcMessage, fallback: number): number {
+  const t = msg.tags.time;
+  if (t === undefined) return fallback;
+  const parsed = Date.parse(t);
+  return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+function isChannel(target: string, chanTypes: string): boolean {
+  return target.length > 0 && chanTypes.includes(target[0] ?? '');
+}
+
+/** Lowercase a channel/nick for use as a conversation id (RFC 1459 casemapping, ascii-only subset). */
+function foldTarget(target: string): string {
+  return target.replace(/[A-Z[\]\\^]/g, (c) => {
+    const map: Record<string, string> = { '[': '{', ']': '}', '\\': '|', '^': '~' };
+    return map[c] ?? c.toLowerCase();
+  });
+}
+
+function synthProtocolId(ts: number, nick: string, body: string): string {
+  return `${String(ts)}~${nick}~${body.slice(0, 40)}`;
+}
+
+function messageEvent(msg: IrcMessage, ctx: IrcContext, notice: boolean): ChatEvent | null {
+  const from = parseIrcPrefix(msg.prefix ?? '');
+  const [target, rawBody] = msg.params;
+  if (from === null || target === undefined || rawBody === undefined || rawBody === '') return null;
+
+  const channel = isChannel(target, ctx.chanTypes);
+  const conversationId = channel ? foldTarget(target) : foldTarget(from.nick);
+  const ts = tagTime(msg, ctx.now);
+
+  let body = rawBody;
+  let kind: ChatMessage['kind'] = 'text';
+  if (body.startsWith(CTCP) && body.endsWith(CTCP)) {
+    const inner = body.slice(1, -1);
+    if (inner.startsWith('ACTION ')) body = `/me ${inner.slice(7)}`;
+    else return null; // a non-ACTION CTCP (VERSION, PING…) is protocol chatter, not a message
+  }
+  if (notice) kind = 'system';
+
+  const protocolId = msg.tags.msgid ?? synthProtocolId(ts, from.nick, body);
+  const message: ChatMessage = {
+    id: protocolId,
+    conversationId,
+    accountId: ctx.accountId,
+    protocolId,
+    senderAddress: from.nick,
+    senderName: from.nick,
+    kind,
+    body,
+    mediaRef: null,
+    replyToId: null,
+    reactions: [],
+    editedAt: null,
+    redacted: false,
+    originTs: ts,
+    receivedAt: ctx.now,
+    deliveryState: 'delivered',
+  };
+  return { type: 'message', message };
+}
+
+function membershipEvent(
+  msg: IrcMessage,
+  ctx: IrcContext,
+  joined: boolean,
+  channelParamIndex = 0,
+): ChatEvent | null {
+  const from = parseIrcPrefix(msg.prefix ?? '');
+  const channel = msg.params[channelParamIndex];
+  if (from === null || channel === undefined || !isChannel(channel, ctx.chanTypes)) return null;
+  return {
+    type: 'room-membership',
+    conversationId: foldTarget(channel),
+    address: `${foldTarget(channel)}/${from.nick}`,
+    joined,
+    memberCount: 0,
+    self: from.nick === ctx.selfNick,
+    affiliation: 'none',
+    role: 'participant',
+    realJid: from.user !== null && from.host !== null ? `${from.user}@${from.host}` : null,
+  };
+}
+
+/** Map one parsed line to a raw event, or `null` when it is not something we surface. */
+export function ircMessageToEvent(msg: IrcMessage, ctx: IrcContext): ChatEvent | null {
+  switch (msg.command) {
+    case 'PRIVMSG':
+      return messageEvent(msg, ctx, false);
+    case 'NOTICE':
+      return messageEvent(msg, ctx, true);
+    case 'JOIN':
+      return membershipEvent(msg, ctx, true);
+    case 'PART':
+      return membershipEvent(msg, ctx, false);
+    case 'KICK':
+      // KICK <channel> <nick> [:reason] — the kicked nick is param 1, not the sender.
+      return membershipEvent(
+        { ...msg, prefix: msg.params[1] ?? '' },
+        ctx,
+        false,
+        0,
+      );
+    case 'QUIT': {
+      // QUIT has no channel — we cannot attribute it to one room here; the adapter tracks
+      // per-channel membership and re-emits. Surface nothing at the parse layer.
+      return null;
+    }
+    default:
+      return null;
+  }
+}
+
+// ── outbound builders ───────────────────────────────────────────────────────
+
+export function buildIrcPrivmsg(target: string, body: string): string {
+  return formatIrcLine('PRIVMSG', [target, body]);
+}
+
+export function buildIrcAction(target: string, action: string): string {
+  return formatIrcLine('PRIVMSG', [target, `${CTCP}ACTION ${action}${CTCP}`]);
+}
+
+export function buildIrcJoin(channel: string, key?: string): string {
+  return key !== undefined && key.length > 0
+    ? formatIrcLine('JOIN', [channel, key])
+    : formatIrcLine('JOIN', [channel]);
+}
+
+export function buildIrcPart(channel: string, reason?: string): string {
+  return reason !== undefined && reason.length > 0
+    ? formatIrcLine('PART', [channel, reason])
+    : formatIrcLine('PART', [channel]);
+}
+
+export function buildIrcNick(nick: string): string {
+  return formatIrcLine('NICK', [nick]);
+}
+
+export function buildIrcAway(message?: string): string {
+  return message !== undefined && message.length > 0
+    ? formatIrcLine('AWAY', [message])
+    : formatIrcLine('AWAY');
+}
