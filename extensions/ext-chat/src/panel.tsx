@@ -1,45 +1,57 @@
-import { Button, Card } from '@tepegoz/ui';
-import { useT } from '@tepegoz/i18n/react';
-import { chatDict } from './i18n';
+import { useState } from 'react';
+import { AccountSetupForm, ChatWorkspace, type ChatClientPort } from '@tepegoz/chat-ui';
+import type { ChatAccount } from '@tepegoz/shared-types';
 
 /**
- * Placeholder surfaces for the Chat extension (X-chat.1 scaffold). The protocol engine
- * (`@tepegoz/chat-adapters`) and the connection lifecycle (`@tepegoz/chat-core`) are built; account
- * setup, the roster, and the conversation view are X-chat.2. These render a localized status card so
- * the extension is a real, enable-able entry in the meantime.
+ * The Chat extension surfaces (X-chat.2). Both the sidebar and the internal page render the same
+ * `<ChatWorkspace>` — accounts, roster, conversation list, timeline, composer — over the injected
+ * host bridge. The add-account flow swaps in `<AccountSetupForm>`; the plaintext secret it produces
+ * crosses to `addChatAccount` once and is stored by the main process in the OS keychain.
  */
 
+export type ChatHostApi = ChatClientPort & {
+  addChatAccount: (account: ChatAccount, secret: string) => Promise<void>;
+};
+
 export interface ChatSurfaceProps {
-  api: unknown;
+  api: ChatHostApi;
   onClose: () => void;
 }
 
-function ComingSoon({ onClose, compact }: Readonly<{ onClose: () => void; compact?: boolean }>) {
-  const s = useT(chatDict);
+function ChatSurface({ api }: Readonly<{ api: ChatHostApi }>) {
+  const [adding, setAdding] = useState(false);
+
+  if (adding) {
+    return (
+      <AccountSetupForm
+        onCancel={() => {
+          setAdding(false);
+        }}
+        onAdd={async ({ account, secret }) => {
+          await api.addChatAccount(
+            { ...account, secretRef: `chat:${account.id}`, updatedAt: Date.now(), version: 1 },
+            secret,
+          );
+          setAdding(false);
+        }}
+      />
+    );
+  }
+
   return (
-    <Card>
-      <h2>{s.comingSoonTitle}</h2>
-      <p>{s.comingSoonBody}</p>
-      {compact !== true && (
-        <>
-          <h3>{s.protocols.heading}</h3>
-          <ul>
-            <li>{s.protocols.xmpp}</li>
-            <li>{s.protocols.irc}</li>
-            <li>{s.protocols.matrix}</li>
-            <li>{s.protocols.bridges}</li>
-          </ul>
-        </>
-      )}
-      <Button onClick={onClose}>{s.close}</Button>
-    </Card>
+    <ChatWorkspace
+      port={api}
+      onAddAccount={() => {
+        setAdding(true);
+      }}
+    />
   );
 }
 
-export function ChatSidebar({ onClose }: Readonly<ChatSurfaceProps>) {
-  return <ComingSoon onClose={onClose} compact />;
+export function ChatSidebar({ api }: Readonly<ChatSurfaceProps>) {
+  return <ChatSurface api={api} />;
 }
 
-export function ChatPage({ onClose }: Readonly<ChatSurfaceProps>) {
-  return <ComingSoon onClose={onClose} />;
+export function ChatPage({ api }: Readonly<ChatSurfaceProps>) {
+  return <ChatSurface api={api} />;
 }

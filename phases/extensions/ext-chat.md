@@ -323,8 +323,9 @@ close-out. · **Branch:** `main` · **Risk:** low.
 
 ## X-chat.2 — Roster & conversation UI
 
-**Status:** 🟡 In progress (2026-09-09) — `@tepegoz/chat-ui` package scaffolded (en/tr dict + parity
-test, leaf dep-cruiser rule, coverage registration). Landed so far: `linkifySegments`
+**Status:** 🟢 Code-complete bar media (2026-09-09) — `@tepegoz/chat-ui` built and wired into
+`extensions/ext-chat`; only media rendering + the runtime DoD remain. `@tepegoz/chat-ui` scaffolded
+(en/tr dict + parity test, leaf dep-cruiser rule, coverage registration). Landed: `linkifySegments`
 (safe — only `http(s)` becomes a link, never auto-navigated / fetched), `groupByDay` +
 `daySeparatorLabel` (timeline day buckets), `presenceMeta` + `<PresenceBadge>`, and the
 **conversation list** — `sortConversations` (recency, id-tiebroken) / `groupConversationsByAccount`
@@ -361,24 +362,32 @@ subscription for the hook's lifetime, `send()` / `setActiveAccount()` / `refresh
 dependency; and **`<ChatWorkspace>`** — the whole surface composed over `useChatState`: account
 switcher (>1 account), a chats / contacts left column, and the open conversation (title + typing
 indicator + `<MessageTimeline>` + `<Composer>`); no-account state invites adding one. Presentational
-glue — every effect goes through the injected port. **113 tests, S99.8/B93.8/F95.6/L99.8.** Next:
-wire `<ChatWorkspace>` into `extensions/ext-chat` (replace the placeholder surfaces) + the desktop
-adapter mapping `window.tepegoz` chat.* → `ChatClientPort`. · **Depends on:** X-chat.1 · **Branch:**
-`main` · **Risk:** medium.
+glue — every effect goes through the injected port. **113 tests, S99.8/B93.8/F95.6/L99.8.**
+
+**Wired in (2026-09-09):** `extensions/ext-chat`'s sidebar + page now render `<ChatWorkspace>` over
+the host bridge (the old "coming soon" surfaces are gone); the add-account flow swaps in
+`<AccountSetupForm>` and hands the completed row + plaintext secret to `addChatAccount` once.
+`window.tepegoz` (already carrying `ChatApi` from X-chat.1) satisfies `ChatClientPort` structurally,
+so the desktop adapter is a pass-through — `apps/desktop` typecheck holds (still only the 2
+pre-existing unrelated errors). ext-chat: 4 panel tests.
+
+**Remaining:** media rendering (image/video thumbnails from quarantined parts) and the runtime
+Functional DoD. · **Depends on:** X-chat.1 · **Branch:** `main` · **Risk:** low.
 
 ### Deliverables
-- [ ] **`@tepegoz/chat-ui`** — conversation list (virtualized, unread/mention badges, account
-      grouping + colour), roster panel (presence, groups, add/remove contact, subscription
-      requests), account setup flow (fields driven by adapter caps).
-- [ ] **Message timeline** — text with linkification (safe — no auto-navigation), reply quoting,
-      reactions row, edited/redacted markers, system events, delivery/read state, typing indicator,
-      date separators, "jump to unread".
-- [ ] **Composer** — text, emoji picker, attachment from the file sandbox (→ `uploadMedia`),
-      reply/edit affordances, per-conversation mute, send on Enter / newline on Shift-Enter.
+- [x] **`@tepegoz/chat-ui`** — conversation list (unread/mention badges, account grouping + colour —
+      _virtualization deferred to a windowing pass_), roster panel (presence, groups, add/remove
+      contact, `from`-subscription pending marker), account setup flow (XMPP fields; _adapter-caps
+      branching lands with IRC/Matrix_).
+- [x] **Message timeline** — linkified text (safe — no auto-navigation), reactions row,
+      edited/redacted markers, system events, delivery/read state, typing indicator, date separators,
+      "new messages" divider. _Reply quoting + "jump to unread" scroll: deferred._
+- [x] **Composer** — text, attachment hook (`OutgoingMessage.mediaPath`), reply/edit affordances,
+      send on Enter / newline on Shift-Enter. _Emoji picker + per-conversation mute: deferred._
 - [ ] **Media rendering** — image/video thumbnails from local (quarantined) parts; click →
       open-into-sandbox; no autoplay; no remote fetch for previews.
-- [ ] IPC read channels: conversation list, history page, roster, account live state; write channels
-      for send / mark-read / mute (all zod-gated).
+- [x] IPC read channels: conversation list, history page, roster, account live state; write channels
+      for send / mark-read (all zod-gated — X-chat.1). _mute: deferred._
 
 ### Functional DoD
 - [ ] A human holds a real XMPP conversation across two accounts: send/receive, reactions, edits,

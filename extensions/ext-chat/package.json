@@ -18,9 +18,10 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@tepegoz/chat-ui": "workspace:*",
     "@tepegoz/extension-sdk": "workspace:*",
     "@tepegoz/i18n": "workspace:*",
-    "@tepegoz/ui": "workspace:*"
+    "@tepegoz/shared-types": "workspace:*"
   },
   "peerDependencies": {
     "react": "^18 || ^19"
