@@ -12,6 +12,26 @@ export const en = {
     today: 'Today',
     yesterday: 'Yesterday',
   },
+  roomBrowser: {
+    title: 'Find a room',
+    /** Label for the conference-service input. */
+    service: 'Room service',
+    servicePlaceholder: 'conference.example.org',
+    browse: 'Browse',
+    search: 'Filter rooms',
+    /** Field to join a room by its full address. */
+    joinByAddress: 'Join by address',
+    joinByAddressPlaceholder: 'room@conference.example.org',
+    join: 'Join',
+    /** Suffix on a room's occupant count, e.g. "42 online". */
+    online: 'online',
+    /** Marker on a password-protected room. */
+    locked: 'Password required',
+    /** Marker on a members-only room. */
+    membersOnly: 'Members only',
+    empty: 'No rooms found',
+    loading: 'Loading rooms…',
+  },
   room: {
     /** Heading over the occupant list (a count precedes it: "12 Members"). */
     members: 'Members',

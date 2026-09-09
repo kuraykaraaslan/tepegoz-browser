@@ -33,6 +33,13 @@ export {
 } from './mention-autocomplete';
 export { RoomMemberList, type RoomMemberListProps } from './RoomMemberList';
 export {
+  filterRoomListings,
+  sortRoomListings,
+  roomListingLabel,
+  type RoomListing,
+} from './room-browser';
+export { RoomBrowser, type RoomBrowserProps } from './RoomBrowser';
+export {
   isSendKey,
   draftToBody,
   canSend,

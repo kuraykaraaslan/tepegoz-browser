@@ -436,9 +436,12 @@ JID. **6 adapter tests (27 total).** Then **downstream consumption** — `room-m
 per-conversation `RoomView` (via `chat-core` `applyOccupant`) and emits a new `{ kind: 'room' }`
 `ChatStateChange`, also exposed via `roomView(id)`; `chat-ui`'s `chat-store` reducer keeps
 `state.rooms` by conversation id; the desktop `account-runner` passes the change straight to the
-renderer (no room table yet). Next: the room-browser UI (over `disco`) + a room header (topic +
-member count) + `decideNotification` wired in the host. · **Depends on:** X-chat.2 · **Branch:**
-`main` · **Risk:** low-medium.
+renderer (no room table yet). Then the **room-browser UI** — `room-browser` (`RoomListing`,
+`filterRoomListings` fold-match on jid/name/description, `sortRoomListings` most-populated-first,
+`roomListingLabel`) + `<RoomBrowser>` (a service field → `discoverRooms` callback, a filterable list
+with occupant counts + password / members-only flags + description, and a "join by address" field).
+**43 tests, S99.6/B93.4/F95.7/L99.6.** Next: a room header (topic + member count) + `decideNotification`
+wired in the host. · **Depends on:** X-chat.2 · **Branch:** `main` · **Risk:** low-medium.
 
 ### Deliverables
 - [ ] **XMPP MUC (XEP-0045)** — join/leave by JID, nickname, room roster + affiliations/roles,
@@ -446,7 +449,8 @@ member count) + `decideNotification` wired in the host. · **Depends on:** X-cha
       _Pure stanza layer (`xmpp/muc.ts`) + `chat-core` `RoomView` + `XmppAdapter` join/leave/presence
       routing done; downstream consumption of `room-membership` next._
 - [ ] **Room browser** — service discovery of a MUC service's public rooms, search, join-by-address.
-      _XEP-0030 stanza layer (`xmpp/disco.ts`) done; adapter method + UI next._
+      _XEP-0030 stanza layer (`xmpp/disco.ts`) + `<RoomBrowser>` UI done; the adapter `discoverRooms`
+      method + desktop bridge wiring next._
 - [ ] **UI for rooms** — member list, mention autocomplete, per-room notification level
       (all / mentions / none), topic display, "who's typing" for rooms.
       _`<RoomMemberList>` + mention autocomplete done; notification level + topic + typing next._
