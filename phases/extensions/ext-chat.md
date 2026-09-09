@@ -525,7 +525,11 @@ reads `CHANTYPES` from `005`; live lines → `ircMessageToEvent`; own `JOIN`/`PA
 / `changeNick`; `roster` / `history` / `markRead` inert (IRC has none / `chathistory` is a later
 slice). 15 tests. Then **wired into the desktop** — `ChatService.makeAdapter` returns `new IrcAdapter()` for
 an `irc` account (was a 501); `chat-service.test.ts` now proves an IRC account spins up a runner and a
-`matrix` account still errors. Next: IRCv3 `chathistory` backfill + a recorded-trace fixture suite. ·
+`matrix` account still errors. Then **IRCv3 `chathistory` backfill** — `IrcSession` tracks the ACKed
+IRCv3 caps + open `BATCH` refs; `history()` sends `CHATHISTORY BEFORE <target> <timestamp|*> 50` and
+resolves from the `chathistory` batch (messages sorted oldest-first, `nextCursor` = the oldest
+`originTs` as ISO), with a 15 s timeout and cleanup on disconnect; a non-`chathistory` batch falls
+through to the live stream. 4 tests. Next: a recorded-trace fixture suite + runtime DoD (local ergo). ·
 **Depends on:** X-chat.1 (contract) + X-chat.2/.3 (UI) · **Branch:** `main` · **Risk:** low-medium.
 
 ### Deliverables

@@ -65,6 +65,11 @@ export class IrcRegistration {
     return this.nick;
   }
 
+  /** The IRCv3 caps the server ACKed (available once `registered`). */
+  get ackedCaps(): ReadonlySet<string> {
+    return this.acked;
+  }
+
   start(): RegistrationAction[] {
     this.phase = 'cap-ls';
     const out: RegistrationAction[] = [{ kind: 'send', line: 'CAP LS 302' }];

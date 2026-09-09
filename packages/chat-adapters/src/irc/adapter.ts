@@ -15,7 +15,7 @@ import type {
 } from '../adapter';
 import { IRC_CAPS } from '../caps';
 import type { ChatTransport, DuplexStream } from '../transport';
-import { parseIrcLine, parseIsupport } from './parse';
+import { parseIrcLine, parseIsupport, type IrcMessage } from './parse';
 import { IrcRegistration, type RegistrationAction } from './registration';
 import {
   buildIrcAway,
@@ -30,6 +30,8 @@ import {
 const DEFAULT_PORT_TLS = 6697;
 const DEFAULT_PORT_PLAIN = 6667;
 const MAX_BUFFER = 1 << 20; // 1 MiB of un-terminated bytes → the peer is misbehaving
+const IRC_HISTORY_LIMIT = 50;
+const IRC_HISTORY_TIMEOUT_MS = 15_000;
 
 /** One connected IRC session: the socket, an incremental line buffer, and a backpressured event queue. */
 export class IrcSession implements ChatSession {
@@ -37,6 +39,13 @@ export class IrcSession implements ChatSession {
   closed = false;
   chanTypes = '#&';
   readonly joined = new Set<string>();
+  /** IRCv3 caps the server ACKed. */
+  ircCaps: ReadonlySet<string> = new Set();
+
+  /** Open IRCv3 `batch` refs → the lines collected under them. */
+  readonly batches = new Map<string, { type: string; target: string; lines: IrcMessage[] }>();
+  /** A pending `history()` call, keyed by folded target. */
+  readonly historyWaiters = new Map<string, (lines: IrcMessage[]) => void>();
 
   private buffer = '';
   private readonly queue: ChatEvent[] = [];
@@ -81,6 +90,8 @@ export class IrcSession implements ChatSession {
     this.ended = true;
     this.closed = true;
     while (this.waiters.length > 0) this.waiters.shift()?.({ value: undefined, done: true });
+    for (const resolve of this.historyWaiters.values()) resolve([]);
+    this.historyWaiters.clear();
   }
 
   nextEvent(): Promise<IteratorResult<ChatEvent>> {
@@ -124,6 +135,7 @@ export class IrcAdapter implements ChatAdapter {
           else if (action.kind === 'registered') {
             registering = false;
             session.nick = action.nick;
+            session.ircCaps = registration.ackedCaps;
             resolve(session);
           } else {
             registering = false;
@@ -150,7 +162,8 @@ export class IrcAdapter implements ChatAdapter {
             if (typeof map.CHANTYPES === 'string') session.chanTypes = map.CHANTYPES;
             continue;
           }
-          this.handleLive(session, line);
+          if (this.handleBatch(session, msg)) continue;
+          this.handleLive(session, msg);
         }
       });
 
@@ -163,9 +176,50 @@ export class IrcAdapter implements ChatAdapter {
     });
   }
 
-  private handleLive(session: IrcSession, line: string): void {
-    const msg = parseIrcLine(line);
-    if (msg === null) return;
+  /**
+   * IRCv3 `batch`: `BATCH +ref TYPE [args]` opens, tagged lines join it, `BATCH -ref` closes. A
+   * `chathistory` batch's messages resolve the matching {@link history} promise; other batch members
+   * fall through to the live stream. Returns whether the line was consumed by the batch machinery.
+   */
+  private handleBatch(session: IrcSession, msg: IrcMessage): boolean {
+    if (msg.command === 'BATCH') {
+      const token = msg.params[0] ?? '';
+      const ref = token.slice(1);
+      if (token.startsWith('+')) {
+        session.batches.set(ref, {
+          type: msg.params[1] ?? '',
+          target: (msg.params[2] ?? '').toLowerCase(),
+          lines: [],
+        });
+        return true;
+      }
+      if (token.startsWith('-')) {
+        const batch = session.batches.get(ref);
+        session.batches.delete(ref);
+        if (batch !== undefined && batch.type === 'chathistory') {
+          const resolve = session.historyWaiters.get(batch.target);
+          if (resolve !== undefined) {
+            session.historyWaiters.delete(batch.target);
+            resolve(batch.lines);
+          }
+          return true;
+        }
+        return batch?.type === 'chathistory';
+      }
+      return false;
+    }
+    const batchRef = msg.tags.batch;
+    if (batchRef !== undefined) {
+      const batch = session.batches.get(batchRef);
+      if (batch?.type === 'chathistory') {
+        batch.lines.push(msg);
+        return true;
+      }
+    }
+    return false;
+  }
+
+  private handleLive(session: IrcSession, msg: IrcMessage): void {
     const ctx: IrcContext = {
       accountId: session.accountId,
       selfNick: session.nick,
@@ -210,9 +264,39 @@ export class IrcAdapter implements ChatAdapter {
     return Promise.resolve([]);
   }
 
-  history(): Promise<HistoryPage> {
-    // IRCv3 `chathistory` backfill lands in a later slice.
-    return Promise.resolve({ messages: [], nextCursor: null });
+  history(session: ChatSession, conv: ConvId, before: string | null): Promise<HistoryPage> {
+    const s = session as IrcSession;
+    if (!s.ircCaps.has('draft/chathistory') && !s.ircCaps.has('chathistory')) {
+      return Promise.resolve({ messages: [], nextCursor: null });
+    }
+    const target = conv.toLowerCase();
+    const selector = before !== null ? `timestamp=${before}` : '*';
+    return new Promise<HistoryPage>((resolve) => {
+      const timer = setTimeout(() => {
+        s.historyWaiters.delete(target);
+        resolve({ messages: [], nextCursor: null });
+      }, IRC_HISTORY_TIMEOUT_MS);
+      s.historyWaiters.set(target, (lines) => {
+        clearTimeout(timer);
+        const ctx: IrcContext = {
+          accountId: s.accountId,
+          selfNick: s.nick,
+          chanTypes: s.chanTypes,
+          now: Date.now(),
+        };
+        const messages = lines
+          .map((m) => ircMessageToEvent(m, ctx))
+          .filter((e): e is Extract<typeof e, { type: 'message' }> => e?.type === 'message')
+          .map((e) => e.message)
+          .sort((a, b) => a.originTs - b.originTs);
+        const oldest = messages[0];
+        resolve({
+          messages,
+          nextCursor: messages.length > 0 && oldest !== undefined ? new Date(oldest.originTs).toISOString() : null,
+        });
+      });
+      s.write(`CHATHISTORY BEFORE ${conv} ${selector} ${IRC_HISTORY_LIMIT}`);
+    });
   }
 
   sendMessage(session: ChatSession, conv: ConvId, body: OutgoingMessage): Promise<SendReceipt> {

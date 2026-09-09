@@ -156,12 +156,72 @@ describe('IrcAdapter — live traffic', () => {
     expect((await it.next()).done).toBe(true);
   });
 
-  it('roster / listConversations / history / markRead are inert', async () => {
-    const { adapter } = await connected();
+  it('roster / listConversations / markRead are inert', async () => {
+    const { adapter, session } = await connected();
     expect(await adapter.roster()).toEqual([]);
     expect(await adapter.listConversations()).toEqual([]);
-    expect(await adapter.history()).toEqual({ messages: [], nextCursor: null });
     await expect(adapter.markRead()).resolves.toBeUndefined();
+    // history is a no-op without the chathistory cap
+    expect(await adapter.history(session, '#c', null)).toEqual({ messages: [], nextCursor: null });
+  });
+
+  it('history() runs a CHATHISTORY BEFORE and resolves from the batch', async () => {
+    const server = new FakeServer();
+    const adapter = new IrcAdapter();
+    const p = adapter.connect(creds(), server);
+    await tick();
+    server.send('CAP * LS :chathistory batch message-tags server-time');
+    server.send('CAP ada ACK :chathistory batch message-tags server-time');
+    server.send(':irc 001 ada :Welcome');
+    const session = (await p) as IrcSession;
+
+    const histP = adapter.history(session, '#chan', null);
+    await tick();
+    expect(server.lastWritten()).toBe('CHATHISTORY BEFORE #chan * 50');
+
+    server.send(
+      'BATCH +h1 chathistory #chan',
+      '@batch=h1;time=2026-01-01T00:00:02.000Z :bob!b@h PRIVMSG #chan :second',
+      '@batch=h1;time=2026-01-01T00:00:01.000Z :bob!b@h PRIVMSG #chan :first',
+      'BATCH -h1',
+    );
+    const page = await histP;
+    expect(page.messages.map((m) => m.body)).toEqual(['first', 'second']);
+    expect(page.nextCursor).toBe('2026-01-01T00:00:01.000Z');
+  });
+
+  it('a non-chathistory batch falls through to the live stream', async () => {
+    const { adapter, server, session } = await connected();
+    const it = adapter.events(session)[Symbol.asyncIterator]();
+    server.send(
+      'BATCH +n netjoin',
+      '@batch=n :bob!b@h PRIVMSG #c :inside a netjoin batch',
+      'BATCH -n',
+      ':bob!b@h PRIVMSG #c :after',
+    );
+    // the batched PRIVMSG is surfaced like any other line; then the plain one
+    expect((await it.next()).value).toMatchObject({ message: { body: 'inside a netjoin batch' } });
+    expect((await it.next()).value).toMatchObject({ message: { body: 'after' } });
+  });
+
+  it('ignores a BATCH close / tag for an unknown ref', async () => {
+    const { adapter, server, session } = await connected();
+    const it = adapter.events(session)[Symbol.asyncIterator]();
+    server.send('BATCH -ghost', '@batch=ghost :bob!b@h PRIVMSG #c :orphan');
+    expect((await it.next()).value).toMatchObject({ message: { body: 'orphan' } });
+  });
+
+  it('history() times out to an empty page and does not leak the waiter', async () => {
+    const server = new FakeServer();
+    const adapter = new IrcAdapter();
+    const p = adapter.connect(creds(), server);
+    await tick();
+    server.send('CAP * LS :chathistory', 'CAP ada ACK :chathistory', ':irc 001 ada :hi');
+    const session = (await p) as IrcSession;
+    // resolve immediately by ending the session — the pending waiter resolves []
+    const histP = adapter.history(session, '#c', 'msgid');
+    await adapter.disconnect(session);
+    expect(await histP).toEqual({ messages: [], nextCursor: null });
   });
 
   it('changeNick writes a NICK line', async () => {
