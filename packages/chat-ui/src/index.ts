@@ -27,6 +27,20 @@ export {
   type SendKeyEvent,
 } from './composer-draft';
 export { Composer, type ComposerProps, type ComposerSubmission } from './Composer';
+export {
+  deriveAccountId,
+  emptyAccountForm,
+  validateXmppAccountForm,
+  type AccountFormState,
+  type AccountFormField,
+  type AccountFormErrors,
+  type AccountFormResult,
+} from './account-form';
+export {
+  AccountSetupForm,
+  type AccountSetupFormProps,
+  type AccountSetupResult,
+} from './AccountSetupForm';
 export { presenceMeta, type PresenceMeta, type PresenceTone } from './presence';
 export { PresenceBadge, type PresenceBadgeProps } from './PresenceBadge';
 export {

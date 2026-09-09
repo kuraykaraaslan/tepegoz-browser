@@ -338,9 +338,14 @@ own-message delivery state); and the **composer** — `composer-draft` (`isSendK
 Shift/Alt/Ctrl/Meta-Enter and Enter-during-IME newline; `draftToBody` trim/reject-empty; `canSend` /
 `isOverLimit` / `remainingChars` against `CHAT_MESSAGE_BODY_MAX`) + `<Composer>` (auto-growing
 textarea, Enter-to-send, reply / edit context banners with cancel-on-✕-or-Escape, live char countdown
-near the limit, over-limit block + error). **64 tests, S99.3/B96.5/F94.7/L99.3.** Next: account setup
-wizard, then wire into `extensions/ext-chat` replacing the placeholder surfaces. · **Depends on:**
-X-chat.1 · **Branch:** `main` · **Risk:** medium.
+near the limit, over-limit block + error); and the **account setup form** — `account-form`
+(`deriveAccountId` label→slug matching `CHAT_ACCOUNT_ID_PATTERN`, `validateXmppAccountForm` — field
+checks then a `ChatAccountSchema` safeParse backstop, produces a persist-ready draft + the plaintext
+secret that crosses once) + `<AccountSetupForm>` (label / JID / password, collapsible connection
+settings for host / port / STARTTLS-vs-TLS / WebSocket URL, per-field `role="alert"` errors, busy
+lock). XMPP-only for now (the single shipped adapter). **75 tests, S99.8/B95.4/F94.8/L99.8.** Next:
+roster panel, then wire into `extensions/ext-chat` replacing the placeholder surfaces + bind the
+`window.tepegoz` chat.* channels. · **Depends on:** X-chat.1 · **Branch:** `main` · **Risk:** medium.
 
 ### Deliverables
 - [ ] **`@tepegoz/chat-ui`** — conversation list (virtualized, unread/mention badges, account
