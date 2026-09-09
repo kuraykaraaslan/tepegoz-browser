@@ -86,6 +86,19 @@ export {
 } from './xmpp/mam';
 
 export {
+  NS_DISCO_ITEMS,
+  NS_DISCO_INFO,
+  buildDiscoItems,
+  buildDiscoInfo,
+  parseDiscoItems,
+  parseDiscoInfo,
+  type DiscoItem,
+  type DiscoIdentity,
+  type DiscoInfo,
+  type DiscoRoomInfo,
+} from './xmpp/disco';
+
+export {
   NS_MUC,
   NS_MUC_USER,
   MUC_AFFILIATIONS,

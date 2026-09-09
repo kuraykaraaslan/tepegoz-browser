@@ -416,15 +416,20 @@ self-offline marks left), `applySubject`, `leaveRoom`, `occupantList` (role rank
 (`findMentionQuery` locates the `@token` under the caret at a word boundary; `rankMentionCandidates`
 fold-aware, exact-prefix first; `applyMention` splices `@nick `) + `<RoomMemberList>` (role-ranked
 occupants with a count, presence dots, owner / admin / mod badges, click-to-pick). **35 tests,
-S99.8/B94/F96/L99.8.** Next: wire the MUC stanza layer + `RoomView` into `XmppAdapter` (join/leave
-drives room `<presence>` traffic; occupant → a room-membership event). ·
-**Depends on:** X-chat.2 · **Branch:** `main` · **Risk:** low-medium.
+S99.8/B94/F96/L99.8.** Then `@tepegoz/chat-adapters` `xmpp/disco.ts` — XEP-0030: `buildDiscoItems` /
+`buildDiscoInfo` requests, `parseDiscoItems` (a MUC service's advertised room list),
+`parseDiscoInfo` (identities + features + the XEP-0045 `muc#roominfo` extras — occupant count,
+password / members-only / hidden flags, description — recognising a room by the `muc` feature or a
+`conference/text` identity). 7 tests. Next: wire the MUC stanza layer + `RoomView` + disco into
+`XmppAdapter` (join/leave drives room `<presence>`; occupant → a room-membership event; disco backs
+the room browser). · **Depends on:** X-chat.2 · **Branch:** `main` · **Risk:** low-medium.
 
 ### Deliverables
 - [ ] **XMPP MUC (XEP-0045)** — join/leave by JID, nickname, room roster + affiliations/roles,
       subject, invites, kick/ban surfacing (read), history-on-join limit, `0secret`/password rooms.
       _Pure stanza layer (`xmpp/muc.ts`) + `chat-core` `RoomView` done; adapter wiring next._
 - [ ] **Room browser** — service discovery of a MUC service's public rooms, search, join-by-address.
+      _XEP-0030 stanza layer (`xmpp/disco.ts`) done; adapter method + UI next._
 - [ ] **UI for rooms** — member list, mention autocomplete, per-room notification level
       (all / mentions / none), topic display, "who's typing" for rooms.
       _`<RoomMemberList>` + mention autocomplete done; notification level + topic + typing next._
