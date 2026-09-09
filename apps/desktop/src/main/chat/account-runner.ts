@@ -148,8 +148,11 @@ export class ChatAccountRunner {
       case 'roster':
         if (!change.removed) this.deps.store.upsertContact(change.contact);
         break;
+      // `room` carries the live occupant/subject view — pushed to the renderer, not yet persisted
+      // (no room table until the room browser lands).
       case 'presence':
       case 'typing':
+      case 'room':
       case 'dropped':
         break;
     }

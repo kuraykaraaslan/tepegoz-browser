@@ -1,4 +1,4 @@
-import type { ChatStateChange } from '@tepegoz/chat-core';
+import type { ChatStateChange, RoomView } from '@tepegoz/chat-core';
 import type { ChatContact, ChatConversation, ChatMessage } from '@tepegoz/shared-types';
 
 /**
@@ -17,10 +17,12 @@ export interface ChatClientState {
   readonly messages: Readonly<Record<string, readonly ChatMessage[]>>;
   /** Sender addresses currently typing, by conversation id. */
   readonly typing: Readonly<Record<string, readonly string[]>>;
+  /** MUC room views (occupants + subject + joined), by conversation id. */
+  readonly rooms: Readonly<Record<string, RoomView>>;
 }
 
 export function emptyChatClientState(): ChatClientState {
-  return { conversations: {}, roster: {}, messages: {}, typing: {} };
+  return { conversations: {}, roster: {}, messages: {}, typing: {}, rooms: {} };
 }
 
 const byId = <T extends { id: string }>(rows: readonly T[]): Record<string, T> =>
@@ -141,6 +143,8 @@ export function applyChatChange(state: ChatClientState, change: ChatStateChange)
         : current.filter((a) => a !== change.senderAddress);
       return { ...state, typing: { ...state.typing, [change.conversationId]: next } };
     }
+    case 'room':
+      return { ...state, rooms: { ...state.rooms, [change.conversationId]: change.room } };
     case 'dropped':
       return state;
   }

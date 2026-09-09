@@ -430,9 +430,15 @@ XEP-0045 join with our nick + `<history maxstanzas="30"/>`, returns a room `Chat
 room's `<presence>` through `handleRoomPresence` → a `room-membership` event (tracking the occupant
 nick set / count) or a conversation-scoped `error` event — a room we have not joined still falls
 through to a normal `presence`, and an unmodelled room presence is swallowed rather than leaking a
-JID. **6 adapter tests (27 total).** Next: consume `room-membership` downstream (`chat-core`
-`account-state` + desktop `account-runner`) + the room-browser UI + `decideNotification` in the host.
-· **Depends on:** X-chat.2 · **Branch:** `main` · **Risk:** low-medium.
+JID. **6 adapter tests (27 total).** Then **downstream consumption** — `room-membership` gained
+`self` / `affiliation` / `role` / `realJid` in `@tepegoz/shared-types` (additive, defaulted);
+`normalizeEvent` capability-gates it on `rooms`; `ChatAccountState.applyRoomMembership` folds it into a
+per-conversation `RoomView` (via `chat-core` `applyOccupant`) and emits a new `{ kind: 'room' }`
+`ChatStateChange`, also exposed via `roomView(id)`; `chat-ui`'s `chat-store` reducer keeps
+`state.rooms` by conversation id; the desktop `account-runner` passes the change straight to the
+renderer (no room table yet). Next: the room-browser UI (over `disco`) + a room header (topic +
+member count) + `decideNotification` wired in the host. · **Depends on:** X-chat.2 · **Branch:**
+`main` · **Risk:** low-medium.
 
 ### Deliverables
 - [ ] **XMPP MUC (XEP-0045)** — join/leave by JID, nickname, room roster + affiliations/roles,

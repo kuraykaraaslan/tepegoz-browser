@@ -475,6 +475,10 @@ function handleRoomPresence(session: XmppSession, el: XmlElement): boolean {
     address: `${roomJid}/${occ.nick}`,
     joined: occ.presence !== 'offline',
     memberCount: room.occupants.size,
+    self: occ.self,
+    affiliation: occ.affiliation,
+    role: occ.role,
+    realJid: occ.realJid,
   });
   return true;
 }

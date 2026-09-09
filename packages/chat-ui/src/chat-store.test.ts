@@ -212,6 +212,17 @@ describe('applyChatChange', () => {
     expect(applyChatChange(s, { kind: 'dropped', reason: 'invalid' })).toBe(s);
   });
 
+  it('room stores the pushed RoomView by conversation id', () => {
+    const room = {
+      joined: true,
+      selfNick: 'me',
+      subject: 'Weekly',
+      occupants: { Bea: { nick: 'Bea', realJid: null, affiliation: 'member', role: 'participant', presence: 'online', statusText: '' } },
+    } as never;
+    const state = applyChatChange(opened(), { kind: 'room', conversationId: 'r1', room });
+    expect(state.rooms.r1).toBe(room);
+  });
+
   it('applyChatChanges folds a batch', () => {
     const state = applyChatChanges(opened(), [
       { kind: 'message', conversationId: 'c1', message: msg({ protocolId: 'a', receivedAt: 300 }) },

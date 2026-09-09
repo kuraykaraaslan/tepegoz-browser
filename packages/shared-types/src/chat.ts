@@ -280,6 +280,13 @@ export const ChatEventSchema = z.discriminatedUnion('type', [
     address: z.string().min(1).max(512),
     joined: z.boolean(),
     memberCount: z.number().int().nonnegative().default(0),
+    /** This membership change is about the connected account (MUC status code 110). */
+    self: z.boolean().default(false),
+    /** The occupant's affiliation / role, when the protocol carries it. */
+    affiliation: z.enum(['owner', 'admin', 'member', 'outcast', 'none']).default('none'),
+    role: z.enum(['moderator', 'participant', 'visitor', 'none']).default('participant'),
+    /** The occupant's real bare JID in a non-anonymous room. */
+    realJid: z.string().max(512).nullable().default(null),
   }),
   z.object({
     type: z.literal('error'),

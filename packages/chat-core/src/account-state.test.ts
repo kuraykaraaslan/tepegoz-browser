@@ -187,12 +187,52 @@ describe('ChatAccountState — presence & roster', () => {
     expect(s.conversationIds()).toEqual(['bob@x.com']);
   });
 
-  it('room-membership and error events yield no changes', () => {
+  it('error events yield no changes', () => {
     const s = state();
     expect(s.applyEvent({ type: 'error', scope: 'account', message: 'x', conversationId: null })).toEqual([]);
-    expect(
-      s.applyEvent({ type: 'room-membership', conversationId: 'r', address: 'a', joined: true, memberCount: 2 }),
-    ).toEqual([]);
+  });
+
+  it('folds room-membership into a room view: occupants, count and the self / joined flag', () => {
+    const s = state();
+    const [enter] = s.applyEvent({
+      type: 'room-membership',
+      conversationId: 'room@conf',
+      address: 'room@conf/Bea',
+      joined: true,
+      memberCount: 1,
+      self: false,
+      affiliation: 'member',
+      role: 'participant',
+      realJid: null,
+    });
+    expect(enter).toMatchObject({ kind: 'room', conversationId: 'room@conf' });
+    expect(enter?.kind === 'room' && enter.room.occupants.Bea?.role).toBe('participant');
+
+    s.applyEvent({
+      type: 'room-membership',
+      conversationId: 'room@conf',
+      address: 'room@conf/me',
+      joined: true,
+      memberCount: 2,
+      self: true,
+      affiliation: 'owner',
+      role: 'moderator',
+      realJid: 'me@x.com',
+    });
+    expect(s.roomView('room@conf')).toMatchObject({ joined: true, selfNick: 'me' });
+
+    s.applyEvent({
+      type: 'room-membership',
+      conversationId: 'room@conf',
+      address: 'room@conf/Bea',
+      joined: false,
+      memberCount: 1,
+      self: false,
+      affiliation: 'member',
+      role: 'participant',
+      realJid: null,
+    });
+    expect(s.roomView('room@conf')?.occupants.Bea).toBeUndefined();
   });
 });
 

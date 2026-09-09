@@ -8,7 +8,8 @@ import type {
 import { normalizeEvent } from './normalize';
 import { type ConversationView, emptyConversation, foldEvent, markRead, reconcileEcho } from './conversation';
 import { PresenceTracker, type EffectivePresence } from './presence';
-import { bareJid } from './address';
+import { bareJid, parseJid } from './address';
+import { applyOccupant, emptyRoom, type RoomOccupantUpdate, type RoomView } from './room';
 
 /**
  * The in-memory aggregate for one connected account: it takes the adapter's **raw** event stream,
@@ -40,12 +41,14 @@ export type ChatStateChange =
   | { kind: 'roster'; contact: ChatContact; removed: boolean }
   | { kind: 'presence'; address: string; effective: EffectivePresence }
   | { kind: 'typing'; conversationId: string; senderAddress: string; active: boolean }
+  | { kind: 'room'; conversationId: string; room: RoomView }
   | { kind: 'dropped'; reason: 'invalid' | 'unsupported-capability' };
 
 export class ChatAccountState {
   private readonly views = new Map<string, ConversationView>();
   private readonly contactsByAddress = new Map<string, ChatContact>();
   private readonly presence = new PresenceTracker();
+  private readonly rooms = new Map<string, RoomView>();
 
   constructor(private readonly opts: ChatAccountStateOptions) {}
 
@@ -94,9 +97,33 @@ export class ChatAccountState {
       case 'roster-change':
         return this.applyRoster(event.contact, event.removed);
       case 'room-membership':
+        return this.applyRoomMembership(event);
       case 'error':
         return [];
     }
+  }
+
+  private applyRoomMembership(
+    event: Extract<ChatEvent, { type: 'room-membership' }>,
+  ): ChatStateChange[] {
+    const nick = parseJid(event.address)?.resource ?? event.address;
+    const update: RoomOccupantUpdate = {
+      nick,
+      realJid: event.realJid,
+      affiliation: event.affiliation,
+      role: event.role,
+      presence: event.joined ? 'online' : 'offline',
+      statusText: '',
+      self: event.self,
+    };
+    const next = applyOccupant(this.rooms.get(event.conversationId) ?? emptyRoom(), update);
+    this.rooms.set(event.conversationId, next);
+    return [{ kind: 'room', conversationId: event.conversationId, room: next }];
+  }
+
+  /** The current member/subject view of a joined room, if any. */
+  roomView(conversationId: string): RoomView | undefined {
+    return this.rooms.get(conversationId);
   }
 
   private foldConversation(
