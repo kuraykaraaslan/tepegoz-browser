@@ -179,6 +179,16 @@ module.exports = {
       to: { path: ['^apps/', 'node_modules/electron'] },
     },
     {
+      name: 'chat-ui-is-a-leaf',
+      severity: 'error',
+      comment:
+        '@tepegoz/chat-ui is the presentational messenger surface (ext-chat X-chat.2): conversation ' +
+        'list, timeline, composer, roster, account setup. A renderer leaf — it takes data + callbacks ' +
+        'and must never import back into the desktop app or Electron. See docs/package-map.md.',
+      from: { path: '^packages/chat-ui/' },
+      to: { path: ['^apps/', 'node_modules/electron', '^node:'] },
+    },
+    {
       name: 'cert-warning-ui-is-a-leaf',
       severity: 'error',
       comment:

@@ -219,6 +219,7 @@ export default defineConfig({
         'packages/chat-adapters/src/**',
         'packages/chat-core/src/**',
         'packages/chat-transport-node/src/**',
+        'packages/chat-ui/src/**',
         'packages/clipboard/src/**',
         'packages/credential-vault/src/**',
         'packages/downloads/src/**',
