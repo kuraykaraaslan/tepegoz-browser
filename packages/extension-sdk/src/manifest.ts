@@ -27,13 +27,22 @@ export const EXTENSION_ID_RE = /^[a-z0-9]+(\.[a-z0-9-]+)+$/;
 
 /** The closed set of capabilities an extension may request — a manifest naming anything else is
  *  rejected at the trust boundary (no free-form permission strings). Extend the enum as new host
- *  capabilities ship; enforcement lands with the Policy Kernel integration (Phase 3). */
+ *  capabilities ship; enforcement lands with the Policy Kernel integration (Phase 3).
+ *
+ *  `accounts` / `background-connection` / `notifications` / `contacts` were added for the
+ *  communication extensions (`ext-mail`, `ext-chat` — see `phases/extensions/`): an extension that
+ *  holds server credentials in the vault, keeps a socket open while its surface is closed, raises OS
+ *  notifications, or reads an address book. Enforcement (like the rest) lands with the Policy Kernel. */
 export const ExtensionPermissionSchema = z.enum([
   'tabs',
   'read-page',
   'write-page',
   'navigate',
   'network',
+  'accounts',
+  'background-connection',
+  'notifications',
+  'contacts',
 ]);
 export type ExtensionPermission = z.infer<typeof ExtensionPermissionSchema>;
 

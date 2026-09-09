@@ -86,6 +86,13 @@ describe('extension manifest schema', () => {
     ).toBe(true);
     expect(validateManifest({ ...VALID, permissions: ['filesystem'] }).success).toBe(false);
     expect(validateManifest({ ...VALID, permissions: ['Tabs'] }).success).toBe(false);
+    // communication-extension permissions (ext-mail / ext-chat)
+    expect(
+      validateManifest({
+        ...VALID,
+        permissions: ['accounts', 'background-connection', 'notifications', 'contacts'],
+      }).success,
+    ).toBe(true);
   });
 
   it('defineExtension throws on an invalid manifest', () => {
