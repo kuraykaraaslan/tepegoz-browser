@@ -412,17 +412,22 @@ affiliation/role, real JID when non-anonymous, self from status 110, raw status 
 … classification). Then `@tepegoz/chat-core` `room.ts` — `RoomView` (joined / selfNick / subject /
 occupants-by-nick) with `applyOccupant` (offline removes; status-110 self sets selfNick + joined,
 self-offline marks left), `applySubject`, `leaveRoom`, `occupantList` (role rank then
-`turkishCompare`). **27 tests, S100/B95+/F100/L100.** Next: wire both into `XmppAdapter` (join/leave
-drives room `<presence>` traffic; occupant → a room-membership event), then the room UI. ·
+`turkishCompare`). Then the **room UI** in `@tepegoz/chat-ui` — `mention-autocomplete`
+(`findMentionQuery` locates the `@token` under the caret at a word boundary; `rankMentionCandidates`
+fold-aware, exact-prefix first; `applyMention` splices `@nick `) + `<RoomMemberList>` (role-ranked
+occupants with a count, presence dots, owner / admin / mod badges, click-to-pick). **35 tests,
+S99.8/B94/F96/L99.8.** Next: wire the MUC stanza layer + `RoomView` into `XmppAdapter` (join/leave
+drives room `<presence>` traffic; occupant → a room-membership event). ·
 **Depends on:** X-chat.2 · **Branch:** `main` · **Risk:** low-medium.
 
 ### Deliverables
 - [ ] **XMPP MUC (XEP-0045)** — join/leave by JID, nickname, room roster + affiliations/roles,
       subject, invites, kick/ban surfacing (read), history-on-join limit, `0secret`/password rooms.
-      _Pure stanza layer (`xmpp/muc.ts`) done; adapter wiring next._
+      _Pure stanza layer (`xmpp/muc.ts`) + `chat-core` `RoomView` done; adapter wiring next._
 - [ ] **Room browser** — service discovery of a MUC service's public rooms, search, join-by-address.
 - [ ] **UI for rooms** — member list, mention autocomplete, per-room notification level
       (all / mentions / none), topic display, "who's typing" for rooms.
+      _`<RoomMemberList>` + mention autocomplete done; notification level + topic + typing next._
 - [ ] **Mention routing** — a room-ping / nick-highlight raises a notification even when the room is
       muted for "all messages".
 

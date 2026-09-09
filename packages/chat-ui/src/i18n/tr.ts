@@ -12,6 +12,13 @@ export const tr: ChatUiStrings = {
     today: 'Bugün',
     yesterday: 'Dün',
   },
+  room: {
+    members: 'Üyeler',
+    moderator: 'Mod',
+    owner: 'Sahip',
+    admin: 'Yönetici',
+    noTopic: 'Konu belirlenmemiş',
+  },
   media: {
     loading: 'Ek yükleniyor…',
     unavailable: 'Ek kullanılamıyor',

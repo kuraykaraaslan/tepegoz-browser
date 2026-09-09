@@ -26,6 +26,13 @@ export {
 } from './media';
 export { MessageMedia, type MessageMediaProps, type ResolveMedia } from './MessageMedia';
 export {
+  findMentionQuery,
+  rankMentionCandidates,
+  applyMention,
+  type MentionQuery,
+} from './mention-autocomplete';
+export { RoomMemberList, type RoomMemberListProps } from './RoomMemberList';
+export {
   isSendKey,
   draftToBody,
   canSend,

@@ -12,6 +12,18 @@ export const en = {
     today: 'Today',
     yesterday: 'Yesterday',
   },
+  room: {
+    /** Heading over the occupant list (a count precedes it: "12 Members"). */
+    members: 'Members',
+    /** Badge on a room moderator. */
+    moderator: 'Mod',
+    /** Badge on the room owner. */
+    owner: 'Owner',
+    /** Badge on a room admin. */
+    admin: 'Admin',
+    /** Empty-topic placeholder in the room header. */
+    noTopic: 'No topic set',
+  },
   media: {
     loading: 'Loading attachment…',
     /** The quarantined part could not be read (missing / not a local file). */
