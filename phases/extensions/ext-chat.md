@@ -450,7 +450,12 @@ from `chat.client.rooms[id]`. **46 chat-ui tests for rooms; S99.8/B94.4/F95.7/L9
 `ChatClientPort` gained optional `discoverRooms` / `joinRoom`; `useChatState` exposes a `rooms`
 handle (`discover` / `join` — join `refresh()`es and selects the new room) only when the port
 supports MUC; `<ChatWorkspace>` shows a third "Find a room" left-column tab in that case, and joining
-from it switches back to the chats list. **148 chat-ui tests.** Then the **desktop room bridge** — `chat:discover-rooms` / `chat:join-room`
+from it switches back to the chats list. **148 chat-ui tests.** Then a **stylesheet** — `chat-ui.css` (imported by `<ChatWorkspace>` /
+`<AccountSetupForm>` like `@tepegoz/reader`'s `reader-view.css`): a Pidgin-style two-pane layout
+(account rail · chats/contacts/rooms column · conversation), message bubbles (own vs peer, grouped),
+presence dots by tone, a real composer, roster / room-browser / setup-form skins — all off the app's
+`--surface-*` / `--text-*` / `--primary` design tokens, so light/dark tracks automatically. (The
+components were shipping raw semantic HTML with no styles.) Then the **desktop room bridge** — `chat:discover-rooms` / `chat:join-room`
 channels + `schemas-chat` guards; `ChatIpcService` / `ChatService` / `ChatAccountRunner` gained
 `discoverRooms` (adapter pass-through, `[]` when the adapter lacks MUC) + `joinRoom` (persists the room
 `ChatConversation`); `ChatApi` + `apps/desktop/src/preload/api-chat.ts` gained `discoverChatRooms` /

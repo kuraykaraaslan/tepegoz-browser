@@ -1,5 +1,6 @@
 import { useId, useState, type ReactNode } from 'react';
 import { useT } from '@tepegoz/i18n/react';
+import './chat-ui.css';
 import type { ChatAccount } from '@tepegoz/shared-types';
 import { chatUiDict } from './i18n';
 import {

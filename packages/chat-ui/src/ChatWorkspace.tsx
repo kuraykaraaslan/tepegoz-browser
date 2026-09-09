@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useT } from '@tepegoz/i18n/react';
+import './chat-ui.css';
 import type { ChatContact, ChatConversation, ChatMessage } from '@tepegoz/shared-types';
 import { chatUiDict } from './i18n';
 import { Composer } from './Composer';
