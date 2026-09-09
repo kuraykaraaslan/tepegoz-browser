@@ -142,22 +142,22 @@ export function useChatState(port: ChatClientPort): UseChatState {
     );
   }, [client.conversations, activeAccountId]);
 
-  const { discoverRooms, joinRoom } = port;
+  const { discoverChatRooms, joinChatRoom } = port;
   const rooms = useMemo(() => {
-    if (discoverRooms === undefined || joinRoom === undefined) return null;
+    if (discoverChatRooms === undefined || joinChatRoom === undefined) return null;
     return {
       discover: (service: string): Promise<RoomListing[]> =>
         activeAccountId === null
           ? Promise.resolve([])
-          : discoverRooms(activeAccountId, service),
+          : discoverChatRooms(activeAccountId, service),
       join: async (roomJid: string): Promise<void> => {
         if (activeAccountId === null) return;
-        await joinRoom(activeAccountId, roomJid);
+        await joinChatRoom(activeAccountId, roomJid);
         await refresh();
         setSelectedConversationId(roomJid);
       },
     };
-  }, [discoverRooms, joinRoom, activeAccountId, refresh]);
+  }, [discoverChatRooms, joinChatRoom, activeAccountId, refresh]);
 
   return {
     accounts,

@@ -57,6 +57,6 @@ export interface ChatClientPort {
   markChatRead(accountId: string, conversationId: string, protocolId: string): Promise<void>;
   onChatState(callback: (event: ChatStateEvent) => void): () => void;
   /** MUC support — optional; the room browser is shown only when both are provided. */
-  discoverRooms?: (accountId: string, service: string) => Promise<RoomListing[]>;
-  joinRoom?: (accountId: string, roomJid: string) => Promise<void>;
+  discoverChatRooms?: (accountId: string, service: string) => Promise<RoomListing[]>;
+  joinChatRoom?: (accountId: string, roomJid: string) => Promise<void>;
 }

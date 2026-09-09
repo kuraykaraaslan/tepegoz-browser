@@ -4,7 +4,7 @@ import type {
   ChatConversation,
   ChatMessage,
 } from '@tepegoz/shared-types';
-import type { ChatAdapter, ChatSession } from '@tepegoz/chat-adapters';
+import type { ChatAdapter, ChatSession, RoomSummary } from '@tepegoz/chat-adapters';
 import type { ChatTransport } from '@tepegoz/chat-adapters';
 import {
   ChatAccountState,
@@ -234,6 +234,17 @@ export class ChatAccountRunner {
     const contacts = await this.deps.adapter.roster(this.requireSession());
     for (const contact of contacts) this.deps.store.upsertContact(contact);
     return contacts;
+  }
+
+  async discoverRooms(service: string): Promise<RoomSummary[]> {
+    if (this.deps.adapter.discoverRooms === undefined) return [];
+    return this.deps.adapter.discoverRooms(this.requireSession(), service);
+  }
+
+  async joinRoom(roomJid: string): Promise<void> {
+    if (this.deps.adapter.joinRoom === undefined) return;
+    const conversation = await this.deps.adapter.joinRoom(this.requireSession(), roomJid);
+    this.deps.store.upsertConversation(conversation);
   }
 }
 

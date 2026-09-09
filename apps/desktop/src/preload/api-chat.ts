@@ -7,6 +7,7 @@ import {
   type ChatConversation,
   type ChatHistoryPage,
   type ChatPresence,
+  type ChatRoomSummary,
   type ChatStateEvent,
   type OutgoingMessage,
   type TepegozApi,
@@ -29,6 +30,8 @@ export const chatApi: Pick<
   | 'sendChatMessage'
   | 'setChatPresence'
   | 'markChatRead'
+  | 'discoverChatRooms'
+  | 'joinChatRoom'
   | 'onChatState'
 > = {
   listChatAccounts: () => invoke<ChatAccountsSnapshot>(IpcChannels.chatListAccounts),
@@ -56,6 +59,10 @@ export const chatApi: Pick<
     }),
   markChatRead: (accountId: string, conversationId: string, protocolId: string) =>
     invoke<void>(IpcChannels.chatMarkRead, { accountId, conversationId, protocolId }),
+  discoverChatRooms: (accountId: string, service: string) =>
+    invoke<ChatRoomSummary[]>(IpcChannels.chatDiscoverRooms, { accountId, service }),
+  joinChatRoom: (accountId: string, roomJid: string) =>
+    invoke<void>(IpcChannels.chatJoinRoom, { accountId, roomJid }),
   onChatState: (callback: (event: ChatStateEvent) => void) => {
     const listener = (_event: unknown, payload: ChatStateEvent): void => {
       callback(payload);

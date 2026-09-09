@@ -116,6 +116,8 @@ export const chatIpcService: ChatIpcService = {
     requireService().setPresence(accountId, presence, statusText),
   markRead: (accountId, conversationId, protocolId) =>
     requireService().markRead(accountId, conversationId, protocolId),
+  discoverRooms: (accountId, service) => requireService().discoverRooms(accountId, service),
+  joinRoom: (accountId, roomJid) => requireService().joinRoom(accountId, roomJid),
 };
 
 /** Test seam. */

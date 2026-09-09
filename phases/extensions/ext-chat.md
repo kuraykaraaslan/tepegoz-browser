@@ -450,18 +450,24 @@ from `chat.client.rooms[id]`. **46 chat-ui tests for rooms; S99.8/B94.4/F95.7/L9
 `ChatClientPort` gained optional `discoverRooms` / `joinRoom`; `useChatState` exposes a `rooms`
 handle (`discover` / `join` — join `refresh()`es and selects the new room) only when the port
 supports MUC; `<ChatWorkspace>` shows a third "Find a room" left-column tab in that case, and joining
-from it switches back to the chats list. **148 chat-ui tests.** Next: the desktop bridge
-(`chat:discover-rooms` + `chat:join-room` channels, `decideNotification` on inbound) + a per-room
-notification-level picker. · **Depends on:** X-chat.2 · **Branch:** `main` · **Risk:** low-medium.
+from it switches back to the chats list. **148 chat-ui tests.** Then the **desktop room bridge** — `chat:discover-rooms` / `chat:join-room`
+channels + `schemas-chat` guards; `ChatIpcService` / `ChatService` / `ChatAccountRunner` gained
+`discoverRooms` (adapter pass-through, `[]` when the adapter lacks MUC) + `joinRoom` (persists the room
+`ChatConversation`); `ChatApi` + `apps/desktop/src/preload/api-chat.ts` gained `discoverChatRooms` /
+`joinChatRoom`. `chat-ui`'s `ChatClientPort` optional MUC methods were renamed to match (so
+`window.tepegoz` satisfies them structurally and the ext-chat panel needs no adapter). Coverage held
+(`apps/desktop/**` F floor met by new `chat-service` / `account-runner` tests). Next: `decideNotification`
+wired on inbound + a per-room notification-level picker. · **Depends on:** X-chat.2 · **Branch:**
+`main` · **Risk:** low-medium.
 
 ### Deliverables
 - [ ] **XMPP MUC (XEP-0045)** — join/leave by JID, nickname, room roster + affiliations/roles,
       subject, invites, kick/ban surfacing (read), history-on-join limit, `0secret`/password rooms.
       _Pure stanza layer (`xmpp/muc.ts`) + `chat-core` `RoomView` + `XmppAdapter` join/leave/presence
       routing done; downstream consumption of `room-membership` next._
-- [ ] **Room browser** — service discovery of a MUC service's public rooms, search, join-by-address.
-      _`xmpp/disco.ts` + `XmppAdapter.discoverRooms` + `<RoomBrowser>` + workspace wiring done; the
-      desktop `chat:discover-rooms` / `chat:join-room` bridge channels next._
+- [x] **Room browser** — service discovery of a MUC service's public rooms, search, join-by-address.
+      `xmpp/disco.ts` + `XmppAdapter.discoverRooms` + `<RoomBrowser>` + `useChatState` wiring + the
+      `chat:discover-rooms` / `chat:join-room` desktop bridge. _Only the runtime DoD remains._
 - [ ] **UI for rooms** — member list, mention autocomplete, per-room notification level
       (all / mentions / none), topic display, "who's typing" for rooms.
       _`<RoomMemberList>` + mention autocomplete + `<RoomHeader>` (topic + member count, wired into

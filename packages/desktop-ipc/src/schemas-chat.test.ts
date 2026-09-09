@@ -3,7 +3,9 @@ import {
   ChatAccountSchema,
   ChatAddAccountSchema,
   ChatConversationArgSchema,
+  ChatDiscoverRoomsSchema,
   ChatGetHistorySchema,
+  ChatJoinRoomSchema,
   ChatMarkReadSchema,
   ChatSendMessageSchema,
   ChatSetPresenceSchema,
@@ -93,6 +95,21 @@ describe('id / conversation arg guards', () => {
     expect(
       ChatMarkReadSchema.safeParse({ accountId: 'a', conversationId: 'c', protocolId: '' }).success,
     ).toBe(false);
+  });
+});
+
+describe('room channels', () => {
+  it('ChatDiscoverRoomsSchema bounds the account id + service host', () => {
+    expect(ChatDiscoverRoomsSchema.safeParse({ accountId: 'a', service: 'conf.example' }).success).toBe(true);
+    expect(ChatDiscoverRoomsSchema.safeParse({ accountId: 'a', service: '' }).success).toBe(false);
+    expect(
+      ChatDiscoverRoomsSchema.safeParse({ accountId: 'a', service: 'x'.repeat(256) }).success,
+    ).toBe(false);
+  });
+
+  it('ChatJoinRoomSchema needs a plausible room JID', () => {
+    expect(ChatJoinRoomSchema.safeParse({ accountId: 'a', roomJid: 'room@conf.example' }).success).toBe(true);
+    expect(ChatJoinRoomSchema.safeParse({ accountId: 'a', roomJid: 'x' }).success).toBe(false);
   });
 });
 

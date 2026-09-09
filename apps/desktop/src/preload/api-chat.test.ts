@@ -93,6 +93,19 @@ describe('account + message commands', () => {
     });
   });
 
+  it('discoverChatRooms / joinChatRoom wrap their args', () => {
+    void chatApi.discoverChatRooms('work', 'conf.example');
+    expect(invoke).toHaveBeenCalledWith(IpcChannels.chatDiscoverRooms, {
+      accountId: 'work',
+      service: 'conf.example',
+    });
+    void chatApi.joinChatRoom('work', 'general@conf.example');
+    expect(invoke).toHaveBeenCalledWith(IpcChannels.chatJoinRoom, {
+      accountId: 'work',
+      roomJid: 'general@conf.example',
+    });
+  });
+
   it('markChatRead → { accountId, conversationId, protocolId }', () => {
     void chatApi.markChatRead('work', 'bob@x.com', 'm-9');
     expect(invoke).toHaveBeenCalledWith(IpcChannels.chatMarkRead, {

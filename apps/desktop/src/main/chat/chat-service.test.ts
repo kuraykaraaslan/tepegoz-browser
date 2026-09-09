@@ -26,6 +26,13 @@ class FakeAdapter {
   markRead = vi.fn(() => Promise.resolve());
   history = vi.fn(() => Promise.resolve({ messages: [] as ChatMessage[], nextCursor: null }));
   roster = vi.fn(() => Promise.resolve([] as ChatContact[]));
+  discoverRooms = vi.fn(() => Promise.resolve([]));
+  joinRoom = vi.fn(() =>
+    Promise.resolve({
+      id: 'r@conf', accountId: 'a', kind: 'room' as const, address: 'r@conf', name: 'r', topic: '',
+      memberCount: 0, unread: 0, mentions: 0, lastReadId: null, muted: false, isKnownContact: true, updatedAt: 1,
+    }),
+  );
 }
 
 class FakeStore implements ChatRunnerStore {
@@ -182,9 +189,13 @@ describe('ChatService — delegation', () => {
     await service.setPresence('a', 'away');
     await service.roster('a');
     await service.history('a', 'bob@x.com', null);
+    await service.discoverRooms('a', 'conf.example');
+    await service.joinRoom('a', 'general@conf.example');
     expect(adapter.setPresence).toHaveBeenCalled();
     expect(adapter.roster).toHaveBeenCalled();
     expect(adapter.history).toHaveBeenCalled();
+    expect(adapter.discoverRooms).toHaveBeenCalledWith(expect.anything(), 'conf.example');
+    expect(adapter.joinRoom).toHaveBeenCalledWith(expect.anything(), 'general@conf.example');
   });
 
   it('throws 409 for an unknown / disconnected account', async () => {

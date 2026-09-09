@@ -59,6 +59,28 @@ class FakeAdapter {
   history = vi.fn(() => Promise.resolve({ messages: this.historyPages, nextCursor: null }));
   roster = vi.fn(() => Promise.resolve(this.rosterContacts));
   listConversations = vi.fn(() => Promise.resolve([]));
+  discoverRooms = vi.fn(() =>
+    Promise.resolve([
+      { jid: 'g@conf', name: 'G', description: null, occupants: 2, passwordProtected: false, membersOnly: false },
+    ]),
+  );
+  joinRoom = vi.fn((_s: unknown, jid: string) =>
+    Promise.resolve({
+      id: jid,
+      accountId: 'acc',
+      kind: 'room' as const,
+      address: jid,
+      name: jid,
+      topic: '',
+      memberCount: 0,
+      unread: 0,
+      mentions: 0,
+      lastReadId: null,
+      muted: false,
+      isKnownContact: true,
+      updatedAt: 1,
+    }),
+  );
 }
 
 class FakeStore implements ChatRunnerStore {
@@ -225,6 +247,28 @@ describe('ChatAccountRunner — actions', () => {
     ];
     expect(await runner.roster()).toHaveLength(1);
     expect(store.contacts).toHaveLength(1);
+  });
+
+  it('discoverRooms passes through the adapter; joinRoom persists the room conversation', async () => {
+    const { runner, adapter, store } = await online();
+    expect(await runner.discoverRooms('conf.example')).toEqual([
+      { jid: 'g@conf', name: 'G', description: null, occupants: 2, passwordProtected: false, membersOnly: false },
+    ]);
+    expect(adapter.discoverRooms).toHaveBeenCalled();
+
+    await runner.joinRoom('general@conf.example');
+    expect(adapter.joinRoom).toHaveBeenCalledWith(expect.anything(), 'general@conf.example');
+    expect(store.conversations.get('general@conf.example')?.kind).toBe('room');
+  });
+
+  it('discoverRooms / joinRoom no-op when the adapter lacks MUC support', async () => {
+    const { runner, adapter } = await online();
+    // @ts-expect-error deliberately drop the optional methods
+    adapter.discoverRooms = undefined;
+    // @ts-expect-error deliberately drop the optional methods
+    adapter.joinRoom = undefined;
+    expect(await runner.discoverRooms('conf.example')).toEqual([]);
+    await expect(runner.joinRoom('x@conf')).resolves.toBeUndefined();
   });
 
   it('a roster-remove event is not persisted as a contact', async () => {

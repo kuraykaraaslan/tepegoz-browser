@@ -182,13 +182,13 @@ describe('useChatState', () => {
     await waitFor(() => expect(noRooms.current.loading).toBe(false));
     expect(noRooms.current.rooms).toBeNull();
 
-    const discoverRooms = vi.fn(() => Promise.resolve([]));
-    const joinRoom = vi.fn(() => Promise.resolve());
+    const discoverChatRooms = vi.fn(() => Promise.resolve([]));
+    const joinChatRoom = vi.fn(() => Promise.resolve());
     const listChatConversations = vi
       .fn<(a?: string) => Promise<import('@tepegoz/shared-types').ChatConversation[]>>()
       .mockResolvedValueOnce([])
       .mockResolvedValue([conv({ id: 'room@conf', accountId: 'home', kind: 'room' })]);
-    const withRooms = makePort({ discoverRooms, joinRoom, listChatConversations });
+    const withRooms = makePort({ discoverChatRooms, joinChatRoom, listChatConversations });
 
     const { result } = renderHook(() => useChatState(withRooms.port));
     await waitFor(() => expect(result.current.rooms).not.toBeNull());
@@ -196,12 +196,12 @@ describe('useChatState', () => {
     await act(async () => {
       await result.current.rooms?.discover('conf.example');
     });
-    expect(discoverRooms).toHaveBeenCalledWith('home', 'conf.example');
+    expect(discoverChatRooms).toHaveBeenCalledWith('home', 'conf.example');
 
     await act(async () => {
       await result.current.rooms?.join('room@conf');
     });
-    expect(joinRoom).toHaveBeenCalledWith('home', 'room@conf');
+    expect(joinChatRoom).toHaveBeenCalledWith('home', 'room@conf');
     await waitFor(() => expect(result.current.selectedConversationId).toBe('room@conf'));
   });
 

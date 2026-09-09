@@ -39,6 +39,8 @@ const svc = {
   sendMessage: vi.fn(() => Promise.resolve('srv-1')),
   setPresence: vi.fn(() => Promise.resolve()),
   markRead: vi.fn(() => Promise.resolve()),
+  discoverRooms: vi.fn(() => Promise.resolve([])),
+  joinRoom: vi.fn(() => Promise.resolve()),
 };
 
 const ev = { senderFrame: { url: TRUSTED }, sender: {} };
@@ -60,8 +62,22 @@ beforeEach(() => {
   registerChatIpc(svc);
 });
 
-it('registers the nine chat channels', () => {
-  expect(h.handlers.size).toBe(9);
+it('registers every chat channel', () => {
+  expect(h.handlers.size).toBe(11);
+});
+
+describe('rooms', () => {
+  it('chat:discover-rooms validates + delegates', async () => {
+    await call(IpcChannels.chatDiscoverRooms, { accountId: 'work', service: 'conf.example' });
+    expect(svc.discoverRooms).toHaveBeenCalledWith('work', 'conf.example');
+    await expect(call(IpcChannels.chatDiscoverRooms, { accountId: 'work' })).rejects.toBeDefined();
+  });
+
+  it('chat:join-room validates + delegates', async () => {
+    await call(IpcChannels.chatJoinRoom, { accountId: 'work', roomJid: 'general@conf.example' });
+    expect(svc.joinRoom).toHaveBeenCalledWith('work', 'general@conf.example');
+    await expect(call(IpcChannels.chatJoinRoom, { accountId: 'work', roomJid: 'x' })).rejects.toBeDefined();
+  });
 });
 
 describe('reads', () => {

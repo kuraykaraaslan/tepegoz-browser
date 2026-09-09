@@ -54,3 +54,15 @@ export const ChatMarkReadSchema = z.object({
   conversationId: z.string().min(1).max(128),
   protocolId: z.string().min(1).max(512),
 });
+
+/** `chat:discover-rooms` — browse a conference service's rooms. */
+export const ChatDiscoverRoomsSchema = z.object({
+  accountId: z.string().min(1).max(64),
+  service: z.string().min(1).max(255),
+});
+
+/** `chat:join-room` — join a MUC room by its bare JID. */
+export const ChatJoinRoomSchema = z.object({
+  accountId: z.string().min(1).max(64),
+  roomJid: z.string().min(3).max(512),
+});

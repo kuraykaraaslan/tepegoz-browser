@@ -263,6 +263,10 @@ export const IpcChannels = {
   chatSendMessage: 'chat:send-message',
   chatSetPresence: 'chat:set-presence',
   chatMarkRead: 'chat:mark-read',
+  /** Renderer→main: browse a MUC service's advertised rooms (XEP-0030 disco). */
+  chatDiscoverRooms: 'chat:discover-rooms',
+  /** Renderer→main: join a MUC room by its bare JID. */
+  chatJoinRoom: 'chat:join-room',
   /** Main→renderer push: per-account connection state + folded conversation/roster changes. */
   chatState: 'chat:state',
   /** Renderer→main: the identity of every built-in extension (from the validated on-disk catalog). */

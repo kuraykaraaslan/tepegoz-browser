@@ -4,7 +4,9 @@ import type { ChatContact, ChatConversation, ChatMessage } from '@tepegoz/shared
 import {
   ChatAccountIdArgSchema,
   ChatAddAccountSchema,
+  ChatDiscoverRoomsSchema,
   ChatGetHistorySchema,
+  ChatJoinRoomSchema,
   ChatMarkReadSchema,
   ChatSendMessageSchema,
   ChatSetPresenceSchema,
@@ -56,6 +58,20 @@ export interface ChatIpcService {
     statusText?: string,
   ) => Promise<void>;
   markRead: (accountId: string, conversationId: string, protocolId: string) => Promise<void>;
+  discoverRooms: (
+    accountId: string,
+    service: string,
+  ) => Promise<
+    ReadonlyArray<{
+      jid: string;
+      name: string | null;
+      description: string | null;
+      occupants: number | null;
+      passwordProtected: boolean;
+      membersOnly: boolean;
+    }>
+  >;
+  joinRoom: (accountId: string, roomJid: string) => Promise<void>;
 }
 
 export function registerChatIpc(service: ChatIpcService): void {
@@ -100,6 +116,16 @@ export function registerChatIpc(service: ChatIpcService): void {
   handleAsync(IpcChannels.chatMarkRead, async (_event, payload): Promise<void> => {
     const { accountId, conversationId, protocolId } = ChatMarkReadSchema.parse(payload);
     await service.markRead(accountId, conversationId, protocolId);
+  });
+
+  handleAsync(IpcChannels.chatDiscoverRooms, async (_event, payload) => {
+    const { accountId, service: mucService } = ChatDiscoverRoomsSchema.parse(payload);
+    return service.discoverRooms(accountId, mucService);
+  });
+
+  handleAsync(IpcChannels.chatJoinRoom, async (_event, payload): Promise<void> => {
+    const { accountId, roomJid } = ChatJoinRoomSchema.parse(payload);
+    await service.joinRoom(accountId, roomJid);
   });
 
   // Handled but not asserted here: `chat:state` is a MAIN→renderer push (webContents.send), not a

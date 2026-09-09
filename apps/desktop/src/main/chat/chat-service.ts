@@ -1,5 +1,5 @@
 import type { ChatAccount, ChatContact, ChatMessage } from '@tepegoz/shared-types';
-import type { ChatAdapter, ChatTransport } from '@tepegoz/chat-adapters';
+import type { ChatAdapter, ChatTransport, RoomSummary } from '@tepegoz/chat-adapters';
 import { XmppAdapter } from '@tepegoz/chat-adapters';
 import type { ChatConnState } from '@tepegoz/chat-core';
 import { AppError } from '@tepegoz/libs';
@@ -182,5 +182,13 @@ export class ChatService {
 
   async roster(accountId: string): Promise<ChatContact[]> {
     return this.require(accountId).roster();
+  }
+
+  async discoverRooms(accountId: string, service: string): Promise<RoomSummary[]> {
+    return this.require(accountId).discoverRooms(service);
+  }
+
+  async joinRoom(accountId: string, roomJid: string): Promise<void> {
+    return this.require(accountId).joinRoom(roomJid);
   }
 }

@@ -212,9 +212,9 @@ describe('ChatWorkspace', () => {
     expect(screen.queryByRole('tab', { name: 'Find a room' })).toBeNull();
     cleanup();
 
-    const joinRoom = vi.fn(() => Promise.resolve());
+    const joinChatRoom = vi.fn(() => Promise.resolve());
     const { port } = makePort({
-      discoverRooms: () =>
+      discoverChatRooms: () =>
         Promise.resolve([
           {
             jid: 'general@conf.example',
@@ -225,14 +225,14 @@ describe('ChatWorkspace', () => {
             membersOnly: false,
           },
         ]),
-      joinRoom,
+      joinChatRoom,
     });
     wrap(<ChatWorkspace port={port} />);
     fireEvent.click(await screen.findByRole('tab', { name: 'Find a room' }));
     fireEvent.change(screen.getByLabelText('Room service'), { target: { value: 'conf.example' } });
     fireEvent.click(screen.getByRole('button', { name: 'Browse' }));
     fireEvent.click(await screen.findByText('General'));
-    await waitFor(() => expect(joinRoom).toHaveBeenCalledWith('work', 'general@conf.example'));
+    await waitFor(() => expect(joinChatRoom).toHaveBeenCalledWith('work', 'general@conf.example'));
   });
 
   it('reflects a pushed typing change in the conversation header', async () => {

@@ -72,6 +72,8 @@ const fakeService = {
   sendMessage: vi.fn(() => Promise.resolve('srv-1')),
   setPresence: vi.fn(() => Promise.resolve()),
   markRead: vi.fn(() => Promise.resolve()),
+  discoverRooms: vi.fn(() => Promise.resolve([])),
+  joinRoom: vi.fn(() => Promise.resolve()),
 };
 
 beforeEach(() => {
@@ -176,6 +178,10 @@ describe('chatIpcService — the "not initialised" guard', () => {
     expect(fakeService.history).toHaveBeenCalledWith('a', 'c', 'cur');
     await mod.chatIpcService.setPresence('a', 'dnd', 'busy');
     expect(fakeService.setPresence).toHaveBeenCalledWith('a', 'dnd', 'busy');
+    await mod.chatIpcService.discoverRooms('a', 'conf.example');
+    expect(fakeService.discoverRooms).toHaveBeenCalledWith('a', 'conf.example');
+    await mod.chatIpcService.joinRoom('a', 'room@conf.example');
+    expect(fakeService.joinRoom).toHaveBeenCalledWith('a', 'room@conf.example');
     expect(mod.chatIpcService.accountStates()).toEqual({ a: 'online' });
     // reads still hit the store, not the service
     expect(mod.chatIpcService.getRoster('a')).toEqual([{ id: 'k' }]);

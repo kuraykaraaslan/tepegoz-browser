@@ -55,6 +55,16 @@ export interface ChatHistoryPage {
   nextCursor: string | null;
 }
 
+/** One room a conference / directory service advertises (XEP-0030 disco for XMPP). */
+export interface ChatRoomSummary {
+  jid: string;
+  name: string | null;
+  description: string | null;
+  occupants: number | null;
+  passwordProtected: boolean;
+  membersOnly: boolean;
+}
+
 /**
  * The main→renderer `chat:state` push. `state` is a connection-lifecycle transition for one account;
  * `change` is a folded conversation / roster / presence delta the UI applies to its in-memory view.
@@ -90,6 +100,10 @@ export interface ChatApi {
   ): Promise<{ protocolId: string }>;
   setChatPresence(accountId: string, presence: ChatPresence, statusText?: string): Promise<void>;
   markChatRead(accountId: string, conversationId: string, protocolId: string): Promise<void>;
+  /** Browse a MUC service's advertised rooms. */
+  discoverChatRooms(accountId: string, service: string): Promise<ChatRoomSummary[]>;
+  /** Join a MUC room by its bare JID. */
+  joinChatRoom(accountId: string, roomJid: string): Promise<void>;
   /** Subscribe to the `chat:state` push. Returns an unsubscribe. */
   onChatState(callback: (event: ChatStateEvent) => void): () => void;
 }
