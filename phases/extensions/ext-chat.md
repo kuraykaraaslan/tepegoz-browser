@@ -14,7 +14,8 @@ prerequisite work in [`README.md`](README.md#shared-prerequisite-work-blocks-bot
 prerequisites), [Phase 2](../product/phase-2-adapters-safe-browsing.md) (adapters),
 [Phase 3](../product/phase-3-backend-cloud-extensions.md) (third-party ExtensionHost, signed adapter
 packages).
-**ADR owed:** `0047 — Chat protocol-adapter & bridge trust model` (write at X-chat.1 start).
+**ADR:** [ADR-0047](../../docs/adr/0047-chat-protocol-adapter-and-bridge-trust-model.md) — Chat
+protocol-adapter & bridge trust model (Proposed, written 2026-09-09).
 **Branch examples:** `feat/ext-chat-core`, `feat/chat-xmpp-adapter`, `feat/chat-reader`,
 `feat/chat-muc`, `feat/chat-irc-adapter`, `feat/chat-matrix-adapter`, `feat/chat-agent-caps`,
 `feat/chat-e2ee`, `feat/chat-bridge-framework`
@@ -192,7 +193,10 @@ X-chat.10 Hardening, sandbox tests, e2e  ◄────────────
 
 ## X-chat.0 — Foundations (`@tepegoz/chat-core` + model)
 
-**Status:** ⬜ Not started · **Depends on:** nothing (pure libs) · **Branch:** `feat/ext-chat-core`
+**Status:** 🟡 Code landed (2026-09-09) — `@tepegoz/shared-types` `chat.ts` + `@tepegoz/chat-core`
+(`normalizeEvent` · `foldEvent`/`reconcileEcho`/`markRead` · `send-queue` · `mentions` · `address` ·
+`search-fold`), 50 tests, coverage floor met. Golden mixed-event-stream + capability-gating tests
+present. DoD-template close-out (i18n/e2e N/A for a pure lib) pending. · **Branch:** `feat/ext-chat-core`
 **Risk:** medium — the cross-protocol normaliser is the design's keystone; getting the event union
 wrong is expensive later.
 
@@ -232,10 +236,14 @@ wrong is expensive later.
 
 ## X-chat.1 — XMPP adapter + connection spine
 
-**Status:** ⬜ Not started · **Depends on:** X-chat.0, shared prerequisites (SDK permission enum,
-`background-connection` supervisor) · **Branch:** `feat/ext-chat-xmpp-adapter`
-**ADR:** write **ADR-0047 — Chat protocol-adapter & bridge trust model** here.
-**Risk:** high — the XMPP stanza engine + reconnect + the `ChatService` host are the core risk.
+**Status:** 🟡 In progress (~35%, 2026-09-09) — done: `ExtensionPermissionSchema` extended
+(`accounts`/`background-connection`/`notifications`/`contacts`); `@tepegoz/chat-adapters`
+(`ChatAdapter` contract + `ChatTransport` port + `XMPP_CAPS`/`IRC_CAPS`/`MATRIX_CAPS` +
+`negotiateCaps`); `ChatStore` + persistence migration 21; [ADR-0047](../../docs/adr/0047-chat-protocol-adapter-and-bridge-trust-model.md)
+written. Remaining: `ext-chat` extension scaffold + i18n, the XMPP stanza engine, desktop
+`ChatService` + IPC + preload, `background-connection` supervisor, autodiscover. · **Branch:**
+`feat/ext-chat-xmpp-adapter` · **Risk:** high — the XMPP stanza engine + reconnect + the
+`ChatService` host are the core risk.
 
 ### Deliverables
 - [ ] **`extensions/ext-chat` scaffold** — manifest (`com.tepegoz.chat`, surfaces `sidebar`+`page`,
