@@ -165,6 +165,11 @@ work lives in Phase 2; agent orchestration (multi-tab parallelism) stays in Phas
       (`sortRowsByColumn`) re-run from sort state on every render, so it survives a poll refresh and
       never mutates the incoming rows; no header picked keeps today's kind-grouped default. New en/tr
       strings for the announced direction._
+      — _End-process now confirms: the row's ✕ arms on the first click (turns into a ✓ carrying the
+      already-existing `endProcessConfirm` prompt as its accessible label, `aria-pressed`) and only
+      calls `end` on a confirming second click. Blur or Escape disarms it, and the page drops a pending
+      confirm if that tab leaves the snapshot — so a destructive renderer kill can no longer happen on a
+      single stray click._
 
 ### L9 — Everyday-UX toggles with no current home
 

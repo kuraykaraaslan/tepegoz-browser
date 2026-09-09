@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faMicrochip, faRotateRight, faXmark } from '@fortawesome/free-solid-svg-icons';
+import { faCheck, faMicrochip, faRotateRight, faXmark } from '@fortawesome/free-solid-svg-icons';
 import { useT } from '@tepegoz/i18n/react';
 import type { ProcessRow, ProcessSnapshot } from '@tepegoz/desktop-ipc';
 import { processDict, type ProcessStrings } from './i18n';
@@ -58,6 +58,47 @@ function SortHeader({
   );
 }
 
+/**
+ * The row's "End process" control. Ending a renderer is destructive — the page is discarded and
+ * reloads from scratch when the user next looks at it — so the button arms on the first click and
+ * only calls `end` on a second click that confirms. Blurring the control (clicking anywhere else,
+ * tabbing away) disarms it; the parent also disarms it when the row leaves the snapshot.
+ */
+function EndProcessCell({
+  armed,
+  strings,
+  onArm,
+  onConfirm,
+  onDisarm,
+}: Readonly<{
+  armed: boolean;
+  strings: Pick<ProcessStrings, 'endProcess' | 'endProcessConfirm'>;
+  onArm: () => void;
+  onConfirm: () => void;
+  onDisarm: () => void;
+}>) {
+  return (
+    <button
+      type="button"
+      aria-label={armed ? strings.endProcessConfirm : strings.endProcess}
+      title={armed ? strings.endProcessConfirm : strings.endProcess}
+      aria-pressed={armed}
+      onClick={armed ? onConfirm : onArm}
+      onBlur={onDisarm}
+      onKeyDown={(e) => {
+        if (e.key === 'Escape' && armed) onDisarm();
+      }}
+      className={`flex h-7 w-7 items-center justify-center rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus ${
+        armed
+          ? 'bg-error-subtle text-error-fg hover:brightness-95'
+          : 'text-text-secondary hover:bg-surface-overlay hover:text-text-primary'
+      }`}
+    >
+      <FontAwesomeIcon icon={armed ? faCheck : faXmark} className="h-3.5 w-3.5" aria-hidden />
+    </button>
+  );
+}
+
 export interface ProcessPageProps {
   /** Fetch a fresh snapshot. The page calls this on its own interval — there is no push. */
   poll: () => Promise<ProcessSnapshot>;
@@ -73,6 +114,9 @@ export function ProcessPage({ poll, end, intervalMs = 1500 }: Readonly<ProcessPa
   // user's chosen sort and incoming rows are never mutated.
   const [rows, setRows] = useState<ProcessRow[] | null>(null);
   const [sort, setSort] = useState<SortState | null>(null);
+  // The tab whose "End process" button is armed and waiting for a confirming second click. Only ever
+  // one at a time; cleared on confirm, on blur, and when that tab drops out of the snapshot.
+  const [confirmTabId, setConfirmTabId] = useState<string | null>(null);
   const pollRef = useRef(poll);
   pollRef.current = poll;
 
@@ -97,6 +141,16 @@ export function ProcessPage({ poll, end, intervalMs = 1500 }: Readonly<ProcessPa
     if (rows === null) return null;
     return sort === null ? sortRows(rows) : sortRowsByColumn(rows, sort.key, sort.direction);
   }, [rows, sort]);
+
+  // If the armed tab disappears from the snapshot (closed, discarded, or its process already gone),
+  // drop the pending confirm so a later, unrelated row can't inherit an armed state.
+  useEffect(() => {
+    if (confirmTabId === null || orderedRows === null) return;
+    const stillListed = orderedRows.some(
+      (r) => r.kind === 'tab' && r.tabId === confirmTabId && r.discarded !== true,
+    );
+    if (!stillListed) setConfirmTabId(null);
+  }, [orderedRows, confirmTabId]);
 
   useEffect(() => {
     refresh();
@@ -235,15 +289,16 @@ export function ProcessPage({ poll, end, intervalMs = 1500 }: Readonly<ProcessPa
                     </td>
                     <td className="py-2 text-right">
                       {r.kind === 'tab' && r.tabId !== undefined && r.discarded !== true && (
-                        <button
-                          type="button"
-                          aria-label={t.endProcess}
-                          title={t.endProcess}
-                          onClick={() => end(r.tabId as string)}
-                          className="flex h-7 w-7 items-center justify-center rounded-md text-text-secondary hover:bg-surface-overlay hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus"
-                        >
-                          <FontAwesomeIcon icon={faXmark} className="h-3.5 w-3.5" aria-hidden />
-                        </button>
+                        <EndProcessCell
+                          armed={confirmTabId === r.tabId}
+                          strings={t}
+                          onArm={() => setConfirmTabId(r.tabId as string)}
+                          onConfirm={() => {
+                            end(r.tabId as string);
+                            setConfirmTabId(null);
+                          }}
+                          onDisarm={() => setConfirmTabId(null)}
+                        />
                       )}
                     </td>
                   </tr>

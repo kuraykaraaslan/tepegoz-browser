@@ -41,8 +41,8 @@ describe('ProcessPageSurface', () => {
     await waitFor(() => expect(bridge.getProcessMetrics).toHaveBeenCalled());
   });
 
-  it('ends a tab process through the bridge when its End process button is clicked', async () => {
-    bridge.getProcessMetrics.mockResolvedValueOnce({
+  it('ends a tab process through the bridge on the confirming second click', async () => {
+    bridge.getProcessMetrics.mockResolvedValue({
       rows: [
         { pid: 100, kind: 'tab', label: 'Example', cpuPercent: 1, memoryBytes: 1024, tabId: 't-1' },
       ],
@@ -50,6 +50,12 @@ describe('ProcessPageSurface', () => {
     });
     render(<ProcessPageSurface />);
     fireEvent.click(await screen.findByRole('button', { name: 'End process' }));
+    expect(bridge.endTabProcess).not.toHaveBeenCalled();
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: 'End this tab’s process? The page will reload when you return to it.',
+      }),
+    );
     expect(bridge.endTabProcess).toHaveBeenCalledWith('t-1');
   });
 });

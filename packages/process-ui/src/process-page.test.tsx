@@ -72,11 +72,58 @@ describe('ProcessPage', () => {
     expect(screen.getByText('—')).toBeDefined();
   });
 
-  it('ends the right tab when End process is clicked', async () => {
+  it('arms on the first click and ends the right tab on the confirming second click', async () => {
+    const { end } = renderPage();
+    await waitFor(() => expect(screen.getByText('Example')).toBeDefined());
+
+    fireEvent.click(screen.getByRole('button', { name: 'End process' }));
+    expect(end).not.toHaveBeenCalled();
+
+    // Armed: the button now carries the confirm prompt as its label.
+    const confirm = screen.getByRole('button', {
+      name: 'End this tab’s process? The page will reload when you return to it.',
+    });
+    expect(confirm.getAttribute('aria-pressed')).toBe('true');
+
+    fireEvent.click(confirm);
+    expect(end).toHaveBeenCalledWith('t-1');
+    // Disarmed again after the action.
+    expect(screen.getByRole('button', { name: 'End process' })).toBeDefined();
+  });
+
+  it('disarms the confirm when the button loses focus', async () => {
     const { end } = renderPage();
     await waitFor(() => expect(screen.getByText('Example')).toBeDefined());
     fireEvent.click(screen.getByRole('button', { name: 'End process' }));
-    expect(end).toHaveBeenCalledWith('t-1');
+    fireEvent.blur(
+      screen.getByRole('button', {
+        name: 'End this tab’s process? The page will reload when you return to it.',
+      }),
+    );
+    expect(screen.getByRole('button', { name: 'End process' })).toBeDefined();
+    expect(end).not.toHaveBeenCalled();
+  });
+
+  it('drops a pending confirm when the armed tab leaves the snapshot', async () => {
+    const first = snapshot();
+    const second = snapshot();
+    second.rows = second.rows.filter((r) => r.label !== 'Example');
+    const poll = vi
+      .fn<() => Promise<ProcessSnapshot>>()
+      .mockResolvedValueOnce(first)
+      .mockResolvedValue(second);
+    const end = vi.fn<(tabId: string) => void>();
+    render(
+      <I18nProvider locale="en">
+        <ProcessPage poll={poll} end={end} intervalMs={100000} />
+      </I18nProvider>,
+    );
+    await waitFor(() => expect(screen.getByText('Example')).toBeDefined());
+
+    fireEvent.click(screen.getByRole('button', { name: 'End process' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh now' }));
+    await waitFor(() => expect(screen.queryByText('Example')).toBeNull());
+    expect(end).not.toHaveBeenCalled();
   });
 
   it('re-polls when the manual refresh control is clicked', async () => {
