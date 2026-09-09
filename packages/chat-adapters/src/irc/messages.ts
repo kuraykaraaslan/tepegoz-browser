@@ -1,6 +1,6 @@
 import { parseIrcPrefix } from '@tepegoz/chat-core';
 import type { ChatEvent, ChatMessage } from '@tepegoz/shared-types';
-import { formatIrcLine, type IrcMessage } from './parse';
+import type { IrcMessage } from './parse';
 
 /**
  * IRC message ⇄ normalized model. Incoming: `ircMessageToEvent` maps `PRIVMSG` / `NOTICE` / `JOIN` /
@@ -139,33 +139,31 @@ export function ircMessageToEvent(msg: IrcMessage, ctx: IrcContext): ChatEvent |
 }
 
 // ── outbound builders ───────────────────────────────────────────────────────
+// The message / reason text is always the `:trailing` argument — a one-word body would otherwise be
+// ambiguous, and an empty one is only expressible as trailing.
 
 export function buildIrcPrivmsg(target: string, body: string): string {
-  return formatIrcLine('PRIVMSG', [target, body]);
+  return `PRIVMSG ${target} :${body}`;
 }
 
 export function buildIrcAction(target: string, action: string): string {
-  return formatIrcLine('PRIVMSG', [target, `${CTCP}ACTION ${action}${CTCP}`]);
+  return `PRIVMSG ${target} :${CTCP}ACTION ${action}${CTCP}`;
 }
 
 export function buildIrcJoin(channel: string, key?: string): string {
-  return key !== undefined && key.length > 0
-    ? formatIrcLine('JOIN', [channel, key])
-    : formatIrcLine('JOIN', [channel]);
+  return key !== undefined && key.length > 0 ? `JOIN ${channel} ${key}` : `JOIN ${channel}`;
 }
 
 export function buildIrcPart(channel: string, reason?: string): string {
   return reason !== undefined && reason.length > 0
-    ? formatIrcLine('PART', [channel, reason])
-    : formatIrcLine('PART', [channel]);
+    ? `PART ${channel} :${reason}`
+    : `PART ${channel}`;
 }
 
 export function buildIrcNick(nick: string): string {
-  return formatIrcLine('NICK', [nick]);
+  return `NICK ${nick}`;
 }
 
 export function buildIrcAway(message?: string): string {
-  return message !== undefined && message.length > 0
-    ? formatIrcLine('AWAY', [message])
-    : formatIrcLine('AWAY');
+  return message !== undefined && message.length > 0 ? `AWAY :${message}` : 'AWAY';
 }

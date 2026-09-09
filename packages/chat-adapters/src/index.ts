@@ -156,6 +156,8 @@ export {
   type RegistrationAction as IrcRegistrationAction,
 } from './irc/registration';
 
+export { IrcAdapter, IrcSession } from './irc/adapter';
+
 export {
   bytesToB64,
   b64ToBytes,

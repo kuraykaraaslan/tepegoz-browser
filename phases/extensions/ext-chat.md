@@ -517,9 +517,14 @@ KICK → `room-membership`, `self` from the nick, KICK attributed to the kicked 
 `irc/registration.ts` — `IrcRegistration`, a pure handshake state machine: `CAP LS 302` (multi-line
 aware) → `CAP REQ` the offered subset of `IRC_WANTED_CAPS` → optional SASL PLAIN (`AUTHENTICATE
 PLAIN` → base64 creds → 903 / 904) → `CAP END` → `PASS`/`NICK`/`USER`, `433 ERR_NICKNAMEINUSE` retry
-(3×, `_`-suffixed), `registered` on `001`. 13 tests. Next: the connection runtime (`ManagedAdapter`
-seam — ping/pong, auto-rejoin, ISUPPORT, flood queue) + the `IrcAdapter` over the injected transport,
-then a recorded-trace fixture suite. · **Depends on:** X-chat.1 (contract) + X-chat.2/.3 (UI) ·
+(3×, `_`-suffixed), `registered` on `001`. 13 tests. Then `irc/adapter.ts` — `IrcAdapter`
+(`ChatAdapter`) + `IrcSession` (incremental CRLF line buffer bounded at 1 MiB, backpressured event
+queue): `connect` drives `IrcRegistration` over `transport.openTCP` (6697/6667 default), auto-`PONG`,
+reads `CHANTYPES` from `005`; live lines → `ircMessageToEvent`; own `JOIN`/`PART` tracked in
+`session.joined` for auto-rejoin; `sendMessage` / `joinRoom` / `leaveRoom` / `setPresence` (→ `AWAY`)
+/ `changeNick`; `roster` / `history` / `markRead` inert (IRC has none / `chathistory` is a later
+slice). 15 tests. Next: `chathistory` backfill + a recorded-trace fixture suite + wire `IrcAdapter`
+into the desktop `ChatService.makeAdapter`. · **Depends on:** X-chat.1 (contract) + X-chat.2/.3 (UI) ·
 **Branch:** `main` · **Risk:** low-medium.
 
 ### Deliverables

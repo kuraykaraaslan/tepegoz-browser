@@ -99,14 +99,15 @@ describe('ircMessageToEvent — membership', () => {
 });
 
 describe('irc builders', () => {
-  it('build well-formed lines', () => {
+  it('build well-formed lines (message / reason text is always :trailing)', () => {
     expect(buildIrcPrivmsg('#c', 'hi there')).toBe('PRIVMSG #c :hi there');
+    expect(buildIrcPrivmsg('#c', 'oneword')).toBe('PRIVMSG #c :oneword');
     expect(buildIrcNick('ada2')).toBe('NICK ada2');
     expect(buildIrcJoin('#c', 's3cret')).toBe('JOIN #c s3cret');
     expect(buildIrcJoin('#c')).toBe('JOIN #c');
-    expect(buildIrcPart('#c', 'later')).toBe('PART #c later');
+    expect(buildIrcPart('#c', 'later on')).toBe('PART #c :later on');
     expect(buildIrcPart('#c')).toBe('PART #c');
-    expect(buildIrcAway('brb')).toBe('AWAY brb');
+    expect(buildIrcAway('brb')).toBe('AWAY :brb');
     expect(buildIrcAway()).toBe('AWAY');
     const soh = String.fromCharCode(1);
     expect(buildIrcAction('#c', 'nods')).toBe(`PRIVMSG #c :${soh}ACTION nods${soh}`);
