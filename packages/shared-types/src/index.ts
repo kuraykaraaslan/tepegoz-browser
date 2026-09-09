@@ -38,3 +38,4 @@ export * from './web-permissions';
 export * from './page-info';
 export * from './chromium-flags';
 export * from './web-content-defaults';
+export * from './chat';
