@@ -86,6 +86,27 @@ export {
 } from './xmpp/mam';
 
 export {
+  NS_MUC,
+  NS_MUC_USER,
+  MUC_AFFILIATIONS,
+  MUC_ROLES,
+  buildMucJoin,
+  buildMucLeave,
+  buildMucChangeSubject,
+  buildMucInvite,
+  parseMucPresence,
+  parseMucSubject,
+  parseMucError,
+  type MucAffiliation,
+  type MucRole,
+  type MucOccupant,
+  type MucJoinOptions,
+  type MucSubject,
+  type MucError,
+  type MucErrorCondition,
+} from './xmpp/muc';
+
+export {
   discoverXmpp,
   discoverWebSocketEndpoints,
   explicitCandidate,

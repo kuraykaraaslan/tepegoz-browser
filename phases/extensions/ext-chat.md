@@ -404,12 +404,19 @@ Functional DoD. · **Depends on:** X-chat.1 · **Branch:** `main` · **Risk:** l
 
 ## X-chat.3 — MUC / rooms
 
-**Status:** ⬜ Not started · **Depends on:** X-chat.2 · **Branch:** `feat/ext-chat-muc`
-**Risk:** low-medium.
+**Status:** 🟡 In progress (2026-09-09) — `@tepegoz/chat-adapters` `xmpp/muc.ts` landed: the pure
+XEP-0045 primitives — `buildMucJoin` (nick + password + history control), `buildMucLeave`,
+`buildMucChangeSubject`, `buildMucInvite`; `parseMucPresence` → `MucOccupant` (nick from the resource,
+affiliation/role, real JID when non-anonymous, self from status 110, raw status codes),
+`parseMucSubject` (topic vs message), `parseMucError` (wrong-password / banned / nick-conflict /
+… classification). 20 tests, S100/B90/F100/L100. Next: wire into `XmppAdapter` (join/leave + occupant
+→ roster-in-a-room events), then room state in `chat-core`, then the room UI. · **Depends on:**
+X-chat.2 · **Branch:** `main` · **Risk:** low-medium.
 
 ### Deliverables
 - [ ] **XMPP MUC (XEP-0045)** — join/leave by JID, nickname, room roster + affiliations/roles,
       subject, invites, kick/ban surfacing (read), history-on-join limit, `0secret`/password rooms.
+      _Pure stanza layer (`xmpp/muc.ts`) done; adapter wiring next._
 - [ ] **Room browser** — service discovery of a MUC service's public rooms, search, join-by-address.
 - [ ] **UI for rooms** — member list, mention autocomplete, per-room notification level
       (all / mentions / none), topic display, "who's typing" for rooms.
