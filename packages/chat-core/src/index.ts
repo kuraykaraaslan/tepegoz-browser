@@ -46,3 +46,12 @@ export {
 export { scanMentions, isMention, type MentionScan } from './mentions';
 
 export { foldForSearch, tokenize, foldedIncludes } from './search-fold';
+
+export {
+  ChatConnectionManager,
+  reconnectDelayMs,
+  type ChatConnState,
+  type ConnectionManagerDeps,
+  type ManagedAdapter,
+  type ManagedSession,
+} from './connection-manager';
