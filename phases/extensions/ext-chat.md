@@ -251,12 +251,14 @@ wrong is expensive later.
   scaffold (manifest + en/tr i18n + placeholder surfaces + `comments` icon) ·
   `ExtensionPermissionSchema` extended · [ADR-0047](../../docs/adr/0047-chat-protocol-adapter-and-bridge-trust-model.md).
 
-**Remaining:** the desktop `ChatService` host — a `node:net`/`node:tls`/WebSocket `ChatTransport`
-implementation bound to the profile egress, credential-vault resolution, `ChatStore` wiring, a
-`ChatConnectionManager` + `ChatAccountState` per account, the IPC surface + preload bridge, and the
-`background-connection` supervisor (enable/disable · profile switch · kill-switch). Best done on a
-clean `apps/desktop` tree. · **Branch:** `feat/ext-chat-xmpp-adapter` · **Risk:** low-medium — every
-hard part (protocol engine, reconnect, presence, folding) is done and unit-tested; the host is glue.
+**Remaining:** the desktop `ChatService` host — compose the reusable packages
+(`NodeChatTransport` [`@tepegoz/chat-transport-node`, done] · `ChatConnectionManager` +
+`ChatAccountState` · `XmppAdapter` · `ChatStore`) with credential-vault resolution, an **egress-bound
+SOCKS dialer** injected into `NodeTransportPorts.dial` (Phase-5 binding), the IPC surface + preload
+bridge, and the `background-connection` supervisor (enable/disable · profile switch · kill-switch).
+Every other layer — the transport, the protocol engine, reconnect, presence, folding — is a
+finished, unit-tested `@tepegoz/*` package; the host is composition. Best done on a clean
+`apps/desktop` tree. · **Branch:** `feat/ext-chat-xmpp-adapter` · **Risk:** low.
 
 ### Deliverables
 - [ ] **`extensions/ext-chat` scaffold** — manifest (`com.tepegoz.chat`, surfaces `sidebar`+`page`,
