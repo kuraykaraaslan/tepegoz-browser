@@ -374,8 +374,21 @@ the host bridge (the old "coming soon" surfaces are gone); the add-account flow 
 so the desktop adapter is a pass-through — `apps/desktop` typecheck holds (still only the 2
 pre-existing unrelated errors). ext-chat: 4 panel tests.
 
-**Remaining:** media rendering (image/video thumbnails from quarantined parts) and the runtime
-Functional DoD. · **Depends on:** X-chat.1 · **Branch:** `main` · **Risk:** low.
+**Modern-messenger pass (2026-09-11):** `chat-ui.css` reworked from the Pidgin-plain two-pane into a
+contemporary IM skin — a new `<Avatar>` (deterministic-hue disc, initials drawn by the stylesheet so
+no `textContent` leak) in the conversation list / roster / room + member list / DM & room headers with
+the presence dot ringed on its corner; tailed elevated bubbles with an own-message accent gradient;
+sticky rounded day chips; pill account switcher / tab bar / composer (focus ring, rounded send);
+thin themed scrollbars. **Theme-robust:** accent tints are `color-mix`-derived from `--cu-primary` +
+the surface (the app leaves `--primary-subtle` unset under a custom theme colour, where the old code
+fell back to the fixed brand cyan and washed everything monochrome); the canvas is a gentle step off
+the base surface, panels separate by border/elevation. **Buddy-list header:** the left column has a
+permanent "Chat" title + a gear button (inline SVG, no icon dep) that opens account management even
+with zero accounts; the no-account notice is a compact inline hint. **Narrow surface:** a `@container`
+query collapses the two-pane layout to one column with a back button in the sidebar dock.
+
+**Remaining:** the runtime Functional DoD (media round-trip needs a live account). · **Depends on:**
+X-chat.1 · **Branch:** `main` · **Risk:** low.
 
 ### Deliverables
 - [x] **`@tepegoz/chat-ui`** — conversation list (unread/mention badges, account grouping + colour),
@@ -513,7 +526,10 @@ remain.** ·
       IRC `KICK`, XMPP MUC removal (status 301/307/321/322/332) and Matrix `m.room.member` ban /
       third-party leave all surface a `system` message (`ircKickSystemMessage` / `mucRemovalText` /
       `matrixMemberSystemMessage`), actor + reason included when reported.
-      _`buildMucInvite` still has no UI action._
+      Room invite: `ChatAdapter.inviteToRoom(session, conv, invitee)` implemented on all three
+      native adapters (XMPP MUC mediated `<invite>` via `buildMucInvite`, IRC `INVITE nick #chan`
+      via `buildIrcInvite`, Matrix `POST /rooms/{id}/invite`). _Desktop bridge + a UI action still
+      pending._
 - [x] **Room browser** — service discovery of a MUC service's public rooms, search, join-by-address.
       `xmpp/disco.ts` + `XmppAdapter.discoverRooms` + `<RoomBrowser>` + `useChatState` wiring + the
       `chat:discover-rooms` / `chat:join-room` desktop bridge. _Only the runtime DoD remains._
