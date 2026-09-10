@@ -37,6 +37,10 @@ const DEFAULT_PORT_PLAIN = 6667;
 const MAX_BUFFER = 1 << 20; // 1 MiB of un-terminated bytes → the peer is misbehaving
 const IRC_HISTORY_LIMIT = 50;
 const IRC_HISTORY_TIMEOUT_MS = 15_000;
+/** Anti-flood (classic ircd penalty model): every queued client line costs this much send budget… */
+const FLOOD_PENALTY_MS = 2000;
+/** …and up to this much budget may be spent ahead of real time before sends are paced out. */
+const FLOOD_BURST_MS = 8000;
 
 /** One connected IRC session: the socket, an incremental line buffer, and a backpressured event queue. */
 export class IrcSession implements ChatSession {
@@ -61,14 +65,50 @@ export class IrcSession implements ChatSession {
   private readonly waiters: Array<(r: IteratorResult<ChatEvent>) => void> = [];
   private ended = false;
 
+  /** Anti-flood send queue: wall-clock ms the budget has been spent up to, plus what is waiting. */
+  private floodBudgetUntil = 0;
+  private readonly pending: string[] = [];
+  private flushTimer: ReturnType<typeof setTimeout> | null = null;
+
   constructor(
     readonly accountId: string,
     public nick: string,
     public stream: DuplexStream,
   ) {}
 
+  /** Write a line to the socket immediately — for protocol-critical traffic (registration, PONG, QUIT). */
   write(line: string): void {
     if (!this.closed) this.stream.write(`${line}\r\n`);
+  }
+
+  /**
+   * Queue a client-initiated line (PRIVMSG / JOIN / PART / NICK / AWAY / CHATHISTORY) behind the
+   * anti-flood pacer. A handful of lines go out back-to-back; beyond that they are spaced by
+   * {@link FLOOD_PENALTY_MS} so a burst does not trip the server's excess-flood kill.
+   */
+  enqueue(line: string): void {
+    if (this.closed) return;
+    this.pending.push(line);
+    this.pump();
+  }
+
+  private pump(): void {
+    if (this.flushTimer !== null || this.closed) return;
+    while (this.pending.length > 0) {
+      const now = Date.now();
+      if (this.floodBudgetUntil < now) this.floodBudgetUntil = now;
+      if (this.floodBudgetUntil - now > FLOOD_BURST_MS) {
+        this.flushTimer = setTimeout(() => {
+          this.flushTimer = null;
+          this.pump();
+        }, this.floodBudgetUntil - FLOOD_BURST_MS - now);
+        return;
+      }
+      const line = this.pending.shift();
+      if (line === undefined) break;
+      this.write(line);
+      this.floodBudgetUntil += FLOOD_PENALTY_MS;
+    }
   }
 
   /** Fold a channel/nick to its conversation id under the negotiated casemapping. */
@@ -103,6 +143,11 @@ export class IrcSession implements ChatSession {
     if (this.ended) return;
     this.ended = true;
     this.closed = true;
+    if (this.flushTimer !== null) {
+      clearTimeout(this.flushTimer);
+      this.flushTimer = null;
+    }
+    this.pending.length = 0;
     while (this.waiters.length > 0) this.waiters.shift()?.({ value: undefined, done: true });
     for (const resolve of this.historyWaiters.values()) resolve([]);
     this.historyWaiters.clear();
@@ -283,7 +328,7 @@ export class IrcAdapter implements ChatAdapter {
 
   setPresence(session: ChatSession, presence: ChatPresence, statusText?: string): Promise<void> {
     const s = session as IrcSession;
-    s.write(presence === 'online' ? buildIrcAway() : buildIrcAway(statusText ?? 'away'));
+    s.enqueue(presence === 'online' ? buildIrcAway() : buildIrcAway(statusText ?? 'away'));
     return Promise.resolve();
   }
 
@@ -324,13 +369,13 @@ export class IrcAdapter implements ChatAdapter {
           nextCursor: messages.length > 0 && oldest !== undefined ? new Date(oldest.originTs).toISOString() : null,
         });
       });
-      s.write(`CHATHISTORY BEFORE ${conv} ${selector} ${IRC_HISTORY_LIMIT}`);
+      s.enqueue(`CHATHISTORY BEFORE ${conv} ${selector} ${IRC_HISTORY_LIMIT}`);
     });
   }
 
   sendMessage(session: ChatSession, conv: ConvId, body: OutgoingMessage): Promise<SendReceipt> {
     const s = session as IrcSession;
-    s.write(buildIrcPrivmsg(conv, body.body));
+    s.enqueue(buildIrcPrivmsg(conv, body.body));
     const ts = Date.now();
     return Promise.resolve({ protocolId: `${String(ts)}~${s.nick}~${body.body.slice(0, 40)}`, ts });
   }
@@ -342,7 +387,7 @@ export class IrcAdapter implements ChatAdapter {
   joinRoom(session: ChatSession, address: string): Promise<ChatConversation> {
     const s = session as IrcSession;
     const channel = s.fold(address);
-    s.write(buildIrcJoin(address));
+    s.enqueue(buildIrcJoin(address));
     s.joined.add(channel);
     return Promise.resolve({
       id: channel,
@@ -364,13 +409,13 @@ export class IrcAdapter implements ChatAdapter {
 
   leaveRoom(session: ChatSession, conv: ConvId): Promise<void> {
     const s = session as IrcSession;
-    s.write(buildIrcPart(conv));
+    s.enqueue(buildIrcPart(conv));
     s.joined.delete(s.fold(conv));
     return Promise.resolve();
   }
 
   changeNick(session: ChatSession, nick: string): Promise<void> {
-    (session as IrcSession).write(buildIrcNick(nick));
+    (session as IrcSession).enqueue(buildIrcNick(nick));
     return Promise.resolve();
   }
 
