@@ -101,6 +101,7 @@ export type {
 } from './types';
 export { presenceMeta, type PresenceMeta, type PresenceTone } from './presence';
 export { PresenceBadge, type PresenceBadgeProps } from './PresenceBadge';
+export { Avatar, avatarHue, avatarInitials, type AvatarProps, type AvatarSize } from './Avatar';
 export {
   conversationTitle,
   sortConversations,

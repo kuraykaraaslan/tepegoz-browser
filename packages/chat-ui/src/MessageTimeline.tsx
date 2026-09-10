@@ -1,5 +1,6 @@
 import { useLocale, useT } from '@tepegoz/i18n/react';
 import type { ChatMessage } from '@tepegoz/shared-types';
+import { Avatar } from './Avatar';
 import { chatUiDict, type ChatUiStrings } from './i18n';
 import { linkifySegments } from './linkify';
 import { MessageMedia, type ResolveMedia } from './MessageMedia';
@@ -192,6 +193,9 @@ export function MessageTimeline({
           >
             {startsGroup && (
               <span className="chat-msg__meta">
+                {!own && (
+                  <Avatar name={senderName} seed={message.senderAddress || senderName} size="sm" />
+                )}
                 <span className="chat-msg__sender">{senderName}</span>
                 <time className="chat-msg__time">
                   {formatClockTime(message.originTs || message.receivedAt, locale)}
