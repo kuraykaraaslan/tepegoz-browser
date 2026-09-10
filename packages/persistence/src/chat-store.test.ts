@@ -220,6 +220,13 @@ describe('ChatStore — messages', () => {
     expect(ChatStore.listMessages(db, 'cv1')[0]?.reactions).toEqual([{ emoji: '👍', count: 2, me: true }]);
   });
 
+  it('getMessage fetches one message by its id, scoped to the conversation', () => {
+    ChatStore.upsertMessage(db, message('p1', 'cv1', { mediaRef: 'mxc://s/pic' }));
+    expect(ChatStore.getMessage(db, 'cv1', 'id-p1')?.mediaRef).toBe('mxc://s/pic');
+    expect(ChatStore.getMessage(db, 'cv1', 'nope')).toBeNull();
+    expect(ChatStore.getMessage(db, 'other', 'id-p1')).toBeNull();
+  });
+
   describe('searchMessages', () => {
     beforeEach(() => {
       ChatStore.upsertConversation(db, conversation('cv2', 'acc', 'ada@example.com'));

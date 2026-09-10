@@ -264,6 +264,22 @@ export default class FileOperationsHost {
   }
 
   /**
+   * Binary sibling of {@link writeExport} — a quarantined chat attachment the agent asked to
+   * materialize (`chat_get_media`). Same fixed `~/tepegoz/attachments/` destination + separator-free
+   * name + traversal check; first-party, so it does not depend on a folder grant. Returns the path.
+   */
+  static async writeAttachment(filename: string, bytes: Uint8Array): Promise<string> {
+    const dir = await canonicalize(path.join(homedir(), 'tepegoz', 'attachments'));
+    const target = await canonicalize(path.join(dir, filename));
+    if (path.dirname(target) !== dir) {
+      throw new AppError(`Invalid attachment filename: '${filename}'`, 400);
+    }
+    await fsHost.mkdir(dir);
+    await fsHost.writeFile(target, Buffer.from(bytes).toString('base64'), 'base64');
+    return target;
+  }
+
+  /**
    * Write a user-initiated multi-file export (the agent diagnostic bundle) into a fresh
    * `~/tepegoz/<dirName>/` folder — same first-party rationale + fixed destination as {@link writeExport},
    * extended to a directory tree (subfolders like `tabs/`, plus binary `base64` files for PNGs). Each

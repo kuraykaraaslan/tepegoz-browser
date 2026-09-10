@@ -394,6 +394,14 @@ export class ChatStore {
     return rows.map(rowToMessage);
   }
 
+  /** One message by its local id within a conversation, or `null`. */
+  static getMessage(db: Db, conversationId: string, messageId: string): ChatMessage | null {
+    const row = db
+      .prepare('SELECT * FROM chat_messages WHERE conversation_id = ? AND id = ?')
+      .get(conversationId, messageId) as ChatMessageRow | undefined;
+    return row === undefined ? null : rowToMessage(row);
+  }
+
   static upsertMessage(db: Db, message: ChatMessage): void {
     db.prepare(
       `INSERT INTO chat_messages (

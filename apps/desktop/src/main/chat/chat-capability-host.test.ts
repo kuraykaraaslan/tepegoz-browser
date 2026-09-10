@@ -55,6 +55,9 @@ function harness(over: Partial<ChatCapabilityHostDeps> = {}) {
     leaveRoom: vi.fn(() => Promise.resolve()),
     setMuted: vi.fn(() => Promise.resolve()),
     react: vi.fn(() => Promise.resolve()),
+    getMessage: vi.fn((_c: string, id: string) => (id === 'm1' ? msg({ mediaRef: 'mxc://s/pic' }) : null)),
+    resolveMedia: vi.fn(() => Promise.resolve({ dataUrl: 'data:image/png;base64,AAECAw==' })),
+    quarantineMedia: vi.fn(() => Promise.resolve('/home/u/tepegoz/attachments/m1.png')),
     sessionOptIns: () => optIns,
     ...over,
   };
@@ -153,8 +156,30 @@ describe('createChatCapabilityHost — writes', () => {
     await expect(host.createMembership({ accountId: 'a', address: '#r' })).rejects.toMatchObject({ statusCode: 400 });
   });
 
-  it('chat_get_media is still 501 until the sandbox slice', async () => {
+  it('getMedia resolves, decodes and quarantines the attachment into the sandbox', async () => {
+    const { host, deps } = harness();
+    const out = await host.getMedia({ accountId: 'acc', conversationId: 'c1', messageId: 'm1' });
+    expect(deps.resolveMedia).toHaveBeenCalledWith('acc', 'mxc://s/pic');
+    const [media] = (deps.quarantineMedia as unknown as { mock: { calls: [{ bytes: Uint8Array; mime: string; suggestedName: string }][] } }).mock.calls[0]!;
+    expect(media.mime).toBe('image/png');
+    expect(Array.from(media.bytes)).toEqual([0, 1, 2, 3]);
+    expect(media.suggestedName).toBe('m1.png');
+    expect(out).toEqual({ sandboxPath: '/home/u/tepegoz/attachments/m1.png' });
+  });
+
+  it('getMedia returns null for a gated conversation, a missing message, or a text message', async () => {
+    const gated = harness({ getConversation: () => conv({ isKnownContact: false }) });
+    expect(await gated.host.getMedia({ accountId: 'acc', conversationId: 'c1', messageId: 'm1' })).toBeNull();
+
+    const noMedia = harness({ getMessage: () => msg({ mediaRef: null }) });
+    expect(await noMedia.host.getMedia({ accountId: 'acc', conversationId: 'c1', messageId: 'm1' })).toBeNull();
+
     const { host } = harness();
-    await expect(host.getMedia({ accountId: 'a', conversationId: 'c', messageId: 'm' })).rejects.toMatchObject({ statusCode: 501 });
+    expect(await host.getMedia({ accountId: 'acc', conversationId: 'c1', messageId: 'gone' })).toBeNull();
+  });
+
+  it('getMedia returns null when the resolver cannot produce bytes', async () => {
+    const { host } = harness({ resolveMedia: vi.fn(() => Promise.resolve(null)) });
+    expect(await host.getMedia({ accountId: 'acc', conversationId: 'c1', messageId: 'm1' })).toBeNull();
   });
 });

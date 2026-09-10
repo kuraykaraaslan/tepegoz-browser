@@ -12,6 +12,7 @@ import { createChatDialer } from './egress-dialer';
 import { seedChatAccountsFromEnv } from './chat-seed.electron';
 import ChatSecrets from './chat-secrets.electron';
 import { createChatCapabilityHost } from './chat-capability-host';
+import FileOperationsHost from '../file-operations/file-operations-host';
 import {
   deleteAccount,
   listAccountSummaries,
@@ -182,6 +183,11 @@ export function chatCapabilityHost(): ReturnType<typeof createChatCapabilityHost
       requireService().setMuted(accountId, conversationId, muted),
     react: (accountId, conversationId, messageId, emoji, on) =>
       requireService().react(accountId, conversationId, messageId, emoji, on),
+    getMessage: (conversationId, messageId) =>
+      getDb() === null ? null : ChatStore.getMessage(requireDb(), conversationId, messageId),
+    resolveMedia: (accountId, mediaRef) => requireService().resolveMedia(accountId, mediaRef),
+    quarantineMedia: ({ bytes, suggestedName }) =>
+      FileOperationsHost.writeAttachment(suggestedName, bytes),
     sessionOptIns: () => chatAgentOptIns,
   });
 }

@@ -477,6 +477,17 @@ describe('writeExport / writeExportBundle', () => {
     expect(fsp.writeFile).toHaveBeenCalledWith(path.join(bundle, 'img', 'a.png'), Buffer.from('p'));
   });
 
+  it('writeAttachment writes bytes into ~/tepegoz/attachments and rejects an escaping name', async () => {
+    const dir = path.join(path.sep, 'home', 'u', 'tepegoz', 'attachments');
+    const bytes = new Uint8Array([1, 2, 3, 4]);
+    const target = await Host.writeAttachment('m1.png', bytes);
+    expect(target).toBe(path.join(dir, 'm1.png'));
+    expect(fsp.writeFile).toHaveBeenCalledWith(path.join(dir, 'm1.png'), Buffer.from(bytes));
+
+    realpath.mockImplementation((p: string) => Promise.resolve(p === dir ? dir : '/elsewhere/x'));
+    await expect(Host.writeAttachment('../escape', bytes)).rejects.toMatchObject({ statusCode: 400 });
+  });
+
   it('writeExportBundle rejects a bundle name that escapes the folder', async () => {
     const root = path.join(path.sep, 'home', 'u', 'tepegoz');
     realpath.mockImplementation((p: string) =>

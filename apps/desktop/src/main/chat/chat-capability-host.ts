@@ -63,12 +63,46 @@ export interface ChatCapabilityHostDeps {
     emoji: string,
     on: boolean,
   ) => Promise<void>;
+  getMessage: (conversationId: string, messageId: string) => ChatMessage | null;
+  /** Resolve a `mediaRef` to a `data:` URL (main does the egress-bound, size-capped download). */
+  resolveMedia: (accountId: string, mediaRef: string) => Promise<{ dataUrl: string } | null>;
+  /** Write already-fetched attachment bytes into the file-operations sandbox → the path. */
+  quarantineMedia: (media: {
+    bytes: Uint8Array;
+    mime: string;
+    suggestedName: string;
+  }) => Promise<string>;
   /** Conversation ids the user opted the agent into this session (on top of persisted known-contact). */
   sessionOptIns: () => ReadonlySet<string>;
 }
 
-const notYet = (tool: string): Promise<never> =>
-  Promise.reject(new AppError(`${tool} is not wired yet (X-chat.6 follow-up)`, 501));
+/** Split a `data:<mime>;base64,<payload>` URL. Throws on any other shape. */
+function decodeDataUrl(url: string): { mime: string; bytes: Uint8Array } {
+  const m = /^data:([^;,]*)(;base64)?,(.*)$/s.exec(url);
+  if (m === null) throw new AppError('media resolver returned a non-data URL', 502);
+  const mime = m[1] !== undefined && m[1].length > 0 ? m[1] : 'application/octet-stream';
+  const raw = m[3] ?? '';
+  const bytes =
+    m[2] === ';base64' ? new Uint8Array(Buffer.from(raw, 'base64')) : new TextEncoder().encode(decodeURIComponent(raw));
+  return { mime, bytes };
+}
+
+const MIME_EXT: Record<string, string> = {
+  'image/png': 'png',
+  'image/jpeg': 'jpg',
+  'image/gif': 'gif',
+  'image/webp': 'webp',
+  'video/mp4': 'mp4',
+  'audio/mpeg': 'mp3',
+  'audio/ogg': 'ogg',
+  'application/pdf': 'pdf',
+};
+
+function mediaFileName(messageId: string, mime: string): string {
+  const safe = messageId.replace(/[^A-Za-z0-9_-]/g, '_').slice(0, 64) || 'attachment';
+  const ext = MIME_EXT[mime.toLowerCase()];
+  return ext !== undefined ? `${safe}.${ext}` : safe;
+}
 
 function summarize(conv: ChatConversation, lastPreview: string | null): ChatConversationSummary {
   return {
@@ -186,8 +220,20 @@ export function createChatCapabilityHost(deps: ChatCapabilityHostDeps): ChatCapa
       return { ok: true };
     },
 
-    getMedia(input: ChatGetMediaRequest): Promise<{ sandboxPath: string } | null> {
-      return notYet(`chat_get_media (${input.messageId})`);
+    async getMedia(input: ChatGetMediaRequest): Promise<{ sandboxPath: string } | null> {
+      const conv = deps.getConversation(input.conversationId);
+      if (!visible(conv) || conv.accountId !== input.accountId) return null;
+      const message = deps.getMessage(input.conversationId, input.messageId);
+      if (message === null || message.mediaRef === null) return null;
+      const resolved = await deps.resolveMedia(input.accountId, message.mediaRef);
+      if (resolved === null) return null;
+      const { mime, bytes } = decodeDataUrl(resolved.dataUrl);
+      const sandboxPath = await deps.quarantineMedia({
+        bytes,
+        mime,
+        suggestedName: mediaFileName(message.id, mime),
+      });
+      return { sandboxPath };
     },
   };
 }
