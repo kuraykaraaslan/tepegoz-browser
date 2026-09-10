@@ -529,7 +529,14 @@ an `irc` account (was a 501); `chat-service.test.ts` now proves an IRC account s
 IRCv3 caps + open `BATCH` refs; `history()` sends `CHATHISTORY BEFORE <target> <timestamp|*> 50` and
 resolves from the `chathistory` batch (messages sorted oldest-first, `nextCursor` = the oldest
 `originTs` as ISO), with a 15 s timeout and cleanup on disconnect; a non-`chathistory` batch falls
-through to the live stream. 4 tests. Next: a recorded-trace fixture suite + runtime DoD (local ergo). ·
+through to the live stream. 4 tests. Then the **recorded-trace fixture suite** (`irc/recorded-trace.test.ts`,
+a full Libera-style session). Then **ISUPPORT `CASEMAPPING`** — `foldIrcTarget(target, mapping)` +
+`asIrcCasemapping` replace the hardcoded RFC-1459 fold; `IrcSession.casemapping` (default `rfc1459`) is
+read from `005` and threaded through every conversation-id fold (live events, membership tracking,
+`chathistory` batch target, `history()`, `joinRoom`/`leaveRoom`), so an `ascii`-casemapping server no
+longer mis-keys `#foo[1]` as `#foo{1}` and a `joinRoom` key matches the server's echoed `JOIN`. 10 new
+tests. Still open on the deliverable: flood-protection send queue, ISUPPORT `PREFIX` parsing, `TOPIC`/
+`NAMES` surfacing, SASL `EXTERNAL`. Next: runtime DoD (local ergo). ·
 **Depends on:** X-chat.1 (contract) + X-chat.2/.3 (UI) · **Branch:** `main` · **Risk:** low-medium.
 
 ### Deliverables

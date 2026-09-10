@@ -18,12 +18,15 @@ import type { ChatTransport, DuplexStream } from '../transport';
 import { parseIrcLine, parseIsupport, type IrcMessage } from './parse';
 import { IrcRegistration, type RegistrationAction } from './registration';
 import {
+  asIrcCasemapping,
   buildIrcAway,
   buildIrcJoin,
   buildIrcNick,
   buildIrcPart,
   buildIrcPrivmsg,
+  foldIrcTarget,
   ircMessageToEvent,
+  type IrcCasemapping,
   type IrcContext,
 } from './messages';
 
@@ -38,6 +41,8 @@ export class IrcSession implements ChatSession {
   readonly caps = IRC_CAPS;
   closed = false;
   chanTypes = '#&';
+  /** ISUPPORT `CASEMAPPING`; narrows how a channel/nick folds to a conversation id. */
+  casemapping: IrcCasemapping = 'rfc1459';
   readonly joined = new Set<string>();
   /** IRCv3 caps the server ACKed. */
   ircCaps: ReadonlySet<string> = new Set();
@@ -60,6 +65,11 @@ export class IrcSession implements ChatSession {
 
   write(line: string): void {
     if (!this.closed) this.stream.write(`${line}\r\n`);
+  }
+
+  /** Fold a channel/nick to its conversation id under the negotiated casemapping. */
+  fold(target: string): string {
+    return foldIrcTarget(target, this.casemapping);
   }
 
   /** Feed a decoded chunk; returns the complete lines it produced. */
@@ -160,6 +170,8 @@ export class IrcAdapter implements ChatAdapter {
           if (msg.command === '005') {
             const map = parseIsupport(msg.params);
             if (typeof map.CHANTYPES === 'string') session.chanTypes = map.CHANTYPES;
+            const casemapping = asIrcCasemapping(map.CASEMAPPING);
+            if (casemapping !== null) session.casemapping = casemapping;
             continue;
           }
           if (this.handleBatch(session, msg)) continue;
@@ -188,7 +200,7 @@ export class IrcAdapter implements ChatAdapter {
       if (token.startsWith('+')) {
         session.batches.set(ref, {
           type: msg.params[1] ?? '',
-          target: (msg.params[2] ?? '').toLowerCase(),
+          target: session.fold(msg.params[2] ?? ''),
           lines: [],
         });
         return true;
@@ -224,11 +236,12 @@ export class IrcAdapter implements ChatAdapter {
       accountId: session.accountId,
       selfNick: session.nick,
       chanTypes: session.chanTypes,
+      casemapping: session.casemapping,
       now: Date.now(),
     };
     // Track our own channel membership so a reconnect can auto-rejoin.
     if ((msg.command === 'JOIN' || msg.command === 'PART') && msg.prefix?.startsWith(`${session.nick}!`)) {
-      const chan = msg.params[0]?.toLowerCase();
+      const chan = msg.params[0] !== undefined ? session.fold(msg.params[0]) : undefined;
       if (chan !== undefined) {
         if (msg.command === 'JOIN') session.joined.add(chan);
         else session.joined.delete(chan);
@@ -269,7 +282,7 @@ export class IrcAdapter implements ChatAdapter {
     if (!s.ircCaps.has('draft/chathistory') && !s.ircCaps.has('chathistory')) {
       return Promise.resolve({ messages: [], nextCursor: null });
     }
-    const target = conv.toLowerCase();
+    const target = s.fold(conv);
     const selector = before !== null ? `timestamp=${before}` : '*';
     return new Promise<HistoryPage>((resolve) => {
       const timer = setTimeout(() => {
@@ -282,6 +295,7 @@ export class IrcAdapter implements ChatAdapter {
           accountId: s.accountId,
           selfNick: s.nick,
           chanTypes: s.chanTypes,
+          casemapping: s.casemapping,
           now: Date.now(),
         };
         const messages = lines
@@ -312,7 +326,7 @@ export class IrcAdapter implements ChatAdapter {
 
   joinRoom(session: ChatSession, address: string): Promise<ChatConversation> {
     const s = session as IrcSession;
-    const channel = address.toLowerCase();
+    const channel = s.fold(address);
     s.write(buildIrcJoin(address));
     s.joined.add(channel);
     return Promise.resolve({
@@ -336,7 +350,7 @@ export class IrcAdapter implements ChatAdapter {
   leaveRoom(session: ChatSession, conv: ConvId): Promise<void> {
     const s = session as IrcSession;
     s.write(buildIrcPart(conv));
-    s.joined.delete(conv.toLowerCase());
+    s.joined.delete(s.fold(conv));
     return Promise.resolve();
   }
 

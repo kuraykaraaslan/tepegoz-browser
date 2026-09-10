@@ -102,6 +102,25 @@ describe('IrcAdapter — connect', () => {
     expect(session.chanTypes).toBe('#!');
   });
 
+  it('reads CASEMAPPING from a 005 line and applies it to conversation ids', async () => {
+    const { adapter, server, session } = await connected();
+    expect(session.casemapping).toBe('rfc1459'); // RFC 2812 default until told otherwise
+    server.send(':irc.example 005 ada CASEMAPPING=ascii :are supported');
+    expect(session.casemapping).toBe('ascii');
+
+    const it = adapter.events(session)[Symbol.asyncIterator]();
+    server.send(':bob!b@h PRIVMSG #Foo[1] :hi');
+    expect((await it.next()).value).toMatchObject({
+      message: { conversationId: '#foo[1]' }, // ascii: brackets are NOT folded to {}
+    });
+  });
+
+  it('ignores an unrecognised CASEMAPPING token', async () => {
+    const { server, session } = await connected();
+    server.send(':irc.example 005 ada CASEMAPPING=rfc7613 :are supported');
+    expect(session.casemapping).toBe('rfc1459');
+  });
+
   it('rejects when the connection drops mid-registration', async () => {
     const server = new FakeServer();
     const p = new IrcAdapter().connect(creds(), server);
@@ -141,6 +160,17 @@ describe('IrcAdapter — live traffic', () => {
     const { server, session } = await connected();
     server.send(':ada!a@h JOIN #a', ':ada!a@h JOIN #b', ':ada!a@h PART #a');
     expect([...session.joined]).toEqual(['#b']);
+  });
+
+  it('joinRoom and our own echoed JOIN fold to the same key under rfc1459', async () => {
+    const { adapter, server, session } = await connected();
+    await adapter.joinRoom(session, '#Test[1]');
+    expect(session.joined.has('#test{1}')).toBe(true); // rfc1459: [ → {
+    // the server echoes our JOIN; the membership tracker must not add a second, differently-folded key
+    server.send(':ada!a@h JOIN #Test[1]');
+    expect([...session.joined]).toEqual(['#test{1}']);
+    await adapter.leaveRoom(session, '#Test[1]');
+    expect(session.joined.size).toBe(0);
   });
 
   it('setPresence maps to AWAY, disconnect QUITs and ends the iterator', async () => {

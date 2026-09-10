@@ -12,12 +12,30 @@ import type { IrcMessage } from './parse';
  * `time~nick~body` key — best-effort dedup for a `chathistory` replay that overlaps the live stream.
  */
 
+/**
+ * ISUPPORT `CASEMAPPING` values we honour. `ascii` folds only `A–Z`; `rfc1459` additionally folds
+ * `[]\^` → `{}|~` (the "{}|~ are the lowercase of []\^" rule); `rfc1459-strict` is `rfc1459` without
+ * the `^` → `~` mapping. Anything else a server advertises falls back to `rfc1459` (RFC 2812).
+ */
+export type IrcCasemapping = 'ascii' | 'rfc1459' | 'rfc1459-strict';
+
+export const IRC_CASEMAPPINGS: readonly IrcCasemapping[] = ['ascii', 'rfc1459', 'rfc1459-strict'];
+
+/** Narrow a raw ISUPPORT token to a known {@link IrcCasemapping}, or `null` if unrecognised. */
+export function asIrcCasemapping(raw: string | boolean | undefined): IrcCasemapping | null {
+  return typeof raw === 'string' && (IRC_CASEMAPPINGS as readonly string[]).includes(raw)
+    ? (raw as IrcCasemapping)
+    : null;
+}
+
 export interface IrcContext {
   accountId: string;
   /** The connected nick — used to mark a room-membership change as `self`. */
   selfNick: string;
   /** Channel-type prefixes from ISUPPORT `CHANTYPES` (default `#&`). */
   chanTypes: string;
+  /** ISUPPORT `CASEMAPPING` (default `rfc1459`) — decides how a target folds to a conversation id. */
+  casemapping?: IrcCasemapping;
   /** Wall-clock ms used when a line has no `server-time` tag. */
   now: number;
 }
@@ -35,12 +53,24 @@ function isChannel(target: string, chanTypes: string): boolean {
   return target.length > 0 && chanTypes.includes(target[0] ?? '');
 }
 
-/** Lowercase a channel/nick for use as a conversation id (RFC 1459 casemapping, ascii-only subset). */
-function foldTarget(target: string): string {
-  return target.replace(/[A-Z[\]\\^]/g, (c) => {
-    const map: Record<string, string> = { '[': '{', ']': '}', '\\': '|', '^': '~' };
-    return map[c] ?? c.toLowerCase();
-  });
+const RFC1459_EXTRA: Record<string, string> = { '[': '{', ']': '}', '\\': '|', '^': '~' };
+const RFC1459_STRICT_EXTRA: Record<string, string> = { '[': '{', ']': '}', '\\': '|' };
+
+/**
+ * Lowercase a channel/nick for use as a conversation id, honouring the negotiated ISUPPORT
+ * `CASEMAPPING`. Fold-only: `A–Z` always map down; `rfc1459` / `rfc1459-strict` additionally map the
+ * bracket set. A server changing casemapping cannot make two previously-distinct ids collide in a way
+ * that crosses a channel/DM boundary — the channel-type prefix is never in the folded set.
+ */
+export function foldIrcTarget(target: string, mapping: IrcCasemapping = 'rfc1459'): string {
+  const extra =
+    mapping === 'rfc1459' ? RFC1459_EXTRA : mapping === 'rfc1459-strict' ? RFC1459_STRICT_EXTRA : null;
+  let out = '';
+  for (const ch of target) {
+    if (ch >= 'A' && ch <= 'Z') out += ch.toLowerCase();
+    else out += extra?.[ch] ?? ch;
+  }
+  return out;
 }
 
 function synthProtocolId(ts: number, nick: string, body: string): string {
@@ -53,7 +83,9 @@ function messageEvent(msg: IrcMessage, ctx: IrcContext, notice: boolean): ChatEv
   if (from === null || target === undefined || rawBody === undefined || rawBody === '') return null;
 
   const channel = isChannel(target, ctx.chanTypes);
-  const conversationId = channel ? foldTarget(target) : foldTarget(from.nick);
+  const conversationId = channel
+    ? foldIrcTarget(target, ctx.casemapping)
+    : foldIrcTarget(from.nick, ctx.casemapping);
   const ts = tagTime(msg, ctx.now);
 
   let body = rawBody;
@@ -96,10 +128,11 @@ function membershipEvent(
   const from = parseIrcPrefix(msg.prefix ?? '');
   const channel = msg.params[channelParamIndex];
   if (from === null || channel === undefined || !isChannel(channel, ctx.chanTypes)) return null;
+  const folded = foldIrcTarget(channel, ctx.casemapping);
   return {
     type: 'room-membership',
-    conversationId: foldTarget(channel),
-    address: `${foldTarget(channel)}/${from.nick}`,
+    conversationId: folded,
+    address: `${folded}/${from.nick}`,
     joined,
     memberCount: 0,
     self: from.nick === ctx.selfNick,

@@ -142,6 +142,9 @@ export {
 
 export {
   ircMessageToEvent,
+  foldIrcTarget,
+  asIrcCasemapping,
+  IRC_CASEMAPPINGS,
   buildIrcPrivmsg,
   buildIrcAction,
   buildIrcJoin,
@@ -149,6 +152,7 @@ export {
   buildIrcNick,
   buildIrcAway,
   type IrcContext,
+  type IrcCasemapping,
 } from './irc/messages';
 
 export {

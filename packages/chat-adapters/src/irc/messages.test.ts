@@ -1,11 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import {
+  asIrcCasemapping,
   buildIrcAction,
   buildIrcAway,
   buildIrcJoin,
   buildIrcNick,
   buildIrcPart,
   buildIrcPrivmsg,
+  foldIrcTarget,
   ircMessageToEvent,
   type IrcContext,
 } from './messages';
@@ -65,8 +67,52 @@ describe('ircMessageToEvent — PRIVMSG', () => {
     expect(ev('PRIVMSG #c :')).toBeNull();
   });
 
-  it('folds RFC-1459 special chars in the channel id', () => {
+  it('folds RFC-1459 special chars in the channel id (the default casemapping)', () => {
     expect(ev(':bob!b@h PRIVMSG #Foo[Bar] :x')).toMatchObject({ message: { conversationId: '#foo{bar}' } });
+  });
+
+  it('an `ascii` casemapping folds only A–Z — brackets are left alone', () => {
+    expect(ev(':bob!b@h PRIVMSG #Foo[Bar] :x', { casemapping: 'ascii' })).toMatchObject({
+      message: { conversationId: '#foo[bar]' },
+    });
+  });
+
+  it('`rfc1459-strict` folds []\\ but not ^', () => {
+    expect(ev(':bob!b@h PRIVMSG #A[b]c^d\\e :x', { casemapping: 'rfc1459-strict' })).toMatchObject({
+      message: { conversationId: '#a{b}c^d|e' },
+    });
+  });
+
+  it('the DM conversation id folds by the same casemapping', () => {
+    expect(ev(':Bob[X]!b@h PRIVMSG ada :hi', { casemapping: 'ascii' })).toMatchObject({
+      message: { conversationId: 'bob[x]' },
+    });
+  });
+
+  it('a membership event folds its channel + address by casemapping', () => {
+    expect(ev(':bob!b@h JOIN #Foo[Bar]', { casemapping: 'ascii' })).toMatchObject({
+      type: 'room-membership',
+      conversationId: '#foo[bar]',
+      address: '#foo[bar]/bob',
+    });
+  });
+});
+
+describe('foldIrcTarget / asIrcCasemapping', () => {
+  it('defaults to rfc1459 and maps the full bracket set', () => {
+    expect(foldIrcTarget('#Foo[]\\^')).toBe('#foo{}|~');
+  });
+
+  it('ascii leaves everything but A–Z', () => {
+    expect(foldIrcTarget('#Foo[]\\^', 'ascii')).toBe('#foo[]\\^');
+  });
+
+  it('narrows a raw ISUPPORT token, rejecting the unknown', () => {
+    expect(asIrcCasemapping('ascii')).toBe('ascii');
+    expect(asIrcCasemapping('rfc1459-strict')).toBe('rfc1459-strict');
+    expect(asIrcCasemapping('rfc7613')).toBeNull();
+    expect(asIrcCasemapping(true)).toBeNull();
+    expect(asIrcCasemapping(undefined)).toBeNull();
   });
 });
 
