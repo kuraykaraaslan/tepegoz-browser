@@ -88,6 +88,34 @@ describe('chat account contract', () => {
     ).toBe(false);
   });
 
+  it('irc preSaslAuth is optional and enum-checked (pass | nickserv)', () => {
+    const bare = ChatServerConfigSchema.safeParse({
+      protocol: 'irc',
+      server: 'irc.libera.chat',
+      port: 6697,
+      nick: 'ada',
+    });
+    expect(bare.success && bare.data.protocol === 'irc' && bare.data.preSaslAuth).toBe(undefined);
+    expect(
+      ChatServerConfigSchema.safeParse({
+        protocol: 'irc',
+        server: 'irc.libera.chat',
+        port: 6697,
+        nick: 'ada',
+        preSaslAuth: 'nickserv',
+      }).success,
+    ).toBe(true);
+    expect(
+      ChatServerConfigSchema.safeParse({
+        protocol: 'irc',
+        server: 'irc.libera.chat',
+        port: 6697,
+        nick: 'ada',
+        preSaslAuth: 'sasl',
+      }).success,
+    ).toBe(false);
+  });
+
   it('bridge config values are bounded strings', () => {
     const big = 'x'.repeat(5000);
     expect(

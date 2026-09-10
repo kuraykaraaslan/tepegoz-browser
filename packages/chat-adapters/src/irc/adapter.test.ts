@@ -360,6 +360,39 @@ describe('IrcAdapter — SASL + errors', () => {
     await expect(p).resolves.toBeDefined();
   });
 
+  it('identifies to NickServ after registration when preSaslAuth is nickserv (no PASS)', async () => {
+    const server = new FakeServer();
+    const p = new IrcAdapter().connect(creds({ preSaslAuth: 'nickserv' }), server);
+    await tick();
+    // the secret is not sent as PASS before registration…
+    expect(server.written).not.toContain('PASS pw');
+    server.send('CAP * LS :message-tags');
+    server.send('CAP ada ACK :message-tags');
+    server.send(':irc.example 001 ada :Welcome ada');
+    await expect(p).resolves.toBeDefined();
+    // …it goes to NickServ once the nick is ours
+    expect(server.lastWritten()).toBe('PRIVMSG NickServ :IDENTIFY pw');
+  });
+
+  it('still sends PASS (not NickServ) when preSaslAuth is absent', async () => {
+    const { server } = await connected();
+    expect(server.written).toContain('PASS pw');
+    expect(server.written.some((l) => l.startsWith('PRIVMSG NickServ'))).toBe(false);
+  });
+
+  it('does not touch NickServ when SASL is on even if preSaslAuth is set', async () => {
+    const server = new FakeServer();
+    const p = new IrcAdapter().connect(creds({ sasl: true, preSaslAuth: 'nickserv' }), server);
+    await tick();
+    server.send('CAP * LS :sasl');
+    server.send('CAP ada ACK :sasl');
+    server.send('AUTHENTICATE +');
+    server.send(':irc 903 ada :ok');
+    server.send(':irc 001 ada :Welcome');
+    await expect(p).resolves.toBeDefined();
+    expect(server.written.some((l) => l.startsWith('PRIVMSG NickServ'))).toBe(false);
+  });
+
   it('rejects a non-irc account', async () => {
     await expect(
       new IrcAdapter().connect(

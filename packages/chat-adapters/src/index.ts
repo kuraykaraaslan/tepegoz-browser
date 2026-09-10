@@ -153,6 +153,7 @@ export {
   buildIrcJoin,
   buildIrcPart,
   buildIrcNick,
+  buildIrcNickServIdentify,
   buildIrcAway,
   type IrcContext,
   type IrcCasemapping,

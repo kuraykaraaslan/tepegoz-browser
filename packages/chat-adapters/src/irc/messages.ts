@@ -328,6 +328,14 @@ export function buildIrcNick(nick: string): string {
   return `NICK ${nick}`;
 }
 
+/**
+ * `PRIVMSG NickServ :IDENTIFY <password>` — the pre-SASL account-auth fallback for a network whose
+ * services want a message rather than a SASL exchange. Sent once, right after `001`.
+ */
+export function buildIrcNickServIdentify(password: string): string {
+  return `PRIVMSG NickServ :IDENTIFY ${password}`;
+}
+
 export function buildIrcAway(message?: string): string {
   return message !== undefined && message.length > 0 ? `AWAY :${message}` : 'AWAY';
 }

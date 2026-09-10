@@ -56,6 +56,14 @@ export const CHAT_IRC_SASL_MECHANISMS = ['plain', 'external'] as const;
 export const ChatIrcSaslMechanismSchema = z.enum(CHAT_IRC_SASL_MECHANISMS);
 export type ChatIrcSaslMechanism = z.infer<typeof ChatIrcSaslMechanismSchema>;
 
+/** How the vaulted secret is presented to a network that does **not** offer SASL. `pass` sends it
+ *  as the connection `PASS` before registration (a bouncer / server password); `nickserv` sends
+ *  `PRIVMSG NickServ :IDENTIFY <secret>` once, after `001` (a pre-SASL network whose services want
+ *  a message). Absent ⇒ `pass`, so rows written before this field parse unchanged. */
+export const CHAT_IRC_PRESASL_AUTH = ['pass', 'nickserv'] as const;
+export const ChatIrcPreSaslAuthSchema = z.enum(CHAT_IRC_PRESASL_AUTH);
+export type ChatIrcPreSaslAuth = z.infer<typeof ChatIrcPreSaslAuthSchema>;
+
 const ircServer = z.object({
   protocol: z.literal('irc'),
   server: z.string().min(1).max(255),
@@ -70,6 +78,12 @@ const ircServer = z.object({
    * supplies the cert. Absent ⇒ `plain`, so rows written before this field parse unchanged.
    */
   saslMechanism: ChatIrcSaslMechanismSchema.optional(),
+  /**
+   * How to present the vaulted secret when `sasl` is off. `pass` (default) sends it as the
+   * connection `PASS`; `nickserv` sends `PRIVMSG NickServ :IDENTIFY <secret>` after registration —
+   * the fallback for a pre-SASL network. Absent ⇒ `pass`; ignored when `sasl` is on.
+   */
+  preSaslAuth: ChatIrcPreSaslAuthSchema.optional(),
 });
 
 const matrixServer = z.object({

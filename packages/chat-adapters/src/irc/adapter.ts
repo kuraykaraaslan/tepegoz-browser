@@ -22,6 +22,7 @@ import {
   buildIrcAway,
   buildIrcJoin,
   buildIrcNick,
+  buildIrcNickServIdentify,
   buildIrcPart,
   buildIrcPrivmsg,
   buildIrcTopic,
@@ -180,11 +181,15 @@ export class IrcAdapter implements ChatAdapter {
 
     const session = new IrcSession(creds.accountId, server.nick, stream);
     const external = server.saslMechanism === 'external';
+    // Pre-SASL account auth: `PASS` before registration (default) or a `NickServ IDENTIFY` message
+    // sent once after `001`. Only one path fires, and only when SASL is off with a secret present.
+    const nickServ =
+      !server.sasl && server.preSaslAuth === 'nickserv' && creds.secret.length > 0;
     const registration = new IrcRegistration({
       nick: server.nick,
       user: server.nick,
-      // A `PASS` only makes sense as the fallback when SASL is off entirely.
-      ...(creds.secret.length > 0 && !server.sasl ? { password: creds.secret } : {}),
+      // A `PASS` only makes sense as the fallback when SASL is off and NickServ was not chosen.
+      ...(creds.secret.length > 0 && !server.sasl && !nickServ ? { password: creds.secret } : {}),
       ...(server.sasl
         ? {
             sasl: external
@@ -205,6 +210,8 @@ export class IrcAdapter implements ChatAdapter {
             registering = false;
             session.nick = action.nick;
             session.ircCaps = registration.ackedCaps;
+            // Pre-SASL services auth: identify to NickServ now that we have a nick.
+            if (nickServ) session.write(buildIrcNickServIdentify(creds.secret));
             resolve(session);
           } else {
             registering = false;
