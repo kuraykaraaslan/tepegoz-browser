@@ -793,10 +793,21 @@ guards, `ChatCapabilityHost` (all ten tools), the confirm payload and the AIAdap
 landed on `main`.
 
 ### Functional DoD
-- [ ] The agent can list / read / search / summarize / draft across accounts and protocols;
+- [~] The agent can list / read / search / summarize / draft across accounts and protocols;
       **cannot send without the unsuppressible HITL confirm**; unknown-contact messages are withheld
-      by default; the injection eval passes (agent resists).
-- [ ] Disabling `com.tepegoz.chat` removes every `chat_*` tool from `CapabilityRegistry.list()`.
+      by default; the injection eval passes (agent resists). _Safety half proven by unit tests:
+      cannot-send-without-HITL (`capabilities.test.ts` — `chat_create_message` is `state_changing`
+      + `confirmSummary`), unknown-contact withholding (`chat-capability-host.test.ts` +
+      `chat-fixture.test.ts` scenario d), injection-resistance (`agent-view.test.ts` +
+      `chat-fixture.test.ts` scenario e). The list/read/search paths are covered in
+      `chat-capability-host.test.ts`. The summarise/draft **competence** half needs the agent-eval
+      run (slice 3 + API spend)._
+- [x] Disabling `com.tepegoz.chat` removes every `chat_*` tool from `CapabilityRegistry.list()`.
+      Proven by composition: `capabilities.test.ts` pins `chatCapabilities()` to exactly the ten
+      `chat_*` ids under `com.tepegoz.chat`; `@tepegoz/extension-host` `supervisor.test.ts`
+      ("registers only enabled providers and unregisters on disable") proves a disabled extension's
+      capabilities are all unregistered from a real registry; `capability-supervisor.electron.test.ts`
+      proves the desktop `isEnabled` closure is prefs-backed and `setEnabled` reconciles.
 - [ ] Sub-phase DoD template ✔.
 
 ---
