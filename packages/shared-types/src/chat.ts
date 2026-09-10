@@ -52,13 +52,24 @@ const xmppServer = z.object({
   wsUrl: z.string().url().max(2048).nullable().default(null),
 });
 
+export const CHAT_IRC_SASL_MECHANISMS = ['plain', 'external'] as const;
+export const ChatIrcSaslMechanismSchema = z.enum(CHAT_IRC_SASL_MECHANISMS);
+export type ChatIrcSaslMechanism = z.infer<typeof ChatIrcSaslMechanismSchema>;
+
 const ircServer = z.object({
   protocol: z.literal('irc'),
   server: z.string().min(1).max(255),
   port: z.number().int().min(1).max(65535),
   tls: z.boolean().default(true),
   nick: z.string().min(1).max(64),
+  /** Whether to authenticate over SASL at all (needs the server's `sasl` cap). */
   sasl: z.boolean().default(false),
+  /**
+   * Which SASL mechanism when `sasl` is on. `plain` (default) sends the nick + the vaulted secret;
+   * `external` presents the TLS client certificate (CertFP) and carries no secret — the transport
+   * supplies the cert. Absent ⇒ `plain`, so rows written before this field parse unchanged.
+   */
+  saslMechanism: ChatIrcSaslMechanismSchema.optional(),
 });
 
 const matrixServer = z.object({

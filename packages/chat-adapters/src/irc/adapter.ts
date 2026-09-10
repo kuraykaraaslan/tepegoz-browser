@@ -177,11 +177,19 @@ export class IrcAdapter implements ChatAdapter {
     });
 
     const session = new IrcSession(creds.accountId, server.nick, stream);
+    const external = server.saslMechanism === 'external';
     const registration = new IrcRegistration({
       nick: server.nick,
       user: server.nick,
+      // A `PASS` only makes sense as the fallback when SASL is off entirely.
       ...(creds.secret.length > 0 && !server.sasl ? { password: creds.secret } : {}),
-      ...(server.sasl ? { sasl: { username: server.nick, password: creds.secret } } : {}),
+      ...(server.sasl
+        ? {
+            sasl: external
+              ? ({ mechanism: 'EXTERNAL' } as const)
+              : ({ mechanism: 'PLAIN', username: server.nick, password: creds.secret } as const),
+          }
+        : {}),
     });
 
     let registering = true;

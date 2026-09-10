@@ -548,9 +548,16 @@ drops the pending queue. Then the **"not encrypted" UI marker** — IRC's caps a
 `e2ee: false`; `@tepegoz/chat-ui` now renders a `<NotEncryptedBadge>` (self-localized `notEncrypted`
 / `ircPlaintext`, en + tr) in both the DM and room conversation headers for any account whose protocol
 is `irc`, derived from the account protocol so the presentational leaf takes no adapter-caps IPC
-round-trip. **The `Caps` deliverable is now closed.** Still open on the big `IRC adapter` box:
-`TOPIC` surfacing (needs a new `ChatEvent` variant), SASL `EXTERNAL` (needs a richer `sasl` config
-shape). Next: runtime DoD (local ergo). ·
+round-trip. **The `Caps` deliverable is now closed.** Then **SASL `EXTERNAL`** — `ircServer` gained an
+optional `saslMechanism: 'plain' | 'external'` (absent ⇒ `plain`, so rows written before the field
+parse unchanged — no migration); `RegistrationConfig.sasl` widened to a discriminated union
+(`{ mechanism: 'PLAIN', username, password }` | `{ mechanism: 'EXTERNAL', authzid? }`); the state
+machine sends `AUTHENTICATE EXTERNAL` then a bare `+` (or a base64 authzid), and `IrcAdapter.connect`
+builds the EXTERNAL config with **no secret on the wire** — the TLS client cert (CertFP) carries the
+identity, the transport supplies the cert. New `saslExternal()` helper in `xmpp/sasl.ts`. 8 new tests
+(registration ×3, adapter ×1, sasl helper ×2, schema ×1, +1 recount). Still open on the big
+`IRC adapter` box: `TOPIC` surfacing (needs a new `ChatEvent` variant). Next: runtime DoD (local
+ergo). ·
 **Depends on:** X-chat.1 (contract) + X-chat.2/.3 (UI) · **Branch:** `main` · **Risk:** low-medium.
 
 ### Deliverables

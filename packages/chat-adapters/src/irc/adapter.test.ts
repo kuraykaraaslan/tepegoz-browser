@@ -320,6 +320,23 @@ describe('IrcAdapter — SASL + errors', () => {
     await expect(p).resolves.toBeDefined();
   });
 
+  it('uses SASL EXTERNAL (no secret on the wire) when saslMechanism is external', async () => {
+    const server = new FakeServer();
+    const p = new IrcAdapter().connect(creds({ sasl: true, saslMechanism: 'external' }), server);
+    await tick();
+    expect(server.written).not.toContain('PASS pw');
+    server.send('CAP * LS :sasl');
+    server.send('CAP ada ACK :sasl');
+    expect(server.lastWritten()).toBe('AUTHENTICATE EXTERNAL');
+    server.send('AUTHENTICATE +');
+    expect(server.lastWritten()).toBe('AUTHENTICATE +');
+    // the vaulted secret never appears anywhere in the exchange
+    expect(server.written.some((l) => l.includes('pw') || l.includes('cA=='))).toBe(false);
+    server.send(':irc 903 ada :ok');
+    server.send(':irc 001 ada :Welcome');
+    await expect(p).resolves.toBeDefined();
+  });
+
   it('rejects a non-irc account', async () => {
     await expect(
       new IrcAdapter().connect(

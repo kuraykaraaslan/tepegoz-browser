@@ -58,6 +58,36 @@ describe('chat account contract', () => {
     expect(ChatServerConfigSchema.safeParse({ protocol: 'irc', jid: 'ada@x.com' }).success).toBe(false);
   });
 
+  it('irc SASL mechanism is optional (defaults to PLAIN) and enum-checked', () => {
+    const bare = ChatServerConfigSchema.safeParse({
+      protocol: 'irc',
+      server: 'irc.libera.chat',
+      port: 6697,
+      nick: 'ada',
+      sasl: true,
+    });
+    expect(bare.success && bare.data.protocol === 'irc' && bare.data.saslMechanism).toBe(undefined);
+    expect(
+      ChatServerConfigSchema.safeParse({
+        protocol: 'irc',
+        server: 'irc.libera.chat',
+        port: 6697,
+        nick: 'ada',
+        sasl: true,
+        saslMechanism: 'external',
+      }).success,
+    ).toBe(true);
+    expect(
+      ChatServerConfigSchema.safeParse({
+        protocol: 'irc',
+        server: 'irc.libera.chat',
+        port: 6697,
+        nick: 'ada',
+        saslMechanism: 'kerberos',
+      }).success,
+    ).toBe(false);
+  });
+
   it('bridge config values are bounded strings', () => {
     const big = 'x'.repeat(5000);
     expect(

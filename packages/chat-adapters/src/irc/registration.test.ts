@@ -84,7 +84,7 @@ describe('IrcRegistration — no SASL', () => {
 
 describe('IrcRegistration — SASL PLAIN', () => {
   it('AUTHENTICATE PLAIN → payload → 903 → CAP END', () => {
-    const r = reg({ sasl: { username: 'ada', password: 'pw' } });
+    const r = reg({ sasl: { mechanism: 'PLAIN', username: 'ada', password: 'pw' } });
     r.start();
     feed(r, 'CAP * LS :sasl');
     expect(feed(r, 'CAP * ACK :sasl')).toEqual(['AUTHENTICATE PLAIN']);
@@ -95,7 +95,7 @@ describe('IrcRegistration — SASL PLAIN', () => {
   });
 
   it('a SASL failure numeric fails registration', () => {
-    const r = reg({ sasl: { username: 'ada', password: 'bad' } });
+    const r = reg({ sasl: { mechanism: 'PLAIN', username: 'ada', password: 'bad' } });
     r.start();
     feed(r, 'CAP * ACK :sasl');
     feed(r, 'AUTHENTICATE +');
@@ -112,7 +112,7 @@ describe('IrcRegistration — SASL PLAIN', () => {
   });
 
   it('900 RPL_LOGGEDIN also ends CAP; a stray AUTHENTICATE is ignored', () => {
-    const r = reg({ sasl: { username: 'a', password: 'b' } });
+    const r = reg({ sasl: { mechanism: 'PLAIN', username: 'a', password: 'b' } });
     r.start();
     feed(r, 'CAP * ACK :sasl');
     expect(feed(r, 'AUTHENTICATE *')).toEqual([]); // not '+', no payload
@@ -132,5 +132,34 @@ describe('IrcRegistration — SASL PLAIN', () => {
     r.start();
     feed(r, 'ERROR :bye');
     expect(feed(r, ':srv 001 ada :too late')).toEqual([]);
+  });
+});
+
+describe('IrcRegistration — SASL EXTERNAL', () => {
+  it('AUTHENTICATE EXTERNAL → bare "+" response (empty authzid) → 903 → CAP END', () => {
+    const r = reg({ sasl: { mechanism: 'EXTERNAL' } });
+    r.start();
+    feed(r, 'CAP * LS :sasl');
+    expect(feed(r, 'CAP * ACK :sasl')).toEqual(['AUTHENTICATE EXTERNAL']);
+    expect(feed(r, 'AUTHENTICATE +')).toEqual(['AUTHENTICATE +']);
+    expect(feed(r, ':srv 903 ada :SASL authentication successful')).toEqual(['CAP END']);
+  });
+
+  it('sends a base64 authzid when one is configured', () => {
+    const r = reg({ sasl: { mechanism: 'EXTERNAL', authzid: 'ada' } });
+    r.start();
+    feed(r, 'CAP * ACK :sasl');
+    // base64 of "ada"
+    expect(feed(r, 'AUTHENTICATE +')).toEqual(['AUTHENTICATE YWRh']);
+  });
+
+  it('a SASL failure numeric still fails registration', () => {
+    const r = reg({ sasl: { mechanism: 'EXTERNAL' } });
+    r.start();
+    feed(r, 'CAP * ACK :sasl');
+    feed(r, 'AUTHENTICATE +');
+    expect(feed(r, ':srv 904 ada :cert not recognised')).toEqual([
+      { kind: 'failed', reason: 'SASL authentication failed' },
+    ]);
   });
 });

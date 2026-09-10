@@ -33,6 +33,14 @@ export function saslPlain(username: string, password: string, authzid = ''): str
   return bytesToB64(enc.encode(authzid + NUL + username + NUL + password));
 }
 
+/**
+ * EXTERNAL: the identity is the TLS client certificate; the response is just the (usually empty)
+ * authzid. An empty authzid is the bare `+` continuation, not `base64('')`.
+ */
+export function saslExternal(authzid = ''): string {
+  return authzid === '' ? '+' : bytesToB64(enc.encode(authzid));
+}
+
 // ── SCRAM ───────────────────────────────────────────────────────────────────
 
 export type ScramHash = 'SHA-1' | 'SHA-256';

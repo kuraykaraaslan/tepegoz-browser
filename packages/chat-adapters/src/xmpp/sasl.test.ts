@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   b64ToBytes,
   bytesToB64,
+  saslExternal,
   saslPlain,
   scramClientFirst,
   scramFinal,
@@ -23,6 +24,16 @@ describe('SASL PLAIN', () => {
   it('encodes authzid\\0authcid\\0passwd', () => {
     const out = saslPlain('ada', 'pw');
     expect(unb64(out)).toBe(`${String.fromCharCode(0)}ada${String.fromCharCode(0)}pw`);
+  });
+});
+
+describe('SASL EXTERNAL', () => {
+  it('is a bare "+" with no authzid', () => {
+    expect(saslExternal()).toBe('+');
+    expect(saslExternal('')).toBe('+');
+  });
+  it('base64-encodes a supplied authzid', () => {
+    expect(unb64(saslExternal('ada'))).toBe('ada');
   });
 });
 

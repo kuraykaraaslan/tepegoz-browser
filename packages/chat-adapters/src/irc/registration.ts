@@ -1,5 +1,5 @@
 import { formatIrcLine, type IrcMessage } from './parse';
-import { saslPlain } from '../xmpp/sasl';
+import { saslExternal, saslPlain } from '../xmpp/sasl';
 
 /**
  * IRC connection registration — a pure state machine (mirrors `xmpp/negotiator.ts`). It drives
@@ -26,14 +26,23 @@ export const IRC_WANTED_CAPS = [
   'sasl',
 ] as const;
 
+/**
+ * SASL config for registration. Requires the server to advertise the `sasl` cap.
+ * - `PLAIN` — nick + secret over the (guaranteed-TLS) stream.
+ * - `EXTERNAL` — no secret; the identity is the TLS client certificate (CertFP). The transport is
+ *   responsible for presenting the cert; this state machine only drives the `AUTHENTICATE` exchange.
+ */
+export type IrcSaslConfig =
+  | { mechanism: 'PLAIN'; username: string; password: string }
+  | { mechanism: 'EXTERNAL'; authzid?: string };
+
 export interface RegistrationConfig {
   nick: string;
   user?: string;
   realname?: string;
   /** Server password (`PASS`), sent before `NICK`/`USER`. */
   password?: string;
-  /** SASL PLAIN credentials. Requires the server to advertise the `sasl` cap. */
-  sasl?: { username: string; password: string };
+  sasl?: IrcSaslConfig;
 }
 
 export type RegistrationAction =
@@ -139,7 +148,7 @@ export class IrcRegistration {
       for (const c of list.split(/\s+/)) if (c.length > 0) this.acked.add(c);
       if (this.acked.has('sasl') && this.cfg.sasl !== undefined) {
         this.phase = 'sasl-auth';
-        return [{ kind: 'send', line: 'AUTHENTICATE PLAIN' }];
+        return [{ kind: 'send', line: `AUTHENTICATE ${this.cfg.sasl.mechanism}` }];
       }
       return this.endCap();
     }
@@ -152,7 +161,11 @@ export class IrcRegistration {
     if (this.phase !== 'sasl-auth' || this.cfg.sasl === undefined) return [];
     if (msg.params[0] !== '+') return [];
     this.phase = 'sasl-wait';
-    const payload = saslPlain(this.cfg.sasl.username, this.cfg.sasl.password);
+    const sasl = this.cfg.sasl;
+    const payload =
+      sasl.mechanism === 'EXTERNAL'
+        ? saslExternal(sasl.authzid ?? '')
+        : saslPlain(sasl.username, sasl.password);
     return [{ kind: 'send', line: `AUTHENTICATE ${payload}` }];
   }
 
