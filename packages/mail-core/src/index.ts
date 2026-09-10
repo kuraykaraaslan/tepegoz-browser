@@ -25,3 +25,6 @@ export type {
   MimeDisposition,
   MimeNodeKind,
 } from './mime-parse';
+
+export { buildMime, collectRecipients } from './mime-build';
+export type { BuildMessageInput, BuildAddress, BuildAttachment } from './mime-build';

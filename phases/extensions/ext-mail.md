@@ -214,9 +214,18 @@ dropped, degrade-to-`text/plain` on a missing/absent boundary), `message/rfc822`
 base64/QP-wrapped inner message), `Content-Disposition` + RFC 2231/2047 filenames, `Content-ID`
 bracket strip, `format=flowed` + `DelSp` unflow (quote-depth aware), and hardening caps (50 MB input,
 25-level nesting, 1000-part budget). Plus `decodeEncodedWords`, an `iterMimeParts` walk and
-`selectBodyStructure` (multipart/alternative preference resolved). 42 tests. Still owed: MIME builder,
-JWZ threading, filter engine, search fold, snippet, fixture corpus. · **Depends on:** nothing (pure
-libs) · **Branch:** `feat/ext-mail-core`
+`selectBodyStructure` (multipart/alternative preference resolved). Then the **MIME builder**
+(`mime-build.ts`) — `buildMime(input)` serialises a compose model to a wire-ready RFC 5322 message
+(CRLF): deterministic `Date` (UTC `+0000`, no tz database) / generated `Message-ID` / `MIME-Version`,
+`In-Reply-To` + de-duped `References`, RFC 2047 chunked-`B` encoding for non-ASCII display names and
+subject (whole-string chunking so interior spaces survive the decoder), `format=flowed` soft-wrap
+with space-stuffing, an optional HTML alternative, `quoted-printable` / `base64` per part, attachments
+(`multipart/mixed`; inline → `multipart/related`; text+html → nested `multipart/alternative`),
+RFC 2231 for non-ASCII filenames, CR/LF stripped from every caller-supplied header value
+(header-injection defence), and a structural-header shadow guard on custom headers. Plus
+`collectRecipients` for the SMTP envelope (Bcc included, never written as a header). Round-trips
+through `parseMime`. 83 tests total. Still owed: JWZ threading, filter engine, search fold, snippet,
+fixture corpus. · **Depends on:** nothing (pure libs) · **Branch:** `feat/ext-mail-core`
 **Risk:** low-medium — MIME is fiddly; contained by a fixture corpus.
 
 ### Deliverables
@@ -237,10 +246,12 @@ libs) · **Branch:** `feat/ext-mail-core`
       `DelSp` unfolding. Returns a `ParsedMime` tree; **total** (never throws — a malformed part
       degrades to `text/plain` with a diagnostic flag). `decodeEncodedWords` / `iterMimeParts` /
       `selectBodyStructure` helpers alongside; 42 tests.
-- [ ] **MIME builder** (`mime-build.ts`) — compose model → RFC 5322: correct `Date`/`Message-ID`/
+- [x] **MIME builder** (`mime-build.ts`) — compose model → RFC 5322: correct `Date`/`Message-ID`/
       `MIME-Version`, `In-Reply-To` + `References` threading headers, `multipart/alternative`
-      (text + optional HTML), `multipart/mixed` for attachments, `quoted-printable` / `base64`
-      encoding, address header encoding (RFC 2047 for names), `format=flowed` output.
+      (text + optional HTML), `multipart/mixed` for attachments (inline → `multipart/related`),
+      `quoted-printable` / `base64` encoding, address header encoding (RFC 2047 for names),
+      `format=flowed` output. CR/LF-stripped header values; `collectRecipients` envelope helper;
+      round-trips through `parseMime`. 31 builder tests.
 - [x] **Address parser** (`address.ts`) — `From:`/`To:` list parsing: quoted display names, groups
       (flattened to members), comments, folded whitespace, `<angle-addr>`, case-insensitive dedupe,
       total on junk; `formatAddress` / `formatAddressList` inverse (quotes the name only when it

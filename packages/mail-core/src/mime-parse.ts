@@ -620,7 +620,9 @@ function parseNode(message: string, depth: number, ctx: ParseCtx): ParsedMime {
 
   let text: string | null = null;
   if (ct.type === 'text') {
-    const decoded = decodeCharset(bytes, charset);
+    // A CTE-decoded body carries its own CRLFs (the outer normalisation only touched the raw
+    // message) — normalise them here so `text` has consistent `\n` line endings.
+    const decoded = normaliseNewlines(decodeCharset(bytes, charset));
     text = flowed ? unflow(decoded, delSp) : decoded;
   }
 
