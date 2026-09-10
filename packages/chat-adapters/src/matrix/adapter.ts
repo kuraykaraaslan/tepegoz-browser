@@ -28,6 +28,13 @@ const SYNC_TIMEOUT_MS = 30_000;
 const RETRY_BASE_MS = 2_000;
 const RETRY_MAX_MS = 60_000;
 const HISTORY_LIMIT = 50;
+/**
+ * Backpressure ceiling for the between-the-wire event queue. `/sync` keeps long-polling and pushing
+ * events even if the consumer stalls (a slow DB write, a paused pump); without a bound the queue —
+ * and process memory — grows without limit across sync cycles. At the cap the oldest events are
+ * dropped and one `error` event is queued so downstream can trigger a gappy backfill.
+ */
+const MAX_QUEUED_EVENTS = 4_096;
 
 /** Matrix caps minus E2EE, which is X-chat.7. */
 export const MATRIX_ADAPTER_CAPS: ChatAdapterCaps = { ...MATRIX_CAPS, e2ee: false };
@@ -43,6 +50,9 @@ export class MatrixSession implements ChatSession {
   private readonly queue: ChatEvent[] = [];
   private readonly waiters: Array<(r: IteratorResult<ChatEvent>) => void> = [];
   private ended = false;
+  /** Events discarded because the consumer was not draining fast enough (memory bound). */
+  droppedEvents = 0;
+  private gapNoticed = false;
 
   constructor(
     readonly accountId: string,
@@ -62,8 +72,24 @@ export class MatrixSession implements ChatSession {
   push(event: ChatEvent): void {
     if (this.ended) return;
     const waiter = this.waiters.shift();
-    if (waiter !== undefined) waiter({ value: event, done: false });
-    else this.queue.push(event);
+    if (waiter !== undefined) {
+      waiter({ value: event, done: false });
+      return;
+    }
+    this.queue.push(event);
+    if (this.queue.length > MAX_QUEUED_EVENTS) {
+      this.queue.shift();
+      this.droppedEvents += 1;
+      if (!this.gapNoticed) {
+        this.gapNoticed = true;
+        this.queue.push({
+          type: 'error',
+          scope: 'account',
+          conversationId: null,
+          message: 'sync backlog overflowed — some events were dropped; a resync is needed',
+        });
+      }
+    }
   }
 
   end(): void {
@@ -75,7 +101,11 @@ export class MatrixSession implements ChatSession {
 
   nextEvent(): Promise<IteratorResult<ChatEvent>> {
     const item = this.queue.shift();
-    if (item !== undefined) return Promise.resolve({ value: item, done: false });
+    if (item !== undefined) {
+      // Drained back to empty → a later overflow re-arms the one-shot gap notice.
+      if (this.queue.length === 0) this.gapNoticed = false;
+      return Promise.resolve({ value: item, done: false });
+    }
     if (this.ended) return Promise.resolve({ value: undefined, done: true });
     return new Promise((resolve) => this.waiters.push(resolve));
   }

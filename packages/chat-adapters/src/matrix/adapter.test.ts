@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { ChatServerConfig } from '@tepegoz/shared-types';
 import type { ChatAccountCreds } from '../adapter';
 import type { ChatFetchInit, ChatFetchResponse, ChatTransport } from '../transport';
-import { MatrixAdapter, type MatrixSession } from './adapter';
+import { MatrixAdapter, MatrixSession } from './adapter';
 
 type Route = (init: ChatFetchInit, url: string) => { status?: number; body: unknown } | 'hang';
 
@@ -294,5 +294,61 @@ describe('MatrixAdapter — actions', () => {
       adapter.uploadMedia(session, { bytes: new Uint8Array([0]), mime: '', filename: 'x' }),
     ).rejects.toThrow(/too big/);
     await adapter.disconnect(session);
+  });
+});
+
+type ChatEventLike = { type: string; message?: { body: string } };
+
+describe('MatrixSession — /sync backpressure (X-chat.10 memory bound)', () => {
+  const msg = (i: number) =>
+    ({
+      type: 'message' as const,
+      message: {
+        id: `id-${String(i)}`, conversationId: 'c', accountId: 'acc', protocolId: `p${String(i)}`,
+        senderAddress: '@bob:x', senderName: 'Bob', kind: 'text' as const, body: String(i),
+        mediaRef: null, replyToId: null, reactions: [], editedAt: null, redacted: false,
+        originTs: i, receivedAt: i, deliveryState: 'delivered' as const,
+      },
+    });
+
+  it('bounds the queue when the consumer never drains, dropping the oldest + one gap notice', async () => {
+    const s = new MatrixSession('acc', 'https://x', {} as never);
+    for (let i = 0; i < 4_096 + 500; i += 1) s.push(msg(i));
+    // memory is bounded: the cap plus at most the single gap-notice event
+    expect((s as unknown as { queue: unknown[] }).queue.length).toBeLessThanOrEqual(4_097);
+    expect(s.droppedEvents).toBe(500);
+
+    const drained: ChatEventLike[] = [];
+    while ((s as unknown as { queue: unknown[] }).queue.length > 0) {
+      const r = await s.nextEvent();
+      if (r.done !== true) drained.push(r.value as ChatEventLike);
+    }
+    // the oldest survivors were dropped: no message body "0".."499" remains
+    const bodies = drained
+      .filter((e) => e.type === 'message' && e.message !== undefined)
+      .map((e) => Number(e.message?.body));
+    expect(Math.min(...bodies)).toBeGreaterThanOrEqual(500);
+    // exactly one overflow notice
+    expect(drained.filter((e) => e.type === 'error').length).toBe(1);
+  });
+
+  it('a waiting consumer is handed the event directly — no queue growth', async () => {
+    const s = new MatrixSession('acc', 'https://x', {} as never);
+    const p = s.nextEvent();
+    s.push(msg(1));
+    const r = await p;
+    expect(r.done).toBe(false);
+    expect((s as unknown as { queue: unknown[] }).queue.length).toBe(0);
+    expect(s.droppedEvents).toBe(0);
+  });
+
+  it('re-arms the one-shot gap notice after the queue drains', async () => {
+    const s = new MatrixSession('acc', 'https://x', {} as never);
+    for (let i = 0; i < 4_096 + 10; i += 1) s.push(msg(i));
+    expect((s as unknown as { gapNoticed: boolean }).gapNoticed).toBe(true);
+    while ((s as unknown as { queue: unknown[] }).queue.length > 0) await s.nextEvent();
+    expect((s as unknown as { gapNoticed: boolean }).gapNoticed).toBe(false);
+    for (let i = 0; i < 4_096 + 10; i += 1) s.push(msg(i));
+    expect((s as unknown as { gapNoticed: boolean }).gapNoticed).toBe(true);
   });
 });
