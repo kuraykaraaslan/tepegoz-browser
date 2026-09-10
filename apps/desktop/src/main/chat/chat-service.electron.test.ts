@@ -39,6 +39,12 @@ const store = vi.hoisted(() => ({
 }));
 vi.mock('./chat-store-adapter', () => store);
 
+const journalAppend = vi.hoisted(() => vi.fn());
+vi.mock('@tepegoz/persistence', () => ({
+  EventJournal: { append: journalAppend },
+  ChatStore: { getConversation: vi.fn(), searchMessages: vi.fn(() => []), getMessage: vi.fn() },
+}));
+
 const prefs = vi.hoisted(() => ({ default: { getAll: () => ({ extensions: {} }) } }));
 vi.mock('@tepegoz/preferences', () => prefs);
 vi.mock('@tepegoz/desktop-ipc', async (orig) => ({
@@ -139,6 +145,60 @@ describe('helpers', () => {
     expect(notificationPush).toHaveBeenCalledWith(
       expect.objectContaining({ source: 'chat', title: 'Bea', body: 'yo', channels: ['center', 'native'] }),
     );
+  });
+
+  it('a "message sent" audit fact is content-free: a conv-id hash + account + protocol id, redacted', () => {
+    mod.chatAudit({
+      kind: 'message-sent',
+      accountId: 'work',
+      conversationHash: '0123456789abcdef',
+      protocolId: 'srv-42',
+      ts: 111,
+    });
+    expect(journalAppend).toHaveBeenCalledTimes(1);
+    const entry = journalAppend.mock.calls[0]![1] as {
+      type: string;
+      redacted: boolean;
+      correlationId: string;
+      payload: Record<string, unknown>;
+    };
+    expect(entry.type).toBe('ChatMessageSent');
+    expect(entry.redacted).toBe(true);
+    expect(entry.correlationId).toBe('0123456789abcdef');
+    expect(Object.keys(entry.payload).sort()).toEqual(['accountId', 'conversationHash', 'protocolId']);
+    // nothing anywhere in the entry that could be a body, an address or a secret
+    const blob = JSON.stringify(entry);
+    for (const forbidden of ['MEETME', '@', 'password', 'token', 'secret']) {
+      expect(blob.includes(forbidden)).toBe(false);
+    }
+  });
+
+  it('an "account added" fact carries only the account id + protocol, redacted', () => {
+    mod.chatAudit({ kind: 'account-added', accountId: 'work', protocol: 'xmpp', ts: 222 });
+    const entry = journalAppend.mock.calls[0]![1] as {
+      type: string;
+      redacted: boolean;
+      payload: Record<string, unknown>;
+    };
+    expect(entry.type).toBe('ChatAccountAdded');
+    expect(entry.redacted).toBe(true);
+    expect(Object.keys(entry.payload).sort()).toEqual(['accountId', 'protocol']);
+    expect(JSON.stringify(entry).includes('secret')).toBe(false);
+  });
+
+  it('never lets the journal break a send: a throwing append is swallowed', () => {
+    journalAppend.mockImplementationOnce(() => {
+      throw new Error('journal down');
+    });
+    expect(() =>
+      mod.chatAudit({ kind: 'message-sent', accountId: 'a', conversationHash: 'h', protocolId: 'p', ts: 1 }),
+    ).not.toThrow();
+  });
+
+  it('is a no-op when the profile database is closed', () => {
+    getDb.mockReturnValue(null);
+    mod.chatAudit({ kind: 'account-added', accountId: 'a', protocol: 'irc', ts: 1 });
+    expect(journalAppend).not.toHaveBeenCalled();
   });
 
   it('broadcastChatEvent sends chat:state to every live window', () => {

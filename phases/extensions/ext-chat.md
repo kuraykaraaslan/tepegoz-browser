@@ -880,6 +880,11 @@ account's `ChatConnState` goes `blocked` and recovers. Then **redacted Journal e
 property test** — `ChatMessageSent` / `ChatAccountAdded` go in with `redacted: true` carrying only a
 conv-id hash / account / protocol id / ts, and tests assert the emitted facts contain no body, no
 room/JID address and no vault secret (new `ChatMessageSent` / `ChatAccountAdded` `EventType`s).
+The property is asserted at **both** ends now (2026-09-11): `account-runner.test.ts` on the
+`ChatAuditEvent` the runner emits, and `chat-service.electron.test.ts` on the `EventJournal.append`
+entry `chatAudit` writes — `type` / `redacted: true` / exact payload key set (`accountId` +
+`conversationHash` + `protocolId`, or `accountId` + `protocol`), a serialized scan for body / `@` /
+secret substrings, a throwing `append` is swallowed, and a closed DB is a no-op.
 Then the **search-latency half of the perf pass** — `ChatStore.searchMessages` now runs against the
 `chat_search` FTS5 index instead of a `body_fold LIKE '%…%'` scan: migration 23 backfills the index
 + adds an `AFTER DELETE` trigger, `upsertMessage`/`redactMessage` keep it in step through one
@@ -896,8 +901,12 @@ Bridge-payload fuzz + the profile-switch half + sandbox / e2e / `/sync`-memory p
       _Bridge-payload fuzz is deferred to X-chat.8 (no bridge contract exists yet)._
 - [ ] **Bridge sandbox tests** — no FS escape, no cross-account reach, crash isolation, egress
       binding enforced, RPC surface minimal.
-- [x] **Journal redaction property test** — the `ChatMessageSent` fact is asserted to contain no
-      message body, no room/JID address and no vault secret (only a conv-id hash); the
+- [x] **Journal redaction property test** — asserted at both ends: the `ChatAuditEvent` the runner
+      emits (`account-runner.test.ts`) **and** the `EventJournal.append` entry `chatAudit` writes
+      (`chat-service.electron.test.ts` — `type`, `redacted: true`, exact payload key set, a
+      substring scan for body / address / secret, a throwing append swallowed, a closed DB a no-op).
+      The `ChatMessageSent` fact contains no message body, no room/JID address and no vault secret
+      (only a conv-id hash); the
       `ChatAccountAdded` fact contains no secret. Both go in with `redacted: true`.
 - [x] **Kill-switch + profile-switch tests** (native path) — bound-blocked profile denies agent chat
       tools (`ChatCapabilityHost.mayEgress` → 403 on every wire action; `notifyEgressChange` fan-out
