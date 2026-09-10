@@ -594,9 +594,13 @@ change onto the `chat_conversations` row (feeds the header's stored-topic fallba
 The IRC adapter maps `TOPIC` (live, with setter + ts), `332 RPL_TOPIC` (on join, no setter) and
 `331 RPL_NOTOPIC` (→ empty topic / a clear); numerics route through `ircMessageToEvent` already, so
 no adapter dispatch change. 11 new tests (shared-types ×2, normalize ×1, account-state ×2,
-irc/messages ×4, account-runner ×1, +1 recount). **The X-chat.4 `IRC adapter` deliverable is now
-closed** — only NickServ-via-PRIVMSG (SASL is the built path) and the runtime DoD (local ergo)
-remain, the latter needing a live server. XMPP `parseMucSubject` and Matrix `m.room.topic` can now
+irc/messages ×4, account-runner ×1, +1 recount). Then the **NickServ pre-SASL fallback** —
+`ircServer.preSaslAuth: 'pass' | 'nickserv'` (optional, absent ⇒ `pass`, no migration); when
+`nickserv` and SASL is off with a secret, `IrcAdapter` sends `PRIVMSG NickServ :IDENTIFY <secret>`
+once after `001` instead of a connection `PASS` (`buildIrcNickServIdentify`), SASL still wins when
+on. 5 new tests (adapter ×3, schema ×2). **The X-chat.4 `IRC adapter` deliverable is now
+closed** — only the runtime DoD (local ergo) remains, needing a live server.
+XMPP `parseMucSubject` and Matrix `m.room.topic` can now
 emit the same `room-topic` event — follow-up wiring under X-chat.3 / .5. ·
 **Depends on:** X-chat.1 (contract) + X-chat.2/.3 (UI) · **Branch:** `main` · **Risk:** low-medium.
 
@@ -606,9 +610,9 @@ emit the same `room-topic` event — follow-up wiring under X-chat.3 / .5. ·
       `message-tags`, `account-tag`, `echo-message`, `batch`, `chathistory`, `multi-prefix`,
       `away-notify`, `extended-join`), channel join/part/topic/names, PRIVMSG/NOTICE, CTCP
       (`ACTION`), `chathistory` backfill, auto-rejoin on reconnect, ISUPPORT
-      parsing (`CHANTYPES`, `PREFIX`, `CASEMAPPING`), flood-protection send queue. _NickServ
-      interaction is via SASL; a `PRIVMSG NickServ IDENTIFY` fallback for pre-SASL servers is not
-      built._
+      parsing (`CHANTYPES`, `PREFIX`, `CASEMAPPING`), flood-protection send queue. NickServ
+      interaction is via SASL, with an opt-in `PRIVMSG NickServ :IDENTIFY` fallback for pre-SASL
+      servers (`ircServer.preSaslAuth: 'nickserv'`, sent once after `001`).
 - [x] **Caps** — `e2ee: false` (protocol has none), `edits: false`, `reactions: false`,
       `receipts: false` unless `message-tags` + a draft spec is present. `IRC_CAPS` sets all four
       off; `@tepegoz/chat-ui`'s `<NotEncryptedBadge>` marks every IRC conversation (DM + room
