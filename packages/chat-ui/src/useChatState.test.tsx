@@ -228,6 +228,28 @@ describe('useChatState', () => {
     expect(result.current.client.conversations['room@conf']?.notifyLevel).toBe('mentions');
   });
 
+  it('setMuted is null without port support; otherwise patches optimistically + calls the port', async () => {
+    const plain = makePort();
+    const { result: noSupport } = renderHook(() => useChatState(plain.port));
+    await waitFor(() => expect(noSupport.current.loading).toBe(false));
+    expect(noSupport.current.setMuted).toBeNull();
+
+    const setChatMuted = vi.fn(() => Promise.resolve());
+    const { port } = makePort({
+      setChatMuted,
+      listChatConversations: () =>
+        Promise.resolve([conv({ id: 'c1', accountId: 'home' })]),
+    });
+    const { result } = renderHook(() => useChatState(port));
+    await waitFor(() => expect(result.current.conversations.length).toBe(1));
+
+    await act(async () => {
+      await result.current.setMuted?.('c1', true);
+    });
+    expect(setChatMuted).toHaveBeenCalledWith('home', 'c1', true);
+    expect(result.current.client.conversations['c1']?.muted).toBe(true);
+  });
+
   it('switching accounts clears the selection', async () => {
     const { port } = makePort();
     const { result } = renderHook(() => useChatState(port));

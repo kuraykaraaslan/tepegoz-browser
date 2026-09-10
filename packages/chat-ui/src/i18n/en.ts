@@ -95,6 +95,10 @@ export const en = {
     typingMany: 'are typing…',
     /** Room typing line, three or more typists (no names). */
     typingSeveral: 'Several people are typing…',
+    /** Toggle action: silence this conversation's notifications. */
+    mute: 'Mute',
+    /** Toggle action: stop silencing this conversation. */
+    unmute: 'Unmute',
     /** Persistent marker on a conversation whose protocol carries no end-to-end encryption. */
     notEncrypted: 'Not encrypted',
     /** Tooltip / detail for {@link notEncrypted} on IRC, which has no encryption at all. */

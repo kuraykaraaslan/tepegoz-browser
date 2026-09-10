@@ -12,6 +12,7 @@ import {
   ChatSendMessageSchema,
   ChatSetPresenceSchema,
   ChatSetRoomNotifyLevelSchema,
+  ChatSetMutedSchema,
 } from '@tepegoz/desktop-ipc/schemas';
 import { handle, handleAsync } from './ipc-helpers';
 
@@ -79,6 +80,7 @@ export interface ChatIpcService {
     conversationId: string,
     level: 'all' | 'mentions' | 'none',
   ) => Promise<void>;
+  setMuted: (accountId: string, conversationId: string, muted: boolean) => Promise<void>;
   resolveMedia: (accountId: string, mediaRef: string) => Promise<{ dataUrl: string } | null>;
 }
 
@@ -139,6 +141,11 @@ export function registerChatIpc(service: ChatIpcService): void {
   handleAsync(IpcChannels.chatSetRoomNotifyLevel, async (_event, payload): Promise<void> => {
     const { accountId, conversationId, level } = ChatSetRoomNotifyLevelSchema.parse(payload);
     await service.setRoomNotifyLevel(accountId, conversationId, level);
+  });
+
+  handleAsync(IpcChannels.chatSetMuted, async (_event, payload): Promise<void> => {
+    const { accountId, conversationId, muted } = ChatSetMutedSchema.parse(payload);
+    await service.setMuted(accountId, conversationId, muted);
   });
 
   handleAsync(IpcChannels.chatResolveMedia, async (_event, payload) => {

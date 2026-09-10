@@ -68,6 +68,8 @@ export const tr: ChatUiStrings = {
     typingOne: 'yazıyor…',
     typingMany: 'yazıyor…',
     typingSeveral: 'Birden fazla kişi yazıyor…',
+    mute: 'Sessize al',
+    unmute: 'Sesi aç',
     notEncrypted: 'Şifresiz',
     ircPlaintext: 'IRC uçtan uca şifreleme sunmaz — mesajlar sunucu tarafından okunabilir.',
   },

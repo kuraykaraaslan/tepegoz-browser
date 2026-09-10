@@ -76,6 +76,13 @@ export const ChatSetRoomNotifyLevelSchema = z.object({
   level: z.enum(CHAT_ROOM_NOTIFY_LEVELS),
 });
 
+/** `chat:set-muted` — mute / unmute one conversation (DM or room). */
+export const ChatSetMutedSchema = z.object({
+  accountId: z.string().min(1).max(64),
+  conversationId: z.string().min(1).max(128),
+  muted: z.boolean(),
+});
+
 /** `chat:resolve-media` — turn a message `mediaRef` (a protocol URI) into a quarantined data URL. */
 export const ChatResolveMediaSchema = z.object({
   accountId: z.string().min(1).max(64),

@@ -17,6 +17,9 @@ export interface RoomHeaderProps {
   onSetNotifyLevel?: (level: RoomNotifyLevel) => void;
   /** The room's protocol offers no end-to-end encryption (IRC) — show the plaintext marker. */
   notEncrypted?: boolean;
+  /** Whether the room is muted; the toggle is shown only when `onToggleMuted` is also given. */
+  muted?: boolean;
+  onToggleMuted?: () => void;
 }
 
 /** The conversation header for a MUC room: name, topic, member count, and a members toggle. */
@@ -29,6 +32,8 @@ export function RoomHeader({
   notifyLevel = 'all',
   onSetNotifyLevel,
   notEncrypted = false,
+  muted = false,
+  onToggleMuted,
 }: Readonly<RoomHeaderProps>) {
   const s = useT(chatUiDict);
   const topic = (room?.subject ?? '').trim() || topicFallback.trim();
@@ -42,6 +47,16 @@ export function RoomHeader({
         {notEncrypted && <NotEncryptedBadge />}
       </div>
       <div className="chat-room-header__actions">
+        {onToggleMuted !== undefined && (
+          <button
+            type="button"
+            className="chat-room-header__mute"
+            aria-pressed={muted}
+            onClick={onToggleMuted}
+          >
+            {muted ? s.workspace.unmute : s.workspace.mute}
+          </button>
+        )}
         {onSetNotifyLevel !== undefined && (
           <select
             className="chat-room-header__notify"

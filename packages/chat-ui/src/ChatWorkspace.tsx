@@ -203,12 +203,16 @@ export function ChatWorkspace({
                   onToggleMembers={() => setMembersOpen((v) => !v)}
                   notifyLevel={selected.notifyLevel}
                   notEncrypted={notEncrypted}
+                  muted={selected.muted}
                   {...(chat.setRoomNotifyLevel !== null
                     ? {
                         onSetNotifyLevel: (level: RoomNotifyLevel) => {
                           void chat.setRoomNotifyLevel?.(selected.id, level);
                         },
                       }
+                    : {})}
+                  {...(chat.setMuted !== null
+                    ? { onToggleMuted: () => void chat.setMuted?.(selected.id, !selected.muted) }
                     : {})}
                 />
               ) : (
@@ -217,6 +221,16 @@ export function ChatWorkspace({
                   {notEncrypted && <NotEncryptedBadge />}
                   {typing.length > 0 && (
                     <span className="chat-workspace__typing">{s.workspace.typing}</span>
+                  )}
+                  {chat.setMuted !== null && (
+                    <button
+                      type="button"
+                      className="chat-workspace__mute"
+                      aria-pressed={selected.muted}
+                      onClick={() => void chat.setMuted?.(selected.id, !selected.muted)}
+                    >
+                      {selected.muted ? s.workspace.unmute : s.workspace.mute}
+                    </button>
                   )}
                 </header>
               )}

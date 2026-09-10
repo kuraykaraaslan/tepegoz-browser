@@ -7,6 +7,7 @@ import {
   ChatGetHistorySchema,
   ChatJoinRoomSchema,
   ChatSetRoomNotifyLevelSchema,
+  ChatSetMutedSchema,
   ChatMarkReadSchema,
   ChatSendMessageSchema,
   ChatSetPresenceSchema,
@@ -121,6 +122,15 @@ describe('room channels', () => {
     }
     expect(
       ChatSetRoomNotifyLevelSchema.safeParse({ accountId: 'a', conversationId: 'c', level: 'loud' }).success,
+    ).toBe(false);
+  });
+
+  it('ChatSetMutedSchema requires a boolean muted flag', () => {
+    expect(
+      ChatSetMutedSchema.safeParse({ accountId: 'a', conversationId: 'c', muted: true }).success,
+    ).toBe(true);
+    expect(
+      ChatSetMutedSchema.safeParse({ accountId: 'a', conversationId: 'c', muted: 'yes' }).success,
     ).toBe(false);
   });
 });

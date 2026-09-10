@@ -67,6 +67,22 @@ describe('RoomHeader', () => {
     expect(onSetNotifyLevel).toHaveBeenCalledWith('none');
   });
 
+  it('shows the mute toggle only with a handler and reflects the muted state', () => {
+    const { rerender } = wrap(<RoomHeader name="r" membersOpen onToggleMembers={vi.fn()} />);
+    expect(screen.queryByRole('button', { name: /Mute|Unmute/ })).toBeNull();
+
+    const onToggleMuted = vi.fn();
+    rerender(
+      <I18nProvider locale="en">
+        <RoomHeader name="r" membersOpen onToggleMembers={vi.fn()} muted onToggleMuted={onToggleMuted} />
+      </I18nProvider>,
+    );
+    const btn = screen.getByRole('button', { name: 'Unmute' });
+    expect(btn.getAttribute('aria-pressed')).toBe('true');
+    fireEvent.click(btn);
+    expect(onToggleMuted).toHaveBeenCalled();
+  });
+
   it('shows the "not encrypted" marker only when the room protocol has no E2EE', () => {
     const { rerender } = wrap(<RoomHeader name="r" membersOpen onToggleMembers={vi.fn()} />);
     expect(screen.queryByText('Not encrypted')).toBeNull();

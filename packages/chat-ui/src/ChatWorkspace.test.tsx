@@ -294,6 +294,16 @@ describe('ChatWorkspace', () => {
     expect(screen.getByText('typing…')).toBeDefined();
   });
 
+  it('mutes a conversation from the DM header through the port', async () => {
+    const setChatMuted = vi.fn(() => Promise.resolve());
+    const { port } = makePort({ setChatMuted });
+    wrap(<ChatWorkspace port={port} />);
+    fireEvent.click(await screen.findByRole('button', { name: /Bob/ }));
+    await screen.findByText('hi there');
+    fireEvent.click(screen.getByRole('button', { name: 'Mute' }));
+    await waitFor(() => expect(setChatMuted).toHaveBeenCalledWith('work', 'c1', true));
+  });
+
   it('names who is typing in a room', async () => {
     const { port, emit } = makePort({
       listChatConversations: () =>

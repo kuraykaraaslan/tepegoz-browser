@@ -384,14 +384,16 @@ Functional DoD. · **Depends on:** X-chat.1 · **Branch:** `main` · **Risk:** l
       edited/redacted markers, system events, delivery/read state, typing indicator, date separators,
       "new messages" divider. _Reply quoting + "jump to unread" scroll: deferred._
 - [x] **Composer** — text, attachment hook (`OutgoingMessage.mediaPath`), reply/edit affordances,
-      send on Enter / newline on Shift-Enter. _Emoji picker + per-conversation mute: deferred._
+      send on Enter / newline on Shift-Enter. _Emoji picker: deferred._ Per-conversation mute landed
+      2026-09-10 — a header toggle (DM + room), `useChatState.setMuted` (optimistic
+      `patchConversation` + `chat:set-muted` bridge), `ChatSetMutedSchema`, `ChatService.setMuted`.
 - [x] **Media rendering** — `<MessageMedia>` loads strictly through an injected `resolveMedia` (host
       reads the quarantined part); inline image / `controls`-no-autoplay video / audio, click-to-open
       chip otherwise; `isSafeMediaResource` rejects any URL that is not `blob:` / `data:` so a preview
       can never become a beacon. Wired through `<MessageTimeline>` + `<ChatWorkspace>` (optional prop;
       the desktop `resolveMedia` bridge method is X-chat.1 follow-up work). _No remote fetch — tested._
 - [x] IPC read channels: conversation list, history page, roster, account live state; write channels
-      for send / mark-read (all zod-gated — X-chat.1). _mute: deferred._
+      for send / mark-read / **mute** (`chat:set-muted`, all zod-gated).
 
 ### Functional DoD
 - [ ] A human holds a real XMPP conversation across two accounts: send/receive, reactions, edits,

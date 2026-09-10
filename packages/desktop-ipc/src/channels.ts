@@ -269,6 +269,8 @@ export const IpcChannels = {
   chatJoinRoom: 'chat:join-room',
   /** Renderer→main: set a room's notification level (all / mentions / none). */
   chatSetRoomNotifyLevel: 'chat:set-room-notify-level',
+  /** Renderer→main: mute / unmute one conversation (DM or room). */
+  chatSetMuted: 'chat:set-muted',
   /** Renderer→main: resolve a message's `mediaRef` to a quarantined `data:` URL (main fetches). */
   chatResolveMedia: 'chat:resolve-media',
   /** Main→renderer push: per-account connection state + folded conversation/roster changes. */

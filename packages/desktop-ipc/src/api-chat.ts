@@ -110,6 +110,9 @@ export interface ChatApi {
     conversationId: string,
     level: RoomNotifyLevel,
   ): Promise<void>;
+  /** Mute / unmute one conversation (DM or room) — silences its notifications, a nick ping in a
+   *  room still breaks through per `decideNotification`. */
+  setChatMuted(accountId: string, conversationId: string, muted: boolean): Promise<void>;
   /**
    * Resolve a message's `mediaRef` to a quarantined `data:` URL. The main process performs the
    * egress-bound download and size-caps it; `null` when the ref is unresolvable or too large.

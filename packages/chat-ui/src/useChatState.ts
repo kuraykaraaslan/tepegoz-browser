@@ -29,6 +29,8 @@ export interface UseChatState {
   send: (text: string, opts?: { replyToId?: string | null }) => Promise<void>;
   /** Change a room's notification level — `null` when the port does not support it. */
   setRoomNotifyLevel: ((conversationId: string, level: RoomNotifyLevel) => Promise<void>) | null;
+  /** Mute / unmute a conversation — `null` when the port does not support it. */
+  setMuted: ((conversationId: string, muted: boolean) => Promise<void>) | null;
   refresh: () => Promise<void>;
   /** MUC — present only when the port supports rooms. */
   rooms:
@@ -148,6 +150,16 @@ export function useChatState(port: ChatClientPort): UseChatState {
     };
   }, [setChatRoomNotifyLevel, activeAccountId]);
 
+  const { setChatMuted } = port;
+  const setMuted = useMemo(() => {
+    if (setChatMuted === undefined) return null;
+    return async (conversationId: string, muted: boolean): Promise<void> => {
+      if (activeAccountId === null) return;
+      setClient((prev) => patchConversation(prev, conversationId, { muted }));
+      await setChatMuted(activeAccountId, conversationId, muted);
+    };
+  }, [setChatMuted, activeAccountId]);
+
   const conversations = useMemo(() => {
     if (activeAccountId === null) return [];
     return sortConversations(
@@ -184,6 +196,7 @@ export function useChatState(port: ChatClientPort): UseChatState {
     loading,
     send,
     setRoomNotifyLevel,
+    setMuted,
     refresh,
     rooms,
   };

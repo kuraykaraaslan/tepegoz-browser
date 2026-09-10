@@ -42,6 +42,7 @@ const svc = {
   discoverRooms: vi.fn(() => Promise.resolve([])),
   joinRoom: vi.fn(() => Promise.resolve()),
   setRoomNotifyLevel: vi.fn(() => Promise.resolve()),
+  setMuted: vi.fn(() => Promise.resolve()),
   resolveMedia: vi.fn(() => Promise.resolve({ dataUrl: 'data:image/png;base64,AAAA' })),
 };
 
@@ -65,7 +66,7 @@ beforeEach(() => {
 });
 
 it('registers every chat channel', () => {
-  expect(h.handlers.size).toBe(13);
+  expect(h.handlers.size).toBe(14);
 });
 
 describe('rooms', () => {
