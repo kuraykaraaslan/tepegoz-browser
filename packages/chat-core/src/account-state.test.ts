@@ -120,6 +120,30 @@ describe('ChatAccountState — messages', () => {
     expect(s.applyRaw({ type: 'exec' })).toEqual([{ kind: 'dropped', reason: 'invalid' }]);
   });
 
+  it('X-chat.10: a hostile raw-event stream never throws and never corrupts a view', () => {
+    const s = state();
+    const hostile: unknown[] = [
+      null, undefined, 0, '', 'message', [], {}, { type: 'garbage' },
+      { type: 'message', message: {} },
+      { type: 'message', message: { id: 'x', conversationId: 'bob@x.com' } },
+      { type: 'message-edit', conversationId: 'bob@x.com', protocolId: '', body: 5, editedAt: -1 },
+      { type: 'room-membership', conversationId: 'bob@x.com', address: 'a', joined: 'maybe' },
+      { type: 'room-topic', conversationId: 'bob@x.com', topic: 42 },
+      JSON.parse('{"__proto__":{"p":1},"type":"typing"}'),
+      { type: 'reaction', conversationId: 'bob@x.com', protocolId: 'p1', emoji: '', senderAddress: '', add: 'y' },
+    ];
+    // one real message so the view exists and can be checked for corruption
+    s.applyRaw({ type: 'message', message: msg({ protocolId: 'real', body: 'hello' }) });
+    for (const raw of hostile) {
+      expect(() => s.applyRaw(raw)).not.toThrow();
+    }
+    const view = s.conversationView('bob@x.com');
+    // the single valid message survived untouched; nothing partial got folded in
+    expect(view.messages.map((m) => m.protocolId)).toEqual(['real']);
+    expect(view.messages[0]?.body).toBe('hello');
+    expect(({} as Record<string, unknown>).p).toBeUndefined();
+  });
+
   it('capability-gates an edit when the adapter lacks edits', () => {
     const noEdit = new ChatAccountState({
       accountId: 'acc',

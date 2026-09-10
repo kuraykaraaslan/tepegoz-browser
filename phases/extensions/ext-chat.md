@@ -819,13 +819,20 @@ adapter contract) · **Depends on:** X-chat.1 · **Branch:** `feat/chat-bridge-f
 
 ## X-chat.10 — Hardening, sandbox tests, e2e
 
-**Status:** ⬜ Not started · **Depends on:** X-chat.2–.7 · **Branch:** `feat/chat-hardening`
-**Risk:** low — mostly tests.
+**Status:** 🟡 In progress (2026-09-10) — the adapter-event fuzz / zod-rejection boundary suite
+landed (`chat-core` `normalize-fuzz.test.ts` — ~50 hostile inputs + a randomised sweep prove
+`normalizeEvent` never throws and never emits a `ChatEvent` that fails `ChatEventSchema`, plus a
+prototype-pollution guard; `account-state.test.ts` adds a hostile-stream test proving `applyRaw`
+does not corrupt a folded view). Bridge-payload fuzz waits on X-chat.8; the rest of the sub-phase
+(sandbox / kill-switch / e2e / perf) is untouched. · **Depends on:** X-chat.2–.7 · **Branch:**
+`feat/chat-hardening` · **Risk:** low — mostly tests.
 
 ### Deliverables
-- [ ] **Adapter-event fuzz / zod-rejection tests** — malformed XMPP stanza, Matrix sync event, IRC
-      line, and bridge payload all rejected cleanly (no throw past the boundary, no state
-      corruption).
+- [x] **Adapter-event fuzz / zod-rejection tests** — malformed XMPP stanza, Matrix sync event and
+      IRC line all reject cleanly at their own parsers (existing suites) and, consolidated, at the
+      `normalizeEvent` boundary: no throw on any input, no `ChatEvent` emitted that would not
+      re-validate, no state corruption in `ChatAccountState.applyRaw`, no prototype pollution.
+      _Bridge-payload fuzz is deferred to X-chat.8 (no bridge contract exists yet)._
 - [ ] **Bridge sandbox tests** — no FS escape, no cross-account reach, crash isolation, egress
       binding enforced, RPC surface minimal.
 - [ ] **Journal redaction property test** — no plaintext, credential, or key material in `events`.
