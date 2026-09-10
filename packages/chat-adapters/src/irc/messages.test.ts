@@ -9,6 +9,7 @@ import {
   buildIrcPrivmsg,
   buildIrcTopic,
   foldIrcTarget,
+  ircKickSystemMessage,
   ircMessageToEvent,
   namesReplyToEvents,
   parseIrcPrefixSpec,
@@ -177,6 +178,23 @@ describe('ircMessageToEvent — membership', () => {
       address: '#c/bob',
       joined: false,
     });
+  });
+
+  it('ircKickSystemMessage renders a system line for the kick (with and without a reason)', () => {
+    const line = (raw: string) => {
+      const m = parseIrcLine(raw);
+      if (m === null) throw new Error(raw);
+      return ircKickSystemMessage(m, ctx);
+    };
+    expect(line(':op!o@h KICK #Chan bob :rude')).toMatchObject({
+      type: 'message',
+      message: { conversationId: '#chan', kind: 'system', senderAddress: 'op', body: 'op kicked bob: rude' },
+    });
+    expect(line(':op!o@h KICK #Chan bob')).toMatchObject({
+      message: { kind: 'system', body: 'op kicked bob' },
+    });
+    expect(line(':op!o@h PART #Chan')).toBeNull();
+    expect(line(':op!o@h KICK nonchan bob')).toBeNull();
   });
 
   it('QUIT and unknown commands surface nothing', () => {

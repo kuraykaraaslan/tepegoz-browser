@@ -26,6 +26,7 @@ import {
   buildIrcPrivmsg,
   buildIrcTopic,
   foldIrcTarget,
+  ircKickSystemMessage,
   ircMessageToEvent,
   namesReplyToEvents,
   parseIrcPrefixSpec,
@@ -317,6 +318,9 @@ export class IrcAdapter implements ChatAdapter {
     }
     const event = ircMessageToEvent(msg, ctx);
     if (event !== null) session.push(event);
+    // A KICK is both a membership change (above) and a visible system line in the channel.
+    const kick = ircKickSystemMessage(msg, ctx);
+    if (kick !== null) session.push(kick);
   }
 
   disconnect(session: ChatSession): Promise<void> {

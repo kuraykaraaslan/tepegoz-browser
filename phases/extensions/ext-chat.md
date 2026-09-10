@@ -491,9 +491,12 @@ carries only a `<subject>` (XEP-0045 §8.1) from a joined room through `parseMuc
 persisted conversation row the same way IRC's does. Then the **room "who's typing" indicator** —
 `chat-ui` `roomTypingLabel` folds the room's typing-address set into a localized line ("Bea is
 typing…" / "Bea & Cy are typing…" / "Several people are typing…", en + tr) shown under the room
-header; a DM keeps the plain "typing…". **X-chat.3 is now code-complete — only the runtime
-DoD (live server) + the sub-phase DoD template remain.** · **Depends on:** X-chat.2 · **Branch:**
-`main` · **Risk:** low-medium.
+header; a DM keeps the plain "typing…". Then **IRC kick surfacing** — a `KICK` line now emits a
+`system` message into the channel (`<kicker> kicked <nick>[: reason]`) alongside the existing
+`room-membership` leave, so a removal is visible in the timeline instead of an occupant silently
+vanishing (`ircKickSystemMessage`; XMPP MUC 307/301 + Matrix ban are the follow-up). **X-chat.3 is
+now code-complete — only the runtime DoD (live server) + the sub-phase DoD template remain.** ·
+**Depends on:** X-chat.2 · **Branch:** `main` · **Risk:** low-medium.
 
 ### Deliverables
 - [x] **XMPP MUC (XEP-0045)** — join/leave by JID, nickname, room roster + affiliations/roles,
@@ -504,7 +507,8 @@ DoD (live server) + the sub-phase DoD template remain.** · **Depends on:** X-ch
       room header can **set** the topic — `ChatAdapter.setRoomTopic` (XMPP `buildMucChangeSubject`,
       IRC `TOPIC`, Matrix `PUT …/state/m.room.topic`) → `ChatService.setRoomTopic` →
       `chat:set-room-topic` bridge → `<RoomHeader>` inline editor (Enter commits, Escape cancels).
-      _`buildMucInvite` still has no UI action; kick/ban surfacing: a later slice._
+      IRC `KICK` now surfaces a `system` message (`ircKickSystemMessage`). _`buildMucInvite` still has
+      no UI action; the XMPP MUC 307/301 + Matrix ban system-message equivalents: a later slice._
 - [x] **Room browser** — service discovery of a MUC service's public rooms, search, join-by-address.
       `xmpp/disco.ts` + `XmppAdapter.discoverRooms` + `<RoomBrowser>` + `useChatState` wiring + the
       `chat:discover-rooms` / `chat:join-room` desktop bridge. _Only the runtime DoD remains._

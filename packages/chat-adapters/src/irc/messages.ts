@@ -204,6 +204,48 @@ function topicEvent(msg: IrcMessage, ctx: IrcContext): ChatEvent | null {
   };
 }
 
+/**
+ * A `KICK <channel> <nick> [:reason]` also surfaces as a `system` message in the channel so the
+ * removal is visible in the timeline, not just a silently vanished occupant. `ircMessageToEvent`
+ * still returns the `room-membership` for the same line; the adapter emits both.
+ */
+export function ircKickSystemMessage(msg: IrcMessage, ctx: IrcContext): ChatEvent | null {
+  if (msg.command !== 'KICK') return null;
+  const by = parseIrcPrefix(msg.prefix ?? '');
+  const [channel, nick, reason] = msg.params;
+  if (by === null || channel === undefined || nick === undefined || !isChannel(channel, ctx.chanTypes)) {
+    return null;
+  }
+  const conversationId = foldIrcTarget(channel, ctx.casemapping);
+  const ts = tagTime(msg, ctx.now);
+  const body =
+    reason !== undefined && reason.length > 0
+      ? `${by.nick} kicked ${nick}: ${reason}`
+      : `${by.nick} kicked ${nick}`;
+  const protocolId = msg.tags.msgid ?? synthProtocolId(ts, by.nick, `kick ${nick}`);
+  return {
+    type: 'message',
+    message: {
+      id: protocolId,
+      conversationId,
+      accountId: ctx.accountId,
+      protocolId,
+      senderAddress: by.nick,
+      senderName: by.nick,
+      kind: 'system',
+      body,
+      mediaRef: null,
+      replyToId: null,
+      reactions: [],
+      editedAt: null,
+      redacted: false,
+      originTs: ts,
+      receivedAt: ctx.now,
+      deliveryState: 'delivered',
+    },
+  };
+}
+
 function membershipEvent(
   msg: IrcMessage,
   ctx: IrcContext,

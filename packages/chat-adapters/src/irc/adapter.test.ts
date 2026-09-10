@@ -173,6 +173,21 @@ describe('IrcAdapter — live traffic', () => {
     expect(session.joined.has('#room')).toBe(false);
   });
 
+  it('a KICK surfaces as both a room-membership leave and a system message', async () => {
+    const { adapter, server, session } = await connected();
+    const it = adapter.events(session)[Symbol.asyncIterator]();
+    server.send(':op!o@h KICK #chan bob :spam');
+    expect((await it.next()).value).toMatchObject({
+      type: 'room-membership',
+      address: '#chan/bob',
+      joined: false,
+    });
+    expect((await it.next()).value).toMatchObject({
+      type: 'message',
+      message: { conversationId: '#chan', kind: 'system', body: 'op kicked bob: spam' },
+    });
+  });
+
   it('tracks our own JOIN/PART for auto-rejoin', async () => {
     const { server, session } = await connected();
     server.send(':ada!a@h JOIN #a', ':ada!a@h JOIN #b', ':ada!a@h PART #a');

@@ -138,7 +138,7 @@ describe('IRC recorded trace — live traffic', () => {
     );
 
     const seen: unknown[] = [];
-    for (let i = 0; i < 9; i += 1) seen.push((await iter.next()).value);
+    for (let i = 0; i < 10; i += 1) seen.push((await iter.next()).value);
 
     // our own JOIN, then the 353 NAMES list fanned out (op → moderator, voice/plain → participant)
     expect(seen[0]).toMatchObject({ type: 'room-membership', conversationId: '#tepegoz', address: '#tepegoz/ada', joined: true, self: true });
@@ -152,6 +152,11 @@ describe('IRC recorded trace — live traffic', () => {
     expect(seen[6]).toMatchObject({ type: 'message', message: { conversationId: '#tepegoz', kind: 'system', body: 'heads up: standup in 5' } });
     expect(seen[7]).toMatchObject({ type: 'message', message: { conversationId: 'bea', body: 'ping me after' } });
     expect(seen[8]).toMatchObject({ type: 'room-membership', conversationId: '#tepegoz', address: '#tepegoz/dan', joined: false });
+    // the KICK also surfaces as a visible system line in the channel
+    expect(seen[9]).toMatchObject({
+      type: 'message',
+      message: { conversationId: '#tepegoz', kind: 'system', senderAddress: 'cem', body: 'cem kicked dan: spam' },
+    });
   });
 
   it('answers a mid-session PING', async () => {
