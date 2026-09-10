@@ -256,6 +256,25 @@ describe('ChatStore — messages', () => {
       ChatStore.upsertMessage(db, message('p9', 'cv1', { body: '100% sure', originTs: 40 }));
       expect(ChatStore.searchMessages(db, { text: '100% sure' }).map((m) => m.protocolId)).toEqual(['p9']);
     });
+
+    it('re-indexes an edited body — the old text stops matching, the new text matches', () => {
+      ChatStore.upsertMessage(db, message('p1', 'cv1', { body: 'kahvaltı planı', originTs: 10 }));
+      expect(ChatStore.searchMessages(db, { text: 'kahvalti' }).map((m) => m.protocolId)).toEqual(['p1']);
+      expect(ChatStore.searchMessages(db, { text: 'toplanti' }).map((m) => m.protocolId)).toEqual(['p3']);
+    });
+
+    it('drops index rows when the messages are cascade-deleted (FTS trigger)', () => {
+      ChatStore.deleteAccount(db, 'acc');
+      expect(ChatStore.searchMessages(db, { text: 'toplanti' })).toEqual([]);
+      expect(ChatStore.searchMessages(db, { text: 'kahve' })).toEqual([]);
+    });
+
+    it('matches a multi-word needle only when every word is present', () => {
+      expect(
+        ChatStore.searchMessages(db, { text: 'toplanti notlari' }).map((m) => m.protocolId),
+      ).toEqual(['p3']);
+      expect(ChatStore.searchMessages(db, { text: 'toplanti kahve' })).toEqual([]);
+    });
   });
 });
 

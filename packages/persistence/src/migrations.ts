@@ -779,6 +779,25 @@ const MIGRATIONS: Migration[] = [
       db.exec("ALTER TABLE chat_conversations ADD COLUMN notify_level TEXT NOT NULL DEFAULT 'all';");
     },
   },
+  {
+    version: 23,
+    up: (db) => {
+      // ext-chat X-chat.10 perf: back message search with the FTS5 index migration 21 created but
+      // nothing populated (`ChatStore.searchMessages` still LIKE-scanned `body_fold`). The FTS
+      // `body` column holds the SAME Turkish-aware fold as `chat_messages.body_fold` — never the raw
+      // body — so a query folded with `foldForSearch` tokenizes identically; `sender` mirrors
+      // `sender_name` for a future sender filter. Redacted rows are absent (their fold is '').
+      db.exec(`
+        INSERT INTO chat_search (message_id, body, sender)
+          SELECT id, body_fold, sender_name FROM chat_messages
+          WHERE redacted = 0 AND body_fold <> '';
+
+        CREATE TRIGGER chat_search_ad AFTER DELETE ON chat_messages BEGIN
+          DELETE FROM chat_search WHERE message_id = old.id;
+        END;
+      `);
+    },
+  },
 ];
 
 /**

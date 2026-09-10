@@ -362,33 +362,61 @@ export class ChatStore {
   }
 
   /**
-   * Fold-insensitive substring search over message bodies (Turkish-aware via `foldForSearch`),
-   * newest-first. Redacted messages have an empty `body_fold` so they never match. Optionally scoped
-   * to one account or one conversation.
+   * Keep a message's `chat_search` (FTS5) row in step with `chat_messages`: a redacted or
+   * empty-fold message has no row, everything else has exactly one. Called from every write path so
+   * the fold and the index stay in one code path (never a SQL trigger — the Turkish fold is JS).
+   */
+  private static syncSearchRow(
+    db: Db,
+    id: string,
+    bodyFold: string,
+    senderName: string,
+    redacted: boolean,
+  ): void {
+    db.prepare('DELETE FROM chat_search WHERE message_id = ?').run(id);
+    if (!redacted && bodyFold !== '') {
+      db.prepare('INSERT INTO chat_search (message_id, body, sender) VALUES (?, ?, ?)').run(
+        id,
+        bodyFold,
+        senderName,
+      );
+    }
+  }
+
+  /**
+   * Full-text search over message bodies, newest-first, backed by the `chat_search` FTS5 index. The
+   * needle is folded with the same Turkish-aware `foldForSearch` as the stored `body`, split into
+   * tokens, and each token is matched as a quoted phrase (so an FTS operator character in the user's
+   * text is inert); the final token is a prefix match, so `toplantı` still finds `toplantısı`.
+   * Redacted messages have no index row. Optionally scoped to one account or one conversation.
    */
   static searchMessages(
     db: Db,
     opts: { text: string; accountId?: string; conversationId?: string; limit?: number },
   ): ChatMessage[] {
-    const needle = foldForSearch(opts.text).trim();
-    if (needle.length === 0) return [];
+    const tokens = foldForSearch(opts.text).match(/[\p{L}\p{N}]+/gu) ?? [];
+    if (tokens.length === 0) return [];
+    const match = tokens
+      .map((t, i) => (i === tokens.length - 1 ? `"${t}"*` : `"${t}"`))
+      .join(' ');
     const n = Math.max(1, Math.min(Math.trunc(opts.limit ?? 50), 200));
-    // Escape LIKE metacharacters in the (already folded) needle; `\` is the ESCAPE char below.
-    const escaped = needle.replace(/[\\%_]/g, (ch) => `\\${ch}`);
-    const where = ["body_fold <> ''", "body_fold LIKE '%' || ? || '%' ESCAPE '\\'"];
-    const params: unknown[] = [escaped];
+    const where = ['chat_search MATCH ?'];
+    const params: unknown[] = [match];
     if (opts.accountId !== undefined) {
-      where.push('account_id = ?');
+      where.push('m.account_id = ?');
       params.push(opts.accountId);
     }
     if (opts.conversationId !== undefined) {
-      where.push('conversation_id = ?');
+      where.push('m.conversation_id = ?');
       params.push(opts.conversationId);
     }
     params.push(n);
     const rows = db
       .prepare(
-        `SELECT * FROM chat_messages WHERE ${where.join(' AND ')} ORDER BY origin_ts DESC LIMIT ?`,
+        `SELECT m.* FROM chat_search
+         JOIN chat_messages m ON m.id = chat_search.message_id
+         WHERE ${where.join(' AND ')}
+         ORDER BY m.origin_ts DESC LIMIT ?`,
       )
       .all(...params) as ChatMessageRow[];
     return rows.map(rowToMessage);
@@ -441,12 +469,23 @@ export class ChatStore {
       receivedAt: message.receivedAt,
       deliveryState: message.deliveryState,
     });
+    ChatStore.syncSearchRow(
+      db,
+      message.id,
+      foldForSearch(message.body),
+      message.senderName,
+      message.redacted,
+    );
   }
 
   /** Redact in place — clears the body (and its fold) so a deleted message leaves no searchable trace. */
   static redactMessage(db: Db, conversationId: string, protocolId: string): void {
     db.prepare(
       "UPDATE chat_messages SET redacted = 1, body = '', body_fold = '' WHERE conversation_id = ? AND protocol_id = ?",
+    ).run(conversationId, protocolId);
+    db.prepare(
+      `DELETE FROM chat_search WHERE message_id IN
+         (SELECT id FROM chat_messages WHERE conversation_id = ? AND protocol_id = ?)`,
     ).run(conversationId, protocolId);
   }
 
