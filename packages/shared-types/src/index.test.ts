@@ -12,6 +12,7 @@ import {
   toolSuccess,
   EvalScenarioSchema,
   EvalScenarioFileSchema,
+  ChatEvalFixtureSchema,
   AgentWorkingStateSchema,
 } from './index';
 
@@ -104,6 +105,41 @@ describe('eval scenario contract (AI-1)', () => {
     const res = EvalScenarioFileSchema.safeParse({ scenarios: [base, { ...base, id: 'other' }] });
     expect(res.success).toBe(true);
     if (res.success) expect(res.data.scenarios).toHaveLength(2);
+  });
+
+  it('accepts a chatFixture target (X-chat.6)', () => {
+    const res = EvalScenarioSchema.safeParse({ ...base, target: { chatFixture: 'room-backlog' } });
+    expect(res.success).toBe(true);
+    expect(EvalScenarioSchema.safeParse({ ...base, target: { chatFixture: '' } }).success).toBe(false);
+  });
+});
+
+describe('chat-eval fixture seed contract (X-chat.6)', () => {
+  it('fills defaults and enforces the size caps', () => {
+    const res = ChatEvalFixtureSchema.safeParse({
+      accountId: 'work',
+      conversations: [
+        { id: 'r1', kind: 'room', title: 'Weekly', messages: [{ from: 'bob@x', body: 'hi' }] },
+        { id: 'd1', kind: 'dm', title: 'Mallory', knownContact: false },
+      ],
+    });
+    expect(res.success).toBe(true);
+    if (res.success) {
+      expect(res.data.protocol).toBe('xmpp');
+      expect(res.data.roster).toEqual([]);
+      expect(res.data.conversations[0]?.knownContact).toBe(true);
+      expect(res.data.conversations[0]?.messages[0]).toMatchObject({ from: 'bob@x', body: 'hi' });
+      expect(res.data.conversations[1]?.knownContact).toBe(false);
+    }
+    // caps: >50 conversations, an unknown protocol, an empty account id all fail
+    expect(
+      ChatEvalFixtureSchema.safeParse({
+        accountId: 'work',
+        conversations: Array.from({ length: 51 }, (_, i) => ({ id: `c${String(i)}`, kind: 'room', title: 't' })),
+      }).success,
+    ).toBe(false);
+    expect(ChatEvalFixtureSchema.safeParse({ accountId: 'work', protocol: 'slack' }).success).toBe(false);
+    expect(ChatEvalFixtureSchema.safeParse({ accountId: '' }).success).toBe(false);
   });
 });
 

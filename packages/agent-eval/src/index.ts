@@ -7,6 +7,7 @@
  */
 export * from './scenario-registry';
 export * from './fixture-server';
+export * from './chat-fixture';
 export * from './scorer';
 export * from './report';
 export * from './judge';

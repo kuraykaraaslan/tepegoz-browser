@@ -160,6 +160,10 @@ export function planRun(
     return { entryUrl, env: { TEPEGOZ_EVAL_MODE: 'scripted', TEPEGOZ_EVAL_SCRIPT: scriptPath } };
   }
   // live
+  // A `chatFixture` scenario (X-chat.6) is not a page — it seeds `ChatStore` and runs the `chat_*`
+  // tools against a `ChatCapabilityHost`. That seed-and-run path is a later slice; until it lands the
+  // scenario is reported as skipped in this tier, exactly like a scripted scenario with no script.
+  if ('chatFixture' in scenario.target) return null;
   const entryUrl =
     'fixture' in scenario.target
       ? `${fixtureUrl(server.url, scenario.target.fixture)}index.html`

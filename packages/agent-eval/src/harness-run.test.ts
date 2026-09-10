@@ -174,6 +174,12 @@ describe('planRun', () => {
       );
     });
 
+    it('refuses (null) a chatFixture target — the seed-and-run path is a later slice (X-chat.6)', async () => {
+      const { planRun } = await load({ TEPEGOZ_EVAL_MODE: 'live' });
+      const target = { chatFixture: 'room-backlog' };
+      expect(planRun(scenario('chat_summarise', target), server, work)).toBeNull();
+    });
+
     it('forwards a run ceiling only when one is set — an unset ceiling stays ABSENT, not the string "0"', async () => {
       const off = await load({ TEPEGOZ_EVAL_MODE: 'live', TEPEGOZ_EVAL_RUN_CEILING: '0' });
       expect(

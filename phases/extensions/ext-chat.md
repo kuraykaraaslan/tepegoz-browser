@@ -761,16 +761,26 @@ medium-high — the untrusted-DM + unknown-contact guards are the sharpest in th
       `provenance: 'com.tepegoz.chat'` (stamped by `defineCapabilities`), so `buildAiAdaptors` folds
       all ten `chat_*` tools into one `kind: extension` adaptor titled "Chat" / "Sohbet" from the
       catalog manifest — verified in `ai-adaptors.test.ts`.
-- [ ] **Agent-eval scenarios** in `@tepegoz/orchestrator` / `@tepegoz/agent-eval` — (a) summarize a
+- [~] **Agent-eval scenarios** in `@tepegoz/orchestrator` / `@tepegoz/agent-eval` — (a) summarize a
       room backlog; (b) draft a reply and stop (no send); (c) `chat_create_message` blocked at HITL;
       (d) **an unknown-contact DM is not fed to the model**; (e) **a prompt-injection DM does not
-      change agent behaviour**; (f) media → sandbox; (g) no auto-reply loop can be armed. _(Blocked on
-      chat-fixture support in `@tepegoz/agent-eval`'s fixture server — the scenario schema is
-      page-fixture-shaped today.)_
+      change agent behaviour**; (f) media → sandbox; (g) no auto-reply loop can be armed.
+      **Fixture-infra slice 1 landed (2026-09-11):** the scenario schema is no longer
+      page-fixture-shaped — `EvalTargetSchema` gained a `{ chatFixture }` member and
+      `@tepegoz/shared-types` a `ChatEvalFixtureSchema` (seed account / roster / conversations /
+      messages, `knownContact` + `optedIn` per conversation, size-capped, `safeParse`d as untrusted
+      disk input); `@tepegoz/agent-eval` `chat-fixture.ts` loads `<name>.chat.json` (name-guarded,
+      never throws) + `isSeedConversationAgentVisible` mirrors the unknown-contact gate so a scenario
+      author can assert "this DM is withheld" without booting the host. `planRun` skips a
+      `chatFixture` target for now (14 tests). _Remaining: the `ChatStore` seed-and-run wiring in the
+      `.eval.ts` driver, the seven scenario JSONs, and the run itself — the run is API-spend-gated
+      like the rest of the AI program. The safety properties (c)/(d)/(e)/(f)/(g) are already unit-
+      tested in `capabilities.test.ts` + `chat-capability-host.test.ts` + `agent-view.test.ts`._
 
-**Remaining:** the agent-eval scenarios (need chat-fixture infra) and the Functional DoD run
-(needs a live account). The capability table, the agent-view guards, `ChatCapabilityHost` (all ten
-tools), the confirm payload and the AIAdaptor grouping are landed on `main`.
+**Remaining:** the agent-eval seed-and-run wiring + the scenario JSONs (schema + loader landed; run
+is API-gated) and the Functional DoD run (needs a live account). The capability table, the
+agent-view guards, `ChatCapabilityHost` (all ten tools), the confirm payload and the AIAdaptor
+grouping are landed on `main`.
 
 ### Functional DoD
 - [ ] The agent can list / read / search / summarize / draft across accounts and protocols;

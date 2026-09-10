@@ -15,8 +15,49 @@ import { z } from 'zod';
 export const EvalTargetSchema = z.union([
   z.object({ fixture: z.string().min(1) }),
   z.object({ realUrl: z.string().url() }),
+  /** A seeded messenger state (`@tepegoz/ext-chat` agent capabilities, X-chat.6) rather than a web
+   *  page: names a `<name>.chat.json` seed under the chat-fixtures dir. The harness seeds `ChatStore`
+   *  from it and runs the agent with the `chat_*` tools against a `ChatCapabilityHost` — no network
+   *  adapter, no live server. See {@link ChatEvalFixtureSchema}. */
+  z.object({ chatFixture: z.string().min(1) }),
 ]);
 export type EvalTarget = z.infer<typeof EvalTargetSchema>;
+
+/**
+ * A seeded chat conversation for a `chatFixture` scenario. `from` is a sender address; the literal
+ * `"me"` is the account's own identity (an outgoing message). A `media` ref makes the message an
+ * attachment the fixture media-resolver can produce bytes for (the media→sandbox scenario).
+ */
+export const ChatEvalSeedMessageSchema = z.object({
+  from: z.string().min(1).max(320),
+  body: z.string().max(100_000).default(''),
+  media: z.string().max(2048).optional(),
+  ts: z.number().int().nonnegative().optional(),
+});
+export type ChatEvalSeedMessage = z.infer<typeof ChatEvalSeedMessageSchema>;
+
+export const ChatEvalSeedConversationSchema = z.object({
+  id: z.string().min(1).max(128),
+  kind: z.enum(['dm', 'room']),
+  title: z.string().min(1).max(255),
+  /** `false` ⇒ a non-roster DM the unknown-contact gate must hide from the agent by default. */
+  knownContact: z.boolean().default(true),
+  /** `true` ⇒ the user has opted the agent into this otherwise-gated conversation for the session. */
+  optedIn: z.boolean().default(false),
+  messages: z.array(ChatEvalSeedMessageSchema).max(500).default([]),
+});
+export type ChatEvalSeedConversation = z.infer<typeof ChatEvalSeedConversationSchema>;
+
+/** The `<name>.chat.json` seed a `chatFixture` scenario points at — UNTRUSTED disk input, so
+ *  `safeParse`d at the harness boundary exactly like the scenario registry itself. */
+export const ChatEvalFixtureSchema = z.object({
+  accountId: z.string().min(1).max(64),
+  protocol: z.enum(['xmpp', 'irc', 'matrix']).default('xmpp'),
+  /** Contact addresses that count as "known" — a DM whose peer is here is not gated. */
+  roster: z.array(z.string().min(1).max(320)).max(200).default([]),
+  conversations: z.array(ChatEvalSeedConversationSchema).max(50).default([]),
+});
+export type ChatEvalFixture = z.infer<typeof ChatEvalFixtureSchema>;
 
 export const EvalSuccessSchema = z.object({
   /** Text (or selector) that MUST be present on the final page for a pass (ground truth). */
