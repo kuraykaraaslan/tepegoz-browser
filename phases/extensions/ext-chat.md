@@ -890,7 +890,17 @@ Then the **search-latency half of the perf pass** — `ChatStore.searchMessages`
 + adds an `AFTER DELETE` trigger, `upsertMessage`/`redactMessage` keep it in step through one
 `syncSearchRow` (fold stays in JS), and the query folds + token-prefix-matches (`toplantı` finds
 `toplantısı`, multi-word is an AND, FTS operators in user text are inert). Signature unchanged.
-Bridge-payload fuzz + the profile-switch half + sandbox / e2e / `/sync`-memory perf remain. ·
+Then (2026-09-11) the **trust-claim regression audit** — every bullet in "Trust & security" now has
+a test that fails if the property regresses: renderer/adapter never open a socket or reach the vault
+(the CI-enforced `chat-ui-is-a-leaf` / `chat-adapters-no-app-no-electron-no-node` /
+`chat-core-no-app-no-electron` dependency-cruiser rules — no `apps/` / `electron` / `node:`);
+**TLS required** — `chat.test.ts` now asserts an XMPP `security: 'none'` and a `http://` Matrix
+homeserver are un-representable (the `matrixServer.homeserverUrl` schema gained an `https://` refine —
+the CS-API carries the access token), IRC keeps `tls` default-true with the UI badge as the opt-out
+signal; account never carries a secret (`secretRef` only); vault refuses plaintext when the keychain
+is down; media quarantined into the file-ops sandbox; kill-switch → 403 + `blocked`; Journal facts
+redacted at both ends. Bridge-payload fuzz + the profile-switch bridge half + bridge sandbox + e2e +
+`/sync`-memory perf remain (the first three wait on X-chat.8). ·
 **Depends on:** X-chat.2–.7 · **Branch:** `feat/chat-hardening` · **Risk:** low — mostly tests.
 
 ### Deliverables
@@ -925,8 +935,10 @@ Bridge-payload fuzz + the profile-switch half + sandbox / e2e / `/sync`-memory p
       memory ceiling remains.
 
 ### Functional DoD
-- [ ] Every trust claim in "Trust & security" above has a test that fails if the property regresses.
-- [ ] Both e2e flows green in CI.
+- [x] Every trust claim in "Trust & security" above has a test that fails if the property regresses
+      (audit 2026-09-11 — see the status note; the two open items, bridge sandbox + isolation, are
+      X-chat.8 work with no contract to test against yet).
+- [ ] Both e2e flows green in CI. _(needs a local Prosody / ergo / Synapse.)_
 - [ ] Sub-phase DoD template ✔.
 
 ---

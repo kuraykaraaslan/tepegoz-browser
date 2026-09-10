@@ -88,7 +88,13 @@ const ircServer = z.object({
 
 const matrixServer = z.object({
   protocol: z.literal('matrix'),
-  homeserverUrl: z.string().url().max(2048),
+  /** Must be `https://` — the CS-API carries the access token, so a cleartext homeserver is not
+   *  representable (the "TLS required" trust rule, enforced here rather than left to the adapter). */
+  homeserverUrl: z
+    .string()
+    .url()
+    .max(2048)
+    .refine((u) => /^https:\/\//i.test(u), { message: 'The homeserver URL must be https://' }),
   userId: z.string().min(3).max(320),
 });
 

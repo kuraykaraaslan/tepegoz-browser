@@ -88,6 +88,44 @@ describe('chat account contract', () => {
     ).toBe(false);
   });
 
+  it('TLS is required: cleartext transports are not representable', () => {
+    // XMPP — the security enum has no cleartext member
+    expect(
+      ChatServerConfigSchema.safeParse({
+        protocol: 'xmpp',
+        jid: 'ada@x.com',
+        security: 'none',
+      }).success,
+    ).toBe(false);
+    expect(
+      ChatServerConfigSchema.safeParse({ protocol: 'xmpp', jid: 'ada@x.com', security: 'starttls' })
+        .success,
+    ).toBe(true);
+    // Matrix — the homeserver URL must be https:// (the CS-API carries the access token)
+    expect(
+      ChatServerConfigSchema.safeParse({
+        protocol: 'matrix',
+        homeserverUrl: 'http://matrix.example',
+        userId: '@ada:matrix.example',
+      }).success,
+    ).toBe(false);
+    expect(
+      ChatServerConfigSchema.safeParse({
+        protocol: 'matrix',
+        homeserverUrl: 'https://matrix.example',
+        userId: '@ada:matrix.example',
+      }).success,
+    ).toBe(true);
+    // IRC — `tls` defaults to true (plaintext is an explicit opt-out, and the UI badges it)
+    const irc = ChatServerConfigSchema.safeParse({
+      protocol: 'irc',
+      server: 'irc.libera.chat',
+      port: 6697,
+      nick: 'ada',
+    });
+    expect(irc.success && irc.data.protocol === 'irc' && irc.data.tls).toBe(true);
+  });
+
   it('irc preSaslAuth is optional and enum-checked (pass | nickserv)', () => {
     const bare = ChatServerConfigSchema.safeParse({
       protocol: 'irc',
