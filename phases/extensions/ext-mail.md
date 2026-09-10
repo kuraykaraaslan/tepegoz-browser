@@ -224,8 +224,13 @@ with space-stuffing, an optional HTML alternative, `quoted-printable` / `base64`
 RFC 2231 for non-ASCII filenames, CR/LF stripped from every caller-supplied header value
 (header-injection defence), and a structural-header shadow guard on custom headers. Plus
 `collectRecipients` for the SMTP envelope (Bcc included, never written as a header). Round-trips
-through `parseMime`. 83 tests total. Still owed: JWZ threading, filter engine, search fold, snippet,
-fixture corpus. · **Depends on:** nothing (pure libs) · **Branch:** `feat/ext-mail-core`
+through `parseMime`. Then **threading** (`thread.ts`) — the JWZ algorithm over
+`Message-ID` / `References` / `In-Reply-To` (empty-container synthesis, loop-safe parent links, empty
+prune, subject-group merge), a localized reply/forward prefix stripper (`Re:` `Fwd:` `Aw:` `Ynt:`
+`İlt:` … + `Re[2]:` counters + `[list-tag]`), stable `threadId`s (FNV-1a over the earliest-message
+key, order-independent), and `assignThreadId` for the incremental single-message path. 114 tests
+total. Still owed: filter engine, search fold, snippet, fixture corpus. · **Depends on:** nothing
+(pure libs) · **Branch:** `feat/ext-mail-core`
 **Risk:** low-medium — MIME is fiddly; contained by a fixture corpus.
 
 ### Deliverables
@@ -256,9 +261,12 @@ fixture corpus. · **Depends on:** nothing (pure libs) · **Branch:** `feat/ext-
       (flattened to members), comments, folded whitespace, `<angle-addr>`, case-insensitive dedupe,
       total on junk; `formatAddress` / `formatAddressList` inverse (quotes the name only when it
       needs it). 10 tests. _obs-routing tolerance is best-effort; the fixture corpus will stress it._
-- [ ] **Threading** (`thread.ts`) — the JWZ algorithm over `Message-ID` / `References` /
+- [x] **Threading** (`thread.ts`) — the JWZ algorithm over `Message-ID` / `References` /
       `In-Reply-To`, subject-based fallback (`Re:` / `Fwd:` / localized prefixes stripped), stable
-      `threadId` assignment, incremental (add one message to an existing thread set).
+      `threadId` assignment (FNV-1a over the earliest-message key, order-independent), incremental
+      (`assignThreadId` — reference then subject match, else a new thread). Golden: a tangled
+      12-message thread (mixed clients, broken References, subject drift, a forward, a dup
+      Message-ID) resolves to one thread with the expected spine. 31 threading tests.
 - [ ] **Filter engine** (`filter.ts`) — evaluate a `MailFilter[]` against a `MailMessage` + its
       headers: all/any match, every field/op (incl. `matches` = anchored safe RegExp with a
       size/step budget, `size` numeric ops), ordered actions, `stopOnMatch`. Pure — returns an

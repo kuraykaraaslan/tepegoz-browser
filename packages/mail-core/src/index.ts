@@ -28,3 +28,13 @@ export type {
 
 export { buildMime, collectRecipients } from './mime-build';
 export type { BuildMessageInput, BuildAddress, BuildAttachment } from './mime-build';
+
+export {
+  threadMessages,
+  assignThreadId,
+  toThreadable,
+  stripSubjectPrefixes,
+  normaliseSubject,
+  isReplySubject,
+} from './thread';
+export type { ThreadableMessage, ThreadNode, ThreadResult, ThreadedRef } from './thread';
