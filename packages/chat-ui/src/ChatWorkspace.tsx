@@ -4,6 +4,7 @@ import './chat-ui.css';
 import type { RoomNotifyLevel } from '@tepegoz/chat-core';
 import type { ChatContact, ChatConversation, ChatMessage } from '@tepegoz/shared-types';
 import { chatUiDict } from './i18n';
+import { Avatar } from './Avatar';
 import { Composer } from './Composer';
 import { ConversationList } from './ConversationList';
 import { MessageTimeline } from './MessageTimeline';
@@ -220,6 +221,9 @@ export function ChatWorkspace({
                 />
               ) : (
                 <header className="chat-workspace__conv-head">
+                  <span className="chat-workspace__conv-head-avatar">
+                    <Avatar name={conversationTitle(selected)} seed={selected.id} />
+                  </span>
                   <h2>{conversationTitle(selected)}</h2>
                   {notEncrypted && <NotEncryptedBadge />}
                   {typing.length > 0 && (

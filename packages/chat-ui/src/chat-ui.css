@@ -292,6 +292,13 @@
   font-size: 15px;
   font-weight: 700;
 }
+.chat-workspace__conv-head-avatar {
+  flex: none;
+  display: inline-flex;
+}
+.chat-workspace__conv-head .chat-workspace__mute {
+  margin-inline-start: auto;
+}
 .chat-workspace__typing {
   color: var(--cu-text-secondary);
   font-style: italic;
