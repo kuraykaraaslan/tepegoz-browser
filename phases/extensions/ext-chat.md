@@ -193,44 +193,50 @@ X-chat.10 Hardening, sandbox tests, e2e  ◄────────────
 
 ## X-chat.0 — Foundations (`@tepegoz/chat-core` + model)
 
-**Status:** 🟡 Code landed (2026-09-09) — `@tepegoz/shared-types` `chat.ts` + `@tepegoz/chat-core`
-(`normalizeEvent` · `foldEvent`/`reconcileEcho`/`markRead` · `send-queue` · `mentions` · `address` ·
-`search-fold`), 50 tests, coverage floor met. Golden mixed-event-stream + capability-gating tests
-present. DoD-template close-out (i18n/e2e N/A for a pure lib) pending. · **Branch:** `feat/ext-chat-core`
+**Status:** ✅ Done (2026-09-11) — every deliverable + the Functional DoD verified. `@tepegoz/chat-core`
+is **13 test files / 128 tests**, coverage **S98.19 / B92.52 / F100 / L98.19** — clear of the
+`packages/**` floor (S80/B85/F86/L80). `@tepegoz/shared-types` `chat.ts` + `chat.test.ts` registered
+(part of the 263-test shared-types suite). `dependency-cruiser` `chat-core-no-app-no-electron` rule +
+`docs/package-map.md` row present. The DoD-template rows that touch a surface / the DB / a live server
+are **N/A for a pure lib** (no `src/i18n/`, no migration, no e2e — the migration is X-chat.1, the
+surfaces are X-chat.2). · **Branch:** `feat/ext-chat-core` → `main`
 **Risk:** medium — the cross-protocol normaliser is the design's keystone; getting the event union
 wrong is expensive later.
 
 ### Deliverables
-- [ ] **Domain schemas** in `@tepegoz/shared-types` (`chat.ts`, appendix): `ChatAccount`
+- [x] **Domain schemas** in `@tepegoz/shared-types` (`chat.ts`, appendix): `ChatAccount`
       (multi-account, per-protocol `ChatServerConfig` discriminated union, `secretRef`),
       `ChatContact`, `ChatConversation` (`kind: 'dm' | 'room'`), `ChatMessage` (text / media /
       system / edit / redaction, reply-to, reactions), `ChatPresence`, `ChatReceipt`, `ChatAdapterCaps`,
       `ChatQuery`. Registered + a `chat.test.ts`.
-- [ ] **`@tepegoz/chat-core` package** — scaffold, `pnpm-workspace` (globbed), coverage `include`,
+- [x] **`@tepegoz/chat-core` package** — scaffold, `pnpm-workspace` (globbed), coverage `include`,
       `dependency-cruiser` (`chat-core-no-app-no-electron`), `docs/package-map.md`.
-- [ ] **The event normaliser** (`normalize.ts`) — every adapter emits a `RawAdapterEvent`; this maps
+- [x] **The event normaliser** (`normalize.ts`) — every adapter emits a `RawAdapterEvent`; this maps
       it to the `ChatEvent` union (`message` / `message-edit` / `message-redact` / `receipt` /
       `typing` / `presence` / `room-membership` / `roster-change` / `error`). Capability-gated fields
       (edits, reactions, threads) are dropped (not faked) when the adapter's caps say the protocol
       lacks them.
-- [ ] **Conversation model** (`conversation.ts`) — merge an incoming event into local state:
+- [x] **Conversation model** (`conversation.ts`) — merge an incoming event into local state:
       dedup by protocol message id, optimistic-echo reconciliation (local temp id → server id),
       ordering by `(origin-ts, arrival-seq)`, unread/mention counting, last-read watermark.
-- [ ] **Offline send queue** (`send-queue.ts`) — pure: enqueue an `OutgoingMessage`, mark
+- [x] **Offline send queue** (`send-queue.ts`) — pure: enqueue an `OutgoingMessage`, mark
       sending/sent/failed, idempotent replay key, backoff schedule; the host drives it.
-- [ ] **Mention / highlight parsing** (`mentions.ts`) — nick highlighting (IRC), `@`-mentions
+- [x] **Mention / highlight parsing** (`mentions.ts`) — nick highlighting (IRC), `@`-mentions
       (Matrix/XMPP), room-ping detection; used for notification routing.
-- [ ] **History search fold** (`search-fold.ts`) — reuse the Turkish-aware fold; FTS writer + query.
-- [ ] **Address parsing** (`address.ts`) — JID (`node@domain/resource`), IRC (`nick!user@host`),
+- [x] **History search fold** (`search-fold.ts`) — reuse the Turkish-aware fold; FTS writer + query.
+- [x] **Address parsing** (`address.ts`) — JID (`node@domain/resource`), IRC (`nick!user@host`),
       Matrix (`@user:server`, `#room:server`, `!roomid:server`) parse + format.
 
 ### Functional DoD
-- [ ] A recorded stream of mixed events (out-of-order delivery, an edit before its original, a
-      redaction, a duplicate) folds into the correct final conversation state (golden test).
-- [ ] Capability gating: an "edit" event from an adapter whose caps lack `edits` is dropped, not
-      applied as a new message.
-- [ ] `@tepegoz/chat-core` meets the `packages/**` coverage floor.
-- [ ] Sub-phase DoD template ✔.
+- [x] A recorded stream of mixed events (out-of-order delivery, an edit before its original, a
+      redaction, a duplicate) folds into the correct final conversation state (golden test —
+      `conversation.test.ts` "same final state regardless of event order", dedup, redaction, ordering;
+      `account-state.test.ts` golden mixed stream).
+- [x] Capability gating: an "edit" event from an adapter whose caps lack `edits` is dropped, not
+      applied as a new message (`normalize.test.ts` "gates out an edit when the adapter has no edits
+      capability" + the reaction / room-topic / rooms gates).
+- [x] `@tepegoz/chat-core` meets the `packages/**` coverage floor (98.19 / 92.52 / 100 / 98.19).
+- [x] Sub-phase DoD template ✔ (surface / DB / live-server rows N/A for a pure lib).
 
 ---
 
