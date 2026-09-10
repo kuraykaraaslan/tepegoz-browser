@@ -638,16 +638,26 @@ medium-high — the untrusted-DM + unknown-contact guards are the sharpest in th
       room topics); the **unknown-contact gate** (a non-roster DM is excluded from
       `chat_get_history` / `chat_list_items` / `chat_search_items` unless the user opted that
       conversation in); media manifest excludes bytes; `chat_get_media` → quarantine → sandbox.
-- [ ] **`chat_create_message` confirm payload** — target conversation (name + account + kind) +
-      rendered body; unattended profile → fail-closed unless sealed-narrowing preapproved that exact
-      conversation. _(Host delegates today; the rich confirm surface needs a `confirmSummary` hook on
-      the extension-SDK capability contract → the gateway → the HITL modal.)_
-- [ ] **AIAdaptor grouping** — one "Chat" adaptor in Settings (ADR-0023); verify. _(Auto-derives
-      from the `chat_` id prefix + `source: 'extension'`; needs a Settings-render check.)_
+- [x] **`chat_create_message` confirm payload** — target conversation (name + account + kind) +
+      rendered body, via a new `confirmSummary(args, host)` hook on the extension-SDK capability
+      contract → `RegisteredTool` → `ToolGateway` (awaited onto `ConfirmRequest.summary`, a throw is
+      swallowed) → `ipc-agent-run` → the ext-agent approval modal (renders `summary` in place of the
+      raw args preview). _The unattended-profile fail-closed path is the generic sealed-narrowing
+      behaviour — no chat-specific work._
+- [x] **AIAdaptor grouping** — `chatCapabilities()` descriptors carry `source: 'extension'` +
+      `provenance: 'com.tepegoz.chat'` (stamped by `defineCapabilities`), so `buildAiAdaptors` folds
+      all ten `chat_*` tools into one `kind: extension` adaptor titled "Chat" / "Sohbet" from the
+      catalog manifest — verified in `ai-adaptors.test.ts`.
 - [ ] **Agent-eval scenarios** in `@tepegoz/orchestrator` / `@tepegoz/agent-eval` — (a) summarize a
       room backlog; (b) draft a reply and stop (no send); (c) `chat_create_message` blocked at HITL;
       (d) **an unknown-contact DM is not fed to the model**; (e) **a prompt-injection DM does not
-      change agent behaviour**; (f) media → sandbox; (g) no auto-reply loop can be armed.
+      change agent behaviour**; (f) media → sandbox; (g) no auto-reply loop can be armed. _(Blocked on
+      chat-fixture support in `@tepegoz/agent-eval`'s fixture server — the scenario schema is
+      page-fixture-shaped today.)_
+
+**Remaining:** the agent-eval scenarios (need chat-fixture infra) and the Functional DoD run
+(needs a live account). The capability table, the agent-view guards, `ChatCapabilityHost` (all ten
+tools), the confirm payload and the AIAdaptor grouping are landed on `main`.
 
 ### Functional DoD
 - [ ] The agent can list / read / search / summarize / draft across accounts and protocols;

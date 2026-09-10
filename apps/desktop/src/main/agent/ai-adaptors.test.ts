@@ -21,11 +21,13 @@ const mcpStatus = vi.hoisted(() =>
 vi.mock('../mcp/supervisor.electron', () => ({ default: { getStatus: mcpStatus } }));
 
 vi.mock('../../shared/extensions', () => ({
-  manifestById: (id: string) => (id === 'com.acme.tool' ? { id } : undefined),
-  extensionLabel: (m: { id: string }) => ({ name: `Acme (${m.id})` }),
+  manifestById: (id: string) =>
+    id === 'com.acme.tool' ? { id } : id === 'com.tepegoz.chat' ? { id, name: 'Chat' } : undefined,
+  extensionLabel: (m: { id: string; name?: string }) => ({ name: m.name ?? `Acme (${m.id})` }),
 }));
 
 const { buildAiAdaptors, buildAdaptorConnections } = await import('./ai-adaptors');
+const { chatCapabilities } = await import('@tepegoz/ext-chat/capabilities');
 
 const tool = (over: Record<string, unknown>) => ({
   id: 'browser_click',
@@ -64,6 +66,35 @@ describe('buildAiAdaptors — grouping', () => {
       title: 'Acme (com.acme.tool)',
       provenance: 'com.acme.tool',
     });
+  });
+
+  it('folds the real chatCapabilities() into a single "Chat" extension adaptor (X-chat.6)', () => {
+    registryList.mockReturnValue(
+      chatCapabilities().capabilities.map((c) => ({
+        ...c.descriptor,
+        requiresIdempotencyKey: c.descriptor.requiresIdempotencyKey ?? false,
+      })),
+    );
+    const adaptors = buildAiAdaptors('en');
+    expect(adaptors).toHaveLength(1);
+    expect(adaptors[0]).toMatchObject({
+      id: 'com.tepegoz.chat',
+      kind: 'extension',
+      title: 'Chat',
+      provenance: 'com.tepegoz.chat',
+    });
+    expect(adaptors[0]?.actions.map((a) => a.id).sort()).toEqual([
+      'chat_create_membership',
+      'chat_create_message',
+      'chat_delete_item',
+      'chat_get_history',
+      'chat_get_item',
+      'chat_get_media',
+      'chat_list_items',
+      'chat_search_items',
+      'chat_update_item',
+      'chat_update_presence',
+    ]);
   });
 
   it('treats the built-in management host as a system "Extensions" group, not a user extension', () => {
