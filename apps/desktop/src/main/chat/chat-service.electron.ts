@@ -7,7 +7,8 @@ import type { Db } from '@tepegoz/persistence';
 import PreferenceStore from '@tepegoz/preferences';
 import { getDb } from '../db/database.electron';
 import NotificationHost from '../notifications/notification-host';
-import { ChatStore } from '@tepegoz/persistence';
+import { ChatStore, EventJournal } from '@tepegoz/persistence';
+import { randomUUID } from 'node:crypto';
 import { createChatDialer } from './egress-dialer';
 import { seedChatAccountsFromEnv } from './chat-seed.electron';
 import ChatSecrets from './chat-secrets.electron';
@@ -23,7 +24,7 @@ import {
   upsertAccount,
 } from './chat-store-adapter';
 import { ChatService, type ChatServiceDeps } from './chat-service';
-import type { RunnerEmit } from './account-runner';
+import type { ChatAuditEvent, RunnerEmit } from './account-runner';
 import type { ChatIpcService } from '../ipc/ipc-chat';
 
 /** `com.tepegoz.chat` — the messenger extension id. */
@@ -63,6 +64,46 @@ export function chatNotify(n: {
   });
 }
 
+/**
+ * Append a redacted chat fact to the Event Journal. The payload is deliberately content-free — a
+ * conversation-id hash, the account, the protocol / protocol id and a timestamp — so the audit trail
+ * records *that* a message was sent or an account added, never what, to whom, or which room, and
+ * never a secret.
+ */
+export function chatAudit(event: ChatAuditEvent): void {
+  const db = getDb();
+  if (db === null) return;
+  try {
+    if (event.kind === 'message-sent') {
+      EventJournal.append(db, {
+        id: randomUUID(),
+        type: 'ChatMessageSent',
+        ts: event.ts,
+        actor: 'user',
+        correlationId: event.conversationHash,
+        redacted: true,
+        payload: {
+          accountId: event.accountId,
+          conversationHash: event.conversationHash,
+          protocolId: event.protocolId,
+        },
+      });
+    } else {
+      EventJournal.append(db, {
+        id: randomUUID(),
+        type: 'ChatAccountAdded',
+        ts: event.ts,
+        actor: 'user',
+        correlationId: event.accountId,
+        redacted: true,
+        payload: { accountId: event.accountId, protocol: event.protocol },
+      });
+    }
+  } catch {
+    /* the journal must never be able to break a send / add */
+  }
+}
+
 function requireDb(): Db {
   const handle = getDb();
   if (handle === null) throw new Error('chat: the profile database is not open');
@@ -86,6 +127,7 @@ export function buildChatService(over: Partial<ChatServiceDeps> = {}): ChatServi
     clearTimer: (h) => clearTimeout(h as ReturnType<typeof setTimeout>),
     emit: broadcastChatEvent,
     notify: chatNotify,
+    audit: chatAudit,
     isEnabled: chatExtensionEnabled,
     ...over,
   });

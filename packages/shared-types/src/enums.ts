@@ -107,5 +107,9 @@ export const EventTypeEnum = z.enum([
   'TaskArtifactCreated',
   'TaskSucceeded',
   'TaskFailed',
+  // Messenger (`com.tepegoz.chat`) — always redacted: a conversation-id hash, the account and a
+  // timestamp, never a body / sender / room address / secret.
+  'ChatAccountAdded',
+  'ChatMessageSent',
 ]);
 export type EventType = z.infer<typeof EventTypeEnum>;

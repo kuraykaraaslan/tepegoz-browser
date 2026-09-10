@@ -4,6 +4,7 @@ import { XMPP_CAPS } from '@tepegoz/chat-adapters';
 import {
   ChatAccountRunner,
   type AccountRunnerDeps,
+  type ChatAuditEvent,
   type ChatRunnerStore,
   type RunnerEmit,
 } from './account-runner';
@@ -157,7 +158,9 @@ function harness(over: DepsOverride = {}) {
   const { deps, emitted } = makeDeps({ adapter, store, ...over });
   const notifications: Array<{ conversationId: string; title: string; body: string }> = [];
   deps.notify = (n) => notifications.push(n);
-  return { runner: new ChatAccountRunner(deps), adapter, store, emitted, notifications };
+  const audits: ChatAuditEvent[] = [];
+  deps.audit = (e) => audits.push(e);
+  return { runner: new ChatAccountRunner(deps), adapter, store, emitted, notifications, audits };
 }
 
 const incomingMessage = (
@@ -241,6 +244,19 @@ describe('ChatAccountRunner — actions', () => {
     expect(store.messages).toHaveLength(1);
     expect(store.messages[0]?.protocolId).toBe('srv-1');
     expect(store.messages[0]?.deliveryState).toBe('sent');
+  });
+
+  it('X-chat.10: the "message sent" audit fact carries no body, address or secret', async () => {
+    const { runner, audits } = await online();
+    await runner.sendMessage('secret-room@conf.example', { body: 'MEETME_AT_MIDNIGHT plaintext' });
+    expect(audits).toHaveLength(1);
+    const json = JSON.stringify(audits[0]);
+    expect(json).not.toContain('MEETME_AT_MIDNIGHT');
+    expect(json).not.toContain('secret-room@conf.example');
+    expect(json).not.toContain('pencil'); // the runner's vault secret (makeDeps `secret: 'pencil'`)
+    const fact = audits[0];
+    expect(fact).toMatchObject({ kind: 'message-sent', accountId: 'acc', protocolId: 'srv-1' });
+    expect(fact?.kind === 'message-sent' && fact.conversationHash).toMatch(/^[0-9a-f]{16}$/);
   });
 
   it('history seeds the conversation and returns the page', async () => {

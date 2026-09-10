@@ -302,8 +302,10 @@ close-out. · **Branch:** `main` · **Risk:** low.
 - [x] **desktop `ChatService`** — account CRUD, credential vault resolve (`safeStorage`),
       `ChatTransport` over Node `net`/`tls`/WebSocket bound to the profile egress, adapter lifecycle,
       DB writes, IPC surface (zod-gated channels + preload bridge).
-      _Deferred to X-chat.2/.10:_ redacted Journal events (`ChatAccountAdded`, `ChatMessageSent` —
-      conv-id hash only).
+      Redacted Journal events landed 2026-09-10: `ChatMessageSent` (a truncated SHA-256 of the
+      conversation id + account + protocol id + ts — no body / sender / room / secret) on every send,
+      `ChatAccountAdded` (account + protocol) on add; `EventJournal.append(..., redacted: true)`,
+      journal failure can never break a send.
 - [x] **`background-connection` supervisor integration** — keep-alive, backoff, drop on disable /
       profile switch / kill-switch; per-account state machine pushed to the renderer.
 - [x] **Offline send queue** wired to `chat-core/send-queue`.
@@ -828,9 +830,12 @@ does not corrupt a folded view). Then the **kill-switch half** — `ChatCapabili
 / `chat_delete_item` / `chat_update_presence` / `chat_update_item` mark-read + reaction /
 `chat_get_media`) now fails closed with a **403** on a kill-switched profile, while local reads and a
 local-only mute still work; `ChatService.notifyEgressChange` is proven to fan the block out so every
-account's `ChatConnState` goes `blocked` and recovers. Bridge-payload fuzz + the profile-switch half +
-sandbox / e2e / perf remain. · **Depends on:** X-chat.2–.7 · **Branch:** `feat/chat-hardening` ·
-**Risk:** low — mostly tests.
+account's `ChatConnState` goes `blocked` and recovers. Then **redacted Journal events + the redaction
+property test** — `ChatMessageSent` / `ChatAccountAdded` go in with `redacted: true` carrying only a
+conv-id hash / account / protocol id / ts, and tests assert the emitted facts contain no body, no
+room/JID address and no vault secret (new `ChatMessageSent` / `ChatAccountAdded` `EventType`s).
+Bridge-payload fuzz + the profile-switch half + sandbox / e2e / perf remain. · **Depends on:**
+X-chat.2–.7 · **Branch:** `feat/chat-hardening` · **Risk:** low — mostly tests.
 
 ### Deliverables
 - [x] **Adapter-event fuzz / zod-rejection tests** — malformed XMPP stanza, Matrix sync event and
@@ -840,7 +845,9 @@ sandbox / e2e / perf remain. · **Depends on:** X-chat.2–.7 · **Branch:** `fe
       _Bridge-payload fuzz is deferred to X-chat.8 (no bridge contract exists yet)._
 - [ ] **Bridge sandbox tests** — no FS escape, no cross-account reach, crash isolation, egress
       binding enforced, RPC surface minimal.
-- [ ] **Journal redaction property test** — no plaintext, credential, or key material in `events`.
+- [x] **Journal redaction property test** — the `ChatMessageSent` fact is asserted to contain no
+      message body, no room/JID address and no vault secret (only a conv-id hash); the
+      `ChatAccountAdded` fact contains no secret. Both go in with `redacted: true`.
 - [~] **Kill-switch + profile-switch tests** — bound-blocked profile denies agent chat tools **✔**
       (`ChatCapabilityHost.mayEgress` → 403 on every wire action; `notifyEgressChange` fan-out to
       `blocked` proven). _Profile-switch drop-every-connection + next-profile-isolation still owed

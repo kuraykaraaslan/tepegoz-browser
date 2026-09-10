@@ -5,6 +5,7 @@ import type { ChatConnState } from '@tepegoz/chat-core';
 import { AppError } from '@tepegoz/libs';
 import {
   ChatAccountRunner,
+  type ChatAuditEvent,
   type ChatNotification,
   type ChatRunnerStore,
   type RunnerEmit,
@@ -44,6 +45,8 @@ export interface ChatServiceDeps {
   emit: (event: RunnerEmit) => void;
   /** Raise a notification for a message that survived `decideNotification`. Optional. */
   notify?: (notification: ChatNotification) => void;
+  /** Record a redacted "message sent" fact in the Event Journal. Optional. */
+  audit?: (event: ChatAuditEvent) => void;
   /** Whether the `com.tepegoz.chat` extension is enabled. */
   isEnabled: () => boolean;
 }
@@ -91,6 +94,7 @@ export class ChatService {
       mayEgress: this.deps.mayEgress,
       emit: this.deps.emit,
       ...(this.deps.notify !== undefined ? { notify: this.deps.notify } : {}),
+      ...(this.deps.audit !== undefined ? { audit: this.deps.audit } : {}),
     });
     this.runners.set(account.id, runner);
     runner.start();
@@ -112,6 +116,12 @@ export class ChatService {
   async addAccount(account: ChatAccount, plainSecret: string): Promise<void> {
     await this.deps.secrets.set(account.secretRef, plainSecret);
     this.deps.persistAccount(account);
+    this.deps.audit?.({
+      kind: 'account-added',
+      accountId: account.id,
+      protocol: account.server.protocol,
+      ts: this.deps.now(),
+    });
     if (this.started && this.deps.isEnabled()) await this.spinUp(account);
   }
 

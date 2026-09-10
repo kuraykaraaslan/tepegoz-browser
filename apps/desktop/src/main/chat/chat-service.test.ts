@@ -81,6 +81,7 @@ function harness(over: Partial<ChatServiceDeps> = {}) {
   let accounts: ChatAccount[] = over.loadAccounts?.() ?? [];
   const secrets = fakeSecrets({ 'chat:a': 's', 'chat:b': 's' });
   const emit = vi.fn();
+  const audit = vi.fn();
   const deps: ChatServiceDeps = {
     loadAccounts: () => accounts,
     secrets,
@@ -98,10 +99,11 @@ function harness(over: Partial<ChatServiceDeps> = {}) {
     setTimer: (fn) => fn,
     clearTimer: () => undefined,
     emit,
+    audit,
     isEnabled: () => true,
     ...over,
   };
-  return { service: new ChatService(deps), adapter, secrets, emit, setAccounts: (a: ChatAccount[]) => (accounts = a) };
+  return { service: new ChatService(deps), adapter, secrets, emit, audit, setAccounts: (a: ChatAccount[]) => (accounts = a) };
 }
 
 describe('ChatService — lifecycle', () => {
@@ -160,6 +162,16 @@ describe('ChatService — accounts', () => {
     expect(secrets.store.get('chat:new')).toBe('hunter2');
     expect(adapter.connect).toHaveBeenCalled();
     expect(service.accountStates()).toHaveProperty('new');
+  });
+
+  it('X-chat.10: the "account added" audit fact carries no secret', async () => {
+    const { service, audit } = harness();
+    await service.start();
+    await service.addAccount(account('new'), 'hunter2-the-vault-secret');
+    expect(audit).toHaveBeenCalledTimes(1);
+    const event = audit.mock.calls[0]?.[0] as { kind: string; accountId: string; protocol: string };
+    expect(JSON.stringify(event)).not.toContain('hunter2-the-vault-secret');
+    expect(event).toMatchObject({ kind: 'account-added', accountId: 'new', protocol: 'xmpp' });
   });
 
   it('removeAccount stops the runner and drops the secret + row', async () => {

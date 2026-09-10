@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import type {
   ChatAccount,
   ChatContact,
@@ -48,6 +49,20 @@ export interface ChatNotification {
   body: string;
 }
 
+/**
+ * A redacted audit fact for the Event Journal. NEVER carries a message body, a sender/JID, a room
+ * address or any secret — only a truncated SHA-256 of the conversation id (enough to correlate a
+ * thread across events), the account id, the protocol message id, the protocol name and a timestamp.
+ */
+export type ChatAuditEvent =
+  | { kind: 'message-sent'; accountId: string; conversationHash: string; protocolId: string; ts: number }
+  | { kind: 'account-added'; accountId: string; protocol: string; ts: number };
+
+/** Truncated SHA-256 of a conversation id — a stable correlation key that reveals no JID / channel. */
+export function hashConversationId(conversationId: string): string {
+  return createHash('sha256').update(conversationId).digest('hex').slice(0, 16);
+}
+
 export interface AccountRunnerDeps {
   account: ChatAccount;
   /** Plaintext secret, resolved from the vault by `ChatService`. */
@@ -62,6 +77,8 @@ export interface AccountRunnerDeps {
   emit: (event: RunnerEmit) => void;
   /** Raise a notification for an inbound message (after `decideNotification`). Optional. */
   notify?: (notification: ChatNotification) => void;
+  /** Record a redacted "message sent" fact in the Event Journal. Optional. */
+  audit?: (event: ChatAuditEvent) => void;
 }
 
 const NOTIFY_BODY_MAX = 180;
@@ -255,6 +272,13 @@ export class ChatAccountRunner {
     for (const change of this.state.reconcileSend(conversationId, tempId, settled)) {
       this.applyChange(change);
     }
+    this.deps.audit?.({
+      kind: 'message-sent',
+      accountId: this.accountId,
+      conversationHash: hashConversationId(conversationId),
+      protocolId: receipt.protocolId,
+      ts: this.deps.now(),
+    });
     return receipt.protocolId;
   }
 
