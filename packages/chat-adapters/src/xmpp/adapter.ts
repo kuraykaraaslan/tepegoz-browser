@@ -25,6 +25,7 @@ import {
 import { buildMamQuery, parseMamFin, parseMamResult } from './mam';
 import {
   buildMucChangeSubject,
+  buildMucInvite,
   buildMucJoin,
   buildMucLeave,
   mucRemovalText,
@@ -412,6 +413,12 @@ export class XmppAdapter implements ChatAdapter {
   setRoomTopic(session: ChatSession, conv: ConvId, topic: string): Promise<void> {
     const s = session as XmppSession;
     s.stream.write(buildMucChangeSubject(bareJid(conv) ?? conv, topic));
+    return Promise.resolve();
+  }
+
+  inviteToRoom(session: ChatSession, conv: ConvId, invitee: string): Promise<void> {
+    const s = session as XmppSession;
+    s.stream.write(buildMucInvite(bareJid(conv) ?? conv, bareJid(invitee) ?? invitee));
     return Promise.resolve();
   }
 

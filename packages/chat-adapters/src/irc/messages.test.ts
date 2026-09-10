@@ -3,6 +3,7 @@ import {
   asIrcCasemapping,
   buildIrcAction,
   buildIrcAway,
+  buildIrcInvite,
   buildIrcJoin,
   buildIrcNick,
   buildIrcPart,
@@ -252,5 +253,6 @@ describe('irc builders', () => {
     expect(buildIrcAction('#c', 'nods')).toBe(`PRIVMSG #c :${soh}ACTION nods${soh}`);
     expect(buildIrcTopic('#c', 'the new topic')).toBe('TOPIC #c :the new topic');
     expect(buildIrcTopic('#c', '')).toBe('TOPIC #c :');
+    expect(buildIrcInvite('carol', '#c')).toBe('INVITE carol #c');
   });
 });

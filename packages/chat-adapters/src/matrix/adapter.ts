@@ -397,6 +397,13 @@ export class MatrixAdapter implements ChatAdapter {
     });
   }
 
+  async inviteToRoom(session: ChatSession, conv: ConvId, invitee: string): Promise<void> {
+    const s = session as MatrixSession;
+    await this.request(s, 'POST', `${CS}/rooms/${encodeURIComponent(conv)}/invite`, {
+      user_id: invitee,
+    });
+  }
+
   resolveMedia(session: ChatSession, mediaRef: string): MediaLocator | null {
     const s = session as MatrixSession;
     const url = mxcDownloadUrl(s.homeserverUrl, mediaRef);

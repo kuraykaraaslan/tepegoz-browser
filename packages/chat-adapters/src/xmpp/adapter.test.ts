@@ -396,6 +396,14 @@ describe('XmppAdapter — live traffic', () => {
     expect(sent).toContain('<subject>Sprint 5 planning</subject>');
   });
 
+  it('inviteToRoom writes a MUC mediated <invite> message to the room', async () => {
+    const { server, adapter, session } = await connected();
+    await adapter.inviteToRoom?.(session, 'general@conf.example.com/res', 'carol@example.com');
+    const sent = server.lastWritten();
+    expect(sent).toContain('to="general@conf.example.com"');
+    expect(sent).toContain('<invite to="carol@example.com">');
+  });
+
   it('a presence from a room we have NOT joined falls through to a normal presence event', async () => {
     const { server, adapter, session } = await connected();
     const it = adapter.events(session)[Symbol.asyncIterator]();

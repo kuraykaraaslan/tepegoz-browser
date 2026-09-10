@@ -152,6 +152,7 @@ export {
   buildIrcAction,
   buildIrcJoin,
   buildIrcPart,
+  buildIrcInvite,
   buildIrcNick,
   buildIrcNickServIdentify,
   buildIrcAway,

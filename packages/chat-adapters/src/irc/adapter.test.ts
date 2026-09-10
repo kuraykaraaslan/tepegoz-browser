@@ -300,6 +300,12 @@ describe('IrcAdapter — live traffic', () => {
     expect(server.lastWritten()).toBe('TOPIC #chan :');
   });
 
+  it('inviteToRoom writes an INVITE line', async () => {
+    const { adapter, server, session } = await connected();
+    await adapter.inviteToRoom?.(session, '#chan', 'carol');
+    expect(server.lastWritten()).toBe('INVITE carol #chan');
+  });
+
   it('disconnect is best-effort when the socket throws', async () => {
     const { adapter, session, server } = await connected();
     server.stub(() => {

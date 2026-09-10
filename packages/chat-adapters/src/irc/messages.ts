@@ -344,3 +344,8 @@ export function buildIrcAway(message?: string): string {
 export function buildIrcTopic(channel: string, topic: string): string {
   return `TOPIC ${channel} :${topic}`;
 }
+
+/** `INVITE <nick> <channel>` — ask the server to invite a user to a channel. */
+export function buildIrcInvite(nick: string, channel: string): string {
+  return `INVITE ${nick} ${channel}`;
+}

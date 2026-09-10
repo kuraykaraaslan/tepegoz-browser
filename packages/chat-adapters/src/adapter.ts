@@ -96,6 +96,10 @@ export interface ChatAdapter {
 
   joinRoom?(session: ChatSession, address: string): Promise<ChatConversation>;
   leaveRoom?(session: ChatSession, conv: ConvId): Promise<void>;
+  /** Invite a contact to a room. `invitee` is the protocol address (JID / nick / Matrix user id);
+   *  the server delivers the invitation. Write-only — any resulting membership change arrives on
+   *  the event stream. Optional; a protocol / room without invites omits it. */
+  inviteToRoom?(session: ChatSession, conv: ConvId, invitee: string): Promise<void>;
   /** Change a room's topic / subject. The server's echo drives the `room-topic` event that updates
    *  local state — this only writes. Optional; a protocol / room without topic support omits it. */
   setRoomTopic?(session: ChatSession, conv: ConvId, topic: string): Promise<void>;

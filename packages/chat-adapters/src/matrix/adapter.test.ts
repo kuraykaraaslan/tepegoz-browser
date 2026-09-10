@@ -183,6 +183,7 @@ describe('MatrixAdapter — actions', () => {
       .on(/\/join\//, () => ({ body: { room_id: '!joined:m.example' } }))
       .on(/\/(leave|receipt|presence)\b/, () => ({ body: {} }))
       .on(/\/rooms\/[^/]+\/leave$/, () => ({ body: {} }))
+      .on(/\/rooms\/[^/]+\/invite$/, () => ({ body: {} }))
       .on(/\/state\/m\.room\.topic$/, () => ({ body: { event_id: '$topic' } }));
     const adapter = new MatrixAdapter();
     const session = (await adapter.connect(creds(), t)) as MatrixSession;
@@ -242,6 +243,15 @@ describe('MatrixAdapter — actions', () => {
     const call = t.calls.find((c) => /\/state\/m\.room\.topic$/.test(c.url));
     expect(call?.init.method).toBe('PUT');
     expect(JSON.parse(String(call?.init.body))).toEqual({ topic: 'Release week' });
+    await adapter.disconnect(session);
+  });
+
+  it('inviteToRoom POSTs the user id to /invite', async () => {
+    const { adapter, session, t } = await connected();
+    await adapter.inviteToRoom?.(session, '!r:m.example', '@carol:m.example');
+    const call = t.calls.find((c) => /\/rooms\/[^/]+\/invite$/.test(c.url));
+    expect(call?.init.method).toBe('POST');
+    expect(JSON.parse(String(call?.init.body))).toEqual({ user_id: '@carol:m.example' });
     await adapter.disconnect(session);
   });
 

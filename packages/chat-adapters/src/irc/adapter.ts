@@ -21,6 +21,7 @@ import {
   asIrcCasemapping,
   buildIrcAway,
   buildIrcJoin,
+  buildIrcInvite,
   buildIrcNick,
   buildIrcNickServIdentify,
   buildIrcPart,
@@ -441,6 +442,11 @@ export class IrcAdapter implements ChatAdapter {
 
   setRoomTopic(session: ChatSession, conv: ConvId, topic: string): Promise<void> {
     (session as IrcSession).enqueue(buildIrcTopic(conv, topic));
+    return Promise.resolve();
+  }
+
+  inviteToRoom(session: ChatSession, conv: ConvId, invitee: string): Promise<void> {
+    (session as IrcSession).enqueue(buildIrcInvite(invitee, conv));
     return Promise.resolve();
   }
 
