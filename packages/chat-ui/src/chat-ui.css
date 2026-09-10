@@ -249,7 +249,14 @@
 }
 .chat-workspace__no-selection {
   margin: auto;
+  max-width: 30ch;
+  padding: 20px;
+  text-align: center;
   color: var(--cu-text-secondary);
+  font-size: 14px;
+}
+.chat-workspace__conv-body:has(.chat-workspace__no-selection) {
+  background: var(--cu-canvas);
 }
 .chat-workspace__conv-head {
   display: flex;
@@ -831,6 +838,21 @@ button.chat-msg__quote {
 .chat-roster__open:hover,
 .chat-room-members__pick:hover {
   background: var(--cu-primary-subtle);
+}
+.chat-roster__avatar {
+  position: relative;
+  flex: none;
+  display: inline-flex;
+}
+.chat-roster__avatar .chat-presence {
+  position: absolute;
+  right: -2px;
+  bottom: -2px;
+}
+.chat-roster__avatar .chat-presence__dot {
+  width: 10px;
+  height: 10px;
+  box-shadow: 0 0 0 2px var(--cu-surface-raised);
 }
 .chat-roster__name,
 .chat-room-members__nick {
