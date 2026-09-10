@@ -194,11 +194,19 @@ X-mail.8  Hardening, at-rest encryption, import, e2e  ◄───────�
 
 ## X-mail.0 — Foundations (`@tepegoz/mail-core` + model)
 
-**Status:** ⬜ Not started · **Depends on:** nothing (pure libs) · **Branch:** `feat/ext-mail-core`
+**Status:** 🟡 Started (2026-09-10) — the `@tepegoz/shared-types` `mail.ts` domain schemas landed
+(`MailAccount` / `MailServerConfig` discriminated union / `MailIdentity` / `MailSyncPrefs`,
+`MailFolder` + `MAIL_FOLDER_ROLES`, `MailMessage` header projection / `MailAddress` / `MailFlag`,
+`MailAttachmentMeta` + quarantine states, `MailBody`, `MailDraft`, `MailFilter` + field/op/action
+enums + condition/action rows, `MailQuery`, `MailSyncCursor`; every string length-capped, every array
+size-capped; `parseMailMessage` boundary helper; exported from `index.ts`), `mail.test.ts` with 14
+accept/reject cases. Everything else in the sub-phase (`@tepegoz/mail-core` package, MIME
+parser/builder, address parser, JWZ threading, filter engine, search fold, snippet, fixture corpus)
+is untouched. · **Depends on:** nothing (pure libs) · **Branch:** `feat/ext-mail-core`
 **Risk:** low-medium — MIME is fiddly; contained by a fixture corpus.
 
 ### Deliverables
-- [ ] **Domain schemas** in `@tepegoz/shared-types` (`mail.ts`, appendix sketch): `MailAccount`
+- [x] **Domain schemas** in `@tepegoz/shared-types` (`mail.ts`, appendix sketch): `MailAccount`
       (multi-account, per-adapter `MailServerConfig` discriminated union, `identities[]`, `sync`
       prefs, `secretRef` — never the secret), `MailFolder` (+ `MAIL_FOLDER_ROLES`), `MailMessage`
       (header projection, body by ref), `MailAttachmentMeta`, `MailBody`, `MailDraft`, `MailFilter`
