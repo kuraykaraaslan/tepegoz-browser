@@ -131,12 +131,14 @@ describe('NodeChatTransport — fetch', () => {
     expect(init?.body).toBe('q');
   });
 
-  it('passes a Uint8Array body straight through for a media upload', async () => {
+  it('passes a Uint8Array body through as bytes for a media upload', async () => {
     const fetchMock = vi.fn<FetchFn>().mockResolvedValue(new Response('{}', { status: 200 }));
     const t = new NodeChatTransport({ fetch: fetchMock as unknown as typeof fetch });
     const bytes = new Uint8Array([1, 2, 3]);
     await t.fetch('https://x.com/upload', { method: 'POST', body: bytes });
-    expect(fetchMock.mock.calls[0]?.[1]?.body).toBe(bytes);
+    const sent = fetchMock.mock.calls[0]?.[1]?.body;
+    expect(sent).toBeInstanceOf(ArrayBuffer);
+    expect(Array.from(new Uint8Array(sent as ArrayBuffer))).toEqual([1, 2, 3]);
   });
 
   it('exposes the raw response body as bytes', async () => {

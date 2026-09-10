@@ -7,9 +7,11 @@ import type { Db } from '@tepegoz/persistence';
 import PreferenceStore from '@tepegoz/preferences';
 import { getDb } from '../db/database.electron';
 import NotificationHost from '../notifications/notification-host';
+import { ChatStore } from '@tepegoz/persistence';
 import { createChatDialer } from './egress-dialer';
 import { seedChatAccountsFromEnv } from './chat-seed.electron';
 import ChatSecrets from './chat-secrets.electron';
+import { createChatCapabilityHost } from './chat-capability-host';
 import {
   deleteAccount,
   listAccountSummaries,
@@ -154,6 +156,26 @@ export function __setServiceForTest(next: ChatService | null): void {
   service = next;
 }
 
+/** Conversation ids the user opted the agent into this session (X-chat.6 unknown-contact gate). */
+const chatAgentOptIns = new Set<string>();
+
+/** The agent `chat_*` capability host — `ChatService` + DB-backed reads through the agent-view guards. */
+export function chatCapabilityHost(): ReturnType<typeof createChatCapabilityHost> {
+  return createChatCapabilityHost({
+    listConversations: (accountId) => (getDb() === null ? [] : listConversations(requireDb(), accountId)),
+    getConversation: (id) => (getDb() === null ? null : ChatStore.getConversation(requireDb(), id)),
+    listContacts: (accountId) => (getDb() === null ? [] : listContacts(requireDb(), accountId)),
+    searchMessages: (opts) => (getDb() === null ? [] : ChatStore.searchMessages(requireDb(), opts)),
+    history: (accountId, conversationId, before) =>
+      requireService().history(accountId, conversationId, before),
+    setPresence: (accountId, presence, statusText) =>
+      requireService().setPresence(accountId, presence, statusText),
+    markRead: (accountId, conversationId, protocolId) =>
+      requireService().markRead(accountId, conversationId, protocolId),
+    sessionOptIns: () => chatAgentOptIns,
+  });
+}
+
 /**
  * Thin facade over the messenger module functions, matching the `XService.*` static surface every other
  * main-process service in this app presents (`TaskService`, `McpService`, …). `app` bootstrap calls
@@ -175,5 +197,9 @@ export default class ChatMessenger {
 
   static reconcile(): Promise<void> {
     return reconcile();
+  }
+
+  static capabilityHost(): ReturnType<typeof chatCapabilityHost> {
+    return chatCapabilityHost();
   }
 }

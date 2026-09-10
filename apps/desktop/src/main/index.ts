@@ -71,6 +71,7 @@ import translateContextMenuContributor from './extensions/translate-context-menu
 import PageContextMenuContributionService from './menus/page-context-menu-contributions';
 import MacroService from './macro/macro-service.electron';
 import { macrosCapabilities } from '@tepegoz/ext-macros/capabilities';
+import { chatCapabilities } from '@tepegoz/ext-chat/capabilities';
 import { typoCapabilities } from '@tepegoz/ext-typo/capabilities';
 import { translateCapabilities } from '@tepegoz/ext-translate/capabilities';
 import { registerBrowserTools } from '@tepegoz/browser-tools';
@@ -422,6 +423,7 @@ if (!app.requestSingleInstanceLock()) {
           ExtensionCapabilityService.provide(macrosCapabilities(), MacroService.capabilityHost());
           ExtensionCapabilityService.provide(typoCapabilities(), typoCapabilityHost);
           ExtensionCapabilityService.provide(translateCapabilities(), translateCapabilityHost);
+          ExtensionCapabilityService.provide(chatCapabilities(), ChatMessenger.capabilityHost());
           ExtensionCapabilityService.start();
         }
         // Sandboxed file operations: seed the default ~/tepegoz grant (first run), sync the access policy

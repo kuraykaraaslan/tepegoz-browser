@@ -87,11 +87,12 @@ export class NodeChatTransport implements ChatTransport {
     const timer =
       init?.timeoutMs !== undefined ? setTimeout(() => controller.abort(), init.timeoutMs) : undefined;
     try {
+      const body = toRequestBody(init?.body);
       const res = await this.ports.fetch(url, {
         method: init?.method ?? 'GET',
         signal: controller.signal,
         ...(init?.headers !== undefined ? { headers: init.headers } : {}),
-        ...(init?.body !== undefined ? { body: init.body } : {}),
+        ...(body !== undefined ? { body } : {}),
       });
       const headers: Record<string, string> = {};
       res.headers.forEach((v, k) => {
@@ -109,14 +110,25 @@ export class NodeChatTransport implements ChatTransport {
   }
 
   async openEventStream(url: string, init?: ChatFetchInit): Promise<EventStream> {
+    const body = toRequestBody(init?.body);
     const res = await this.ports.fetch(url, {
       method: init?.method ?? 'GET',
       headers: { Accept: 'text/event-stream', ...init?.headers },
-      ...(init?.body !== undefined ? { body: init.body } : {}),
+      ...(body !== undefined ? { body } : {}),
     });
     if (res.body === null) throw new Error('openEventStream: response had no body');
     return consumeSse(res.body);
   }
+}
+
+/** Normalize a `ChatFetchInit` body to something `fetch` accepts: a string stays; raw bytes are
+ *  copied into a fresh `ArrayBuffer`-backed view (`fetch`'s `BodyInit` wants `ArrayBufferView` over a
+ *  concrete `ArrayBuffer`, not the `ArrayBufferLike` a caller's `Uint8Array` may carry). */
+function toRequestBody(body: string | Uint8Array | undefined): string | ArrayBuffer | undefined {
+  if (body === undefined || typeof body === 'string') return body;
+  const copy = new Uint8Array(body.byteLength);
+  copy.set(body);
+  return copy.buffer;
 }
 
 /** Parse an SSE body into an `EventStream`, emitting the `data:` payload of each complete event. */

@@ -1,4 +1,5 @@
-import type { ChatContact, ChatMessage, ChatPresence } from '@tepegoz/shared-types';
+import type { ChatContact, ChatPresence } from '@tepegoz/shared-types';
+import type { AgentChatMessage } from '@tepegoz/chat-core';
 
 /**
  * The host contract the **agent** capabilities (`capabilities.ts`) run against — implemented in the
@@ -52,7 +53,7 @@ export interface ChatHistoryRequest {
 }
 
 export interface ChatHistorySlice {
-  messages: ChatMessage[];
+  messages: AgentChatMessage[];
   nextCursor: string | null;
 }
 
@@ -66,7 +67,7 @@ export interface ChatSearchRequest {
 export interface ChatMessageHit {
   conversationId: string;
   accountId: string;
-  message: ChatMessage;
+  message: AgentChatMessage;
 }
 
 export interface ChatCreateMessageRequest {

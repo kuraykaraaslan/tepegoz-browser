@@ -447,6 +447,9 @@ importers:
 
   extensions/ext-chat:
     dependencies:
+      '@tepegoz/chat-core':
+        specifier: workspace:*
+        version: link:../../packages/chat-core
       '@tepegoz/chat-ui':
         specifier: workspace:*
         version: link:../../packages/chat-ui
