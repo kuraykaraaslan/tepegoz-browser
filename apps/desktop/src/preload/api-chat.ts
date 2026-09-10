@@ -36,6 +36,7 @@ export const chatApi: Pick<
   | 'setChatRoomNotifyLevel'
   | 'setChatMuted'
   | 'setChatRoomTopic'
+  | 'inviteToChatRoom'
   | 'resolveChatMedia'
   | 'onChatState'
 > = {
@@ -74,6 +75,8 @@ export const chatApi: Pick<
     invoke<void>(IpcChannels.chatSetMuted, { accountId, conversationId, muted }),
   setChatRoomTopic: (accountId: string, conversationId: string, topic: string) =>
     invoke<void>(IpcChannels.chatSetRoomTopic, { accountId, conversationId, topic }),
+  inviteToChatRoom: (accountId: string, conversationId: string, invitee: string) =>
+    invoke<void>(IpcChannels.chatInviteToRoom, { accountId, conversationId, invitee }),
   resolveChatMedia: (accountId: string, mediaRef: string) =>
     invoke<{ dataUrl: string } | null>(IpcChannels.chatResolveMedia, { accountId, mediaRef }),
   onChatState: (callback: (event: ChatStateEvent) => void) => {

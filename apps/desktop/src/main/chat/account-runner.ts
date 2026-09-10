@@ -352,6 +352,12 @@ export class ChatAccountRunner {
     await this.deps.adapter.setRoomTopic(this.requireSession(), conversationId, topic);
   }
 
+  /** Ask the server to invite a contact to a room; any membership change comes back on the stream. */
+  async inviteToRoom(conversationId: string, invitee: string): Promise<void> {
+    if (this.deps.adapter.inviteToRoom === undefined) return;
+    await this.deps.adapter.inviteToRoom(this.requireSession(), conversationId, invitee);
+  }
+
   async react(conversationId: string, messageId: string, emoji: string, on: boolean): Promise<void> {
     if (this.deps.adapter.react === undefined) {
       throw new Error('this protocol does not support reactions');

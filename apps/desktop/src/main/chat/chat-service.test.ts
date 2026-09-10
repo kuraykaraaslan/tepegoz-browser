@@ -33,6 +33,7 @@ class FakeAdapter {
       memberCount: 0, unread: 0, mentions: 0, lastReadId: null, muted: false, notifyLevel: 'all' as const, isKnownContact: true, updatedAt: 1,
     }),
   );
+  inviteToRoom = vi.fn(() => Promise.resolve());
 }
 
 class FakeStore implements ChatRunnerStore {
@@ -228,6 +229,8 @@ describe('ChatService — delegation', () => {
     await service.discoverRooms('a', 'conf.example');
     await service.joinRoom('a', 'general@conf.example');
     await service.setRoomNotifyLevel('a', 'room@conf', 'none');
+    await service.inviteToRoom('a', 'general@conf.example', 'carol@x.com');
+    expect(adapter.inviteToRoom).toHaveBeenCalledWith(expect.anything(), 'general@conf.example', 'carol@x.com');
     expect(adapter.setPresence).toHaveBeenCalled();
     expect(adapter.roster).toHaveBeenCalled();
     expect(adapter.history).toHaveBeenCalled();

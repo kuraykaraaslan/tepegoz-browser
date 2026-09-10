@@ -90,6 +90,13 @@ export const ChatSetRoomTopicSchema = z.object({
   topic: z.string().max(4096),
 });
 
+/** `chat:invite-to-room` — invite a contact (JID / nick / Matrix user id) to a room. */
+export const ChatInviteToRoomSchema = z.object({
+  accountId: z.string().min(1).max(64),
+  conversationId: z.string().min(1).max(128),
+  invitee: z.string().min(1).max(320),
+});
+
 /** `chat:resolve-media` — turn a message `mediaRef` (a protocol URI) into a quarantined data URL. */
 export const ChatResolveMediaSchema = z.object({
   accountId: z.string().min(1).max(64),

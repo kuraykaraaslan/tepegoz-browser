@@ -510,6 +510,11 @@ adapters** — an IRC `KICK`, an XMPP MUC removal presence (status 301/307/321/3
 (`<who> was kicked/banned by <actor>: <reason>`, actor + reason when the protocol reports them)
 alongside the `room-membership` leave, so a removal is visible in the timeline instead of an occupant
 silently vanishing (`ircKickSystemMessage` / `mucRemovalText` / `matrixMemberSystemMessage`).
+Then (2026-09-11) the **room-invite vertical slice** — `ChatAdapter.inviteToRoom` on XMPP
+(`buildMucInvite`), IRC (`buildIrcInvite` → `INVITE`) and Matrix (`POST …/invite`), wired through
+`chat:invite-to-room` (`ChatInviteToRoomSchema`), `ChatService`/`ChatAccountRunner.inviteToRoom`,
+`ChatApi.inviteToChatRoom` + preload, `useChatState.inviteToRoom`, and an **Invite** field in
+`<RoomHeader>`. The `buildMucInvite` deliverable is closed.
 **X-chat.3 is now code-complete — only the runtime DoD (live server) + the sub-phase DoD template
 remain.** ·
 **Depends on:** X-chat.2 · **Branch:** `main` · **Risk:** low-medium.
@@ -526,10 +531,13 @@ remain.** ·
       IRC `KICK`, XMPP MUC removal (status 301/307/321/322/332) and Matrix `m.room.member` ban /
       third-party leave all surface a `system` message (`ircKickSystemMessage` / `mucRemovalText` /
       `matrixMemberSystemMessage`), actor + reason included when reported.
-      Room invite: `ChatAdapter.inviteToRoom(session, conv, invitee)` implemented on all three
-      native adapters (XMPP MUC mediated `<invite>` via `buildMucInvite`, IRC `INVITE nick #chan`
-      via `buildIrcInvite`, Matrix `POST /rooms/{id}/invite`). _Desktop bridge + a UI action still
-      pending._
+      Room invite: `ChatAdapter.inviteToRoom(session, conv, invitee)` on all three native adapters
+      (XMPP MUC mediated `<invite>` via `buildMucInvite`, IRC `INVITE nick #chan` via
+      `buildIrcInvite`, Matrix `POST /rooms/{id}/invite`), wired end-to-end — `chat:invite-to-room`
+      channel + `ChatInviteToRoomSchema` + `ipc-chat` handler + `ChatService`/`ChatAccountRunner`
+      + `ChatApi.inviteToChatRoom` + preload, and an **Invite** field in `<RoomHeader>` (reveal on
+      click, commit on Enter, hide on Escape) surfaced through `useChatState.inviteToRoom`. The
+      `buildMucInvite` deliverable is closed.
 - [x] **Room browser** — service discovery of a MUC service's public rooms, search, join-by-address.
       `xmpp/disco.ts` + `XmppAdapter.discoverRooms` + `<RoomBrowser>` + `useChatState` wiring + the
       `chat:discover-rooms` / `chat:join-room` desktop bridge. _Only the runtime DoD remains._

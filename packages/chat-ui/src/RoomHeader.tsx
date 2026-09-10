@@ -24,6 +24,8 @@ export interface RoomHeaderProps {
   onToggleMuted?: () => void;
   /** Commit a new topic; the "Edit topic" affordance is shown only when this is given. */
   onSetTopic?: (topic: string) => void;
+  /** Invite a contact to the room; the "Invite" affordance is shown only when this is given. */
+  onInvite?: (invitee: string) => void;
 }
 
 /** The conversation header for a MUC room: name, topic, member count, and a members toggle. */
@@ -39,6 +41,7 @@ export function RoomHeader({
   muted = false,
   onToggleMuted,
   onSetTopic,
+  onInvite,
 }: Readonly<RoomHeaderProps>) {
   const s = useT(chatUiDict);
   const topic = (room?.subject ?? '').trim() || topicFallback.trim();
@@ -46,6 +49,14 @@ export function RoomHeader({
 
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(topic);
+  const [inviting, setInviting] = useState(false);
+  const [invitee, setInvitee] = useState('');
+  const commitInvite = (): void => {
+    const who = invitee.trim();
+    setInviting(false);
+    setInvitee('');
+    if (who !== '') onInvite?.(who);
+  };
   // Re-seed the draft whenever the live topic changes while not editing.
   useEffect(() => {
     if (!editing) setDraft(topic);
@@ -102,6 +113,33 @@ export function RoomHeader({
         </div>
       </div>
       <div className="chat-room-header__actions">
+        {onInvite !== undefined &&
+          (inviting ? (
+            <input
+              className="chat-room-header__invite-input"
+              aria-label={s.room.invite}
+              placeholder={s.room.invitePlaceholder}
+              value={invitee}
+              autoFocus
+              onChange={(e) => setInvitee(e.target.value)}
+              onBlur={commitInvite}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') commitInvite();
+                else if (e.key === 'Escape') {
+                  setInviting(false);
+                  setInvitee('');
+                }
+              }}
+            />
+          ) : (
+            <button
+              type="button"
+              className="chat-room-header__invite"
+              onClick={() => setInviting(true)}
+            >
+              {s.room.invite}
+            </button>
+          ))}
         {onToggleMuted !== undefined && (
           <button
             type="button"

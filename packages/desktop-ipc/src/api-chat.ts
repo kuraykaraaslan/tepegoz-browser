@@ -115,6 +115,8 @@ export interface ChatApi {
   setChatMuted(accountId: string, conversationId: string, muted: boolean): Promise<void>;
   /** Change a room's topic / subject (empty string clears it). The server echo updates local state. */
   setChatRoomTopic(accountId: string, conversationId: string, topic: string): Promise<void>;
+  /** Invite a contact to a room. Write-only — any membership change arrives on `chat:state`. */
+  inviteToChatRoom(accountId: string, conversationId: string, invitee: string): Promise<void>;
   /**
    * Resolve a message's `mediaRef` to a quarantined `data:` URL. The main process performs the
    * egress-bound download and size-caps it; `null` when the ref is unresolvable or too large.

@@ -251,6 +251,9 @@ export function ChatWorkspace({
                   {...(chat.setRoomTopic !== null
                     ? { onSetTopic: (topic: string) => void chat.setRoomTopic?.(selected.id, topic) }
                     : {})}
+                  {...(chat.inviteToRoom !== null
+                    ? { onInvite: (who: string) => void chat.inviteToRoom?.(selected.id, who) }
+                    : {})}
                 />
               ) : (
                 <header className="chat-workspace__conv-head">

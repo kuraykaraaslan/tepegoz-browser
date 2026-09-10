@@ -54,6 +54,9 @@ export const en = {
     noTopic: 'No topic set',
     /** Button + input label for editing the room topic. */
     editTopic: 'Edit topic',
+    /** Button + field label for inviting a contact to the room. */
+    invite: 'Invite',
+    invitePlaceholder: 'user@example.org',
   },
   media: {
     loading: 'Loading attachment…',

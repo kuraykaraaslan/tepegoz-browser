@@ -197,6 +197,8 @@ export const chatIpcService: ChatIpcService = {
     requireService().setMuted(accountId, conversationId, muted),
   setRoomTopic: (accountId, conversationId, topic) =>
     requireService().setRoomTopic(accountId, conversationId, topic),
+  inviteToRoom: (accountId, conversationId, invitee) =>
+    requireService().inviteToRoom(accountId, conversationId, invitee),
   resolveMedia: (accountId, mediaRef) => requireService().resolveMedia(accountId, mediaRef),
 };
 

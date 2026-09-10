@@ -69,6 +69,8 @@ export interface ChatClientPort {
   setChatMuted?: (accountId: string, conversationId: string, muted: boolean) => Promise<void>;
   /** Change a room's topic — optional; the room-header topic editor needs it. */
   setChatRoomTopic?: (accountId: string, conversationId: string, topic: string) => Promise<void>;
+  /** Invite a contact to a room — optional; the room-header invite field needs it. */
+  inviteToChatRoom?: (accountId: string, conversationId: string, invitee: string) => Promise<void>;
   /**
    * Resolve a message `mediaRef` to a quarantined `data:` URL — optional; when present,
    * {@link ChatWorkspace} feeds it to `<MessageMedia>` so attachments render inline.

@@ -14,6 +14,7 @@ import {
   ChatSetRoomNotifyLevelSchema,
   ChatSetMutedSchema,
   ChatSetRoomTopicSchema,
+  ChatInviteToRoomSchema,
 } from '@tepegoz/desktop-ipc/schemas';
 import { handle, handleAsync } from './ipc-helpers';
 
@@ -83,6 +84,7 @@ export interface ChatIpcService {
   ) => Promise<void>;
   setMuted: (accountId: string, conversationId: string, muted: boolean) => Promise<void>;
   setRoomTopic: (accountId: string, conversationId: string, topic: string) => Promise<void>;
+  inviteToRoom: (accountId: string, conversationId: string, invitee: string) => Promise<void>;
   resolveMedia: (accountId: string, mediaRef: string) => Promise<{ dataUrl: string } | null>;
 }
 
@@ -153,6 +155,11 @@ export function registerChatIpc(service: ChatIpcService): void {
   handleAsync(IpcChannels.chatSetRoomTopic, async (_event, payload): Promise<void> => {
     const { accountId, conversationId, topic } = ChatSetRoomTopicSchema.parse(payload);
     await service.setRoomTopic(accountId, conversationId, topic);
+  });
+
+  handleAsync(IpcChannels.chatInviteToRoom, async (_event, payload): Promise<void> => {
+    const { accountId, conversationId, invitee } = ChatInviteToRoomSchema.parse(payload);
+    await service.inviteToRoom(accountId, conversationId, invitee);
   });
 
   handleAsync(IpcChannels.chatResolveMedia, async (_event, payload) => {

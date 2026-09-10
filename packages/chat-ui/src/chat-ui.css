@@ -1088,6 +1088,7 @@ button.chat-msg__quote {
 }
 .chat-room-header__members-toggle,
 .chat-room-header__mute,
+.chat-room-header__invite,
 .chat-workspace__mute {
   padding: 5px 10px;
   border: 1px solid var(--cu-border);
@@ -1096,6 +1097,16 @@ button.chat-msg__quote {
   color: var(--cu-text-primary);
   font: inherit;
   cursor: pointer;
+}
+.chat-room-header__invite-input {
+  width: min(240px, 42vw);
+  padding: 4px 8px;
+  border: 1px solid var(--cu-border-focus);
+  border-radius: 6px;
+  background: var(--cu-surface-base);
+  color: var(--cu-text-primary);
+  font: inherit;
+  font-size: 12px;
 }
 .chat-workspace__mute {
   padding: 3px 8px;

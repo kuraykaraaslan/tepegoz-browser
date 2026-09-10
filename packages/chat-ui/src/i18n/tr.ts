@@ -40,6 +40,8 @@ export const tr: ChatUiStrings = {
     admin: 'Yönetici',
     noTopic: 'Konu belirlenmemiş',
     editTopic: 'Konuyu düzenle',
+    invite: 'Davet et',
+    invitePlaceholder: 'kullanici@ornek.org',
   },
   media: {
     loading: 'Ek yükleniyor…',

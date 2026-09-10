@@ -33,6 +33,8 @@ export interface UseChatState {
   setMuted: ((conversationId: string, muted: boolean) => Promise<void>) | null;
   /** Change a room's topic — `null` when the port does not support it. */
   setRoomTopic: ((conversationId: string, topic: string) => Promise<void>) | null;
+  /** Invite a contact to a room — `null` when the port does not support it. */
+  inviteToRoom: ((conversationId: string, invitee: string) => Promise<void>) | null;
   refresh: () => Promise<void>;
   /** MUC — present only when the port supports rooms. */
   rooms:
@@ -172,6 +174,16 @@ export function useChatState(port: ChatClientPort): UseChatState {
     };
   }, [setChatRoomTopic, activeAccountId]);
 
+  const { inviteToChatRoom } = port;
+  const inviteToRoom = useMemo(() => {
+    if (inviteToChatRoom === undefined) return null;
+    return async (conversationId: string, invitee: string): Promise<void> => {
+      if (activeAccountId === null) return;
+      // Write-only — a resulting membership change arrives on `chat:state`.
+      await inviteToChatRoom(activeAccountId, conversationId, invitee);
+    };
+  }, [inviteToChatRoom, activeAccountId]);
+
   const conversations = useMemo(() => {
     if (activeAccountId === null) return [];
     return sortConversations(
@@ -210,6 +222,7 @@ export function useChatState(port: ChatClientPort): UseChatState {
     setRoomNotifyLevel,
     setMuted,
     setRoomTopic,
+    inviteToRoom,
     refresh,
     rooms,
   };

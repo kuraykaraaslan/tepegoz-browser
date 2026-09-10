@@ -228,6 +228,10 @@ export class ChatService {
     return this.require(accountId).setRoomTopic(conversationId, topic);
   }
 
+  async inviteToRoom(accountId: string, conversationId: string, invitee: string): Promise<void> {
+    return this.require(accountId).inviteToRoom(conversationId, invitee);
+  }
+
   async react(
     accountId: string,
     conversationId: string,

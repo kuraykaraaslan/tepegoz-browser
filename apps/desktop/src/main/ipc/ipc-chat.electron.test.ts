@@ -44,6 +44,7 @@ const svc = {
   setRoomNotifyLevel: vi.fn(() => Promise.resolve()),
   setMuted: vi.fn(() => Promise.resolve()),
   setRoomTopic: vi.fn(() => Promise.resolve()),
+  inviteToRoom: vi.fn(() => Promise.resolve()),
   resolveMedia: vi.fn(() => Promise.resolve({ dataUrl: 'data:image/png;base64,AAAA' })),
 };
 
@@ -67,7 +68,7 @@ beforeEach(() => {
 });
 
 it('registers every chat channel', () => {
-  expect(h.handlers.size).toBe(15);
+  expect(h.handlers.size).toBe(16);
 });
 
 describe('rooms', () => {
@@ -75,6 +76,18 @@ describe('rooms', () => {
     await call(IpcChannels.chatDiscoverRooms, { accountId: 'work', service: 'conf.example' });
     expect(svc.discoverRooms).toHaveBeenCalledWith('work', 'conf.example');
     await expect(call(IpcChannels.chatDiscoverRooms, { accountId: 'work' })).rejects.toBeDefined();
+  });
+
+  it('chat:invite-to-room validates + delegates', async () => {
+    await call(IpcChannels.chatInviteToRoom, {
+      accountId: 'work',
+      conversationId: 'general@conf.example',
+      invitee: 'carol@example.com',
+    });
+    expect(svc.inviteToRoom).toHaveBeenCalledWith('work', 'general@conf.example', 'carol@example.com');
+    await expect(
+      call(IpcChannels.chatInviteToRoom, { accountId: 'work', conversationId: 'g', invitee: '' }),
+    ).rejects.toBeDefined();
   });
 
   it('chat:join-room validates + delegates', async () => {

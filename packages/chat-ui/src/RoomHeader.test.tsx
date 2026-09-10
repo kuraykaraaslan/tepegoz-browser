@@ -129,6 +129,28 @@ describe('RoomHeader', () => {
     expect(screen.queryByLabelText('Edit topic')).toBeNull();
   });
 
+  it('invites a contact: reveal the field, commit on Enter, hide on Escape', () => {
+    const onInvite = vi.fn();
+    wrap(
+      <RoomHeader name="general" membersOpen={false} onToggleMembers={vi.fn()} onInvite={onInvite} />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Invite' }));
+    const field = screen.getByLabelText('Invite');
+    fireEvent.change(field, { target: { value: 'carol@example.org' } });
+    fireEvent.keyDown(field, { key: 'Enter' });
+    expect(onInvite).toHaveBeenCalledWith('carol@example.org');
+    // field hidden again; a blank commit does nothing
+    expect(screen.queryByLabelText('Invite')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Invite' }));
+    fireEvent.keyDown(screen.getByLabelText('Invite'), { key: 'Escape' });
+    expect(onInvite).toHaveBeenCalledTimes(1);
+  });
+
+  it('hides the invite affordance entirely without a handler', () => {
+    wrap(<RoomHeader name="general" membersOpen={false} onToggleMembers={vi.fn()} />);
+    expect(screen.queryByRole('button', { name: 'Invite' })).toBeNull();
+  });
+
   it('falls back to the stored topic, then to a placeholder', () => {
     const { rerender } = wrap(
       <RoomHeader name="r" topicFallback="stored topic" membersOpen onToggleMembers={vi.fn()} />,

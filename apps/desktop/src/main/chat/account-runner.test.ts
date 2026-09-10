@@ -84,6 +84,7 @@ class FakeAdapter {
     }),
   );
   setRoomTopic = vi.fn(() => Promise.resolve());
+  inviteToRoom = vi.fn(() => Promise.resolve());
   resolveMedia?= vi.fn((_s: unknown, ref: string) =>
     ref.startsWith('mxc://')
       ? { url: `https://hs.example/media/${ref.slice(6)}`, headers: { authorization: 'Bearer t' } }
@@ -292,6 +293,12 @@ describe('ChatAccountRunner — actions', () => {
     const { runner, adapter } = await online();
     await runner.setRoomTopic('#c', 'agenda for today');
     expect(adapter.setRoomTopic).toHaveBeenCalledWith(expect.anything(), '#c', 'agenda for today');
+  });
+
+  it('inviteToRoom delegates to the adapter', async () => {
+    const { runner, adapter } = await online();
+    await runner.inviteToRoom('#c', 'carol');
+    expect(adapter.inviteToRoom).toHaveBeenCalledWith(expect.anything(), '#c', 'carol');
   });
 
   it('persists a room-topic change onto the stored conversation row', async () => {
