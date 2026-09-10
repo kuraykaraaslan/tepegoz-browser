@@ -151,6 +151,30 @@ describe('ChatService — lifecycle', () => {
     expect(adapter.disconnect).toHaveBeenCalledTimes(2);
     expect(service.accountStates()).toEqual({});
   });
+
+  it('X-chat.10: a profile switch drops every connection; the next profile sees only its own accounts', async () => {
+    // A profile switch is a process swap (ADR-0045 process-per-profile): the outgoing process runs
+    // `before-quit` → `ChatMessenger.stop()` → this `stop()`, and the incoming process is a fresh
+    // `ChatService` whose `loadAccounts` is scoped to that profile's own SQLite file.
+    const outgoing = harness({ loadAccounts: () => [account('a'), account('b')] });
+    await outgoing.service.start();
+    await tick();
+    expect(Object.keys(outgoing.service.accountStates())).toEqual(['a', 'b']);
+
+    await outgoing.service.stop();
+    expect(outgoing.adapter.disconnect).toHaveBeenCalledTimes(2);
+    expect(outgoing.service.accountStates()).toEqual({});
+    outgoing.emit.mockClear();
+    outgoing.service.notifyEgressChange(); // nothing left to fan to
+    expect(outgoing.emit).not.toHaveBeenCalled();
+    await outgoing.service.stop(); // idempotent
+
+    // The next profile's service only ever knows what its own `loadAccounts` returns.
+    const incoming = harness({ loadAccounts: () => [account('a')] });
+    await incoming.service.start();
+    await tick();
+    expect(Object.keys(incoming.service.accountStates())).toEqual(['a']);
+  });
 });
 
 describe('ChatService — accounts', () => {

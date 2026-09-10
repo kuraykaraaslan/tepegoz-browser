@@ -848,10 +848,12 @@ X-chat.2–.7 · **Branch:** `feat/chat-hardening` · **Risk:** low — mostly t
 - [x] **Journal redaction property test** — the `ChatMessageSent` fact is asserted to contain no
       message body, no room/JID address and no vault secret (only a conv-id hash); the
       `ChatAccountAdded` fact contains no secret. Both go in with `redacted: true`.
-- [~] **Kill-switch + profile-switch tests** — bound-blocked profile denies agent chat tools **✔**
-      (`ChatCapabilityHost.mayEgress` → 403 on every wire action; `notifyEgressChange` fan-out to
-      `blocked` proven). _Profile-switch drop-every-connection + next-profile-isolation still owed
-      (native path; bridge path waits on X-chat.8)._
+- [x] **Kill-switch + profile-switch tests** (native path) — bound-blocked profile denies agent chat
+      tools (`ChatCapabilityHost.mayEgress` → 403 on every wire action; `notifyEgressChange` fan-out
+      to `blocked` proven); a profile switch (ADR-0045 process swap → `before-quit` →
+      `ChatMessenger.stop()`) drops every connection, `stop()` is idempotent and stops emitting, and
+      the next profile's `ChatService` only ever knows what its own profile-scoped `loadAccounts`
+      returns. _Bridge-path drop + isolation waits on X-chat.8._
 - [ ] **Playwright `_electron` e2e** — against a local Prosody (XMPP) + ergo (IRC), and a local
       Synapse (Matrix) if CI budget allows: add account → roster → 1:1 send/receive → join a room →
       get pinged. A second e2e for the agent path (summarize → draft → HITL-stop → unknown-DM
