@@ -553,8 +553,10 @@ through to the live stream. 4 tests. Next: a recorded-trace fixture suite + runt
 
 ## X-chat.5 — Matrix adapter
 
-**Status:** 🟡 In progress (2026-09-10) — `@tepegoz/chat-adapters` `matrix/events.ts` landed: the pure
-CS-API event mapping. `matrixTimelineEvent` → `m.room.message` (text / `m.emote` → `/me` / `m.notice`
+**Status:** 🟢 Code-complete (2026-09-10) — the Matrix adapter, media repo (resolve + upload) and the
+Synapse fixture suite are on `main`; only the runtime Functional DoD (needs a live homeserver
+account) and the DoD-template checklist remain. The build history: `@tepegoz/chat-adapters`
+`matrix/events.ts` landed first — the pure CS-API event mapping. `matrixTimelineEvent` → `m.room.message` (text / `m.emote` → `/me` / `m.notice`
 → system / image·file·video·audio → `media` + `mxc://` ref from `content.url` or `content.file.url`),
 reply relations → `replyToId`, `m.replace` → `message-edit`, `m.room.redaction` → `message-redact`,
 `m.room.member` join/leave/ban → `room-membership`; `matrixEphemeralEvents` → `m.typing` /
@@ -567,48 +569,81 @@ the reaction event — is adapter-tracked, a later slice). 4 new tests across th
 `/sync` walker: flattens every `rooms.join[id]` timeline + ephemeral block into `ChatEvent`s, reads
 each room's name / topic / member count from state (`m.room.name` / `m.room.topic` / `m.room.member`,
 `m.joined_member_count` wins when higher), reports `limited` + `prev_batch` for gappy backfill, plus
-`invites` and `left`; defensive coercion throughout. 6 tests, S100/B92/F100/L100. Next: the
-`MatrixAdapter` over `transport.fetch` — login, the `/sync` long-poll loop with `since` + a
-`M_UNKNOWN_TOKEN` re-login, `/rooms/{id}/send`, `mxc://` media resolve. · **Depends on:** X-chat.1
-(contract) + X-chat.2/.3 (UI); E2EE is X-chat.7 · **Branch:** `main` · **Risk:** medium-high.
+`invites` and `left`; defensive coercion throughout. 6 tests, S100/B92/F100/L100. Then the
+`MatrixAdapter` over `transport.fetch` — password/token login (long-opaque-secret heuristic), a
+priming `/sync` + a backgrounded long-poll loop with `since`, `M_UNKNOWN_TOKEN` re-login and
+exponential backoff, message send / edit / react, backwards history paging, room join/leave, read
+receipts, presence; wired into `ChatService.makeAdapter` (matrix accounts get a real adapter, only
+`bridge` is 501). Then `matrix/media.ts` — `parseMxc` + `mxcDownloadUrl` / `mxcThumbnailUrl`
+(authenticated CS-API v1) and a new `ChatAdapter.resolveMedia(session, ref) → MediaLocator`; the
+desktop `resolveMedia` bridge (`chat:resolve-media` IPC → runner egress-bound GET → 12 MiB cap →
+`data:` URL → `<MessageMedia>`). Then **spaces** — `parseSyncResponse` reads `m.room.create`'s type;
+a space is reported in `SyncRoom` but its timeline / membership are not surfaced as a conversation.
+Then media **upload** — `ChatFetchInit.body` takes `Uint8Array`, `OutgoingMedia`, and
+`MatrixAdapter.uploadMedia` → `/_matrix/media/v3/upload` → `mxc://`. Then a **recorded Synapse
+`/sync` fixture suite** (initial: room + space + invite + media + typing/receipts; incremental: edit
++ reaction + redaction + leave) plus a pre-room-v11 top-level `redacts` fix. · **Depends on:**
+X-chat.1 (contract) + X-chat.2/.3 (UI); E2EE is X-chat.7 · **Branch:** `main` · **Risk:** medium-high.
 
 ### Deliverables
-- [ ] **Matrix adapter** (`matrix/`) — login (password / token / SSO-token), `/sync` loop with
-      `since` token + filters, room state + timeline events, `m.room.message` (text/emote/notice/
-      image/file), `m.reaction`, `m.room.redaction`, edits (`m.replace`), threads (`m.thread`),
-      read markers + receipts, typing (`m.typing`), presence, `/rooms/{id}/send`, media repo
-      upload/download (`mxc://` resolve), spaces (`m.space`), room directory, invites.
-- [ ] **Caps** — everything on except E2EE (deferred to X-chat.7); `history-sync: true`.
-- [ ] **State resilience** — a dropped `/sync` resumes from the last token; a `M_UNKNOWN_TOKEN`
-      forces a clean re-login; gappy sync (`limited: true`) triggers a backfill.
-- [ ] Recorded-exchange fixture suite (Synapse shapes).
+- [x] **Matrix adapter** (`matrix/`) — login (password / token), `/sync` loop with `since`, room
+      state + timeline, `m.room.message` (text/emote/notice/image/file), `m.reaction`,
+      `m.room.redaction`, edits (`m.replace`), read markers + receipts, typing, presence,
+      `/rooms/{id}/send`, media repo upload/download (`mxc://` resolve), spaces (`m.space`), invites.
+      _Threads (`m.thread`) and a room directory are deferred to X-chat hardening._
+- [x] **Caps** — everything on except E2EE (`MATRIX_ADAPTER_CAPS = { ...MATRIX_CAPS, e2ee: false }`).
+- [x] **State resilience** — a dropped `/sync` resumes from the last token; `M_UNKNOWN_TOKEN` forces
+      a clean re-login; gappy sync (`limited: true`) is reported for backfill.
+- [x] Recorded-exchange fixture suite (Synapse shapes).
+
+**Remaining:** the runtime Functional DoD below (needs a live homeserver account) and the
+DoD-template checklist.
 
 ### Functional DoD
-- [ ] A Matrix account adds, syncs rooms + spaces, sends/receives text + media + reactions + edits +
-      threads in **unencrypted** rooms, survives a sync drop and a token invalidation.
+- [ ] A Matrix account adds, syncs rooms + spaces, sends/receives text + media + reactions + edits in
+      **unencrypted** rooms, survives a sync drop and a token invalidation.
 - [ ] Sub-phase DoD template ✔.
 
 ---
 
 ## X-chat.6 — Agent capabilities
 
-**Status:** ⬜ Not started · **Depends on:** X-chat.1 + X-chat.2 (+ any of .3/.4/.5 for breadth) ·
-**Branch:** `feat/chat-agent-caps` · **Risk:** medium-high — the untrusted-DM + unknown-contact
-guards are the sharpest in the whole product.
+**Status:** 🟡 In progress (2026-09-10) — the capability table, the `chat-core` agent-view guards and
+`ChatCapabilityHost` (all ten `chat_*` tools wired over `ChatService` + `ChatStore`, registered into
+`CapabilityRegistry` gated on `com.tepegoz.chat`) are on `main`. The build: `extensions/ext-chat`
+`capabilities.ts` — the tool table on `defineCapabilities`, ids `ToolNameSchema`-compliant (`join a
+room` → `chat_create_membership`), reads auto-allow, `chat_create_message` / `chat_create_membership`
+`state_changing` + idempotency key, leave is `destructive`. Then `@tepegoz/chat-core` `agent-view.ts`
+— `wrapChatContent` + `CHAT_UNTRUSTED_NOTE` (delimiter-breakout-safe), `agentMessageView` (body /
+sender wrapped, redacted → placeholder, attachment bytes → an opaque `mediaRef` handle), and the
+unknown-contact gate `isConversationAgentVisible` / `filterAgentConversations`. Then
+`ChatStore.searchMessages` — Turkish-fold substring search over `body_fold`, account/conversation
+scopable, LIKE-metachar-escaped, redacted rows excluded. Then `ChatCapabilityHost` itself
+(`apps/desktop/src/main/chat/chat-capability-host.ts`, IO-free by injection): the read half
+(`chat_list_items` / `chat_get_item` / `chat_get_history` / `chat_search_items`) folds every path
+through the agent-view + gate, then the write half (`chat_create_message` → `sendMessage`,
+`chat_create_membership` → `joinRoom`, `chat_delete_item` → `leaveRoom`, `chat_update_item` mark-read
+/ mute / reaction) once `ChatService` grew `leaveRoom` / `setMuted` / `react`, then `chat_get_media`
+— `ChatStore.getMessage` by id → gate → `ChatService.resolveMedia` → decode → a new
+`FileOperationsHost.writeAttachment` (binary sibling of `writeExport`, fixed `~/tepegoz/attachments/`)
+→ `{ sandboxPath }`. Session opt-ins for the gate live in `chat-service.electron.ts`. ·
+**Depends on:** X-chat.1 + X-chat.2 (+ .3/.4/.5 for breadth) · **Branch:** `main` · **Risk:**
+medium-high — the untrusted-DM + unknown-contact guards are the sharpest in the whole product.
 
 ### Deliverables
-- [ ] **`capabilities.ts`** — the tool table above on `defineCapabilities`, ids passing
-      `ToolNameSchema`, `dangerClass` per the table, idempotency key on `create_message` /
-      `create_room_join`, `aiTask` set.
-- [ ] **`ChatCapabilityHost`** in `ChatService` — `wrapUntrustedContent` on every read path
-      (bodies, sender display names, room topics); the **unknown-contact gate** (a conversation with
-      a non-roster peer is excluded from `chat_get_history` / `chat_list_items` unless the user
-      opted that conversation in); media manifest excludes bytes; `chat_get_media` → quarantine →
-      sandbox.
+- [x] **`capabilities.ts`** — the tool table on `defineCapabilities`, ids passing `ToolNameSchema`,
+      `dangerClass` per the table, idempotency key on `chat_create_message` /
+      `chat_create_membership`.
+- [x] **`ChatCapabilityHost`** — `wrapChatContent` on every read path (bodies, sender display names,
+      room topics); the **unknown-contact gate** (a non-roster DM is excluded from
+      `chat_get_history` / `chat_list_items` / `chat_search_items` unless the user opted that
+      conversation in); media manifest excludes bytes; `chat_get_media` → quarantine → sandbox.
 - [ ] **`chat_create_message` confirm payload** — target conversation (name + account + kind) +
       rendered body; unattended profile → fail-closed unless sealed-narrowing preapproved that exact
-      conversation.
-- [ ] **AIAdaptor grouping** — one "Chat" adaptor in Settings (ADR-0023); verify.
+      conversation. _(Host delegates today; the rich confirm surface needs a `confirmSummary` hook on
+      the extension-SDK capability contract → the gateway → the HITL modal.)_
+- [ ] **AIAdaptor grouping** — one "Chat" adaptor in Settings (ADR-0023); verify. _(Auto-derives
+      from the `chat_` id prefix + `source: 'extension'`; needs a Settings-render check.)_
 - [ ] **Agent-eval scenarios** in `@tepegoz/orchestrator` / `@tepegoz/agent-eval` — (a) summarize a
       room backlog; (b) draft a reply and stop (no send); (c) `chat_create_message` blocked at HITL;
       (d) **an unknown-contact DM is not fed to the model**; (e) **a prompt-injection DM does not
