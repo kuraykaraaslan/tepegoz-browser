@@ -39,4 +39,14 @@ describe('UserAvatar', () => {
     const { container } = render(<UserAvatar name="Ada" className="h-5 w-5" />);
     expect(container.firstElementChild?.className).toContain('h-5 w-5');
   });
+
+  it('fills the letter-avatar with the solid accent + on-accent tokens, not a translucent tint', () => {
+    // A `bg-primary/20` tint let the disc fade into a page-set theme-color; the solid fill + fg token
+    // are both re-derived for contrast by applyTheme(), so the account button stays visible.
+    const { container } = render(<UserAvatar name="Ada" />);
+    const cls = container.firstElementChild?.className ?? '';
+    expect(cls).toContain('bg-primary');
+    expect(cls).not.toContain('bg-primary/20');
+    expect(cls).toContain('text-primary-fg');
+  });
 });
