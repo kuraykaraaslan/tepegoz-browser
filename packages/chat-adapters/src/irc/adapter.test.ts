@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import type { ChatServerConfig } from '@tepegoz/shared-types';
 import type { ChatAccountCreds } from '../adapter';
 import type { ChatTransport, DuplexStream, OpenTcpOptions } from '../transport';
-import { IrcAdapter, type IrcSession } from './adapter';
+import { IrcAdapter, IrcSession } from './adapter';
 
 type IrcServer = Extract<ChatServerConfig, { protocol: 'irc' }>;
 
@@ -463,5 +463,16 @@ describe('IrcAdapter — flood protection', () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+
+  it('bounds the event queue for a stalled consumer (X-chat.10 memory)', async () => {
+    const stream = { write: () => {}, onData: () => {}, onClose: () => {}, close: () => {} };
+    const s = new IrcSession('acc', 'ada', stream);
+    const line = { type: 'error' as const, scope: 'account' as const, conversationId: null, message: 'x' };
+    for (let i = 0; i < 4_096 + 200; i += 1) s.push({ ...line });
+    expect((s as unknown as { queue: unknown[] }).queue.length).toBe(4_096); // hard cap
+    expect(s.droppedEvents).toBe(200);
+    // the overflow notice is delivered out-of-band before the surviving backlog
+    expect((await s.nextEvent()).value).toMatchObject({ type: 'error', scope: 'account' });
   });
 });

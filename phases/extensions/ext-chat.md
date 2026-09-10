@@ -900,9 +900,10 @@ the CS-API carries the access token), IRC keeps `tls` default-true with the UI b
 signal; account never carries a secret (`secretRef` only); vault refuses plaintext when the keychain
 is down; media quarantined into the file-ops sandbox; kill-switch → 403 + `blocked`; Journal facts
 redacted at both ends. Bridge-payload fuzz + the profile-switch bridge half + bridge sandbox + e2e +
-perf remain (the first three wait on X-chat.8). Then (2026-09-11) the **`/sync` memory bound** —
-`MatrixSession`'s event queue is capped at 4096; a stalled consumer no longer grows process memory
-without limit (oldest dropped + `droppedEvents` + a one-shot `error` gap notice). ·
+perf remain (the first three wait on X-chat.8). Then (2026-09-11) the **event-queue memory bound** —
+a shared `event-queue.ts` caps every adapter session's between-the-wire queue at 4096
+(`MatrixSession` / `IrcSession` / `XmppSession`); a stalled consumer no longer grows process memory
+without limit (oldest dropped + `droppedEvents` + a re-armable out-of-band `error` gap notice). ·
 **Depends on:** X-chat.2–.7 · **Branch:** `feat/chat-hardening` · **Risk:** low — mostly tests.
 
 ### Deliverables
@@ -934,13 +935,15 @@ without limit (oldest dropped + `droppedEvents` + a one-shot `error` gap notice)
       caps the DOM at the most-recent 200 messages + a "N earlier" row). **Search ✔** —
       `searchMessages` hits the `chat_search` FTS5 index (migration 23 backfill + delete trigger;
       `syncSearchRow` on every write; folded token-prefix query), no more `body_fold` scan.
-      **`/sync` memory ✔** — `MatrixSession`'s between-the-wire event queue is now bounded at
-      `MAX_QUEUED_EVENTS` (4096): if the consumer stalls while `/sync` keeps long-polling, the oldest
-      events are dropped (memory stays bounded), `droppedEvents` counts them, and one `error` event is
-      queued so `ChatAccountState` surfaces a "resync needed" — re-armed once the queue drains. 3
-      tests (bound + drop-oldest + gap notice, direct hand-off to a waiter, re-arm). _IRC/XMPP
-      sessions share the same unbounded-queue shape; folding the bound into a shared helper is a
-      small follow-up._
+      **event-queue memory ✔** — a shared `event-queue.ts` (`boundEventQueue` / `takeGapNotice` /
+      `rearmGapNotice`) caps every adapter session's between-the-wire queue at `MAX_QUEUED_EVENTS`
+      (4096). If the consumer stalls while the wire keeps delivering (a Matrix `/sync` loop, an IRC
+      channel firehose, an XMPP MAM burst) the oldest events are dropped — the queue length never
+      exceeds the cap — `droppedEvents` counts them, and one out-of-band `error` event is delivered
+      before the surviving backlog so `ChatAccountState` surfaces a "resync needed" (re-armed once the
+      queue drains). Applied to `MatrixSession`, `IrcSession` and `XmppSession`. 12 tests
+      (`event-queue.test.ts` ×6 + Matrix session ×3 + IRC session ×1 + the XMPP handshake suite
+      exercises `push`/`flush`/`nextEvent` transitively).
 
 ### Functional DoD
 - [x] Every trust claim in "Trust & security" above has a test that fails if the property regresses

@@ -311,25 +311,28 @@ describe('MatrixSession — /sync backpressure (X-chat.10 memory bound)', () => 
       },
     });
 
-  it('bounds the queue when the consumer never drains, dropping the oldest + one gap notice', async () => {
+  const queueLen = (s: MatrixSession): number => (s as unknown as { queue: unknown[] }).queue.length;
+  const gap = (s: MatrixSession): string => (s as unknown as { qstate: { gap: string } }).qstate.gap;
+
+  it('never exceeds the cap when the consumer never drains, dropping the oldest', async () => {
     const s = new MatrixSession('acc', 'https://x', {} as never);
     for (let i = 0; i < 4_096 + 500; i += 1) s.push(msg(i));
-    // memory is bounded: the cap plus at most the single gap-notice event
-    expect((s as unknown as { queue: unknown[] }).queue.length).toBeLessThanOrEqual(4_097);
+    expect(queueLen(s)).toBe(4_096); // the memory bound — no gap sentinel stored inside
     expect(s.droppedEvents).toBe(500);
 
+    // first dequeue is the out-of-band overflow notice, then the newest survivors, in order
+    const first = await s.nextEvent();
+    expect(first.value).toMatchObject({ type: 'error', scope: 'account' });
     const drained: ChatEventLike[] = [];
-    while ((s as unknown as { queue: unknown[] }).queue.length > 0) {
+    while (queueLen(s) > 0) {
       const r = await s.nextEvent();
       if (r.done !== true) drained.push(r.value as ChatEventLike);
     }
-    // the oldest survivors were dropped: no message body "0".."499" remains
     const bodies = drained
       .filter((e) => e.type === 'message' && e.message !== undefined)
       .map((e) => Number(e.message?.body));
-    expect(Math.min(...bodies)).toBeGreaterThanOrEqual(500);
-    // exactly one overflow notice
-    expect(drained.filter((e) => e.type === 'error').length).toBe(1);
+    expect(Math.min(...bodies)).toBe(500); // 0..499 were dropped
+    expect(drained.filter((e) => e.type === 'error')).toHaveLength(0); // only the one, already taken
   });
 
   it('a waiting consumer is handed the event directly — no queue growth', async () => {
@@ -338,17 +341,17 @@ describe('MatrixSession — /sync backpressure (X-chat.10 memory bound)', () => 
     s.push(msg(1));
     const r = await p;
     expect(r.done).toBe(false);
-    expect((s as unknown as { queue: unknown[] }).queue.length).toBe(0);
+    expect(queueLen(s)).toBe(0);
     expect(s.droppedEvents).toBe(0);
   });
 
   it('re-arms the one-shot gap notice after the queue drains', async () => {
     const s = new MatrixSession('acc', 'https://x', {} as never);
     for (let i = 0; i < 4_096 + 10; i += 1) s.push(msg(i));
-    expect((s as unknown as { gapNoticed: boolean }).gapNoticed).toBe(true);
-    while ((s as unknown as { queue: unknown[] }).queue.length > 0) await s.nextEvent();
-    expect((s as unknown as { gapNoticed: boolean }).gapNoticed).toBe(false);
+    expect(gap(s)).toBe('pending');
+    while (queueLen(s) > 0 || gap(s) !== 'none') await s.nextEvent();
+    expect(gap(s)).toBe('none');
     for (let i = 0; i < 4_096 + 10; i += 1) s.push(msg(i));
-    expect((s as unknown as { gapNoticed: boolean }).gapNoticed).toBe(true);
+    expect(gap(s)).toBe('pending');
   });
 });

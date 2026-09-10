@@ -39,6 +39,16 @@ export {
 } from './caps';
 
 export {
+  MAX_QUEUED_EVENTS,
+  newEventQueueState,
+  boundEventQueue,
+  takeGapNotice,
+  rearmGapNotice,
+  overflowGapEvent,
+  type EventQueueState,
+} from './event-queue';
+
+export {
   XmlStreamParser,
   decodeXmlText,
   encodeXmlText,

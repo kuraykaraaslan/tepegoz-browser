@@ -35,6 +35,13 @@ import {
 } from './muc';
 import { buildDiscoInfo, buildDiscoItems, parseDiscoInfo, parseDiscoItems } from './disco';
 import type { RoomSummary } from '../adapter';
+import {
+  boundEventQueue,
+  newEventQueueState,
+  rearmGapNotice,
+  takeGapNotice,
+  type EventQueueState,
+} from '../event-queue';
 
 /**
  * The native in-process XMPP adapter (phase X-chat.1). Wires the injected `ChatTransport` to the
@@ -63,6 +70,12 @@ export class XmppSession implements ChatSession {
   private readonly queue: ChatEvent[] = [];
   private readonly waiters: Array<(r: IteratorResult<ChatEvent>) => void> = [];
   private ended = false;
+  private readonly qstate: EventQueueState = newEventQueueState();
+
+  /** Events dropped because the consumer stalled (memory bound). */
+  get droppedEvents(): number {
+    return this.qstate.dropped;
+  }
   private iqSeq = 0;
   private readonly pendingIq = new Map<
     string,
@@ -145,20 +158,30 @@ export class XmppSession implements ChatSession {
   }
 
   private flush(): void {
-    while (this.waiters.length > 0 && (this.queue.length > 0 || this.ended)) {
+    while (
+      this.waiters.length > 0 &&
+      (this.queue.length > 0 || this.ended || this.qstate.gap === 'pending')
+    ) {
       const resolve = this.waiters.shift();
       if (resolve === undefined) break;
+      const gap = takeGapNotice(this.qstate);
+      if (gap !== null) {
+        resolve({ value: gap, done: false });
+        continue;
+      }
       const item = this.queue.shift();
       resolve(
         item !== undefined ? { value: item, done: false } : { value: undefined, done: true },
       );
     }
+    rearmGapNotice(this.queue, this.qstate);
   }
 
   push(event: ChatEvent): void {
     if (this.ended) return;
     this.queue.push(event);
     this.flush();
+    boundEventQueue(this.queue, this.qstate);
   }
 
   end(): void {
@@ -172,8 +195,13 @@ export class XmppSession implements ChatSession {
   }
 
   nextEvent(): Promise<IteratorResult<ChatEvent>> {
+    const gap = takeGapNotice(this.qstate);
+    if (gap !== null) return Promise.resolve({ value: gap, done: false });
     const item = this.queue.shift();
-    if (item !== undefined) return Promise.resolve({ value: item, done: false });
+    if (item !== undefined) {
+      rearmGapNotice(this.queue, this.qstate);
+      return Promise.resolve({ value: item, done: false });
+    }
     if (this.ended) return Promise.resolve({ value: undefined, done: true });
     return new Promise((resolve) => this.waiters.push(resolve));
   }

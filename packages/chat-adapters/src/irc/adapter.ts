@@ -14,6 +14,13 @@ import type {
   SendReceipt,
 } from '../adapter';
 import { IRC_CAPS } from '../caps';
+import {
+  boundEventQueue,
+  newEventQueueState,
+  rearmGapNotice,
+  takeGapNotice,
+  type EventQueueState,
+} from '../event-queue';
 import type { ChatTransport, DuplexStream } from '../transport';
 import { parseIrcLine, parseIsupport, type IrcMessage } from './parse';
 import { IrcRegistration, type RegistrationAction } from './registration';
@@ -68,6 +75,12 @@ export class IrcSession implements ChatSession {
   private readonly queue: ChatEvent[] = [];
   private readonly waiters: Array<(r: IteratorResult<ChatEvent>) => void> = [];
   private ended = false;
+  private readonly qstate: EventQueueState = newEventQueueState();
+
+  /** Events dropped because the consumer stalled (memory bound). */
+  get droppedEvents(): number {
+    return this.qstate.dropped;
+  }
 
   /** Anti-flood send queue: wall-clock ms the budget has been spent up to, plus what is waiting. */
   private floodBudgetUntil = 0;
@@ -139,8 +152,12 @@ export class IrcSession implements ChatSession {
   push(event: ChatEvent): void {
     if (this.ended) return;
     const waiter = this.waiters.shift();
-    if (waiter !== undefined) waiter({ value: event, done: false });
-    else this.queue.push(event);
+    if (waiter !== undefined) {
+      waiter({ value: event, done: false });
+      return;
+    }
+    this.queue.push(event);
+    boundEventQueue(this.queue, this.qstate);
   }
 
   end(): void {
@@ -158,8 +175,13 @@ export class IrcSession implements ChatSession {
   }
 
   nextEvent(): Promise<IteratorResult<ChatEvent>> {
+    const gap = takeGapNotice(this.qstate);
+    if (gap !== null) return Promise.resolve({ value: gap, done: false });
     const item = this.queue.shift();
-    if (item !== undefined) return Promise.resolve({ value: item, done: false });
+    if (item !== undefined) {
+      rearmGapNotice(this.queue, this.qstate);
+      return Promise.resolve({ value: item, done: false });
+    }
     if (this.ended) return Promise.resolve({ value: undefined, done: true });
     return new Promise((resolve) => this.waiters.push(resolve));
   }
