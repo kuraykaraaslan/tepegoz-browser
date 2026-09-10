@@ -341,6 +341,24 @@ describe('XmppAdapter — live traffic', () => {
     expect((await it.next()).value).toMatchObject({ type: 'message' });
   });
 
+  it('a kick presence surfaces as both a room-membership leave and a system message', async () => {
+    const { server, adapter, session } = await connected();
+    await adapter.joinRoom(session, 'general@conf.example.com');
+    const it = adapter.events(session)[Symbol.asyncIterator]();
+
+    server.send(
+      `<presence from="general@conf.example.com/Bea" type="unavailable">` +
+        `<x xmlns="http://jabber.org/protocol/muc#user">` +
+        `<item affiliation="none" role="none"><actor nick="Ada"/><reason>spam</reason></item>` +
+        `<status code="307"/></x></presence>`,
+    );
+    expect((await it.next()).value).toMatchObject({ type: 'room-membership', joined: false });
+    expect((await it.next()).value).toMatchObject({
+      type: 'message',
+      message: { conversationId: 'general@conf.example.com', kind: 'system', body: 'Bea was kicked by Ada: spam' },
+    });
+  });
+
   it('a room join error surfaces as a conversation-scoped error event', async () => {
     const { server, adapter, session } = await connected();
     await adapter.joinRoom(session, 'locked@conf.example.com');

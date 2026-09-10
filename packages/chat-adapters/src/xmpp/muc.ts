@@ -34,6 +34,10 @@ export interface MucOccupant {
   self: boolean;
   /** Raw MUC status codes on the presence (110 self, 201 room-created, 210 nick-assigned, …). */
   statusCodes: number[];
+  /** Who performed a kick / ban (`<item><actor nick=…/></item>`), when the room reports it. */
+  actor: string | null;
+  /** The kick / ban reason (`<item><reason>…</reason></item>`), when given. */
+  reason: string | null;
 }
 
 export interface MucJoinOptions {
@@ -137,6 +141,9 @@ export function parseMucPresence(el: XmlElement): MucOccupant | null {
 
   const item = child(x, 'item');
   const codes = statusCodesOf(x);
+  const actorEl = item !== null ? child(item, 'actor') : null;
+  const actor = actorEl?.attrs.nick ?? (actorEl?.attrs.jid !== undefined ? bareJid(actorEl.attrs.jid) : null);
+  const reason = item !== null ? childText(item, 'reason').slice(0, 512) : '';
 
   return {
     roomJid,
@@ -148,7 +155,38 @@ export function parseMucPresence(el: XmlElement): MucOccupant | null {
     statusText: childText(el, 'status').slice(0, 512),
     self: codes.includes(110),
     statusCodes: codes,
+    actor: actor !== undefined && actor !== null && actor.length > 0 ? actor : null,
+    reason: reason.length > 0 ? reason : null,
   };
+}
+
+/** MUC status codes that mean an occupant left involuntarily (XEP-0045 §7.14 / §9.x). */
+const MUC_REMOVAL_CODES: Record<number, 'kicked' | 'banned' | 'affiliation' | 'members-only' | 'shutdown'> = {
+  301: 'banned',
+  307: 'kicked',
+  321: 'affiliation',
+  322: 'members-only',
+  332: 'shutdown',
+};
+
+/**
+ * If this occupant presence is an involuntary removal (kick / ban / …), a human sentence for a
+ * `system` message. `null` for a normal leave or a join.
+ */
+export function mucRemovalText(occ: MucOccupant): string | null {
+  if (occ.presence !== 'offline') return null;
+  const kind = occ.statusCodes.map((c) => MUC_REMOVAL_CODES[c]).find((k) => k !== undefined);
+  if (kind === undefined) return null;
+  const who = occ.self ? 'You were' : `${occ.nick} was`;
+  const verb =
+    kind === 'kicked' ? 'kicked'
+    : kind === 'banned' ? 'banned'
+    : kind === 'affiliation' ? 'removed (no longer a member)'
+    : kind === 'members-only' ? 'removed (room is now members-only)'
+    : 'removed (room shut down)';
+  const by = occ.actor !== null ? ` by ${occ.actor}` : '';
+  const because = occ.reason !== null ? `: ${occ.reason}` : '';
+  return `${who} ${verb}${by}${because}`;
 }
 
 export interface MucSubject {

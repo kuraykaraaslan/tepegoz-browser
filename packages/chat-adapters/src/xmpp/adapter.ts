@@ -27,6 +27,7 @@ import {
   buildMucChangeSubject,
   buildMucJoin,
   buildMucLeave,
+  mucRemovalText,
   parseMucError,
   parseMucPresence,
   parseMucSubject,
@@ -539,6 +540,34 @@ function handleRoomPresence(session: XmppSession, el: XmlElement): boolean {
     role: occ.role,
     realJid: occ.realJid,
   });
+
+  // A kick / ban is also a visible system line in the room (not just a vanished occupant).
+  const removal = mucRemovalText(occ);
+  if (removal !== null) {
+    const now = Date.now();
+    const id = `sys-${String(now)}-${occ.nick}`;
+    session.push({
+      type: 'message',
+      message: {
+        id,
+        conversationId: roomJid,
+        accountId: session.accountId,
+        protocolId: id,
+        senderAddress: occ.actor ?? occ.nick,
+        senderName: occ.actor ?? occ.nick,
+        kind: 'system',
+        body: removal,
+        mediaRef: null,
+        replyToId: null,
+        reactions: [],
+        editedAt: null,
+        redacted: false,
+        originTs: now,
+        receivedAt: now,
+        deliveryState: 'delivered',
+      },
+    });
+  }
   return true;
 }
 

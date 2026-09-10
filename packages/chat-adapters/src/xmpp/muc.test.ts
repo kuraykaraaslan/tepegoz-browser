@@ -5,9 +5,11 @@ import {
   buildMucInvite,
   buildMucJoin,
   buildMucLeave,
+  mucRemovalText,
   parseMucError,
   parseMucPresence,
   parseMucSubject,
+  type MucOccupant,
 } from './muc';
 
 function el(xml: string): XmlElement {
@@ -88,6 +90,8 @@ describe('parseMucPresence', () => {
       statusText: '',
       self: true,
       statusCodes: [110, 210],
+      actor: null,
+      reason: null,
     });
   });
 
@@ -130,6 +134,45 @@ describe('parseMucPresence', () => {
         el(`<presence from="room@conf.example"><x xmlns="http://jabber.org/protocol/muc#user"/></presence>`),
       ),
     ).toBeNull();
+  });
+
+  it('reads the actor + reason from a kick presence', () => {
+    const occ = parseMucPresence(
+      el(
+        `<presence from="room@conf.example/Bob" type="unavailable">` +
+          `<x xmlns="http://jabber.org/protocol/muc#user">` +
+          `<item affiliation="none" role="none"><actor nick="Op"/><reason>spam</reason></item>` +
+          `<status code="307"/></x></presence>`,
+      ),
+    );
+    expect(occ).toMatchObject({ nick: 'Bob', actor: 'Op', reason: 'spam', statusCodes: [307] });
+  });
+});
+
+describe('mucRemovalText', () => {
+  const occ = (over: Partial<MucOccupant>): MucOccupant => ({
+    roomJid: 'r@c', nick: 'Bob', realJid: null, affiliation: 'none', role: 'none',
+    presence: 'offline', statusText: '', self: false, statusCodes: [], actor: null, reason: null,
+    ...over,
+  });
+
+  it('is null for a join or a plain leave', () => {
+    expect(mucRemovalText(occ({ presence: 'online', statusCodes: [110] }))).toBeNull();
+    expect(mucRemovalText(occ({ statusCodes: [] }))).toBeNull();
+  });
+
+  it('renders kick / ban with the actor and reason when present', () => {
+    expect(mucRemovalText(occ({ statusCodes: [307], actor: 'Op', reason: 'spam' }))).toBe(
+      'Bob was kicked by Op: spam',
+    );
+    expect(mucRemovalText(occ({ statusCodes: [301] }))).toBe('Bob was banned');
+    expect(mucRemovalText(occ({ statusCodes: [307], self: true }))).toBe('You were kicked');
+  });
+
+  it('covers the members-only / affiliation / shutdown codes', () => {
+    expect(mucRemovalText(occ({ statusCodes: [321] }))).toMatch(/no longer a member/);
+    expect(mucRemovalText(occ({ statusCodes: [322] }))).toMatch(/members-only/);
+    expect(mucRemovalText(occ({ statusCodes: [332] }))).toMatch(/shut down/);
   });
 });
 
