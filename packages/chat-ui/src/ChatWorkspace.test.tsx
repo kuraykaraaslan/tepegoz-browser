@@ -119,6 +119,26 @@ describe('ChatWorkspace', () => {
     expect(onAddAccount).toHaveBeenCalled();
   });
 
+  it('shows an always-on left header with a gear that opens account management', async () => {
+    const onAddAccount = vi.fn();
+    const { port } = makePort({
+      listChatAccounts: () =>
+        Promise.resolve({
+          accounts: [
+            { id: 'work', label: 'Work', displayName: '', protocol: 'xmpp', color: null, order: 0 },
+          ],
+          states: {},
+        }),
+      listChatConversations: () => Promise.resolve([]),
+      getChatRoster: () => Promise.resolve([]),
+    });
+    wrap(<ChatWorkspace port={port} onAddAccount={onAddAccount} />);
+    // header present even with an account configured (no "add account" hint then)
+    expect(await screen.findByText('Chat')).toBeDefined();
+    fireEvent.click(screen.getByRole('button', { name: 'Accounts' }));
+    expect(onAddAccount).toHaveBeenCalled();
+  });
+
   it('lists conversations, opens one, and renders its timeline', async () => {
     const { port } = makePort();
     wrap(<ChatWorkspace port={port} />);

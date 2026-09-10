@@ -22,11 +22,17 @@
   --cu-border-focus: var(--border-focus, #0891a4);
   --cu-primary: var(--primary, #06aec4);
   --cu-primary-fg: var(--primary-fg, #0c2135);
-  --cu-primary-subtle: var(--primary-subtle, #e4f8fb);
   --cu-primary-on-surface: var(--primary-on-surface, #116b7a);
 
-  /* modern-messenger extras — a distinct chat canvas, soft elevation, generous radii */
-  --cu-canvas: var(--surface-sunken, #eef1f4);
+  /* Accent tints are DERIVED from `--cu-primary` + the surface, not from `--primary-subtle` —
+   * the app leaves `--primary-subtle` unset under a custom theme colour, where it would otherwise
+   * fall back to the fixed brand cyan and clash. These adapt to any theme colour and both modes. */
+  --cu-primary-subtle: color-mix(in srgb, var(--cu-primary) 16%, var(--cu-surface-base));
+  --cu-accent-line: color-mix(in srgb, var(--cu-primary) 40%, transparent);
+
+  /* modern-messenger extras — a distinct chat canvas, soft elevation, generous radii. The canvas is
+   * only a gentle step off the base surface so panels read as separated, never as a flat colour wash. */
+  --cu-canvas: color-mix(in srgb, var(--cu-surface-base) 93%, var(--cu-text-primary));
   --cu-bubble-peer: var(--surface-base, #ffffff);
   --cu-shadow-sm: 0 1px 2px rgb(15 23 42 / 0.06), 0 1px 1px rgb(15 23 42 / 0.04);
   --cu-shadow-pop: 0 6px 20px rgb(15 23 42 / 0.12);
@@ -46,10 +52,8 @@
     --cu-border-focus: var(--border-focus, #22c6da);
     --cu-primary: var(--primary, #22c6da);
     --cu-primary-fg: var(--primary-fg, #08222b);
-    --cu-primary-subtle: var(--primary-subtle, #0b3a44);
     --cu-primary-on-surface: var(--primary-on-surface, #22c6da);
 
-    --cu-canvas: var(--surface-sunken, #081a2b);
     --cu-bubble-peer: var(--surface-raised, #14334e);
     --cu-shadow-sm: 0 1px 2px rgb(0 0 0 / 0.3);
     --cu-shadow-pop: 0 8px 24px rgb(0 0 0 / 0.45);
@@ -65,6 +69,12 @@
   color: var(--cu-text-primary);
   font: 14px/1.5 ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   -webkit-font-smoothing: antialiased;
+  container-type: inline-size;
+}
+
+/* Back to the list — only meaningful in the narrow single-column layout (see the container query). */
+.chat-workspace__back {
+  display: none;
 }
 .chat-workspace button {
   transition:
@@ -176,7 +186,7 @@
 /* ── body: two panes ──────────────────────────────────────────────────────── */
 .chat-workspace__body {
   display: grid;
-  grid-template-columns: minmax(200px, 280px) 1fr;
+  grid-template-columns: minmax(220px, 320px) 1fr;
   min-height: 0;
 }
 .chat-workspace__left {
@@ -185,6 +195,38 @@
   min-height: 0;
   border-right: 1px solid var(--cu-border);
   background: var(--cu-surface-raised);
+}
+
+/* Narrow surface (the sidebar dock): one column at a time. No selection → the list fills the pane;
+ * a conversation open → the list yields to it and a back button appears. Pure CSS via :has(). */
+@container (max-width: 560px) {
+  .chat-workspace__body {
+    grid-template-columns: 1fr;
+  }
+  .chat-workspace__main:not(:has(.chat-workspace__conv-head, .chat-room-header)) {
+    display: none;
+  }
+  .chat-workspace__body:has(.chat-workspace__conv-head, .chat-room-header) .chat-workspace__left {
+    display: none;
+  }
+  .chat-workspace__back {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin: 0;
+    padding: 9px 14px;
+    border: 0;
+    border-bottom: 1px solid var(--cu-border);
+    background: var(--cu-surface-raised);
+    color: var(--cu-primary-on-surface);
+    font: inherit;
+    font-weight: 650;
+    cursor: pointer;
+  }
+  .chat-workspace__back span {
+    font-size: 16px;
+    line-height: 1;
+  }
 }
 .chat-workspace__tabs {
   display: flex;
@@ -222,29 +264,59 @@
   overflow-y: auto;
 }
 
-/* No account yet: the left column still shows its tabs + empty lists; this banner sits above them. */
+/* The left column's own header — always visible (Pidgin-style buddy-list title + a gear that opens
+ * account management). Sits above the no-account hint and the tabs. */
+.chat-workspace__left-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 12px 8px;
+  border-bottom: 1px solid var(--cu-border);
+}
+.chat-workspace__left-title {
+  font-size: 13px;
+  font-weight: 750;
+  letter-spacing: 0.01em;
+}
+.chat-workspace__icon-btn {
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--cu-border);
+  border-radius: 8px;
+  background: var(--cu-surface-base);
+  color: var(--cu-text-secondary);
+  cursor: pointer;
+}
+.chat-workspace__icon-btn:hover {
+  color: var(--cu-text-primary);
+  border-color: var(--cu-border-strong);
+}
+
+/* No account yet: the left column still shows its tabs + (empty) contacts list; this is a compact
+ * inline hint above them, not a full-height banner. */
 .chat-workspace__no-accounts {
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 10px;
-  padding: 14px 12px;
-  border-bottom: 1px solid var(--cu-border);
-  text-align: center;
-  color: var(--cu-text-secondary);
-}
-.chat-workspace__no-accounts p {
+  flex-wrap: wrap;
+  gap: 8px;
   margin: 0;
-  max-width: 32ch;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--cu-border);
+  background: var(--cu-accent-wash);
+  color: var(--cu-text-secondary);
+  font-size: 12px;
 }
 .chat-workspace__no-accounts button {
-  padding: 7px 16px;
+  padding: 5px 12px;
   border: 0;
-  border-radius: 7px;
+  border-radius: 999px;
   background: var(--cu-primary);
   color: var(--cu-primary-fg);
   font: inherit;
-  font-weight: 600;
+  font-weight: 650;
   cursor: pointer;
 }
 .chat-workspace__no-accounts button:hover {

@@ -31,6 +31,18 @@ export interface ChatWorkspaceProps {
 
 type LeftTab = 'chats' | 'contacts' | 'rooms';
 
+/** Inline gear — chat-ui is a string-free leaf with no icon dependency, so the glyph lives here. */
+function GearIcon() {
+  return (
+    <svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true" focusable="false">
+      <path
+        fill="currentColor"
+        d="M11.3 1.6a1 1 0 0 0-2.6 0l-.2 1.2a6.6 6.6 0 0 0-1.5.9L5.9 5a1 1 0 0 0-1.3.4L3.3 7.6a1 1 0 0 0 .3 1.3l1 .8a6.7 6.7 0 0 0 0 1.8l-1 .8a1 1 0 0 0-.3 1.3l1.3 2.2A1 1 0 0 0 5.9 18l1.1-.5c.5.4 1 .7 1.5.9l.2 1.2a1 1 0 0 0 2.6 0l.2-1.2c.6-.2 1-.5 1.5-.9l1.1.5a1 1 0 0 0 1.3-.4l1.3-2.2a1 1 0 0 0-.3-1.3l-1-.8a6.7 6.7 0 0 0 0-1.8l1-.8a1 1 0 0 0 .3-1.3l-1.3-2.2A1 1 0 0 0 14.1 5l-1.1.5c-.5-.4-1-.7-1.5-.9l-.2-1.2ZM10 13a3 3 0 1 1 0-6 3 3 0 0 1 0 6Z"
+      />
+    </svg>
+  );
+}
+
 /**
  * The whole messenger surface composed over {@link useChatState}: an account switcher, a
  * chats / contacts left column, and the open conversation (timeline + composer). Presentational glue
@@ -117,15 +129,29 @@ export function ChatWorkspace({
 
       <div className="chat-workspace__body">
         <aside className="chat-workspace__left">
+          <div className="chat-workspace__left-head">
+            <span className="chat-workspace__left-title">{s.workspace.title}</span>
+            {onAddAccount !== undefined && (
+              <button
+                type="button"
+                className="chat-workspace__icon-btn"
+                aria-label={s.workspace.manageAccounts}
+                title={s.workspace.manageAccounts}
+                onClick={onAddAccount}
+              >
+                <GearIcon />
+              </button>
+            )}
+          </div>
           {noAccounts && (
-            <div className="chat-workspace__no-accounts">
-              <p>{s.workspace.noAccounts}</p>
+            <p className="chat-workspace__no-accounts">
+              <span>{s.workspace.noAccounts}</span>
               {onAddAccount !== undefined && (
                 <button type="button" onClick={onAddAccount}>
                   {s.workspace.addAccount}
                 </button>
               )}
-            </div>
+            </p>
           )}
           <div className="chat-workspace__tabs" role="tablist">
             <button
@@ -195,6 +221,13 @@ export function ChatWorkspace({
             <p className="chat-workspace__no-selection">{s.workspace.noSelection}</p>
           ) : (
             <>
+              <button
+                type="button"
+                className="chat-workspace__back"
+                onClick={() => chat.selectConversation(null)}
+              >
+                <span aria-hidden="true">‹</span> {s.workspace.title}
+              </button>
               {selected.kind === 'room' ? (
                 <RoomHeader
                   name={conversationTitle(selected)}

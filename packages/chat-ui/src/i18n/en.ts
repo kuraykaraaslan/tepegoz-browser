@@ -84,6 +84,10 @@ export const en = {
     failed: 'Not sent',
   },
   workspace: {
+    /** The left column's own heading, above the tabs. */
+    title: 'Chat',
+    /** Accessible name for the gear button that opens account management / add-account. */
+    manageAccounts: 'Accounts',
     /** Left-column tab: the conversation list. */
     chatsTab: 'Chats',
     /** Left-column tab: the roster. */

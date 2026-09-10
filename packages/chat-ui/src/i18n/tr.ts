@@ -62,6 +62,10 @@ export const tr: ChatUiStrings = {
     failed: 'Gönderilemedi',
   },
   workspace: {
+    /** The left column's own heading, above the tabs. */
+    title: 'Sohbet',
+    /** Accessible name for the gear button that opens account management / add-account. */
+    manageAccounts: 'Hesaplar',
     chatsTab: 'Sohbetler',
     contactsTab: 'Kişiler',
     noAccounts: 'Başlamak için bir sohbet hesabı ekleyin.',
