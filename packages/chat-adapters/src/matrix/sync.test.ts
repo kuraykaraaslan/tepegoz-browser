@@ -127,6 +127,35 @@ describe('parseSyncResponse', () => {
     expect(parseSyncResponse({ rooms: { join: { '!r:s': 'nope' } } }, ctx).rooms).toHaveLength(1);
   });
 
+  it('surfaces a timeline m.room.topic as a room-topic event', () => {
+    const r = parseSyncResponse(
+      {
+        next_batch: 's',
+        rooms: {
+          join: {
+            '!r:s': {
+              timeline: {
+                events: [
+                  {
+                    type: 'm.room.topic',
+                    sender: '@ada:s',
+                    event_id: '$t',
+                    origin_server_ts: 20,
+                    content: { topic: 'New direction' },
+                  },
+                ],
+              },
+            },
+          },
+        },
+      },
+      ctx,
+    );
+    expect(r.events).toEqual([
+      { type: 'room-topic', conversationId: '!r:s', topic: 'New direction', setBy: '@ada:s', ts: 20 },
+    ]);
+  });
+
   it('drops a timeline entry with no type', () => {
     const r = parseSyncResponse(
       { next_batch: 's', rooms: { join: { '!r:s': { timeline: { events: [{ sender: '@a:s' }, 'x'] } } } } },

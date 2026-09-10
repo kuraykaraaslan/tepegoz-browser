@@ -135,6 +135,16 @@ export function matrixTimelineEvent(
     };
   }
 
+  if (ev.type === 'm.room.topic') {
+    return {
+      type: 'room-topic',
+      conversationId: roomId,
+      topic: str(ev.content.topic),
+      setBy: ev.sender,
+      ts: ev.origin_server_ts,
+    };
+  }
+
   if (ev.type !== 'm.room.message') return null;
 
   const relation = relatesTo(ev.content);

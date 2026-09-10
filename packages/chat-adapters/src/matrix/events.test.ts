@@ -146,8 +146,28 @@ describe('matrixTimelineEvent — messages', () => {
     ).toBeNull();
   });
 
+  it('m.room.topic → room-topic with the sender and server ts', () => {
+    expect(
+      matrixTimelineEvent(
+        ev({ type: 'm.room.topic', sender: '@ada:s', content: { topic: 'Sprint goals' } }),
+        ROOM,
+        ctx,
+      ),
+    ).toEqual({
+      type: 'room-topic',
+      conversationId: ROOM,
+      topic: 'Sprint goals',
+      setBy: '@ada:s',
+      ts: 1_700_000_000_000,
+    });
+    // a cleared topic (no content.topic) is still a valid change
+    expect(
+      matrixTimelineEvent(ev({ type: 'm.room.topic', content: {} }), ROOM, ctx),
+    ).toMatchObject({ type: 'room-topic', topic: '' });
+  });
+
   it('drops an unmodelled type, an empty body, and a bad shape', () => {
-    expect(matrixTimelineEvent(ev({ type: 'm.room.topic' }), ROOM, ctx)).toBeNull();
+    expect(matrixTimelineEvent(ev({ type: 'm.room.avatar' }), ROOM, ctx)).toBeNull();
     expect(matrixTimelineEvent(ev({ content: { msgtype: 'm.text', body: '' } }), ROOM, ctx)).toBeNull();
     expect(matrixTimelineEvent(ev({ sender: '' }), ROOM, ctx)).toBeNull();
   });

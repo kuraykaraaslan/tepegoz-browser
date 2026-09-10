@@ -632,14 +632,19 @@ a space is reported in `SyncRoom` but its timeline / membership are not surfaced
 Then media **upload** — `ChatFetchInit.body` takes `Uint8Array`, `OutgoingMedia`, and
 `MatrixAdapter.uploadMedia` → `/_matrix/media/v3/upload` → `mxc://`. Then a **recorded Synapse
 `/sync` fixture suite** (initial: room + space + invite + media + typing/receipts; incremental: edit
-+ reaction + redaction + leave) plus a pre-room-v11 top-level `redacts` fix. · **Depends on:**
-X-chat.1 (contract) + X-chat.2/.3 (UI); E2EE is X-chat.7 · **Branch:** `main` · **Risk:** medium-high.
++ reaction + redaction + leave) plus a pre-room-v11 top-level `redacts` fix. Then (2026-09-10,
+alongside X-chat.3/.4) a **timeline `m.room.topic` → `room-topic` event** — `matrixTimelineEvent`
+maps it (setter = `ev.sender`, ts = `origin_server_ts`); the initial topic still comes from the room
+state summary, a *change* now surfaces the same way IRC's `TOPIC` and XMPP's `<subject>` do. ·
+**Depends on:** X-chat.1 (contract) + X-chat.2/.3 (UI); E2EE is X-chat.7 · **Branch:** `main` ·
+**Risk:** medium-high.
 
 ### Deliverables
 - [x] **Matrix adapter** (`matrix/`) — login (password / token), `/sync` loop with `since`, room
       state + timeline, `m.room.message` (text/emote/notice/image/file), `m.reaction`,
-      `m.room.redaction`, edits (`m.replace`), read markers + receipts, typing, presence,
-      `/rooms/{id}/send`, media repo upload/download (`mxc://` resolve), spaces (`m.space`), invites.
+      `m.room.redaction`, edits (`m.replace`), `m.room.topic` → `room-topic`, read markers +
+      receipts, typing, presence, `/rooms/{id}/send`, media repo upload/download (`mxc://` resolve),
+      spaces (`m.space`), invites.
       _Threads (`m.thread`) and a room directory are deferred to X-chat hardening._
 - [x] **Caps** — everything on except E2EE (`MATRIX_ADAPTER_CAPS = { ...MATRIX_CAPS, e2ee: false }`).
 - [x] **State resilience** — a dropped `/sync` resumes from the last token; `M_UNKNOWN_TOKEN` forces
