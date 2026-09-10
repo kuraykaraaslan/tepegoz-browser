@@ -10,3 +10,18 @@ export {
   formatAddress,
   formatAddressList,
 } from './address';
+
+export {
+  parseMime,
+  decodeEncodedWords,
+  iterMimeParts,
+  selectBodyStructure,
+} from './mime-parse';
+export type {
+  ParsedMime,
+  MimeHeader,
+  MimeContentType,
+  MimeEncoding,
+  MimeDisposition,
+  MimeNodeKind,
+} from './mime-parse';

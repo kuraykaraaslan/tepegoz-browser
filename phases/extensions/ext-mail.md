@@ -205,8 +205,18 @@ tsconfig(.build) / lockfile / `vitest.coverage.config.ts` include / `dependency-
 `mail-core-no-app-no-electron` / `docs/package-map.md`) with its first module — `address.ts`
 (`parseAddressList` / `formatAddress` / `formatAddressList`: comment-strip, folded whitespace, quoted
 display names with commas, `<angle-addr>`, `Group: a, b;` → members, case-insensitive dedupe, total
-on junk input), 10 tests. Still owed: MIME parser/builder, JWZ threading, filter engine, search fold,
-snippet, fixture corpus. · **Depends on:** nothing (pure libs) · **Branch:** `feat/ext-mail-core`
+on junk input), 10 tests. Then the **MIME parser** (`mime-parse.ts`) landed: a total, tolerant
+`parseMime` returning a `ParsedMime` tree — RFC 5322 header unfold + field parse, RFC 2047
+encoded-words (`B`/`Q`, charset via `TextDecoder` with a fallback ladder, adjacent-word whitespace
+elision), `Content-Type` + RFC 2231 continued/extended params, all five `Content-Transfer-Encoding`s
+(tolerant base64 + quoted-printable decoders), `multipart/*` boundary split (nested, preamble/epilogue
+dropped, degrade-to-`text/plain` on a missing/absent boundary), `message/rfc822` recursion (incl. a
+base64/QP-wrapped inner message), `Content-Disposition` + RFC 2231/2047 filenames, `Content-ID`
+bracket strip, `format=flowed` + `DelSp` unflow (quote-depth aware), and hardening caps (50 MB input,
+25-level nesting, 1000-part budget). Plus `decodeEncodedWords`, an `iterMimeParts` walk and
+`selectBodyStructure` (multipart/alternative preference resolved). 42 tests. Still owed: MIME builder,
+JWZ threading, filter engine, search fold, snippet, fixture corpus. · **Depends on:** nothing (pure
+libs) · **Branch:** `feat/ext-mail-core`
 **Risk:** low-medium — MIME is fiddly; contained by a fixture corpus.
 
 ### Deliverables
@@ -219,13 +229,14 @@ snippet, fixture corpus. · **Depends on:** nothing (pure libs) · **Branch:** `
 - [x] **`@tepegoz/mail-core` package** — `package.json` / `tsconfig(.build).json`, `pnpm-lock.yaml`,
       `vitest.coverage.config.ts` `include`, `dependency-cruiser.cjs`
       (`mail-core-no-app-no-electron`), `docs/package-map.md`. (eslint is the flat root config.)
-- [ ] **MIME parser** (`mime-parse.ts`) — headers (RFC 5322), encoded-words (RFC 2047, `Q`/`B`,
+- [x] **MIME parser** (`mime-parse.ts`) — headers (RFC 5322), encoded-words (RFC 2047, `Q`/`B`,
       charset via `TextDecoder`), `Content-Type` + params, `Content-Transfer-Encoding`
       (`base64` / `quoted-printable` / `7bit` / `8bit` / `binary`), `multipart/*` boundary split
       (incl. nested + `multipart/alternative` preference), `message/rfc822` nesting,
       `Content-Disposition` (attachment vs inline, filename incl. RFC 2231), `format=flowed` +
       `DelSp` unfolding. Returns a `ParsedMime` tree; **total** (never throws — a malformed part
-      degrades to `text/plain` with a diagnostic flag).
+      degrades to `text/plain` with a diagnostic flag). `decodeEncodedWords` / `iterMimeParts` /
+      `selectBodyStructure` helpers alongside; 42 tests.
 - [ ] **MIME builder** (`mime-build.ts`) — compose model → RFC 5322: correct `Date`/`Message-ID`/
       `MIME-Version`, `In-Reply-To` + `References` threading headers, `multipart/alternative`
       (text + optional HTML), `multipart/mixed` for attachments, `quoted-printable` / `base64`
