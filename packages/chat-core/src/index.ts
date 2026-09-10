@@ -74,6 +74,15 @@ export {
 } from './account-state';
 
 export {
+  CHAT_UNTRUSTED_NOTE,
+  wrapChatContent,
+  agentMessageView,
+  isConversationAgentVisible,
+  filterAgentConversations,
+  type AgentChatMessage,
+} from './agent-view';
+
+export {
   ROOM_AFFILIATIONS,
   ROOM_ROLES,
   emptyRoom,
