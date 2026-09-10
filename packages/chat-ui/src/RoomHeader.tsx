@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useT } from '@tepegoz/i18n/react';
 import { occupantCount, type RoomNotifyLevel, type RoomView } from '@tepegoz/chat-core';
+import { Avatar } from './Avatar';
 import { chatUiDict } from './i18n';
 import { NotEncryptedBadge } from './NotEncryptedBadge';
 
@@ -61,39 +62,44 @@ export function RoomHeader({
 
   return (
     <header className="chat-room-header">
-      <div className="chat-room-header__id">
-        <h2>{name}</h2>
-        {editing ? (
-          <input
-            className="chat-room-header__topic-input"
-            aria-label={s.room.editTopic}
-            value={draft}
-            autoFocus
-            onChange={(e) => setDraft(e.target.value)}
-            onBlur={commit}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') commit();
-              else if (e.key === 'Escape') cancel();
-            }}
-          />
-        ) : (
-          <p className="chat-room-header__topic">
-            {topic !== '' ? topic : s.room.noTopicHeader}
-            {onSetTopic !== undefined && (
-              <button
-                type="button"
-                className="chat-room-header__topic-edit"
-                onClick={() => {
-                  setDraft(topic);
-                  setEditing(true);
-                }}
-              >
-                {s.room.editTopic}
-              </button>
-            )}
-          </p>
-        )}
-        {notEncrypted && <NotEncryptedBadge />}
+      <div className="chat-room-header__lead">
+        <span className="chat-room-header__avatar">
+          <Avatar name={name} seed={name} />
+        </span>
+        <div className="chat-room-header__id">
+          <h2>{name}</h2>
+          {editing ? (
+            <input
+              className="chat-room-header__topic-input"
+              aria-label={s.room.editTopic}
+              value={draft}
+              autoFocus
+              onChange={(e) => setDraft(e.target.value)}
+              onBlur={commit}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') commit();
+                else if (e.key === 'Escape') cancel();
+              }}
+            />
+          ) : (
+            <p className="chat-room-header__topic">
+              {topic !== '' ? topic : s.room.noTopicHeader}
+              {onSetTopic !== undefined && (
+                <button
+                  type="button"
+                  className="chat-room-header__topic-edit"
+                  onClick={() => {
+                    setDraft(topic);
+                    setEditing(true);
+                  }}
+                >
+                  {s.room.editTopic}
+                </button>
+              )}
+            </p>
+          )}
+          {notEncrypted && <NotEncryptedBadge />}
+        </div>
       </div>
       <div className="chat-room-header__actions">
         {onToggleMuted !== undefined && (

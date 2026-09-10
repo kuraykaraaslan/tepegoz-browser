@@ -1,5 +1,6 @@
 import { useT } from '@tepegoz/i18n/react';
 import { occupantList, type RoomView } from '@tepegoz/chat-core';
+import { Avatar } from './Avatar';
 import type { ChatUiStrings } from './i18n';
 import { chatUiDict } from './i18n';
 import { PresenceBadge } from './PresenceBadge';
@@ -45,7 +46,10 @@ export function RoomMemberList({ room, onSelectMember }: Readonly<RoomMemberList
                 disabled={onSelectMember === undefined}
                 onClick={() => onSelectMember?.(occupant.nick)}
               >
-                <PresenceBadge presence={occupant.presence} dotOnly />
+                <span className="chat-roster__avatar">
+                  <Avatar name={occupant.nick} seed={occupant.realJid || occupant.nick} size="sm" />
+                  <PresenceBadge presence={occupant.presence} dotOnly />
+                </span>
                 <span className="chat-room-members__nick">{occupant.nick}</span>
                 {badge !== null && <span className="chat-room-members__badge">{badge}</span>}
               </button>
