@@ -289,3 +289,8 @@ export function buildIrcNick(nick: string): string {
 export function buildIrcAway(message?: string): string {
   return message !== undefined && message.length > 0 ? `AWAY :${message}` : 'AWAY';
 }
+
+/** `TOPIC <channel> :<text>` — always `:trailing` so an empty topic (a clear) is expressible. */
+export function buildIrcTopic(channel: string, topic: string): string {
+  return `TOPIC ${channel} :${topic}`;
+}

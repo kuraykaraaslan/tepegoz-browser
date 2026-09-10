@@ -182,7 +182,8 @@ describe('MatrixAdapter — actions', () => {
       }))
       .on(/\/join\//, () => ({ body: { room_id: '!joined:m.example' } }))
       .on(/\/(leave|receipt|presence)\b/, () => ({ body: {} }))
-      .on(/\/rooms\/[^/]+\/leave$/, () => ({ body: {} }));
+      .on(/\/rooms\/[^/]+\/leave$/, () => ({ body: {} }))
+      .on(/\/state\/m\.room\.topic$/, () => ({ body: { event_id: '$topic' } }));
     const adapter = new MatrixAdapter();
     const session = (await adapter.connect(creds(), t)) as MatrixSession;
     return { adapter, session, t };
@@ -232,6 +233,15 @@ describe('MatrixAdapter — actions', () => {
     await adapter.leaveRoom(session, '!r:m.example');
     expect(t.calls.some((c) => /\/receipt\/m\.read\//.test(c.url))).toBe(true);
     expect(t.calls.some((c) => /\/presence\//.test(c.url))).toBe(true);
+    await adapter.disconnect(session);
+  });
+
+  it('setRoomTopic PUTs the m.room.topic state event', async () => {
+    const { adapter, session, t } = await connected();
+    await adapter.setRoomTopic(session, '!r:m.example', 'Release week');
+    const call = t.calls.find((c) => /\/state\/m\.room\.topic$/.test(c.url));
+    expect(call?.init.method).toBe('PUT');
+    expect(JSON.parse(String(call?.init.body))).toEqual({ topic: 'Release week' });
     await adapter.disconnect(session);
   });
 

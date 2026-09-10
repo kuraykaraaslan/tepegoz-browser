@@ -8,6 +8,7 @@ import {
   ChatJoinRoomSchema,
   ChatSetRoomNotifyLevelSchema,
   ChatSetMutedSchema,
+  ChatSetRoomTopicSchema,
   ChatMarkReadSchema,
   ChatSendMessageSchema,
   ChatSetPresenceSchema,
@@ -131,6 +132,16 @@ describe('room channels', () => {
     ).toBe(true);
     expect(
       ChatSetMutedSchema.safeParse({ accountId: 'a', conversationId: 'c', muted: 'yes' }).success,
+    ).toBe(false);
+  });
+
+  it('ChatSetRoomTopicSchema takes a string topic and caps its length', () => {
+    expect(
+      ChatSetRoomTopicSchema.safeParse({ accountId: 'a', conversationId: 'c', topic: '' }).success,
+    ).toBe(true);
+    expect(
+      ChatSetRoomTopicSchema.safeParse({ accountId: 'a', conversationId: 'c', topic: 'x'.repeat(4097) })
+        .success,
     ).toBe(false);
   });
 });

@@ -390,6 +390,13 @@ export class MatrixAdapter implements ChatAdapter {
     await this.request(s, 'POST', `${CS}/rooms/${encodeURIComponent(conv)}/leave`, {});
   }
 
+  async setRoomTopic(session: ChatSession, conv: ConvId, topic: string): Promise<void> {
+    const s = session as MatrixSession;
+    await this.request(s, 'PUT', `${CS}/rooms/${encodeURIComponent(conv)}/state/m.room.topic`, {
+      topic,
+    });
+  }
+
   resolveMedia(session: ChatSession, mediaRef: string): MediaLocator | null {
     const s = session as MatrixSession;
     const url = mxcDownloadUrl(s.homeserverUrl, mediaRef);

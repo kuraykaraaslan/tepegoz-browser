@@ -96,6 +96,9 @@ export interface ChatAdapter {
 
   joinRoom?(session: ChatSession, address: string): Promise<ChatConversation>;
   leaveRoom?(session: ChatSession, conv: ConvId): Promise<void>;
+  /** Change a room's topic / subject. The server's echo drives the `room-topic` event that updates
+   *  local state — this only writes. Optional; a protocol / room without topic support omits it. */
+  setRoomTopic?(session: ChatSession, conv: ConvId, topic: string): Promise<void>;
   /** Discover the rooms a conference / directory service advertises. */
   discoverRooms?(session: ChatSession, service: string): Promise<RoomSummary[]>;
 

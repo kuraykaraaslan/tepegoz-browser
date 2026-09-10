@@ -7,6 +7,7 @@ import {
   buildIrcNick,
   buildIrcPart,
   buildIrcPrivmsg,
+  buildIrcTopic,
   foldIrcTarget,
   ircMessageToEvent,
   namesReplyToEvents,
@@ -231,5 +232,7 @@ describe('irc builders', () => {
     expect(buildIrcAway()).toBe('AWAY');
     const soh = String.fromCharCode(1);
     expect(buildIrcAction('#c', 'nods')).toBe(`PRIVMSG #c :${soh}ACTION nods${soh}`);
+    expect(buildIrcTopic('#c', 'the new topic')).toBe('TOPIC #c :the new topic');
+    expect(buildIrcTopic('#c', '')).toBe('TOPIC #c :');
   });
 });

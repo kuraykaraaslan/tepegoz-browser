@@ -495,9 +495,11 @@ DoD (live server) + the sub-phase DoD template remain.** · **Depends on:** X-ch
       history-on-join limit, password rooms. `xmpp/muc.ts` (join/leave/subject/invite builders +
       presence/subject/error parse) + `chat-core` `RoomView` + `XmppAdapter` join/leave/presence
       routing + downstream `room-membership` folding through `ChatAccountState` / reducer / runner.
-      A live `<subject>` change now surfaces as a `room-topic` event (`handleRoomSubject`).
-      _`buildMucChangeSubject` / `buildMucInvite` exist but no UI action yet; kick/ban surfacing: a
-      later slice._
+      A live `<subject>` change now surfaces as a `room-topic` event (`handleRoomSubject`), and the
+      room header can **set** the topic — `ChatAdapter.setRoomTopic` (XMPP `buildMucChangeSubject`,
+      IRC `TOPIC`, Matrix `PUT …/state/m.room.topic`) → `ChatService.setRoomTopic` →
+      `chat:set-room-topic` bridge → `<RoomHeader>` inline editor (Enter commits, Escape cancels).
+      _`buildMucInvite` still has no UI action; kick/ban surfacing: a later slice._
 - [x] **Room browser** — service discovery of a MUC service's public rooms, search, join-by-address.
       `xmpp/disco.ts` + `XmppAdapter.discoverRooms` + `<RoomBrowser>` + `useChatState` wiring + the
       `chat:discover-rooms` / `chat:join-room` desktop bridge. _Only the runtime DoD remains._

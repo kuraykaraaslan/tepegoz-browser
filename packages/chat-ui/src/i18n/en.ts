@@ -52,6 +52,8 @@ export const en = {
     admin: 'Admin',
     /** Empty-topic placeholder in the room header. */
     noTopic: 'No topic set',
+    /** Button + input label for editing the room topic. */
+    editTopic: 'Edit topic',
   },
   media: {
     loading: 'Loading attachment…',

@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { useT } from '@tepegoz/i18n/react';
 import { occupantCount, type RoomNotifyLevel, type RoomView } from '@tepegoz/chat-core';
 import { chatUiDict } from './i18n';
@@ -20,6 +21,8 @@ export interface RoomHeaderProps {
   /** Whether the room is muted; the toggle is shown only when `onToggleMuted` is also given. */
   muted?: boolean;
   onToggleMuted?: () => void;
+  /** Commit a new topic; the "Edit topic" affordance is shown only when this is given. */
+  onSetTopic?: (topic: string) => void;
 }
 
 /** The conversation header for a MUC room: name, topic, member count, and a members toggle. */
@@ -34,16 +37,62 @@ export function RoomHeader({
   notEncrypted = false,
   muted = false,
   onToggleMuted,
+  onSetTopic,
 }: Readonly<RoomHeaderProps>) {
   const s = useT(chatUiDict);
   const topic = (room?.subject ?? '').trim() || topicFallback.trim();
   const count = room !== undefined ? occupantCount(room) : 0;
 
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(topic);
+  // Re-seed the draft whenever the live topic changes while not editing.
+  useEffect(() => {
+    if (!editing) setDraft(topic);
+  }, [topic, editing]);
+
+  const commit = (): void => {
+    setEditing(false);
+    if (draft !== topic) onSetTopic?.(draft);
+  };
+  const cancel = (): void => {
+    setEditing(false);
+    setDraft(topic);
+  };
+
   return (
     <header className="chat-room-header">
       <div className="chat-room-header__id">
         <h2>{name}</h2>
-        <p className="chat-room-header__topic">{topic !== '' ? topic : s.room.noTopicHeader}</p>
+        {editing ? (
+          <input
+            className="chat-room-header__topic-input"
+            aria-label={s.room.editTopic}
+            value={draft}
+            autoFocus
+            onChange={(e) => setDraft(e.target.value)}
+            onBlur={commit}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') commit();
+              else if (e.key === 'Escape') cancel();
+            }}
+          />
+        ) : (
+          <p className="chat-room-header__topic">
+            {topic !== '' ? topic : s.room.noTopicHeader}
+            {onSetTopic !== undefined && (
+              <button
+                type="button"
+                className="chat-room-header__topic-edit"
+                onClick={() => {
+                  setDraft(topic);
+                  setEditing(true);
+                }}
+              >
+                {s.room.editTopic}
+              </button>
+            )}
+          </p>
+        )}
         {notEncrypted && <NotEncryptedBadge />}
       </div>
       <div className="chat-room-header__actions">

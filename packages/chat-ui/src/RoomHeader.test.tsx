@@ -94,6 +94,41 @@ describe('RoomHeader', () => {
     expect(screen.getByText('Not encrypted')).toBeDefined();
   });
 
+  it('edits the topic: reveal input, commit on Enter, skip when unchanged, cancel on Escape', () => {
+    const onSetTopic = vi.fn();
+    wrap(
+      <RoomHeader
+        name="r"
+        topicFallback="old topic"
+        membersOpen
+        onToggleMembers={vi.fn()}
+        onSetTopic={onSetTopic}
+      />,
+    );
+    // no editor without a click
+    expect(screen.queryByLabelText('Edit topic')).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Edit topic' }));
+    const input = screen.getByLabelText('Edit topic');
+    expect(input).toHaveProperty('value', 'old topic');
+
+    fireEvent.change(input, { target: { value: 'brand new topic' } });
+    fireEvent.keyDown(input, { key: 'Enter' });
+    expect(onSetTopic).toHaveBeenCalledWith('brand new topic');
+
+    // re-open, leave unchanged, Enter → no extra call
+    fireEvent.click(screen.getByRole('button', { name: 'Edit topic' }));
+    fireEvent.keyDown(screen.getByLabelText('Edit topic'), { key: 'Enter' });
+    expect(onSetTopic).toHaveBeenCalledTimes(1);
+
+    // re-open, type, Escape → no call, editor closes
+    fireEvent.click(screen.getByRole('button', { name: 'Edit topic' }));
+    fireEvent.change(screen.getByLabelText('Edit topic'), { target: { value: 'discarded' } });
+    fireEvent.keyDown(screen.getByLabelText('Edit topic'), { key: 'Escape' });
+    expect(onSetTopic).toHaveBeenCalledTimes(1);
+    expect(screen.queryByLabelText('Edit topic')).toBeNull();
+  });
+
   it('falls back to the stored topic, then to a placeholder', () => {
     const { rerender } = wrap(
       <RoomHeader name="r" topicFallback="stored topic" membersOpen onToggleMembers={vi.fn()} />,

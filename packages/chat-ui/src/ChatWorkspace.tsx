@@ -214,6 +214,9 @@ export function ChatWorkspace({
                   {...(chat.setMuted !== null
                     ? { onToggleMuted: () => void chat.setMuted?.(selected.id, !selected.muted) }
                     : {})}
+                  {...(chat.setRoomTopic !== null
+                    ? { onSetTopic: (topic: string) => void chat.setRoomTopic?.(selected.id, topic) }
+                    : {})}
                 />
               ) : (
                 <header className="chat-workspace__conv-head">

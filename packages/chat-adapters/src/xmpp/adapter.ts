@@ -24,6 +24,7 @@ import {
 } from './stanzas';
 import { buildMamQuery, parseMamFin, parseMamResult } from './mam';
 import {
+  buildMucChangeSubject,
   buildMucJoin,
   buildMucLeave,
   parseMucError,
@@ -404,6 +405,12 @@ export class XmppAdapter implements ChatAdapter {
       s.stream.write(buildMucLeave(roomJid, room.nick));
       s.rooms.delete(roomJid);
     }
+    return Promise.resolve();
+  }
+
+  setRoomTopic(session: ChatSession, conv: ConvId, topic: string): Promise<void> {
+    const s = session as XmppSession;
+    s.stream.write(buildMucChangeSubject(bareJid(conv) ?? conv, topic));
     return Promise.resolve();
   }
 

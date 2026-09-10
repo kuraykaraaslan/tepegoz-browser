@@ -369,6 +369,15 @@ describe('XmppAdapter — live traffic', () => {
     await adapter.leaveRoom(session, 'never@conf.example.com');
   });
 
+  it('setRoomTopic writes a groupchat <subject> message', async () => {
+    const { server, adapter, session } = await connected();
+    await adapter.setRoomTopic(session, 'general@conf.example.com', 'Sprint 5 planning');
+    const sent = server.lastWritten();
+    expect(sent).toContain('to="general@conf.example.com"');
+    expect(sent).toContain('type="groupchat"');
+    expect(sent).toContain('<subject>Sprint 5 planning</subject>');
+  });
+
   it('a presence from a room we have NOT joined falls through to a normal presence event', async () => {
     const { server, adapter, session } = await connected();
     const it = adapter.events(session)[Symbol.asyncIterator]();

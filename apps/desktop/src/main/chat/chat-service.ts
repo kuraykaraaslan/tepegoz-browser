@@ -214,6 +214,10 @@ export class ChatService {
     return this.require(accountId).setMuted(conversationId, muted);
   }
 
+  async setRoomTopic(accountId: string, conversationId: string, topic: string): Promise<void> {
+    return this.require(accountId).setRoomTopic(conversationId, topic);
+  }
+
   async react(
     accountId: string,
     conversationId: string,

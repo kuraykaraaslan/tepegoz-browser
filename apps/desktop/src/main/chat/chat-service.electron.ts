@@ -153,6 +153,8 @@ export const chatIpcService: ChatIpcService = {
     requireService().setRoomNotifyLevel(accountId, conversationId, level),
   setMuted: (accountId, conversationId, muted) =>
     requireService().setMuted(accountId, conversationId, muted),
+  setRoomTopic: (accountId, conversationId, topic) =>
+    requireService().setRoomTopic(accountId, conversationId, topic),
   resolveMedia: (accountId, mediaRef) => requireService().resolveMedia(accountId, mediaRef),
 };
 

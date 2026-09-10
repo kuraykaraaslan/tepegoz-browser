@@ -24,6 +24,7 @@ import {
   buildIrcNick,
   buildIrcPart,
   buildIrcPrivmsg,
+  buildIrcTopic,
   foldIrcTarget,
   ircMessageToEvent,
   namesReplyToEvents,
@@ -424,6 +425,11 @@ export class IrcAdapter implements ChatAdapter {
 
   changeNick(session: ChatSession, nick: string): Promise<void> {
     (session as IrcSession).enqueue(buildIrcNick(nick));
+    return Promise.resolve();
+  }
+
+  setRoomTopic(session: ChatSession, conv: ConvId, topic: string): Promise<void> {
+    (session as IrcSession).enqueue(buildIrcTopic(conv, topic));
     return Promise.resolve();
   }
 

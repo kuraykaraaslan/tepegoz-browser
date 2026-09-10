@@ -322,6 +322,12 @@ export class ChatAccountRunner {
     return Promise.resolve();
   }
 
+  /** Write the new topic; the server's echo drives the persisted `room-topic` update. */
+  async setRoomTopic(conversationId: string, topic: string): Promise<void> {
+    if (this.deps.adapter.setRoomTopic === undefined) return;
+    await this.deps.adapter.setRoomTopic(this.requireSession(), conversationId, topic);
+  }
+
   async react(conversationId: string, messageId: string, emoji: string, on: boolean): Promise<void> {
     if (this.deps.adapter.react === undefined) {
       throw new Error('this protocol does not support reactions');

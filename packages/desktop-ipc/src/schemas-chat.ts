@@ -83,6 +83,13 @@ export const ChatSetMutedSchema = z.object({
   muted: z.boolean(),
 });
 
+/** `chat:set-room-topic` — change a room's topic / subject (empty string clears it). */
+export const ChatSetRoomTopicSchema = z.object({
+  accountId: z.string().min(1).max(64),
+  conversationId: z.string().min(1).max(128),
+  topic: z.string().max(4096),
+});
+
 /** `chat:resolve-media` — turn a message `mediaRef` (a protocol URI) into a quarantined data URL. */
 export const ChatResolveMediaSchema = z.object({
   accountId: z.string().min(1).max(64),

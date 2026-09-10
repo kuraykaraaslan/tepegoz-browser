@@ -277,6 +277,14 @@ describe('IrcAdapter — live traffic', () => {
     expect(server.lastWritten()).toBe('NICK ada2');
   });
 
+  it('setRoomTopic writes a TOPIC line (empty string clears)', async () => {
+    const { adapter, server, session } = await connected();
+    await adapter.setRoomTopic(session, '#chan', 'new direction');
+    expect(server.lastWritten()).toBe('TOPIC #chan :new direction');
+    await adapter.setRoomTopic(session, '#chan', '');
+    expect(server.lastWritten()).toBe('TOPIC #chan :');
+  });
+
   it('disconnect is best-effort when the socket throws', async () => {
     const { adapter, session, server } = await connected();
     server.stub(() => {

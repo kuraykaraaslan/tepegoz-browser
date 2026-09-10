@@ -742,6 +742,28 @@ button.chat-msg__quote {
   color: var(--cu-text-secondary);
   font-size: 12px;
 }
+.chat-room-header__topic-edit {
+  margin-inline-start: 6px;
+  padding: 0 4px;
+  border: 1px solid var(--cu-border);
+  border-radius: 4px;
+  background: var(--cu-surface-base);
+  color: var(--cu-text-secondary);
+  font: inherit;
+  font-size: 11px;
+  cursor: pointer;
+}
+.chat-room-header__topic-input {
+  margin: 1px 0 0;
+  width: min(420px, 60vw);
+  padding: 2px 6px;
+  border: 1px solid var(--cu-border-focus);
+  border-radius: 4px;
+  background: var(--cu-surface-base);
+  color: var(--cu-text-primary);
+  font: inherit;
+  font-size: 12px;
+}
 .chat-room-header__members-toggle,
 .chat-room-header__mute,
 .chat-workspace__mute {

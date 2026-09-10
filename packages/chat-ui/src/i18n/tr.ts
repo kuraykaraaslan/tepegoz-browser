@@ -39,6 +39,7 @@ export const tr: ChatUiStrings = {
     owner: 'Sahip',
     admin: 'Yönetici',
     noTopic: 'Konu belirlenmemiş',
+    editTopic: 'Konuyu düzenle',
   },
   media: {
     loading: 'Ek yükleniyor…',

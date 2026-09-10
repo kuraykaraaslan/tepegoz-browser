@@ -67,6 +67,8 @@ export interface ChatClientPort {
   ) => Promise<void>;
   /** Mute / unmute a conversation — optional; the header mute toggle needs it. */
   setChatMuted?: (accountId: string, conversationId: string, muted: boolean) => Promise<void>;
+  /** Change a room's topic — optional; the room-header topic editor needs it. */
+  setChatRoomTopic?: (accountId: string, conversationId: string, topic: string) => Promise<void>;
   /**
    * Resolve a message `mediaRef` to a quarantined `data:` URL — optional; when present,
    * {@link ChatWorkspace} feeds it to `<MessageMedia>` so attachments render inline.
