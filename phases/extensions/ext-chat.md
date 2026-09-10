@@ -777,11 +777,15 @@ medium-high — the untrusted-DM + unknown-contact guards are the sharpest in th
       injection-dm,media-attachment,auto-reply}.chat.json` + `scenarios/chat-agent.json` (each a
       judge-rubric scenario; the backlog one also carries a ground-truth `expectedValue`).
       `registry-integrity` asserts every `chatFixture` scenario names a seed that loads clean and
-      every `*.chat.json` on disk parses (20 tests across slices 1+2). _Remaining: **slice 3** — the
-      `ChatStore` seed-and-run wiring in the app's eval runner (needs the real app) + the run itself
-      (API-spend-gated, like the rest of the AI program). The safety properties (c)/(d)/(e)/(f)/(g)
-      are already unit-tested in `capabilities.test.ts` + `chat-capability-host.test.ts` +
-      `agent-view.test.ts`._
+      every `*.chat.json` on disk parses. **Slice 2b (2026-09-11):** the shipped `unknown-dm` /
+      `injection-dm` seeds are now run against the **real** `@tepegoz/chat-core` guards in
+      `chat-fixture.test.ts` — `isConversationAgentVisible` withholds the stranger DM and keeps the
+      roster DM (scenario **d**), and `wrapChatContent` on the `[[SYSTEM]]` body is delimiter-safe
+      (scenario **e**) — so those two scenarios are discharged as pure unit tests without an agent or
+      an API key (`@tepegoz/chat-core` added as an agent-eval dep). 23 tests across slices 1+2.
+      _Remaining: **slice 3** — the `ChatStore` seed-and-run wiring in the app's eval runner (needs
+      the real app) + the run itself (API-spend-gated). Safety properties (c)/(f)/(g) are unit-tested
+      in `capabilities.test.ts` + `chat-capability-host.test.ts`._
 
 **Remaining:** the agent-eval seed-and-run wiring (slice 3, needs the real app; the run is
 API-gated) and the Functional DoD run (needs a live account). The capability table, the agent-view

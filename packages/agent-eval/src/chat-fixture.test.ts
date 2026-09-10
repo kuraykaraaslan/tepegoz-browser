@@ -1,13 +1,17 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { isConversationAgentVisible, wrapChatContent } from '@tepegoz/chat-core';
 import type { ChatEvalFixture } from '@tepegoz/shared-types';
 import {
   chatFixtureFile,
   isSeedConversationAgentVisible,
   loadChatFixture,
 } from './chat-fixture';
+
+const chatFixturesDir = join(dirname(fileURLToPath(import.meta.url)), '..', 'chat-fixtures');
 
 let dir = '';
 beforeEach(() => {
@@ -115,5 +119,69 @@ describe('isSeedConversationAgentVisible — the unknown-contact gate, mirrored'
 
   it('an unknown conversation id is not visible', () => {
     expect(isSeedConversationAgentVisible(seed(), 'nope')).toBe(false);
+  });
+});
+
+/**
+ * The shipped seeds, run against the REAL `@tepegoz/chat-core` agent-view — so the fixtures for
+ * scenarios (d) and (e) provably exercise the guards the scenarios exist to check, without an
+ * agent or an API key.
+ */
+describe('shipped chat-fixtures against the real chat-core guards', () => {
+  const load = (name: string): ChatEvalFixture => {
+    const { fixture, error } = loadChatFixture(chatFixturesDir, name);
+    expect(error).toBeNull();
+    if (fixture === null) throw new Error('unreachable');
+    return fixture;
+  };
+
+  /** Project a seed conversation to the shape `chat-core`'s gate reads. */
+  const gateShape = (f: ChatEvalFixture, id: string) => ({
+    id,
+    isKnownContact: isSeedConversationAgentVisible(f, id),
+  });
+
+  it('(d) unknown-dm: chat-core withholds the stranger DM, keeps the roster DM', () => {
+    const f = load('unknown-dm');
+    const optIns = new Set<string>();
+    const visible = f.conversations
+      .map((c) => c.id)
+      .filter((id) => isConversationAgentVisible(gateShape(f, id), optIns));
+    expect(visible).toEqual(['bob@example.com']);
+    expect(visible).not.toContain('stranger-9f2@example.com');
+  });
+
+  it('(e) injection-dm: the [[SYSTEM]] body is delimiter-safe untrusted content', () => {
+    const f = load('injection-dm');
+    const bob = f.conversations.find((c) => c.id === 'bob@example.com');
+    expect(bob).toBeDefined();
+    // the conversation is a roster peer, so it IS visible — the defence is the wrapper, not the gate
+    expect(isConversationAgentVisible(gateShape(f, 'bob@example.com'), new Set())).toBe(true);
+
+    const injected = bob?.messages.find((m) => m.body.includes('[[SYSTEM]]'));
+    expect(injected).toBeDefined();
+    const wrapped = wrapChatContent(injected!.body);
+    expect(wrapped.startsWith('<untrusted_chat_message>\n')).toBe(true);
+    expect(wrapped.endsWith('\n</untrusted_chat_message>')).toBe(true);
+    // no literal delimiter tag survives inside the payload to break the wrapper open
+    const inner = wrapped.slice(
+      '<untrusted_chat_message>\n'.length,
+      wrapped.length - '\n</untrusted_chat_message>'.length,
+    );
+    expect(inner).not.toMatch(/<\s*\/?\s*untrusted_chat_message/i);
+  });
+
+  it('every shipped seed round-trips through loadChatFixture', () => {
+    for (const name of [
+      'room-backlog',
+      'draft-reply',
+      'send-hitl',
+      'unknown-dm',
+      'injection-dm',
+      'media-attachment',
+      'auto-reply',
+    ]) {
+      expect(loadChatFixture(chatFixturesDir, name).error).toBeNull();
+    }
   });
 });

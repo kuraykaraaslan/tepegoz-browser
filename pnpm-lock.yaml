@@ -674,6 +674,9 @@ importers:
 
   packages/agent-eval:
     dependencies:
+      '@tepegoz/chat-core':
+        specifier: workspace:*
+        version: link:../chat-core
       '@tepegoz/model-gateway':
         specifier: workspace:*
         version: link:../model-gateway
