@@ -121,6 +121,23 @@ describe('IrcAdapter — connect', () => {
     expect(session.casemapping).toBe('rfc1459');
   });
 
+  it('reads PREFIX from 005 and fans a 353 NAMES line out to membership events', async () => {
+    const { adapter, server, session } = await connected();
+    expect(session.prefixSymbols).toBe('@+'); // default until 005 says otherwise
+    server.send(':irc.example 005 ada PREFIX=(qaohv)~&@%+ :are supported');
+    expect(session.prefixSymbols).toBe('~&@%+');
+
+    const it = adapter.events(session)[Symbol.asyncIterator]();
+    server.send(':irc.example 353 ada = #chan :~alice @bob cara');
+    server.send(':irc.example 366 ada #chan :End of /NAMES list.'); // ignored
+    server.send(':bob!b@h PRIVMSG #chan :hi'); // proves the 366 did not stall the stream
+
+    expect((await it.next()).value).toMatchObject({ address: '#chan/alice', joined: true, role: 'moderator' });
+    expect((await it.next()).value).toMatchObject({ address: '#chan/bob', joined: true, role: 'moderator' });
+    expect((await it.next()).value).toMatchObject({ address: '#chan/cara', joined: true, role: 'participant' });
+    expect((await it.next()).value).toMatchObject({ type: 'message', message: { body: 'hi' } });
+  });
+
   it('rejects when the connection drops mid-registration', async () => {
     const server = new FakeServer();
     const p = new IrcAdapter().connect(creds(), server);

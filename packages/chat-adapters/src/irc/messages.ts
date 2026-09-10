@@ -36,8 +36,71 @@ export interface IrcContext {
   chanTypes: string;
   /** ISUPPORT `CASEMAPPING` (default `rfc1459`) — decides how a target folds to a conversation id. */
   casemapping?: IrcCasemapping;
+  /** Membership-status symbols from ISUPPORT `PREFIX`, highest-rank first (default `@+`). */
+  prefixSymbols?: string;
   /** Wall-clock ms used when a line has no `server-time` tag. */
   now: number;
+}
+
+/** Symbols that make an occupant a room moderator (op / admin / owner / halfop). */
+const MODERATOR_SYMBOLS = '~&@%';
+
+/**
+ * Parse an ISUPPORT `PREFIX` value (`(modes)symbols`, e.g. `(qaohv)~&@%+`) to just the ordered
+ * symbol string (`~&@%+`), highest-rank first. Returns `''` for a malformed value so a hostile
+ * server line cannot make membership parsing throw.
+ */
+export function parseIrcPrefixSpec(raw: string): string {
+  const m = /^\(([^)]*)\)(.*)$/.exec(raw);
+  if (m === null) return '';
+  const [, modes = '', symbols = ''] = m;
+  return modes.length === symbols.length ? symbols : '';
+}
+
+/** Split the leading run of membership-status symbols off a NAMES nick (`@+bob` → `@`, `bob`). */
+export function splitMembershipPrefix(
+  token: string,
+  symbols: string,
+): { symbol: string; nick: string } {
+  let i = 0;
+  while (i < token.length && symbols.includes(token[i] ?? '')) i += 1;
+  // `multi-prefix` stacks symbols highest-rank first — keep the top one.
+  return { symbol: i > 0 ? (token[0] ?? '') : '', nick: token.slice(i) };
+}
+
+function roleForSymbol(symbol: string): 'moderator' | 'participant' {
+  return symbol.length > 0 && MODERATOR_SYMBOLS.includes(symbol) ? 'moderator' : 'participant';
+}
+
+/**
+ * `RPL_NAMREPLY` (353) → one `room-membership` per listed occupant (`joined: true`). The line is
+ * `<me> <=|*|@> <#channel> :<prefix>nick …`; `multi-prefix` may stack symbols, we keep the top rank.
+ * `RPL_ENDOFNAMES` (366) carries nothing extra and is ignored.
+ */
+export function namesReplyToEvents(msg: IrcMessage, ctx: IrcContext): ChatEvent[] {
+  const channel = msg.params[2];
+  const list = msg.params[msg.params.length - 1];
+  if (channel === undefined || list === undefined || !isChannel(channel, ctx.chanTypes)) return [];
+  const folded = foldIrcTarget(channel, ctx.casemapping);
+  const symbols = ctx.prefixSymbols ?? '@+';
+  const out: ChatEvent[] = [];
+  for (const token of list.split(/\s+/)) {
+    if (token === '') continue;
+    const { symbol, nick } = splitMembershipPrefix(token, symbols);
+    if (nick === '') continue;
+    out.push({
+      type: 'room-membership',
+      conversationId: folded,
+      address: `${folded}/${nick}`,
+      joined: true,
+      memberCount: 0,
+      self: nick === ctx.selfNick,
+      affiliation: 'none',
+      role: roleForSymbol(symbol),
+      realJid: null,
+    });
+  }
+  return out;
 }
 
 const CTCP = String.fromCharCode(1);

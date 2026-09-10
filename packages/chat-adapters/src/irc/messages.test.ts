@@ -9,6 +9,9 @@ import {
   buildIrcPrivmsg,
   foldIrcTarget,
   ircMessageToEvent,
+  namesReplyToEvents,
+  parseIrcPrefixSpec,
+  splitMembershipPrefix,
   type IrcContext,
 } from './messages';
 import { parseIrcLine } from './parse';
@@ -113,6 +116,43 @@ describe('foldIrcTarget / asIrcCasemapping', () => {
     expect(asIrcCasemapping('rfc7613')).toBeNull();
     expect(asIrcCasemapping(true)).toBeNull();
     expect(asIrcCasemapping(undefined)).toBeNull();
+  });
+});
+
+describe('ISUPPORT PREFIX + RPL_NAMREPLY (353)', () => {
+  it('parseIrcPrefixSpec keeps the ordered symbol string, rejecting a malformed value', () => {
+    expect(parseIrcPrefixSpec('(ov)@+')).toBe('@+');
+    expect(parseIrcPrefixSpec('(qaohv)~&@%+')).toBe('~&@%+');
+    expect(parseIrcPrefixSpec('(ov)@')).toBe(''); // count mismatch
+    expect(parseIrcPrefixSpec('garbage')).toBe('');
+  });
+
+  it('splitMembershipPrefix peels the leading symbol run and keeps the top rank', () => {
+    expect(splitMembershipPrefix('@+bob', '@+')).toEqual({ symbol: '@', nick: 'bob' });
+    expect(splitMembershipPrefix('~carol', '~&@%+')).toEqual({ symbol: '~', nick: 'carol' });
+    expect(splitMembershipPrefix('dave', '@+')).toEqual({ symbol: '', nick: 'dave' });
+  });
+
+  it('fans a 353 line out to one joined membership per occupant, op → moderator', () => {
+    const msg = parseIrcLine(':srv 353 ada = #Chan :@bea +cem ada')!;
+    expect(namesReplyToEvents(msg, ctx)).toMatchObject([
+      { type: 'room-membership', conversationId: '#chan', address: '#chan/bea', joined: true, role: 'moderator', self: false },
+      { type: 'room-membership', address: '#chan/cem', joined: true, role: 'participant' },
+      { type: 'room-membership', address: '#chan/ada', joined: true, role: 'participant', self: true },
+    ]);
+  });
+
+  it('honours a non-default PREFIX symbol set and the negotiated casemapping', () => {
+    const msg = parseIrcLine(':srv 353 ada = #Foo[1] :%hank ~ida')!;
+    expect(namesReplyToEvents(msg, { ...ctx, prefixSymbols: '~&@%+', casemapping: 'ascii' })).toMatchObject([
+      { address: '#foo[1]/hank', role: 'moderator' },
+      { address: '#foo[1]/ida', role: 'moderator' },
+    ]);
+  });
+
+  it('returns nothing for a 353 whose target is not a channel', () => {
+    const msg = parseIrcLine(':srv 353 ada = ada :ada')!;
+    expect(namesReplyToEvents(msg, ctx)).toEqual([]);
   });
 });
 

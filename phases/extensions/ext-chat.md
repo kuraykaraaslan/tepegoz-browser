@@ -535,8 +535,14 @@ a full Libera-style session). Then **ISUPPORT `CASEMAPPING`** — `foldIrcTarget
 read from `005` and threaded through every conversation-id fold (live events, membership tracking,
 `chathistory` batch target, `history()`, `joinRoom`/`leaveRoom`), so an `ascii`-casemapping server no
 longer mis-keys `#foo[1]` as `#foo{1}` and a `joinRoom` key matches the server's echoed `JOIN`. 10 new
-tests. Still open on the deliverable: flood-protection send queue, ISUPPORT `PREFIX` parsing, `TOPIC`/
-`NAMES` surfacing, SASL `EXTERNAL`. Next: runtime DoD (local ergo). ·
+tests. Then **ISUPPORT `PREFIX` + `RPL_NAMREPLY` (353)** — `parseIrcPrefixSpec` reads `(modes)symbols`
+to the ordered symbol string, `IrcSession.prefixSymbols` (default `@+`) is set from `005`, and
+`namesReplyToEvents` fans a `353` line out to one `room-membership` (`joined: true`) per occupant with
+the leading status symbol peeled and mapped to `role` (`~&@%` → moderator, else participant); `366` is
+ignored and does not stall the stream. The recorded-trace suite now asserts the fanned NAMES batch. 9
+new tests. Still open on the deliverable: flood-protection send queue, `TOPIC` surfacing (needs a new
+`ChatEvent` variant), SASL `EXTERNAL` (needs a richer `sasl` config shape). Next: runtime DoD (local
+ergo). ·
 **Depends on:** X-chat.1 (contract) + X-chat.2/.3 (UI) · **Branch:** `main` · **Risk:** low-medium.
 
 ### Deliverables

@@ -26,6 +26,8 @@ import {
   buildIrcPrivmsg,
   foldIrcTarget,
   ircMessageToEvent,
+  namesReplyToEvents,
+  parseIrcPrefixSpec,
   type IrcCasemapping,
   type IrcContext,
 } from './messages';
@@ -43,6 +45,8 @@ export class IrcSession implements ChatSession {
   chanTypes = '#&';
   /** ISUPPORT `CASEMAPPING`; narrows how a channel/nick folds to a conversation id. */
   casemapping: IrcCasemapping = 'rfc1459';
+  /** ISUPPORT `PREFIX` membership-status symbols, highest-rank first (default `@+`). */
+  prefixSymbols = '@+';
   readonly joined = new Set<string>();
   /** IRCv3 caps the server ACKed. */
   ircCaps: ReadonlySet<string> = new Set();
@@ -172,6 +176,10 @@ export class IrcAdapter implements ChatAdapter {
             if (typeof map.CHANTYPES === 'string') session.chanTypes = map.CHANTYPES;
             const casemapping = asIrcCasemapping(map.CASEMAPPING);
             if (casemapping !== null) session.casemapping = casemapping;
+            if (typeof map.PREFIX === 'string') {
+              const symbols = parseIrcPrefixSpec(map.PREFIX);
+              if (symbols !== '') session.prefixSymbols = symbols;
+            }
             continue;
           }
           if (this.handleBatch(session, msg)) continue;
@@ -237,8 +245,14 @@ export class IrcAdapter implements ChatAdapter {
       selfNick: session.nick,
       chanTypes: session.chanTypes,
       casemapping: session.casemapping,
+      prefixSymbols: session.prefixSymbols,
       now: Date.now(),
     };
+    // RPL_NAMREPLY lists many occupants in one line → fan out to one membership event each.
+    if (msg.command === '353') {
+      for (const e of namesReplyToEvents(msg, ctx)) session.push(e);
+      return;
+    }
     // Track our own channel membership so a reconnect can auto-rejoin.
     if ((msg.command === 'JOIN' || msg.command === 'PART') && msg.prefix?.startsWith(`${session.nick}!`)) {
       const chan = msg.params[0] !== undefined ? session.fold(msg.params[0]) : undefined;
@@ -296,6 +310,7 @@ export class IrcAdapter implements ChatAdapter {
           selfNick: s.nick,
           chanTypes: s.chanTypes,
           casemapping: s.casemapping,
+          prefixSymbols: s.prefixSymbols,
           now: Date.now(),
         };
         const messages = lines

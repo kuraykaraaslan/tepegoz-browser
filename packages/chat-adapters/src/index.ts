@@ -142,8 +142,11 @@ export {
 
 export {
   ircMessageToEvent,
+  namesReplyToEvents,
   foldIrcTarget,
   asIrcCasemapping,
+  parseIrcPrefixSpec,
+  splitMembershipPrefix,
   IRC_CASEMAPPINGS,
   buildIrcPrivmsg,
   buildIrcAction,
