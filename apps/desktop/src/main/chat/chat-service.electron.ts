@@ -193,6 +193,7 @@ export function chatCapabilityHost(): ReturnType<typeof createChatCapabilityHost
     quarantineMedia: ({ bytes, suggestedName }) =>
       FileOperationsHost.writeAttachment(suggestedName, bytes),
     sessionOptIns: () => chatAgentOptIns,
+    mayEgress: chatMayEgress,
   });
 }
 

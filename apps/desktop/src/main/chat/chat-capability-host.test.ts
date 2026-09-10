@@ -59,6 +59,7 @@ function harness(over: Partial<ChatCapabilityHostDeps> = {}) {
     resolveMedia: vi.fn(() => Promise.resolve({ dataUrl: 'data:image/png;base64,AAECAw==' })),
     quarantineMedia: vi.fn(() => Promise.resolve('/home/u/tepegoz/attachments/m1.png')),
     sessionOptIns: () => optIns,
+    mayEgress: () => true,
     ...over,
   };
   return { host: createChatCapabilityHost(deps), deps, optIns };
@@ -181,5 +182,33 @@ describe('createChatCapabilityHost — writes', () => {
   it('getMedia returns null when the resolver cannot produce bytes', async () => {
     const { host } = harness({ resolveMedia: vi.fn(() => Promise.resolve(null)) });
     expect(await host.getMedia({ accountId: 'acc', conversationId: 'c1', messageId: 'm1' })).toBeNull();
+  });
+});
+
+describe('createChatCapabilityHost — kill-switch (X-chat.10)', () => {
+  const blocked = () => harness({ mayEgress: () => false });
+
+  it('denies every network-touching action with a 403 policy denial', async () => {
+    const { host, deps } = blocked();
+    await expect(host.updatePresence({ accountId: 'a', presence: 'online' })).rejects.toMatchObject({ statusCode: 403 });
+    await expect(host.createMessage({ accountId: 'a', conversationId: 'c', body: 'hi' })).rejects.toMatchObject({ statusCode: 403 });
+    await expect(host.createMembership({ accountId: 'a', address: '#r' })).rejects.toMatchObject({ statusCode: 403 });
+    await expect(host.deleteItem({ accountId: 'a', conversationId: 'c' })).rejects.toMatchObject({ statusCode: 403 });
+    await expect(host.getMedia({ accountId: 'acc', conversationId: 'c1', messageId: 'm1' })).rejects.toMatchObject({ statusCode: 403 });
+    await expect(host.updateItem({ accountId: 'a', conversationId: 'c', markReadUpTo: 'p2' })).rejects.toMatchObject({ statusCode: 403 });
+    await expect(host.updateItem({ accountId: 'a', conversationId: 'c', reaction: { messageId: 'm1', emoji: '👍', on: true } })).rejects.toMatchObject({ statusCode: 403 });
+    // nothing reached the wire
+    expect(deps.sendMessage).not.toHaveBeenCalled();
+    expect(deps.joinRoom).not.toHaveBeenCalled();
+    expect(deps.markRead).not.toHaveBeenCalled();
+    expect(deps.react).not.toHaveBeenCalled();
+  });
+
+  it('still allows local reads and a local-only mute while blocked (local-first)', async () => {
+    const { host, deps } = blocked();
+    expect(await host.listItems('acc')).toHaveLength(1);
+    expect((await host.getHistory({ accountId: 'acc', conversationId: 'c1' })).messages.length).toBeGreaterThan(0);
+    await host.updateItem({ accountId: 'acc', conversationId: 'c1', muted: true });
+    expect(deps.setMuted).toHaveBeenCalledWith('acc', 'c1', true);
   });
 });

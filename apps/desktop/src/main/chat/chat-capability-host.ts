@@ -74,6 +74,9 @@ export interface ChatCapabilityHostDeps {
   }) => Promise<string>;
   /** Conversation ids the user opted the agent into this session (on top of persisted known-contact). */
   sessionOptIns: () => ReadonlySet<string>;
+  /** False ⇒ the active profile's egress is kill-switched (Phase 5). Every chat action that would put
+   *  bytes on the wire is then denied with a 403; local-only reads still work (local-first). */
+  mayEgress: () => boolean;
 }
 
 /** Split a `data:<mime>;base64,<payload>` URL. Throws on any other shape. */
@@ -119,6 +122,13 @@ function summarize(conv: ChatConversation, lastPreview: string | null): ChatConv
 export function createChatCapabilityHost(deps: ChatCapabilityHostDeps): ChatCapabilityHost {
   const visible = (conv: ChatConversation | null): conv is ChatConversation =>
     conv !== null && isConversationAgentVisible(conv, deps.sessionOptIns());
+
+  /** Fail closed on a kill-switched profile before any chat action that needs the network. */
+  const requireEgress = (): void => {
+    if (!deps.mayEgress()) {
+      throw new AppError('chat egress is blocked by the profile kill-switch', 403);
+    }
+  };
 
   return {
     listItems(accountId: string): Promise<ChatConversationSummary[]> {
@@ -175,15 +185,17 @@ export function createChatCapabilityHost(deps: ChatCapabilityHostDeps): ChatCapa
       return Promise.resolve(hits);
     },
 
-    updatePresence(input: ChatUpdatePresenceRequest): Promise<{ ok: true }> {
-      const call =
-        input.statusText !== undefined
-          ? deps.setPresence(input.accountId, input.presence, input.statusText)
-          : deps.setPresence(input.accountId, input.presence);
-      return call.then(() => ({ ok: true as const }));
+    async updatePresence(input: ChatUpdatePresenceRequest): Promise<{ ok: true }> {
+      requireEgress();
+      await (input.statusText !== undefined
+        ? deps.setPresence(input.accountId, input.presence, input.statusText)
+        : deps.setPresence(input.accountId, input.presence));
+      return { ok: true as const };
     },
 
     async updateItem(input: ChatUpdateItemRequest): Promise<{ ok: true }> {
+      // A mute is a local preference; mark-read and reactions go on the wire.
+      if (input.markReadUpTo !== undefined || input.reaction !== undefined) requireEgress();
       if (input.markReadUpTo !== undefined) {
         await deps.markRead(input.accountId, input.conversationId, input.markReadUpTo);
       }
@@ -198,6 +210,7 @@ export function createChatCapabilityHost(deps: ChatCapabilityHostDeps): ChatCapa
     },
 
     async createMessage(input: ChatCreateMessageRequest): Promise<{ protocolId: string }> {
+      requireEgress();
       const protocolId = await deps.sendMessage(input.accountId, input.conversationId, {
         body: input.body,
         replyToId: input.replyToId ?? null,
@@ -208,6 +221,7 @@ export function createChatCapabilityHost(deps: ChatCapabilityHostDeps): ChatCapa
     async createMembership(
       input: ChatCreateMembershipRequest,
     ): Promise<{ conversationId: string }> {
+      requireEgress();
       const conversationId = await deps.joinRoom(input.accountId, input.address);
       if (conversationId === null) {
         throw new AppError('this protocol cannot join a room by address', 400);
@@ -216,11 +230,13 @@ export function createChatCapabilityHost(deps: ChatCapabilityHostDeps): ChatCapa
     },
 
     async deleteItem(input: ChatDeleteItemRequest): Promise<{ ok: true }> {
+      requireEgress();
       await deps.leaveRoom(input.accountId, input.conversationId);
       return { ok: true };
     },
 
     async getMedia(input: ChatGetMediaRequest): Promise<{ sandboxPath: string } | null> {
+      requireEgress();
       const conv = deps.getConversation(input.conversationId);
       if (!visible(conv) || conv.accountId !== input.accountId) return null;
       const message = deps.getMessage(input.conversationId, input.messageId);

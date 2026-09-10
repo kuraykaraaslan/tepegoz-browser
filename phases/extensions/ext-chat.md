@@ -823,9 +823,14 @@ adapter contract) · **Depends on:** X-chat.1 · **Branch:** `feat/chat-bridge-f
 landed (`chat-core` `normalize-fuzz.test.ts` — ~50 hostile inputs + a randomised sweep prove
 `normalizeEvent` never throws and never emits a `ChatEvent` that fails `ChatEventSchema`, plus a
 prototype-pollution guard; `account-state.test.ts` adds a hostile-stream test proving `applyRaw`
-does not corrupt a folded view). Bridge-payload fuzz waits on X-chat.8; the rest of the sub-phase
-(sandbox / kill-switch / e2e / perf) is untouched. · **Depends on:** X-chat.2–.7 · **Branch:**
-`feat/chat-hardening` · **Risk:** low — mostly tests.
+does not corrupt a folded view). Then the **kill-switch half** — `ChatCapabilityHost` gained a
+`mayEgress` dep; every network-touching agent action (`chat_create_message` / `chat_create_membership`
+/ `chat_delete_item` / `chat_update_presence` / `chat_update_item` mark-read + reaction /
+`chat_get_media`) now fails closed with a **403** on a kill-switched profile, while local reads and a
+local-only mute still work; `ChatService.notifyEgressChange` is proven to fan the block out so every
+account's `ChatConnState` goes `blocked` and recovers. Bridge-payload fuzz + the profile-switch half +
+sandbox / e2e / perf remain. · **Depends on:** X-chat.2–.7 · **Branch:** `feat/chat-hardening` ·
+**Risk:** low — mostly tests.
 
 ### Deliverables
 - [x] **Adapter-event fuzz / zod-rejection tests** — malformed XMPP stanza, Matrix sync event and
@@ -836,9 +841,10 @@ does not corrupt a folded view). Bridge-payload fuzz waits on X-chat.8; the rest
 - [ ] **Bridge sandbox tests** — no FS escape, no cross-account reach, crash isolation, egress
       binding enforced, RPC surface minimal.
 - [ ] **Journal redaction property test** — no plaintext, credential, or key material in `events`.
-- [ ] **Kill-switch + profile-switch tests** — bound-blocked profile denies agent chat tools; a
-      profile switch drops every connection (native + bridge) and the next profile sees only its own
-      accounts.
+- [~] **Kill-switch + profile-switch tests** — bound-blocked profile denies agent chat tools **✔**
+      (`ChatCapabilityHost.mayEgress` → 403 on every wire action; `notifyEgressChange` fan-out to
+      `blocked` proven). _Profile-switch drop-every-connection + next-profile-isolation still owed
+      (native path; bridge path waits on X-chat.8)._
 - [ ] **Playwright `_electron` e2e** — against a local Prosody (XMPP) + ergo (IRC), and a local
       Synapse (Matrix) if CI budget allows: add account → roster → 1:1 send/receive → join a room →
       get pinged. A second e2e for the agent path (summarize → draft → HITL-stop → unknown-DM

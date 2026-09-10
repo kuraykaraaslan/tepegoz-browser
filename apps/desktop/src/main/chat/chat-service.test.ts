@@ -210,6 +210,27 @@ describe('ChatService — delegation', () => {
     const { service } = await ready();
     expect(() => service.notifyEgressChange()).not.toThrow();
   });
+
+  it('X-chat.10: losing egress fans the kill-switch out — every account goes "blocked"', async () => {
+    let egress = true;
+    const h = harness({
+      loadAccounts: () => [account('a'), account('b')],
+      mayEgress: () => egress,
+    });
+    await h.service.start();
+    await tick();
+    expect(Object.values(h.service.accountStates())).toEqual(['online', 'online']);
+
+    egress = false;
+    h.service.notifyEgressChange();
+    await tick();
+    expect(Object.values(h.service.accountStates())).toEqual(['blocked', 'blocked']);
+
+    egress = true;
+    h.service.notifyEgressChange();
+    await tick();
+    expect(Object.values(h.service.accountStates())).toEqual(['online', 'online']);
+  });
 });
 
 describe('ChatService — default adapter selection', () => {
