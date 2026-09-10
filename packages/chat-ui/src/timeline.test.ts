@@ -91,4 +91,38 @@ describe('buildTimeline', () => {
     const items = buildTimeline([msg({ id: 'a', originTs: 0, receivedAt: T0 })]);
     expect(items[0]).toMatchObject({ kind: 'day', day: new Date(2026, 2, 15).getTime() });
   });
+
+  describe('maxMessages windowing', () => {
+    const many = Array.from({ length: 500 }, (_, i) =>
+      msg({ id: `m${i}`, originTs: T0 + i * 1000 }),
+    );
+
+    it('renders everything when under the cap or the cap is 0', () => {
+      expect(kinds(buildTimeline(many.slice(0, 10), { maxMessages: 200 })).filter((k) => k === 'message')).toHaveLength(10);
+      expect(kinds(buildTimeline(many, { maxMessages: 0 })).filter((k) => k === 'message')).toHaveLength(500);
+    });
+
+    it('keeps only the most-recent N and prepends one truncated item with the hidden count', () => {
+      const items = buildTimeline(many, { maxMessages: 200 });
+      expect(items[0]).toEqual({ kind: 'truncated', hiddenCount: 300, key: 'truncated' });
+      const shown = items.flatMap((i) => (i.kind === 'message' ? [i.message.id] : []));
+      expect(shown).toHaveLength(200);
+      expect(shown[0]).toBe('m300');
+      expect(shown.at(-1)).toBe('m499');
+    });
+
+    it('positions the "new messages" divider against the windowed slice', () => {
+      // lastRead is m400 → divider before m401, both inside the last-200 window
+      const items = buildTimeline(many, { maxMessages: 200, lastReadId: 'm400' });
+      const dividerIdx = items.findIndex((i) => i.kind === 'unread-divider');
+      expect(dividerIdx).toBeGreaterThan(0);
+      const next = items[dividerIdx + 1];
+      expect(next?.kind === 'message' && next.message.id).toBe('m401');
+    });
+
+    it('drops the divider when lastRead scrolled out of the window', () => {
+      const items = buildTimeline(many, { maxMessages: 200, lastReadId: 'm10' });
+      expect(items.some((i) => i.kind === 'unread-divider')).toBe(false);
+    });
+  });
 });

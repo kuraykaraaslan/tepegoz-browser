@@ -161,6 +161,15 @@ describe('MessageTimeline', () => {
     expect(screen.getByText('👍 3')).toBeDefined();
   });
 
+  it('windows a very long conversation and shows an "earlier messages" row', () => {
+    const many = Array.from({ length: 260 }, (_, i) => msg({ id: `m${i}`, body: `line ${i}`, originTs: T0 + i * 1000 }));
+    wrap(<MessageTimeline messages={many} now={T0 + 260_000} maxMessages={200} />);
+    expect(screen.getByText('60 earlier messages not shown')).toBeDefined();
+    // the oldest kept line is 60, line 59 is windowed out
+    expect(screen.getByText('line 60')).toBeDefined();
+    expect(screen.queryByText('line 59')).toBeNull();
+  });
+
   it('quotes the original of a reply that is in the window', () => {
     wrap(
       <MessageTimeline

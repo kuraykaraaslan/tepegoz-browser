@@ -378,10 +378,13 @@ pre-existing unrelated errors). ext-chat: 4 panel tests.
 Functional DoD. · **Depends on:** X-chat.1 · **Branch:** `main` · **Risk:** low.
 
 ### Deliverables
-- [x] **`@tepegoz/chat-ui`** — conversation list (unread/mention badges, account grouping + colour —
-      _virtualization deferred to a windowing pass_), roster panel (presence, groups, add/remove
-      contact, `from`-subscription pending marker), account setup flow (XMPP fields; _adapter-caps
-      branching lands with IRC/Matrix_).
+- [x] **`@tepegoz/chat-ui`** — conversation list (unread/mention badges, account grouping + colour),
+      roster panel (presence, groups, add/remove contact, `from`-subscription pending marker), account
+      setup flow (XMPP fields; _adapter-caps branching lands with IRC/Matrix_). The **message timeline
+      is windowed** (`buildTimeline` `maxMessages`, default `TIMELINE_WINDOW` = 200) — a very long room
+      keeps only the most-recent N in the DOM behind one "N earlier messages not shown" row, with the
+      day separators and the "new messages" divider recomputed against the visible slice. _Conversation
+      list virtualization: still a later windowing pass._
 - [x] **Message timeline** — linkified text (safe — no auto-navigation), reactions row,
       edited/redacted markers, system events, delivery/read state, typing indicator, date separators,
       "new messages" divider, **reply quoting** (a one-line preview of the replied-to original when it
@@ -858,7 +861,9 @@ X-chat.2–.7 · **Branch:** `feat/chat-hardening` · **Risk:** low — mostly t
       Synapse (Matrix) if CI budget allows: add account → roster → 1:1 send/receive → join a room →
       get pinged. A second e2e for the agent path (summarize → draft → HITL-stop → unknown-DM
       withheld).
-- [ ] **Perf pass** — a 20k-message room: timeline virtualization, search latency, `/sync` memory
+- [~] **Perf pass** — a 20k-message room: **timeline windowing ✔** (`buildTimeline` `maxMessages`
+      caps the DOM at the most-recent 200 messages + a "N earlier" row). Search latency (`chat_search`
+      FTS5 is migrated but `searchMessages` still `LIKE`-scans `body_fold`) + `/sync` memory remain.
       ceiling.
 
 ### Functional DoD

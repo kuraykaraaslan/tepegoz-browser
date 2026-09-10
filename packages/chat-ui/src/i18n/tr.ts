@@ -50,6 +50,7 @@ export const tr: ChatUiStrings = {
     edited: 'düzenlendi',
     redacted: 'Mesaj silindi',
     newMessages: 'Yeni mesajlar',
+    earlierHidden: 'önceki mesaj gösterilmiyor',
     inReplyTo: 'Şu mesaja yanıt',
     quoteAttachment: 'Ek',
   },

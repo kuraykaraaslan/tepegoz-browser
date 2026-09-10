@@ -16,7 +16,12 @@ export {
   type DayGroup,
 } from './time';
 export { buildTimeline, type TimelineItem, type BuildTimelineOptions } from './timeline';
-export { MessageTimeline, QUOTE_SNIPPET_MAX, type MessageTimelineProps } from './MessageTimeline';
+export {
+  MessageTimeline,
+  QUOTE_SNIPPET_MAX,
+  TIMELINE_WINDOW,
+  type MessageTimelineProps,
+} from './MessageTimeline';
 export {
   mediaCategory,
   isLocalMediaUrl,

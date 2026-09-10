@@ -13,6 +13,7 @@ type TimelineMessageFields = Pick<ChatMessage, 'id' | 'senderAddress' | 'kind' |
 export type TimelineItem<M> =
   | { readonly kind: 'day'; readonly day: number; readonly key: string }
   | { readonly kind: 'unread-divider'; readonly key: string }
+  | { readonly kind: 'truncated'; readonly hiddenCount: number; readonly key: string }
   | { readonly kind: 'message'; readonly message: M; readonly key: string; readonly startsGroup: boolean };
 
 export interface BuildTimelineOptions<M> {
@@ -25,6 +26,12 @@ export interface BuildTimelineOptions<M> {
   lastReadId?: string | null;
   /** Timestamp accessor; defaults to `originTs` falling back to `receivedAt`. */
   tsOf?: (message: M) => number;
+  /**
+   * Windowing cap — keep only the most-recent N messages in the render model and prepend one
+   * `truncated` item carrying how many were dropped. Bounds the DOM for a very long room without
+   * pixel virtualization. `undefined` / `0` ⇒ render everything.
+   */
+  maxMessages?: number;
 }
 
 const DEFAULT_GROUP_WINDOW_MS = 5 * 60_000;
@@ -40,15 +47,20 @@ export function buildTimeline<M extends TimelineMessageFields>(
   const groupWindow = options.groupWindowMs ?? DEFAULT_GROUP_WINDOW_MS;
   const tsOf = options.tsOf ?? ((m: M) => defaultTs(m));
 
+  const cap = options.maxMessages ?? 0;
+  const hiddenCount = cap > 0 && messages.length > cap ? messages.length - cap : 0;
+  const windowed = hiddenCount > 0 ? messages.slice(hiddenCount) : messages;
+
   const readIndex =
-    options.lastReadId == null ? -1 : messages.findIndex((m) => m.id === options.lastReadId);
-  const dividerBefore = readIndex >= 0 && readIndex < messages.length - 1 ? readIndex + 1 : -1;
+    options.lastReadId == null ? -1 : windowed.findIndex((m) => m.id === options.lastReadId);
+  const dividerBefore = readIndex >= 0 && readIndex < windowed.length - 1 ? readIndex + 1 : -1;
 
   const items: TimelineItem<M>[] = [];
+  if (hiddenCount > 0) items.push({ kind: 'truncated', hiddenCount, key: 'truncated' });
   let currentDay: number | null = null;
   let previous: { sender: string; ts: number; system: boolean } | null = null;
 
-  messages.forEach((message, index) => {
+  windowed.forEach((message, index) => {
     const ts = tsOf(message);
     const day = startOfDay(ts);
     const isSystem = message.kind === 'system';

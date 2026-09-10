@@ -69,6 +69,8 @@ export const en = {
     redacted: 'Message deleted',
     /** Divider the "jump to unread" control scrolls to. */
     newMessages: 'New messages',
+    /** Row shown at the top of a windowed timeline: "{n} " + this. */
+    earlierHidden: 'earlier messages not shown',
     /** Accessible prefix on a quoted reply preview: "In reply to" + sender. */
     inReplyTo: 'In reply to',
     /** Stands in for the quoted body when the original was an attachment with no text. */

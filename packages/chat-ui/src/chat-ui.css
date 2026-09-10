@@ -350,7 +350,8 @@
   gap: 2px;
 }
 .chat-timeline__day,
-.chat-timeline__unread {
+.chat-timeline__unread,
+.chat-timeline__truncated {
   align-self: center;
   margin: 12px 0 6px;
   padding: 2px 10px;
@@ -367,6 +368,10 @@
   border-top: 1px solid currentColor;
   border-radius: 0;
   background: transparent;
+}
+.chat-timeline__truncated {
+  font-weight: 500;
+  font-style: italic;
 }
 .chat-msg {
   display: flex;

@@ -9,6 +9,9 @@ import { daySeparatorLabel, formatClockTime } from './time';
 /** Longest quoted-reply snippet shown inline before it is trimmed with an ellipsis. */
 export const QUOTE_SNIPPET_MAX = 120;
 
+/** Default render window — a very long room keeps only this many most-recent messages in the DOM. */
+export const TIMELINE_WINDOW = 200;
+
 export interface MessageTimelineProps {
   messages: readonly ChatMessage[];
   /** `id` of the last read message — positions the "new messages" divider. */
@@ -31,6 +34,9 @@ export interface MessageTimelineProps {
   /** Scroll to / focus the quoted original when its preview is clicked. Absent ⇒ the quote is inert. */
   onJumpToMessage?: (protocolId: string) => void;
   groupWindowMs?: BuildTimelineOptions<ChatMessage>['groupWindowMs'];
+  /** Keep at most this many most-recent messages in the DOM (default {@link TIMELINE_WINDOW}); a
+   *  `0` renders everything. Older messages collapse into one "N earlier messages" row. */
+  maxMessages?: number;
 }
 
 /** A one-line preview of the message a reply points at, when that original is in the loaded window. */
@@ -138,11 +144,13 @@ export function MessageTimeline({
   onOpenMedia,
   onJumpToMessage,
   groupWindowMs,
+  maxMessages = TIMELINE_WINDOW,
 }: Readonly<MessageTimelineProps>) {
   const s = useT(chatUiDict);
   const locale = useLocale();
   const items = buildTimeline(messages, {
     lastReadId,
+    maxMessages,
     ...(groupWindowMs !== undefined ? { groupWindowMs } : {}),
   });
   const byProtocolId = new Map(messages.map((m) => [m.protocolId, m]));
@@ -161,6 +169,13 @@ export function MessageTimeline({
           return (
             <li key={item.key} className="chat-timeline__unread" role="separator">
               {s.timeline.newMessages}
+            </li>
+          );
+        }
+        if (item.kind === 'truncated') {
+          return (
+            <li key={item.key} className="chat-timeline__truncated" role="separator">
+              {item.hiddenCount} {s.timeline.earlierHidden}
             </li>
           );
         }
