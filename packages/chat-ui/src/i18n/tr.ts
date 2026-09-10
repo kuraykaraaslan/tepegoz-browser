@@ -65,6 +65,8 @@ export const tr: ChatUiStrings = {
     noSelection: 'Bir konuşma seçin.',
     accountSwitcher: 'Hesap',
     typing: 'yazıyor…',
+    notEncrypted: 'Şifresiz',
+    ircPlaintext: 'IRC uçtan uca şifreleme sunmaz — mesajlar sunucu tarafından okunabilir.',
   },
   roster: {
     title: 'Kişiler',

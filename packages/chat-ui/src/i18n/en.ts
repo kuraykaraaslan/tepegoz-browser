@@ -89,6 +89,10 @@ export const en = {
     /** Accessible label for the account switcher. */
     accountSwitcher: 'Account',
     typing: 'typing…',
+    /** Persistent marker on a conversation whose protocol carries no end-to-end encryption. */
+    notEncrypted: 'Not encrypted',
+    /** Tooltip / detail for {@link notEncrypted} on IRC, which has no encryption at all. */
+    ircPlaintext: 'IRC has no end-to-end encryption — messages are readable by the server.',
   },
   roster: {
     title: 'Contacts',

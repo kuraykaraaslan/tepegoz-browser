@@ -84,18 +84,7 @@ export function ChatWorkspace({
   const typing = selected ? chat.client.typing[selected.id] ?? [] : [];
   const selectedRoom = selected ? chat.client.rooms[selected.id] : undefined;
 
-  if (!chat.loading && chat.accounts.length === 0) {
-    return (
-      <div className="chat-workspace chat-workspace--empty">
-        <p>{s.workspace.noAccounts}</p>
-        {onAddAccount !== undefined && (
-          <button type="button" onClick={onAddAccount}>
-            {s.workspace.addAccount}
-          </button>
-        )}
-      </div>
-    );
-  }
+  const noAccounts = !chat.loading && chat.accounts.length === 0;
 
   return (
     <div className="chat-workspace">
@@ -118,6 +107,16 @@ export function ChatWorkspace({
 
       <div className="chat-workspace__body">
         <aside className="chat-workspace__left">
+          {noAccounts && (
+            <div className="chat-workspace__no-accounts">
+              <p>{s.workspace.noAccounts}</p>
+              {onAddAccount !== undefined && (
+                <button type="button" onClick={onAddAccount}>
+                  {s.workspace.addAccount}
+                </button>
+              )}
+            </div>
+          )}
           <div className="chat-workspace__tabs" role="tablist">
             <button
               type="button"

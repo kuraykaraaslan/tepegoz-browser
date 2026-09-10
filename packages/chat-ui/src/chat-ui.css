@@ -53,35 +53,6 @@
   font: 13px/1.45 ui-sans-serif, system-ui, sans-serif;
 }
 
-.chat-workspace--empty {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 14px;
-  padding: 32px;
-  text-align: center;
-  color: var(--cu-text-secondary);
-  background: var(--cu-surface-base);
-}
-.chat-workspace--empty p {
-  margin: 0;
-  max-width: 32ch;
-}
-.chat-workspace--empty button {
-  padding: 8px 18px;
-  border: 0;
-  border-radius: 7px;
-  background: var(--cu-primary);
-  color: var(--cu-primary-fg);
-  font: inherit;
-  font-weight: 600;
-  cursor: pointer;
-}
-.chat-workspace--empty button:hover {
-  background: color-mix(in srgb, var(--cu-primary) 88%, #000);
-}
-
 /* ── account switcher ─────────────────────────────────────────────────────── */
 .chat-workspace__accounts {
   display: flex;
@@ -154,6 +125,35 @@
   flex: 1;
   min-height: 0;
   overflow-y: auto;
+}
+
+/* No account yet: the left column still shows its tabs + empty lists; this banner sits above them. */
+.chat-workspace__no-accounts {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 12px;
+  border-bottom: 1px solid var(--cu-border);
+  text-align: center;
+  color: var(--cu-text-secondary);
+}
+.chat-workspace__no-accounts p {
+  margin: 0;
+  max-width: 32ch;
+}
+.chat-workspace__no-accounts button {
+  padding: 7px 16px;
+  border: 0;
+  border-radius: 7px;
+  background: var(--cu-primary);
+  color: var(--cu-primary-fg);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+.chat-workspace__no-accounts button:hover {
+  background: color-mix(in srgb, var(--cu-primary) 88%, #000);
 }
 
 .chat-workspace__main {

@@ -98,13 +98,23 @@ function makePort(over: Partial<ChatClientPort> = {}): {
 }
 
 describe('ChatWorkspace', () => {
-  it('shows the no-account state and invites adding one', async () => {
+  it('invites adding an account while still showing the chats/contacts shell', async () => {
     const onAddAccount = vi.fn();
     const { port } = makePort({
       listChatAccounts: () => Promise.resolve({ accounts: [], states: {} }),
+      listChatConversations: () => Promise.resolve([]),
+      getChatRoster: () => Promise.resolve([]),
     });
     wrap(<ChatWorkspace port={port} onAddAccount={onAddAccount} />);
     await screen.findByText('Add a chat account to get started.');
+
+    // The left column keeps its tabs and their empty lists — the surface is not replaced.
+    expect(screen.getByRole('tab', { name: 'Chats' })).toBeDefined();
+    expect(screen.getByRole('tab', { name: 'Contacts' })).toBeDefined();
+    expect(screen.getByText('No conversations yet')).toBeDefined();
+    fireEvent.click(screen.getByRole('tab', { name: 'Contacts' }));
+    expect(screen.getByText('No contacts yet')).toBeDefined();
+
     fireEvent.click(screen.getByRole('button', { name: 'Add account' }));
     expect(onAddAccount).toHaveBeenCalled();
   });
