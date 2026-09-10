@@ -148,6 +148,17 @@ module.exports = {
       to: { path: ['^apps/', 'node_modules/electron'] },
     },
     {
+      name: 'mail-core-no-app-no-electron',
+      severity: 'error',
+      comment:
+        '@tepegoz/mail-core is the Electron-free, protocol-agnostic mail core (ext-mail X-mail.0): ' +
+        'MIME parse/build, RFC 5322 address handling, JWZ threading, the filter engine and the search ' +
+        'fold. No Electron, no app imports — the desktop MailService owns the sockets and the vault. ' +
+        'See docs/package-map.md.',
+      from: { path: '^packages/mail-core/' },
+      to: { path: ['^apps/', 'node_modules/electron'] },
+    },
+    {
       name: 'chat-adapters-no-app-no-electron-no-node',
       severity: 'error',
       comment:

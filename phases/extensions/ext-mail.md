@@ -200,9 +200,13 @@ X-mail.8  Hardening, at-rest encryption, import, e2e  ◄───────�
 `MailAttachmentMeta` + quarantine states, `MailBody`, `MailDraft`, `MailFilter` + field/op/action
 enums + condition/action rows, `MailQuery`, `MailSyncCursor`; every string length-capped, every array
 size-capped; `parseMailMessage` boundary helper; exported from `index.ts`), `mail.test.ts` with 14
-accept/reject cases. Everything else in the sub-phase (`@tepegoz/mail-core` package, MIME
-parser/builder, address parser, JWZ threading, filter engine, search fold, snippet, fixture corpus)
-is untouched. · **Depends on:** nothing (pure libs) · **Branch:** `feat/ext-mail-core`
+accept/reject cases. Then the **`@tepegoz/mail-core` package** was scaffolded (package.json /
+tsconfig(.build) / lockfile / `vitest.coverage.config.ts` include / `dependency-cruiser.cjs`
+`mail-core-no-app-no-electron` / `docs/package-map.md`) with its first module — `address.ts`
+(`parseAddressList` / `formatAddress` / `formatAddressList`: comment-strip, folded whitespace, quoted
+display names with commas, `<angle-addr>`, `Group: a, b;` → members, case-insensitive dedupe, total
+on junk input), 10 tests. Still owed: MIME parser/builder, JWZ threading, filter engine, search fold,
+snippet, fixture corpus. · **Depends on:** nothing (pure libs) · **Branch:** `feat/ext-mail-core`
 **Risk:** low-medium — MIME is fiddly; contained by a fixture corpus.
 
 ### Deliverables
@@ -212,9 +216,9 @@ is untouched. · **Depends on:** nothing (pure libs) · **Branch:** `feat/ext-ma
       (header projection, body by ref), `MailAttachmentMeta`, `MailBody`, `MailDraft`, `MailFilter`
       (+ field/op/action enums), `MailQuery`, `MailSyncCursor`. Registered in `index.ts`; a
       `mail.test.ts` with accept/reject cases.
-- [ ] **`@tepegoz/mail-core` package** — `package.json` / `tsconfig(.build).json` / `eslint`,
-      registered in `pnpm-workspace.yaml` (already globbed), `vitest.coverage.config.ts` `include`,
-      `dependency-cruiser.cjs` (`mail-core-no-app-no-electron`), `docs/package-map.md`.
+- [x] **`@tepegoz/mail-core` package** — `package.json` / `tsconfig(.build).json`, `pnpm-lock.yaml`,
+      `vitest.coverage.config.ts` `include`, `dependency-cruiser.cjs`
+      (`mail-core-no-app-no-electron`), `docs/package-map.md`. (eslint is the flat root config.)
 - [ ] **MIME parser** (`mime-parse.ts`) — headers (RFC 5322), encoded-words (RFC 2047, `Q`/`B`,
       charset via `TextDecoder`), `Content-Type` + params, `Content-Transfer-Encoding`
       (`base64` / `quoted-printable` / `7bit` / `8bit` / `binary`), `multipart/*` boundary split
@@ -226,8 +230,10 @@ is untouched. · **Depends on:** nothing (pure libs) · **Branch:** `feat/ext-ma
       `MIME-Version`, `In-Reply-To` + `References` threading headers, `multipart/alternative`
       (text + optional HTML), `multipart/mixed` for attachments, `quoted-printable` / `base64`
       encoding, address header encoding (RFC 2047 for names), `format=flowed` output.
-- [ ] **Address parser** (`address.ts`) — `From:`/`To:` list parsing: quoted display names, groups,
-      comments, obs-routing tolerance; `formatAddress` / `formatAddressList` inverse.
+- [x] **Address parser** (`address.ts`) — `From:`/`To:` list parsing: quoted display names, groups
+      (flattened to members), comments, folded whitespace, `<angle-addr>`, case-insensitive dedupe,
+      total on junk; `formatAddress` / `formatAddressList` inverse (quotes the name only when it
+      needs it). 10 tests. _obs-routing tolerance is best-effort; the fixture corpus will stress it._
 - [ ] **Threading** (`thread.ts`) — the JWZ algorithm over `Message-ID` / `References` /
       `In-Reply-To`, subject-based fallback (`Re:` / `Fwd:` / localized prefixes stripped), stable
       `threadId` assignment, incremental (add one message to an existing thread set).

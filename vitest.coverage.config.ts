@@ -239,6 +239,7 @@ export default defineConfig({
         'packages/libs/src/**',
         'packages/local-inference/src/**',
         'packages/macro-engine/src/**',
+        'packages/mail-core/src/**',
         'packages/markdown/src/**',
         'packages/mcp-client/src/**',
         'packages/model-catalog/src/**',
