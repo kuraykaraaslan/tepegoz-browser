@@ -89,6 +89,12 @@ export const en = {
     /** Accessible label for the account switcher. */
     accountSwitcher: 'Account',
     typing: 'typing…',
+    /** Room typing line, one typist: "{name} " + this. */
+    typingOne: 'is typing…',
+    /** Room typing line, two typists: "{a} & {b} " + this. */
+    typingMany: 'are typing…',
+    /** Room typing line, three or more typists (no names). */
+    typingSeveral: 'Several people are typing…',
     /** Persistent marker on a conversation whose protocol carries no end-to-end encryption. */
     notEncrypted: 'Not encrypted',
     /** Tooltip / detail for {@link notEncrypted} on IRC, which has no encryption at all. */

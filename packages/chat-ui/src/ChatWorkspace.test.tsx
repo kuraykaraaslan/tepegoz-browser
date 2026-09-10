@@ -293,4 +293,27 @@ describe('ChatWorkspace', () => {
     });
     expect(screen.getByText('typing…')).toBeDefined();
   });
+
+  it('names who is typing in a room', async () => {
+    const { port, emit } = makePort({
+      listChatConversations: () =>
+        Promise.resolve([conv({ id: 'room@conf', kind: 'room', address: 'room@conf', name: 'Room' })]),
+    });
+    wrap(<ChatWorkspace port={port} />);
+    fireEvent.click(await screen.findByRole('button', { name: /Room/ }));
+    await screen.findByText('hi there');
+    act(() => {
+      emit({
+        kind: 'change',
+        accountId: 'work',
+        change: { kind: 'typing', conversationId: 'room@conf', senderAddress: 'room@conf/Bea', active: true },
+      });
+      emit({
+        kind: 'change',
+        accountId: 'work',
+        change: { kind: 'typing', conversationId: 'room@conf', senderAddress: 'room@conf/Cy', active: true },
+      });
+    });
+    expect(screen.getByText('Bea & Cy are typing…')).toBeDefined();
+  });
 });

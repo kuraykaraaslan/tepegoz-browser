@@ -191,6 +191,11 @@
   color: var(--cu-text-secondary);
   font-style: italic;
 }
+.chat-workspace__room-typing {
+  margin: 0;
+  padding: 2px 14px 6px;
+  font-size: 12px;
+}
 
 /* "Not encrypted" marker — IRC conversations, whose protocol has no E2EE at all. */
 .chat-not-encrypted {

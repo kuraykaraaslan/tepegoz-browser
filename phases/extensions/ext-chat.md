@@ -479,7 +479,10 @@ survives, raises a `ChatNotification` (title = sender name, body capped at 180);
 subject wiring** — `XmppAdapter.handleLiveElement` now routes a `<message type="groupchat">` that
 carries only a `<subject>` (XEP-0045 §8.1) from a joined room through `parseMucSubject` to a
 `room-topic` event (setter from the resource), so a live topic change reaches `<RoomHeader>` and the
-persisted conversation row the same way IRC's does. **X-chat.3 is now code-complete — only the runtime
+persisted conversation row the same way IRC's does. Then the **room "who's typing" indicator** —
+`chat-ui` `roomTypingLabel` folds the room's typing-address set into a localized line ("Bea is
+typing…" / "Bea & Cy are typing…" / "Several people are typing…", en + tr) shown under the room
+header; a DM keeps the plain "typing…". **X-chat.3 is now code-complete — only the runtime
 DoD (live server) + the sub-phase DoD template remain.** · **Depends on:** X-chat.2 · **Branch:**
 `main` · **Risk:** low-medium.
 
@@ -495,10 +498,11 @@ DoD (live server) + the sub-phase DoD template remain.** · **Depends on:** X-ch
       `xmpp/disco.ts` + `XmppAdapter.discoverRooms` + `<RoomBrowser>` + `useChatState` wiring + the
       `chat:discover-rooms` / `chat:join-room` desktop bridge. _Only the runtime DoD remains._
 - [x] **UI for rooms** — member list, mention autocomplete, per-room notification level
-      (all / mentions / none), topic display. `<RoomMemberList>` + mention autocomplete + `<RoomHeader>`
-      (topic + member count + notify-level `<select>`, wired into `<ChatWorkspace>`) + the
-      `chat:set-room-notify-level` bridge. _"Who's typing" for rooms: the `typing` change already
-      carries the room; a multi-typist indicator is a later refinement._
+      (all / mentions / none), topic display, "who's typing". `<RoomMemberList>` + mention
+      autocomplete + `<RoomHeader>` (topic + member count + notify-level `<select>`, wired into
+      `<ChatWorkspace>`) + the `chat:set-room-notify-level` bridge + `roomTypingLabel` (chat-ui:
+      "Bea is typing…" / "Bea & Cy are typing…" / "Several people are typing…", en + tr) shown under
+      the room header.
 - [x] **Mention routing** — a room-ping / nick-highlight raises a notification even when the room is
       muted for "all messages". `chat-core/notify.ts` `decideNotification` + `ChatAccountRunner.maybeNotify`
       + `NotificationHost.push({ source: 'chat' })`.

@@ -13,6 +13,7 @@ import { RoomHeader } from './RoomHeader';
 import { RoomMemberList } from './RoomMemberList';
 import { RosterPanel } from './RosterPanel';
 import { conversationTitle, type ChatAccountRef } from './conversation-list';
+import { roomTypingLabel } from './typing';
 import type { ResolveMedia } from './MessageMedia';
 import { dataUrlMime } from './media';
 import { useChatState } from './useChatState';
@@ -218,6 +219,11 @@ export function ChatWorkspace({
                     <span className="chat-workspace__typing">{s.workspace.typing}</span>
                   )}
                 </header>
+              )}
+              {selected.kind === 'room' && roomTypingLabel(typing, s.workspace) !== null && (
+                <p className="chat-workspace__typing chat-workspace__room-typing">
+                  {roomTypingLabel(typing, s.workspace)}
+                </p>
               )}
               <div className="chat-workspace__conv-body">
                 <MessageTimeline
