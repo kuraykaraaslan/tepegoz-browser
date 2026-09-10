@@ -542,7 +542,10 @@ through to the live stream. 4 tests. Next: a recorded-trace fixture suite + runt
 - [ ] **Caps** — `e2ee: false` (protocol has none), `edits: false`, `reactions: false`,
       `receipts: false` unless `message-tags` + a draft spec is present. The UI shows "not
       encrypted" for IRC conversations.
-- [ ] Recorded-trace fixture suite.
+- [x] Recorded-trace fixture suite — `irc/recorded-trace.test.ts` plays a full Libera-style session
+      (`CAP LS 302` multi-line → SASL PLAIN → `001`–`005` ISUPPORT split across lines → MOTD → JOIN +
+      `353`/`366` NAMES, channel PRIVMSG, CTCP ACTION, NOTICE, DM, KICK, QUIT) through `IrcAdapter`
+      and asserts exactly the surfaced message / membership events, numerics ignored.
 
 ### Functional DoD
 - [ ] Connect to a local IRC server (ergo), join a channel, send/receive, backfill via
