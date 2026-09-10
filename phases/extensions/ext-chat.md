@@ -850,8 +850,13 @@ account's `ChatConnState` goes `blocked` and recovers. Then **redacted Journal e
 property test** — `ChatMessageSent` / `ChatAccountAdded` go in with `redacted: true` carrying only a
 conv-id hash / account / protocol id / ts, and tests assert the emitted facts contain no body, no
 room/JID address and no vault secret (new `ChatMessageSent` / `ChatAccountAdded` `EventType`s).
-Bridge-payload fuzz + the profile-switch half + sandbox / e2e / perf remain. · **Depends on:**
-X-chat.2–.7 · **Branch:** `feat/chat-hardening` · **Risk:** low — mostly tests.
+Then the **search-latency half of the perf pass** — `ChatStore.searchMessages` now runs against the
+`chat_search` FTS5 index instead of a `body_fold LIKE '%…%'` scan: migration 23 backfills the index
++ adds an `AFTER DELETE` trigger, `upsertMessage`/`redactMessage` keep it in step through one
+`syncSearchRow` (fold stays in JS), and the query folds + token-prefix-matches (`toplantı` finds
+`toplantısı`, multi-word is an AND, FTS operators in user text are inert). Signature unchanged.
+Bridge-payload fuzz + the profile-switch half + sandbox / e2e / `/sync`-memory perf remain. ·
+**Depends on:** X-chat.2–.7 · **Branch:** `feat/chat-hardening` · **Risk:** low — mostly tests.
 
 ### Deliverables
 - [x] **Adapter-event fuzz / zod-rejection tests** — malformed XMPP stanza, Matrix sync event and
@@ -875,9 +880,10 @@ X-chat.2–.7 · **Branch:** `feat/chat-hardening` · **Risk:** low — mostly t
       get pinged. A second e2e for the agent path (summarize → draft → HITL-stop → unknown-DM
       withheld).
 - [~] **Perf pass** — a 20k-message room: **timeline windowing ✔** (`buildTimeline` `maxMessages`
-      caps the DOM at the most-recent 200 messages + a "N earlier" row). Search latency (`chat_search`
-      FTS5 is migrated but `searchMessages` still `LIKE`-scans `body_fold`) + `/sync` memory remain.
-      ceiling.
+      caps the DOM at the most-recent 200 messages + a "N earlier" row). **Search ✔** —
+      `searchMessages` now hits the `chat_search` FTS5 index (migration 23 backfill + delete trigger;
+      `syncSearchRow` on every write; folded token-prefix query), no more `body_fold` scan. `/sync`
+      memory ceiling remains.
 
 ### Functional DoD
 - [ ] Every trust claim in "Trust & security" above has a test that fails if the property regresses.
