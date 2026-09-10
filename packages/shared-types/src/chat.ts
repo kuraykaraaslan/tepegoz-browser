@@ -314,6 +314,16 @@ export const ChatEventSchema = z.discriminatedUnion('type', [
     realJid: z.string().max(512).nullable().default(null),
   }),
   z.object({
+    type: z.literal('room-topic'),
+    conversationId: z.string().min(1).max(128),
+    /** The new room topic / subject. Empty string ⇒ the topic was cleared. */
+    topic: z.string().max(4096),
+    /** Who set it (nick / JID / MXID), when the protocol carries it. */
+    setBy: z.string().max(512).nullable().default(null),
+    /** When it was set (epoch ms), when the protocol carries it. */
+    ts: z.number().int().nonnegative().nullable().default(null),
+  }),
+  z.object({
     type: z.literal('error'),
     scope: z.enum(['account', 'conversation']),
     message: z.string().max(2048),

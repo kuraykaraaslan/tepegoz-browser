@@ -168,11 +168,21 @@ export class ChatAccountRunner {
       case 'roster':
         if (!change.removed) this.deps.store.upsertContact(change.contact);
         break;
-      // `room` carries the live occupant/subject view — pushed to the renderer, not yet persisted
-      // (no room table until the room browser lands).
+      case 'room': {
+        // The occupant view is renderer-only, but a topic change is persisted onto the
+        // conversation row so it survives a reload (and feeds the header's stored-topic fallback).
+        const base = this.deps.store.getConversation(change.conversationId);
+        if (base !== null && change.room.subject !== base.topic) {
+          this.deps.store.upsertConversation({
+            ...base,
+            topic: change.room.subject,
+            updatedAt: this.deps.now(),
+          });
+        }
+        break;
+      }
       case 'presence':
       case 'typing':
-      case 'room':
       case 'dropped':
         break;
     }

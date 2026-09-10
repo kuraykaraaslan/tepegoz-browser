@@ -271,6 +271,18 @@ describe('ChatAccountRunner — actions', () => {
     expect(store.conversations.get('general@conf.example')?.kind).toBe('room');
   });
 
+  it('persists a room-topic change onto the stored conversation row', async () => {
+    const { adapter, store } = await online();
+    store.upsertConversation({
+      id: '#c', accountId: 'acc', kind: 'room', address: '#c', name: '#c', topic: '',
+      memberCount: 0, unread: 0, mentions: 0, lastReadId: null, muted: false,
+      notifyLevel: 'all', isKnownContact: true, updatedAt: 1,
+    });
+    adapter.channel.push({ type: 'room-topic', conversationId: '#c', topic: 'Release week', setBy: 'op', ts: null });
+    await tick();
+    expect(store.conversations.get('#c')?.topic).toBe('Release week');
+  });
+
   it('setRoomNotifyLevel patches the stored conversation (creating a stub if needed)', async () => {
     const { runner, store } = await online();
     await runner.setRoomNotifyLevel('room@conf', 'mentions');

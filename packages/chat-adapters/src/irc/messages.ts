@@ -182,6 +182,28 @@ function messageEvent(msg: IrcMessage, ctx: IrcContext, notice: boolean): ChatEv
   return { type: 'message', message };
 }
 
+/**
+ * A room topic change → a `room-topic` event.
+ * - `TOPIC <channel> :<text>` — a live change; `prefix` is the setter.
+ * - `332 RPL_TOPIC` — `<me> <channel> :<text>` — the current topic on join / query (no setter here;
+ *   `333 RPL_TOPICWHOTIME` carries that separately and is not surfaced yet).
+ * - `331 RPL_NOTOPIC` — `<me> <channel> :…` — no topic set ⇒ an empty-string topic (a clear).
+ */
+function topicEvent(msg: IrcMessage, ctx: IrcContext): ChatEvent | null {
+  const numeric = msg.command === '331' || msg.command === '332';
+  const channel = msg.params[numeric ? 1 : 0];
+  if (channel === undefined || !isChannel(channel, ctx.chanTypes)) return null;
+  const topic = msg.command === '331' ? '' : (msg.params[numeric ? 2 : 1] ?? '');
+  const from = numeric ? null : parseIrcPrefix(msg.prefix ?? '');
+  return {
+    type: 'room-topic',
+    conversationId: foldIrcTarget(channel, ctx.casemapping),
+    topic,
+    setBy: from?.nick ?? null,
+    ts: msg.command === 'TOPIC' ? tagTime(msg, ctx.now) : null,
+  };
+}
+
 function membershipEvent(
   msg: IrcMessage,
   ctx: IrcContext,
@@ -224,6 +246,10 @@ export function ircMessageToEvent(msg: IrcMessage, ctx: IrcContext): ChatEvent |
         false,
         0,
       );
+    case 'TOPIC': // live topic change
+    case '331': // RPL_NOTOPIC
+    case '332': // RPL_TOPIC
+      return topicEvent(msg, ctx);
     case 'QUIT': {
       // QUIT has no channel — we cannot attribute it to one room here; the adapter tracks
       // per-channel membership and re-emits. Surface nothing at the parse layer.

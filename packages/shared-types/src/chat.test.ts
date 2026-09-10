@@ -152,4 +152,23 @@ describe('chat event contract', () => {
       }).success,
     ).toBe(true);
   });
+
+  it('accepts a room-topic event and defaults setBy / ts to null', () => {
+    const res = ChatEventSchema.safeParse({ type: 'room-topic', conversationId: 'c1', topic: 'Weekly' });
+    expect(res.success).toBe(true);
+    if (res.success && res.data.type === 'room-topic') {
+      expect(res.data.setBy).toBe(null);
+      expect(res.data.ts).toBe(null);
+    }
+  });
+
+  it('caps a room-topic so a huge TOPIC line cannot DoS the parser', () => {
+    expect(
+      ChatEventSchema.safeParse({
+        type: 'room-topic',
+        conversationId: 'c1',
+        topic: 'a'.repeat(4097),
+      }).success,
+    ).toBe(false);
+  });
 });

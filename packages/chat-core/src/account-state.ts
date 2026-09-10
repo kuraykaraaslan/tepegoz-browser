@@ -9,7 +9,7 @@ import { normalizeEvent } from './normalize';
 import { type ConversationView, emptyConversation, foldEvent, markRead, reconcileEcho } from './conversation';
 import { PresenceTracker, type EffectivePresence } from './presence';
 import { bareJid, parseJid } from './address';
-import { applyOccupant, emptyRoom, type RoomOccupantUpdate, type RoomView } from './room';
+import { applyOccupant, applySubject, emptyRoom, type RoomOccupantUpdate, type RoomView } from './room';
 
 /**
  * The in-memory aggregate for one connected account: it takes the adapter's **raw** event stream,
@@ -99,6 +99,13 @@ export class ChatAccountState {
         return this.applyRoster(event.contact, event.removed);
       case 'room-membership':
         return this.applyRoomMembership(event);
+      case 'room-topic': {
+        const before = this.rooms.get(event.conversationId) ?? emptyRoom();
+        const next = applySubject(before, event.topic);
+        if (next === before) return [];
+        this.rooms.set(event.conversationId, next);
+        return [{ kind: 'room', conversationId: event.conversationId, room: next }];
+      }
       case 'error':
         return [];
     }

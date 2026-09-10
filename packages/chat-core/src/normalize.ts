@@ -31,6 +31,7 @@ const CAP_FOR_TYPE: Partial<Record<ChatEvent['type'], keyof ChatAdapterCaps>> = 
   typing: 'typing',
   presence: 'presence',
   'room-membership': 'rooms',
+  'room-topic': 'rooms',
 };
 
 /** Normalize one untrusted adapter event against the protocol's declared capabilities. */

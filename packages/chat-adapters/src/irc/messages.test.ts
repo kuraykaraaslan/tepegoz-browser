@@ -184,6 +184,40 @@ describe('ircMessageToEvent — membership', () => {
   });
 });
 
+describe('ircMessageToEvent — TOPIC', () => {
+  it('a live TOPIC change → room-topic with the setter and a timestamp', () => {
+    expect(ev(':op!o@h TOPIC #Chan :New topic here')).toMatchObject({
+      type: 'room-topic',
+      conversationId: '#chan',
+      topic: 'New topic here',
+      setBy: 'op',
+      ts: 1000,
+    });
+  });
+
+  it('332 RPL_TOPIC → room-topic, no setter', () => {
+    expect(ev(':srv 332 ada #Chan :Persisted topic')).toEqual({
+      type: 'room-topic',
+      conversationId: '#chan',
+      topic: 'Persisted topic',
+      setBy: null,
+      ts: null,
+    });
+  });
+
+  it('331 RPL_NOTOPIC → an empty-string topic (a clear)', () => {
+    expect(ev(':srv 331 ada #Chan :No topic is set')).toMatchObject({
+      type: 'room-topic',
+      conversationId: '#chan',
+      topic: '',
+    });
+  });
+
+  it('a TOPIC for a non-channel target is ignored', () => {
+    expect(ev(':op!o@h TOPIC ada :nope')).toBeNull();
+  });
+});
+
 describe('irc builders', () => {
   it('build well-formed lines (message / reason text is always :trailing)', () => {
     expect(buildIrcPrivmsg('#c', 'hi there')).toBe('PRIVMSG #c :hi there');

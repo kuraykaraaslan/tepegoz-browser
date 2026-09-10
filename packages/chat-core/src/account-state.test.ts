@@ -251,6 +251,42 @@ describe('ChatAccountState — presence & roster', () => {
     });
     expect(s.roomView('room@conf')?.occupants.Bea).toBeUndefined();
   });
+
+  it('folds room-topic into the room view subject and re-emits on change only', () => {
+    const s = state();
+    const changes = s.applyEvent({
+      type: 'room-topic',
+      conversationId: 'room@conf',
+      topic: 'Weekly sync',
+      setBy: 'ada',
+      ts: null,
+    });
+    expect(kinds(changes)).toEqual(['room']);
+    expect(s.roomView('room@conf')?.subject).toBe('Weekly sync');
+
+    // same topic again → no change
+    expect(
+      s.applyEvent({ type: 'room-topic', conversationId: 'room@conf', topic: 'Weekly sync', setBy: null, ts: null }),
+    ).toEqual([]);
+
+    // a clear
+    expect(
+      kinds(s.applyEvent({ type: 'room-topic', conversationId: 'room@conf', topic: '', setBy: 'ada', ts: null })),
+    ).toEqual(['room']);
+    expect(s.roomView('room@conf')?.subject).toBe('');
+  });
+
+  it('drops room-topic when the adapter caps lack rooms', () => {
+    const noRooms = new ChatAccountState({
+      accountId: 'acc',
+      selfBareJid: 'me@x.com',
+      selfNames: ['me'],
+      caps: ChatAdapterCapsSchema.parse({ rooms: false }),
+    });
+    expect(
+      noRooms.applyRaw({ type: 'room-topic', conversationId: 'room@conf', topic: 'x' }),
+    ).toEqual([{ kind: 'dropped', reason: 'unsupported-capability' }]);
+  });
 });
 
 describe('ChatAccountState — local send + history', () => {

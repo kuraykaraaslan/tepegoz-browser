@@ -54,6 +54,17 @@ describe('normalizeEvent', () => {
     expect(normalizeEvent(raw, caps({ reactions: true })).event?.type).toBe('reaction');
   });
 
+  it('gates a room-topic event on the rooms capability', () => {
+    const raw = { type: 'room-topic', conversationId: 'c1', topic: 'Weekly' };
+    expect(normalizeEvent(raw, caps({ rooms: false }))).toEqual({
+      event: null,
+      dropped: 'unsupported-capability',
+    });
+    const ok = normalizeEvent(raw, caps({ rooms: true }));
+    expect(ok.event?.type).toBe('room-topic');
+    expect(ok.event?.type === 'room-topic' && ok.event.setBy).toBe(null);
+  });
+
   it('strips reactions/media/threads from a message rather than dropping it', () => {
     const res = normalizeEvent(
       {

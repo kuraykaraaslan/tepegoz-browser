@@ -555,18 +555,30 @@ parse unchanged — no migration); `RegistrationConfig.sasl` widened to a discri
 machine sends `AUTHENTICATE EXTERNAL` then a bare `+` (or a base64 authzid), and `IrcAdapter.connect`
 builds the EXTERNAL config with **no secret on the wire** — the TLS client cert (CertFP) carries the
 identity, the transport supplies the cert. New `saslExternal()` helper in `xmpp/sasl.ts`. 8 new tests
-(registration ×3, adapter ×1, sasl helper ×2, schema ×1, +1 recount). Still open on the big
-`IRC adapter` box: `TOPIC` surfacing (needs a new `ChatEvent` variant). Next: runtime DoD (local
-ergo). ·
+(registration ×3, adapter ×1, sasl helper ×2, schema ×1, +1 recount). Then **`TOPIC` surfacing** — a
+new `room-topic` `ChatEvent` variant (`{ conversationId, topic, setBy?, ts? }`, capability-gated on
+`rooms`); `ChatAccountState` folds it through `chat-core`'s `applySubject` into the `RoomView.subject`
+and re-emits the existing `{ kind: 'room' }` change only when the topic actually changed, so
+`<RoomHeader>` picks it up with **no UI change**; the desktop `ChatAccountRunner` persists a topic
+change onto the `chat_conversations` row (feeds the header's stored-topic fallback across a reload).
+The IRC adapter maps `TOPIC` (live, with setter + ts), `332 RPL_TOPIC` (on join, no setter) and
+`331 RPL_NOTOPIC` (→ empty topic / a clear); numerics route through `ircMessageToEvent` already, so
+no adapter dispatch change. 11 new tests (shared-types ×2, normalize ×1, account-state ×2,
+irc/messages ×4, account-runner ×1, +1 recount). **The X-chat.4 `IRC adapter` deliverable is now
+closed** — only NickServ-via-PRIVMSG (SASL is the built path) and the runtime DoD (local ergo)
+remain, the latter needing a live server. XMPP `parseMucSubject` and Matrix `m.room.topic` can now
+emit the same `room-topic` event — follow-up wiring under X-chat.3 / .5. ·
 **Depends on:** X-chat.1 (contract) + X-chat.2/.3 (UI) · **Branch:** `main` · **Risk:** low-medium.
 
 ### Deliverables
-- [ ] **IRC adapter** (`irc/`) — RFC 2812 message parser, connection registration (`PASS`/`NICK`/
+- [x] **IRC adapter** (`irc/`) — RFC 2812 message parser, connection registration (`PASS`/`NICK`/
       `USER`), SASL (`PLAIN`, `EXTERNAL`), IRCv3 capability negotiation (`server-time`,
       `message-tags`, `account-tag`, `echo-message`, `batch`, `chathistory`, `multi-prefix`,
       `away-notify`, `extended-join`), channel join/part/topic/names, PRIVMSG/NOTICE, CTCP
-      (`ACTION`), `chathistory` backfill, NickServ interaction, auto-rejoin on reconnect, ISUPPORT
-      parsing (`CHANTYPES`, `PREFIX`, `CASEMAPPING`), flood-protection send queue.
+      (`ACTION`), `chathistory` backfill, auto-rejoin on reconnect, ISUPPORT
+      parsing (`CHANTYPES`, `PREFIX`, `CASEMAPPING`), flood-protection send queue. _NickServ
+      interaction is via SASL; a `PRIVMSG NickServ IDENTIFY` fallback for pre-SASL servers is not
+      built._
 - [x] **Caps** — `e2ee: false` (protocol has none), `edits: false`, `reactions: false`,
       `receipts: false` unless `message-tags` + a draft spec is present. `IRC_CAPS` sets all four
       off; `@tepegoz/chat-ui`'s `<NotEncryptedBadge>` marks every IRC conversation (DM + room
