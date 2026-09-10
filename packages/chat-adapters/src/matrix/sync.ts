@@ -1,6 +1,7 @@
 import type { ChatEvent } from '@tepegoz/shared-types';
 import {
   matrixEphemeralEvents,
+  matrixMemberSystemMessage,
   matrixTimelineEvent,
   type MatrixContext,
   type MatrixRoomEvent,
@@ -39,6 +40,7 @@ function asRoomEvent(v: unknown): MatrixRoomEvent | null {
   };
   if (o.unsigned !== undefined) event.unsigned = rec(o.unsigned);
   if (typeof o.redacts === 'string') event.redacts = o.redacts;
+  if (typeof o.state_key === 'string') event.state_key = o.state_key;
   return event;
 }
 
@@ -125,6 +127,8 @@ export function parseSyncResponse(body: unknown, ctx: MatrixContext): SyncResult
       if (e === null) continue;
       const mapped = matrixTimelineEvent(e, roomId, ctx);
       if (mapped !== null) out.events.push(mapped);
+      const removal = matrixMemberSystemMessage(e, roomId, ctx);
+      if (removal !== null) out.events.push(removal);
     }
     for (const raw2 of arr(rec(joined.ephemeral).events)) {
       const o = rec(raw2);

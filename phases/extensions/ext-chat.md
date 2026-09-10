@@ -491,12 +491,14 @@ carries only a `<subject>` (XEP-0045 §8.1) from a joined room through `parseMuc
 persisted conversation row the same way IRC's does. Then the **room "who's typing" indicator** —
 `chat-ui` `roomTypingLabel` folds the room's typing-address set into a localized line ("Bea is
 typing…" / "Bea & Cy are typing…" / "Several people are typing…", en + tr) shown under the room
-header; a DM keeps the plain "typing…". Then **involuntary-removal surfacing** — an IRC `KICK` and an
-XMPP MUC removal presence (status 301/307/321/322/332; actor + reason read from the `<item>`) now
-each emit a `system` message into the room (`<who> was kicked/banned by <actor>: <reason>`) alongside
-the `room-membership` leave, so a removal is visible in the timeline instead of an occupant silently
-vanishing (`ircKickSystemMessage` / `mucRemovalText`; Matrix ban is the follow-up). **X-chat.3 is
-now code-complete — only the runtime DoD (live server) + the sub-phase DoD template remain.** ·
+header; a DM keeps the plain "typing…". Then **involuntary-removal surfacing across all three native
+adapters** — an IRC `KICK`, an XMPP MUC removal presence (status 301/307/321/322/332) and a Matrix
+`m.room.member` ban / third-party leave each emit a `system` message into the room
+(`<who> was kicked/banned by <actor>: <reason>`, actor + reason when the protocol reports them)
+alongside the `room-membership` leave, so a removal is visible in the timeline instead of an occupant
+silently vanishing (`ircKickSystemMessage` / `mucRemovalText` / `matrixMemberSystemMessage`).
+**X-chat.3 is now code-complete — only the runtime DoD (live server) + the sub-phase DoD template
+remain.** ·
 **Depends on:** X-chat.2 · **Branch:** `main` · **Risk:** low-medium.
 
 ### Deliverables
@@ -508,9 +510,10 @@ now code-complete — only the runtime DoD (live server) + the sub-phase DoD tem
       room header can **set** the topic — `ChatAdapter.setRoomTopic` (XMPP `buildMucChangeSubject`,
       IRC `TOPIC`, Matrix `PUT …/state/m.room.topic`) → `ChatService.setRoomTopic` →
       `chat:set-room-topic` bridge → `<RoomHeader>` inline editor (Enter commits, Escape cancels).
-      IRC `KICK` and XMPP MUC removal (status 301/307/321/322/332, with actor + reason from the
-      `<item>`) both surface a `system` message (`ircKickSystemMessage` / `mucRemovalText`).
-      _`buildMucInvite` still has no UI action; Matrix ban → system message: a later slice._
+      IRC `KICK`, XMPP MUC removal (status 301/307/321/322/332) and Matrix `m.room.member` ban /
+      third-party leave all surface a `system` message (`ircKickSystemMessage` / `mucRemovalText` /
+      `matrixMemberSystemMessage`), actor + reason included when reported.
+      _`buildMucInvite` still has no UI action._
 - [x] **Room browser** — service discovery of a MUC service's public rooms, search, join-by-address.
       `xmpp/disco.ts` + `XmppAdapter.discoverRooms` + `<RoomBrowser>` + `useChatState` wiring + the
       `chat:discover-rooms` / `chat:join-room` desktop bridge. _Only the runtime DoD remains._

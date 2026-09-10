@@ -127,6 +127,35 @@ describe('parseSyncResponse', () => {
     expect(parseSyncResponse({ rooms: { join: { '!r:s': 'nope' } } }, ctx).rooms).toHaveLength(1);
   });
 
+  it('emits a system message alongside the room-membership for a ban', () => {
+    const r = parseSyncResponse(
+      {
+        next_batch: 's',
+        rooms: {
+          join: {
+            '!r:s': {
+              timeline: {
+                events: [
+                  {
+                    type: 'm.room.member',
+                    sender: '@op:s',
+                    state_key: '@bob:s',
+                    event_id: '$ban',
+                    origin_server_ts: 30,
+                    content: { membership: 'ban', reason: 'trolling' },
+                  },
+                ],
+              },
+            },
+          },
+        },
+      },
+      ctx,
+    );
+    expect(r.events.map((e) => e.type)).toEqual(['room-membership', 'message']);
+    expect(r.events[1]).toMatchObject({ type: 'message', message: { kind: 'system', body: 'bob was banned by op: trolling' } });
+  });
+
   it('surfaces a timeline m.room.topic as a room-topic event', () => {
     const r = parseSyncResponse(
       {

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   matrixEphemeralEvents,
+  matrixMemberSystemMessage,
   matrixTimelineEvent,
   type MatrixContext,
   type MatrixRoomEvent,
@@ -170,6 +171,37 @@ describe('matrixTimelineEvent — messages', () => {
     expect(matrixTimelineEvent(ev({ type: 'm.room.avatar' }), ROOM, ctx)).toBeNull();
     expect(matrixTimelineEvent(ev({ content: { msgtype: 'm.text', body: '' } }), ROOM, ctx)).toBeNull();
     expect(matrixTimelineEvent(ev({ sender: '' }), ROOM, ctx)).toBeNull();
+  });
+});
+
+describe('matrixMemberSystemMessage', () => {
+  const member = (over: Partial<MatrixRoomEvent>): MatrixRoomEvent =>
+    ev({ type: 'm.room.member', sender: '@op:s', state_key: '@bob:s', content: { membership: 'ban' }, ...over });
+
+  it('renders a ban with the actor and reason', () => {
+    expect(matrixMemberSystemMessage(member({ content: { membership: 'ban', reason: 'spam' } }), ROOM, ctx)).toMatchObject({
+      type: 'message',
+      message: { conversationId: ROOM, kind: 'system', body: 'bob was banned by op: spam' },
+    });
+  });
+
+  it('renders a third-party leave as a kick, and "You were" for self', () => {
+    const body = (e: ReturnType<typeof matrixMemberSystemMessage>): string | undefined =>
+      e?.type === 'message' ? e.message.body : undefined;
+    expect(body(matrixMemberSystemMessage(member({ content: { membership: 'leave' } }), ROOM, ctx))).toBe(
+      'bob was kicked by op',
+    );
+    expect(
+      body(matrixMemberSystemMessage(member({ state_key: '@me:s', content: { membership: 'leave' } }), ROOM, ctx)),
+    ).toBe('You were kicked by op');
+  });
+
+  it('is null for a self-leave, a join, an invite, or a non-member event', () => {
+    expect(matrixMemberSystemMessage(member({ sender: '@bob:s', content: { membership: 'leave' } }), ROOM, ctx)).toBeNull();
+    expect(matrixMemberSystemMessage(member({ content: { membership: 'join' } }), ROOM, ctx)).toBeNull();
+    expect(matrixMemberSystemMessage(member({ content: { membership: 'invite' } }), ROOM, ctx)).toBeNull();
+    expect(matrixMemberSystemMessage(ev({ type: 'm.room.message' }), ROOM, ctx)).toBeNull();
+    expect(matrixMemberSystemMessage(member({ state_key: '' }), ROOM, ctx)).toBeNull();
   });
 });
 

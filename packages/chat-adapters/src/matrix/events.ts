@@ -17,6 +17,8 @@ export interface MatrixRoomEvent {
   event_id: string;
   origin_server_ts: number;
   content: Record<string, unknown>;
+  /** State events (`m.room.member`, `m.room.topic`, …) carry the key the state is about. */
+  state_key?: string;
   /** Pre-room-v11 redaction target (moved into `content.redacts` from v11 on). */
   redacts?: string;
   unsigned?: { redacted_because?: unknown; 'm.relations'?: unknown };
@@ -166,6 +168,58 @@ export function matrixTimelineEvent(
   if (body.length === 0 && !isMedia) return null;
 
   return { type: 'message', message: buildMessage(ev, roomId, ctx, ev.content) };
+}
+
+/** `@bob:server.example` → `bob`; anything else passes through unchanged. */
+function mxidName(id: string): string {
+  const m = /^@([^:]+):/.exec(id);
+  return m?.[1] ?? id;
+}
+
+/**
+ * An `m.room.member` transition that is an involuntary removal → a `system` message sentence, or
+ * `null`. A `ban` is always one; a `leave` is a kick only when a third party (`sender`) set it.
+ * `matrixTimelineEvent` still returns the `room-membership` for the same event; the sync walker
+ * emits both.
+ */
+export function matrixMemberSystemMessage(
+  ev: MatrixRoomEvent,
+  roomId: string,
+  ctx: MatrixContext,
+): ChatEvent | null {
+  if (ev.type !== 'm.room.member' || roomId.length === 0 || ev.event_id.length === 0) return null;
+  const membership = str(ev.content.membership);
+  const target = str(ev.state_key);
+  if (target.length === 0) return null;
+  const isKick = membership === 'leave' && ev.sender.length > 0 && ev.sender !== target;
+  if (membership !== 'ban' && !isKick) return null;
+
+  const who = target === ctx.selfUserId ? 'You were' : `${mxidName(target)} was`;
+  const verb = membership === 'ban' ? 'banned' : 'kicked';
+  const by = ev.sender.length > 0 ? ` by ${mxidName(ev.sender)}` : '';
+  const reason = str(ev.content.reason);
+  const because = reason.length > 0 ? `: ${reason}` : '';
+  return {
+    type: 'message',
+    message: {
+      id: ev.event_id,
+      conversationId: roomId,
+      accountId: ctx.accountId,
+      protocolId: ev.event_id,
+      senderAddress: ev.sender || target,
+      senderName: '',
+      kind: 'system',
+      body: `${who} ${verb}${by}${because}`,
+      mediaRef: null,
+      replyToId: null,
+      reactions: [],
+      editedAt: null,
+      redacted: false,
+      originTs: ev.origin_server_ts,
+      receivedAt: Date.now(),
+      deliveryState: 'delivered',
+    },
+  };
 }
 
 /** The `m.typing` / `m.receipt` events from a room's `ephemeral` block. */
