@@ -313,6 +313,34 @@ describe('XmppAdapter — live traffic', () => {
     expect((await it.next()).value).toMatchObject({ joined: false, memberCount: 0 });
   });
 
+  it('a groupchat <subject> from a joined room becomes a room-topic event', async () => {
+    const { server, adapter, session } = await connected();
+    await adapter.joinRoom(session, 'general@conf.example.com');
+    const it = adapter.events(session)[Symbol.asyncIterator]();
+
+    server.send(
+      `<message type="groupchat" from="general@conf.example.com/Bea">` +
+        `<subject>Release planning</subject></message>`,
+    );
+    expect((await it.next()).value).toMatchObject({
+      type: 'room-topic',
+      conversationId: 'general@conf.example.com',
+      topic: 'Release planning',
+      setBy: 'Bea',
+    });
+  });
+
+  it('a groupchat <subject> for a room we have not joined is not surfaced', async () => {
+    const { server, adapter, session } = await connected();
+    const it = adapter.events(session)[Symbol.asyncIterator]();
+    server.send(
+      `<message type="groupchat" from="stranger@conf.example.com/x"><subject>nope</subject></message>`,
+    );
+    server.send('<message type="chat" from="bob@example.com"><body>real</body></message>');
+    // the next surfaced event is the DM, not a room-topic
+    expect((await it.next()).value).toMatchObject({ type: 'message' });
+  });
+
   it('a room join error surfaces as a conversation-scoped error event', async () => {
     const { server, adapter, session } = await connected();
     await adapter.joinRoom(session, 'locked@conf.example.com');

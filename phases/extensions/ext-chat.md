@@ -475,14 +475,20 @@ up the conversation, runs `decideNotification` (own-echo / redaction / room leve
 survives, raises a `ChatNotification` (title = sender name, body capped at 180);
 `chat-service.electron.ts` wires it to
 `NotificationHost.push({ source: 'chat', channels: ['center', 'native'] })`, `'chat'` added to
-`NOTIFICATION_SOURCES`. **X-chat.3 is now code-complete — only the runtime DoD (live server) + the
-sub-phase DoD template remain.** · **Depends on:** X-chat.2 · **Branch:** `main` · **Risk:** low-medium.
+`NOTIFICATION_SOURCES`. Then, alongside X-chat.4's `room-topic` primitive (2026-09-10), the **XMPP MUC
+subject wiring** — `XmppAdapter.handleLiveElement` now routes a `<message type="groupchat">` that
+carries only a `<subject>` (XEP-0045 §8.1) from a joined room through `parseMucSubject` to a
+`room-topic` event (setter from the resource), so a live topic change reaches `<RoomHeader>` and the
+persisted conversation row the same way IRC's does. **X-chat.3 is now code-complete — only the runtime
+DoD (live server) + the sub-phase DoD template remain.** · **Depends on:** X-chat.2 · **Branch:**
+`main` · **Risk:** low-medium.
 
 ### Deliverables
 - [x] **XMPP MUC (XEP-0045)** — join/leave by JID, nickname, room roster + affiliations/roles,
       history-on-join limit, password rooms. `xmpp/muc.ts` (join/leave/subject/invite builders +
       presence/subject/error parse) + `chat-core` `RoomView` + `XmppAdapter` join/leave/presence
       routing + downstream `room-membership` folding through `ChatAccountState` / reducer / runner.
+      A live `<subject>` change now surfaces as a `room-topic` event (`handleRoomSubject`).
       _`buildMucChangeSubject` / `buildMucInvite` exist but no UI action yet; kick/ban surfacing: a
       later slice._
 - [x] **Room browser** — service discovery of a MUC service's public rooms, search, join-by-address.

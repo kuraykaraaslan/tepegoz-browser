@@ -23,7 +23,13 @@ import {
   stanzaToEvent,
 } from './stanzas';
 import { buildMamQuery, parseMamFin, parseMamResult } from './mam';
-import { buildMucJoin, buildMucLeave, parseMucError, parseMucPresence } from './muc';
+import {
+  buildMucJoin,
+  buildMucLeave,
+  parseMucError,
+  parseMucPresence,
+  parseMucSubject,
+} from './muc';
 import { buildDiscoInfo, buildDiscoItems, parseDiscoInfo, parseDiscoItems } from './disco';
 import type { RoomSummary } from '../adapter';
 
@@ -480,6 +486,9 @@ function handleLiveElement(session: XmppSession, el: XmlElement): void {
   // presence (which would carry the occupant's real JID as an address).
   if (el.local === 'presence' && handleRoomPresence(session, el)) return;
 
+  // A room `<message type="groupchat">` carrying only a `<subject>` → a room-topic change.
+  if (el.local === 'message' && handleRoomSubject(session, el)) return;
+
   const event = stanzaToEvent(el, {
     accountId: session.accountId,
     selfBareJid: session.selfBareJid,
@@ -522,6 +531,21 @@ function handleRoomPresence(session: XmppSession, el: XmlElement): boolean {
     affiliation: occ.affiliation,
     role: occ.role,
     realJid: occ.realJid,
+  });
+  return true;
+}
+
+/** A `<message type="groupchat">` with a `<subject>` and no `<body>` (XEP-0045 §8.1) from a room we
+ *  have joined → a `room-topic` event. Returns whether it was consumed. */
+function handleRoomSubject(session: XmppSession, el: XmlElement): boolean {
+  const sub = parseMucSubject(el);
+  if (sub === null || !session.rooms.has(sub.roomJid)) return false;
+  session.push({
+    type: 'room-topic',
+    conversationId: sub.roomJid,
+    topic: sub.subject,
+    setBy: sub.nick,
+    ts: null,
   });
   return true;
 }
