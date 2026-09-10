@@ -50,6 +50,11 @@ function harness(over: Partial<ChatCapabilityHostDeps> = {}) {
     history: vi.fn(() => Promise.resolve({ messages: [msg({ body: 'older' }), msg({ body: 'newer', protocolId: 'p2' })], nextCursor: 'cur' })),
     setPresence: vi.fn(() => Promise.resolve()),
     markRead: vi.fn(() => Promise.resolve()),
+    sendMessage: vi.fn(() => Promise.resolve('srv-1')),
+    joinRoom: vi.fn(() => Promise.resolve('!joined:x')),
+    leaveRoom: vi.fn(() => Promise.resolve()),
+    setMuted: vi.fn(() => Promise.resolve()),
+    react: vi.fn(() => Promise.resolve()),
     sessionOptIns: () => optIns,
     ...over,
   };
@@ -124,18 +129,32 @@ describe('createChatCapabilityHost — writes', () => {
     expect(deps.setPresence).toHaveBeenCalledWith('acc', 'dnd', 'busy');
   });
 
-  it('updateItem marks read; unimplemented branches throw 501', async () => {
+  it('updateItem applies mark-read, mute and reaction', async () => {
     const { host, deps } = harness();
-    expect(await host.updateItem({ accountId: 'acc', conversationId: 'c1', markReadUpTo: 'p2' })).toEqual({ ok: true });
+    await host.updateItem({ accountId: 'acc', conversationId: 'c1', markReadUpTo: 'p2' });
     expect(deps.markRead).toHaveBeenCalledWith('acc', 'c1', 'p2');
-    await expect(host.updateItem({ accountId: 'acc', conversationId: 'c1', muted: true })).rejects.toMatchObject({ statusCode: 501 });
+    await host.updateItem({ accountId: 'acc', conversationId: 'c1', muted: true });
+    expect(deps.setMuted).toHaveBeenCalledWith('acc', 'c1', true);
+    await host.updateItem({ accountId: 'acc', conversationId: 'c1', reaction: { messageId: 'm1', emoji: '👍', on: true } });
+    expect(deps.react).toHaveBeenCalledWith('acc', 'c1', 'm1', '👍', true);
   });
 
-  it('the not-yet-wired write tools throw a 501 AppError', async () => {
+  it('createMessage / createMembership / deleteItem delegate', async () => {
+    const { host, deps } = harness();
+    expect(await host.createMessage({ accountId: 'a', conversationId: 'c', body: 'hi', replyToId: '$0' })).toEqual({ protocolId: 'srv-1' });
+    expect(deps.sendMessage).toHaveBeenCalledWith('a', 'c', { body: 'hi', replyToId: '$0' });
+    expect(await host.createMembership({ accountId: 'a', address: '#r' })).toEqual({ conversationId: '!joined:x' });
+    expect(await host.deleteItem({ accountId: 'a', conversationId: 'c' })).toEqual({ ok: true });
+    expect(deps.leaveRoom).toHaveBeenCalledWith('a', 'c');
+  });
+
+  it('createMembership fails cleanly when the protocol cannot join by address', async () => {
+    const { host } = harness({ joinRoom: vi.fn(() => Promise.resolve(null)) });
+    await expect(host.createMembership({ accountId: 'a', address: '#r' })).rejects.toMatchObject({ statusCode: 400 });
+  });
+
+  it('chat_get_media is still 501 until the sandbox slice', async () => {
     const { host } = harness();
-    await expect(host.createMessage({ accountId: 'a', conversationId: 'c', body: 'x' })).rejects.toMatchObject({ statusCode: 501 });
-    await expect(host.createMembership({ accountId: 'a', address: '#r' })).rejects.toMatchObject({ statusCode: 501 });
-    await expect(host.deleteItem({ accountId: 'a', conversationId: 'c' })).rejects.toMatchObject({ statusCode: 501 });
     await expect(host.getMedia({ accountId: 'a', conversationId: 'c', messageId: 'm' })).rejects.toMatchObject({ statusCode: 501 });
   });
 });

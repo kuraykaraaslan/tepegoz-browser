@@ -194,8 +194,12 @@ export class ChatService {
     return this.require(accountId).discoverRooms(service);
   }
 
-  async joinRoom(accountId: string, roomJid: string): Promise<void> {
+  async joinRoom(accountId: string, roomJid: string): Promise<string | null> {
     return this.require(accountId).joinRoom(roomJid);
+  }
+
+  async leaveRoom(accountId: string, conversationId: string): Promise<void> {
+    return this.require(accountId).leaveRoom(conversationId);
   }
 
   async setRoomNotifyLevel(
@@ -204,6 +208,20 @@ export class ChatService {
     level: 'all' | 'mentions' | 'none',
   ): Promise<void> {
     return this.require(accountId).setRoomNotifyLevel(conversationId, level);
+  }
+
+  async setMuted(accountId: string, conversationId: string, muted: boolean): Promise<void> {
+    return this.require(accountId).setMuted(conversationId, muted);
+  }
+
+  async react(
+    accountId: string,
+    conversationId: string,
+    messageId: string,
+    emoji: string,
+    on: boolean,
+  ): Promise<void> {
+    return this.require(accountId).react(conversationId, messageId, emoji, on);
   }
 
   async resolveMedia(

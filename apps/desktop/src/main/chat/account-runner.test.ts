@@ -290,7 +290,29 @@ describe('ChatAccountRunner — actions', () => {
     // @ts-expect-error deliberately drop the optional methods
     adapter.joinRoom = undefined;
     expect(await runner.discoverRooms('conf.example')).toEqual([]);
-    await expect(runner.joinRoom('x@conf')).resolves.toBeUndefined();
+    await expect(runner.joinRoom('x@conf')).resolves.toBeNull();
+  });
+
+  it('joinRoom returns the new conversation id', async () => {
+    const { runner } = await online();
+    await expect(runner.joinRoom('general@conf.example')).resolves.toBe('general@conf.example');
+  });
+
+  it('leaveRoom calls the adapter when it supports it and marks the row not-known', async () => {
+    const { runner, adapter, store } = await online();
+    const leave = vi.fn(() => Promise.resolve());
+    (adapter as unknown as { leaveRoom: typeof leave }).leaveRoom = leave;
+    await runner.joinRoom('general@conf.example');
+    await runner.leaveRoom('general@conf.example');
+    expect(leave).toHaveBeenCalledWith(expect.anything(), 'general@conf.example');
+    expect(store.conversations.get('general@conf.example')?.isKnownContact).toBe(false);
+  });
+
+  it('setMuted patches the stored conversation; react needs adapter support', async () => {
+    const { runner, store } = await online();
+    await runner.setMuted('room@conf', true);
+    expect(store.conversations.get('room@conf')?.muted).toBe(true);
+    await expect(runner.react('room@conf', 'm1', '👍', true)).rejects.toThrow(/reactions/);
   });
 
   it('a roster-remove event is not persisted as a contact', async () => {

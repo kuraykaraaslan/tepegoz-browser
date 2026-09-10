@@ -281,10 +281,19 @@ export class ChatAccountRunner {
     return this.deps.adapter.discoverRooms(this.requireSession(), service);
   }
 
-  async joinRoom(roomJid: string): Promise<void> {
-    if (this.deps.adapter.joinRoom === undefined) return;
+  async joinRoom(roomJid: string): Promise<string | null> {
+    if (this.deps.adapter.joinRoom === undefined) return null;
     const conversation = await this.deps.adapter.joinRoom(this.requireSession(), roomJid);
     this.deps.store.upsertConversation(conversation);
+    return conversation.id;
+  }
+
+  async leaveRoom(conversationId: string): Promise<void> {
+    const conv = this.deps.store.getConversation(conversationId);
+    if (this.deps.adapter.leaveRoom !== undefined) {
+      await this.deps.adapter.leaveRoom(this.requireSession(), conversationId);
+    }
+    if (conv !== null) this.deps.store.upsertConversation({ ...conv, isKnownContact: false, unread: 0 });
   }
 
   setRoomNotifyLevel(conversationId: string, level: 'all' | 'mentions' | 'none'): Promise<void> {
@@ -293,6 +302,21 @@ export class ChatAccountRunner {
       blankConversation(this.accountId, conversationId);
     this.deps.store.upsertConversation({ ...existing, notifyLevel: level });
     return Promise.resolve();
+  }
+
+  setMuted(conversationId: string, muted: boolean): Promise<void> {
+    const existing =
+      this.deps.store.getConversation(conversationId) ??
+      blankConversation(this.accountId, conversationId);
+    this.deps.store.upsertConversation({ ...existing, muted });
+    return Promise.resolve();
+  }
+
+  async react(conversationId: string, messageId: string, emoji: string, on: boolean): Promise<void> {
+    if (this.deps.adapter.react === undefined) {
+      throw new Error('this protocol does not support reactions');
+    }
+    await this.deps.adapter.react(this.requireSession(), conversationId, messageId, emoji, on);
   }
 
   /**

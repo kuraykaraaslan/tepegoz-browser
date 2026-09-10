@@ -145,7 +145,9 @@ export const chatIpcService: ChatIpcService = {
   markRead: (accountId, conversationId, protocolId) =>
     requireService().markRead(accountId, conversationId, protocolId),
   discoverRooms: (accountId, service) => requireService().discoverRooms(accountId, service),
-  joinRoom: (accountId, roomJid) => requireService().joinRoom(accountId, roomJid),
+  joinRoom: async (accountId, roomJid) => {
+    await requireService().joinRoom(accountId, roomJid);
+  },
   setRoomNotifyLevel: (accountId, conversationId, level) =>
     requireService().setRoomNotifyLevel(accountId, conversationId, level),
   resolveMedia: (accountId, mediaRef) => requireService().resolveMedia(accountId, mediaRef),
@@ -172,6 +174,14 @@ export function chatCapabilityHost(): ReturnType<typeof createChatCapabilityHost
       requireService().setPresence(accountId, presence, statusText),
     markRead: (accountId, conversationId, protocolId) =>
       requireService().markRead(accountId, conversationId, protocolId),
+    sendMessage: (accountId, conversationId, body) =>
+      requireService().sendMessage(accountId, conversationId, body),
+    joinRoom: (accountId, address) => requireService().joinRoom(accountId, address),
+    leaveRoom: (accountId, conversationId) => requireService().leaveRoom(accountId, conversationId),
+    setMuted: (accountId, conversationId, muted) =>
+      requireService().setMuted(accountId, conversationId, muted),
+    react: (accountId, conversationId, messageId, emoji, on) =>
+      requireService().react(accountId, conversationId, messageId, emoji, on),
     sessionOptIns: () => chatAgentOptIns,
   });
 }

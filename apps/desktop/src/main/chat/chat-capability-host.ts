@@ -48,6 +48,21 @@ export interface ChatCapabilityHostDeps {
   ) => Promise<{ messages: ChatMessage[]; nextCursor: string | null }>;
   setPresence: (accountId: string, presence: ChatPresence, statusText?: string) => Promise<void>;
   markRead: (accountId: string, conversationId: string, protocolId: string) => Promise<void>;
+  sendMessage: (
+    accountId: string,
+    conversationId: string,
+    body: { body: string; replyToId?: string | null },
+  ) => Promise<string>;
+  joinRoom: (accountId: string, address: string) => Promise<string | null>;
+  leaveRoom: (accountId: string, conversationId: string) => Promise<void>;
+  setMuted: (accountId: string, conversationId: string, muted: boolean) => Promise<void>;
+  react: (
+    accountId: string,
+    conversationId: string,
+    messageId: string,
+    emoji: string,
+    on: boolean,
+  ) => Promise<void>;
   /** Conversation ids the user opted the agent into this session (on top of persisted known-contact). */
   sessionOptIns: () => ReadonlySet<string>;
 }
@@ -137,25 +152,42 @@ export function createChatCapabilityHost(deps: ChatCapabilityHostDeps): ChatCapa
     async updateItem(input: ChatUpdateItemRequest): Promise<{ ok: true }> {
       if (input.markReadUpTo !== undefined) {
         await deps.markRead(input.accountId, input.conversationId, input.markReadUpTo);
-        return { ok: true };
       }
-      return notYet('chat_update_item (mute / reaction)');
+      if (input.muted !== undefined) {
+        await deps.setMuted(input.accountId, input.conversationId, input.muted);
+      }
+      if (input.reaction !== undefined) {
+        const { messageId, emoji, on } = input.reaction;
+        await deps.react(input.accountId, input.conversationId, messageId, emoji, on);
+      }
+      return { ok: true };
     },
 
-    createMessage(_input: ChatCreateMessageRequest): Promise<{ protocolId: string }> {
-      return notYet('chat_create_message');
+    async createMessage(input: ChatCreateMessageRequest): Promise<{ protocolId: string }> {
+      const protocolId = await deps.sendMessage(input.accountId, input.conversationId, {
+        body: input.body,
+        replyToId: input.replyToId ?? null,
+      });
+      return { protocolId };
     },
 
-    createMembership(_input: ChatCreateMembershipRequest): Promise<{ conversationId: string }> {
-      return notYet('chat_create_membership');
+    async createMembership(
+      input: ChatCreateMembershipRequest,
+    ): Promise<{ conversationId: string }> {
+      const conversationId = await deps.joinRoom(input.accountId, input.address);
+      if (conversationId === null) {
+        throw new AppError('this protocol cannot join a room by address', 400);
+      }
+      return { conversationId };
     },
 
-    deleteItem(_input: ChatDeleteItemRequest): Promise<{ ok: true }> {
-      return notYet('chat_delete_item');
+    async deleteItem(input: ChatDeleteItemRequest): Promise<{ ok: true }> {
+      await deps.leaveRoom(input.accountId, input.conversationId);
+      return { ok: true };
     },
 
-    getMedia(_input: ChatGetMediaRequest): Promise<{ sandboxPath: string } | null> {
-      return notYet('chat_get_media');
+    getMedia(input: ChatGetMediaRequest): Promise<{ sandboxPath: string } | null> {
+      return notYet(`chat_get_media (${input.messageId})`);
     },
   };
 }
