@@ -146,6 +146,13 @@ class Harness extends WindowTabsClosing {
       faviconUrl: null,
     });
   }
+  /** An internal tab that opted into a real page view (settings et al.) — the view lives in the
+   *  separate `internalPageViews` map, never in `views`. */
+  seedInternalTabWithView(url: string, view: FakeView): string {
+    const id = this.seedInternalTab(url);
+    this.internalPageViews.set(id, view as unknown as Electron.WebContentsView);
+    return id;
+  }
   /** The real `createTab` builds a live `WebContentsView`; override it with a store-only stub so
    *  `createTabRight` / `duplicateTab` are exercisable without Electron. */
   override createTab(
@@ -408,6 +415,15 @@ describe('small queries and reload', () => {
     expect(() => {
       tabs.reloadTab('nope');
     }).not.toThrow();
+  });
+
+  it('reloadTab reloads an internal page tab through its own view (outside `views`)', () => {
+    const { tabs } = harness();
+    const view = new FakeView();
+    const id = tabs.seedInternalTabWithView('tepegoz://settings', view);
+
+    tabs.reloadTab(id);
+    expect(view.webContents!.reloadCalls).toBe(1);
   });
 });
 

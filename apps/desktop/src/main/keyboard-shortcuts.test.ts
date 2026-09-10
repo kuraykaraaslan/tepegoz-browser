@@ -121,6 +121,17 @@ describe('page-command shortcuts', () => {
     expect(commands.reloadPage).toHaveBeenLastCalledWith(page, true);
   });
 
+  it('prefers the reloadActiveTab target (routes through the tab model, so tepegoz:// pages reload)', () => {
+    const reloadActiveTab = vi.fn();
+    expect(handleWindowShortcut(win, press('r', { control: true }), { page, reloadActiveTab })).toBe(
+      true,
+    );
+    expect(reloadActiveTab).toHaveBeenLastCalledWith(false);
+    handleWindowShortcut(win, press('r', { control: true, shift: true }), { page, reloadActiveTab });
+    expect(reloadActiveTab).toHaveBeenLastCalledWith(true);
+    expect(commands.reloadPage).not.toHaveBeenCalled();
+  });
+
   /**
    * The security property. Ctrl+Shift+I must reach the GATED toggle, never Electron's ungated
    * `toggleDevTools` role — which is what answered this key for as long as the app never set its own

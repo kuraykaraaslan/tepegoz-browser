@@ -62,8 +62,14 @@ export class WindowTabsNav extends WindowTabsMoves {
     if (wc?.navigationHistory.canGoForward()) wc.navigationHistory.goForward();
   }
 
-  reloadActive(): void {
-    this.activeView()?.webContents.reload();
+  /** Reload the active tab (toolbar button, page menu, command palette, Ctrl+R). `hard` skips the
+   *  cache (Ctrl+Shift+R). Resolves the webContents through `activeContentWebContents()` so it also
+   *  reloads an internal (`tepegoz://…`) page, whose view lives outside `views`. */
+  reloadActive(hard = false): void {
+    const wc = this.activeContentWebContents();
+    if (wc === undefined) return;
+    if (hard) wc.reloadIgnoringCache();
+    else wc.reload();
   }
 
   /** Print the active web page (opens the system print dialog). Page context menu → Print. */

@@ -163,9 +163,10 @@ export class WindowTabsClosing extends WindowTabsBase {
     this.emitState();
   }
 
-  /** Reload a specific tab (context menu) — distinct from reloadActive (omnibox/shortcut). */
+  /** Reload a specific tab (context menu) — distinct from reloadActive (omnibox/shortcut). Falls back
+   *  to an internal (`tepegoz://…`) tab's own page view, which lives outside `views`. */
   reloadTab(id: string): void {
-    this.views.get(id)?.webContents.reload();
+    (this.views.get(id) ?? this.internalPageViews.get(id))?.webContents.reload();
   }
 
   /** The active tab's id (null if none) — lets callers open a new tab as a child of the current tab. */

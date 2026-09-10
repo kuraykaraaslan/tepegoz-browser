@@ -129,6 +129,7 @@ const mkWc = (over: Wc = {}): Wc => ({
   isDestroyed: () => false,
   getURL: () => 'https://page.test/',
   reload: vi.fn(),
+  reloadIgnoringCache: vi.fn(),
   navigationHistory: {
     canGoBack: () => true,
     goBack: vi.fn(),
@@ -228,6 +229,16 @@ describe('navigation', () => {
     const id = tabs.addWeb();
     tabs.setActive(id);
     tabs.putView(id, wc);
+    tabs.reloadActive();
+    expect(wc.reload).toHaveBeenCalled();
+    tabs.reloadActive(true);
+    expect(wc.reloadIgnoringCache).toHaveBeenCalled();
+  });
+
+  it('reloadActive reloads an internal (tepegoz://…) page through its own view', () => {
+    const id = tabs.addWeb('tepegoz://settings');
+    tabs.setActive(id);
+    tabs.putInternalView(id, wc);
     tabs.reloadActive();
     expect(wc.reload).toHaveBeenCalled();
   });

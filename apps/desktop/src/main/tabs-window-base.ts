@@ -355,6 +355,22 @@ export class WindowTabsBase {
     return id !== null ? this.views.get(id) : undefined;
   }
 
+  /**
+   * The active tab's page `WebContents` — its browsed view's, or, for an internal (`tepegoz://…`) tab
+   * that opted into a real view (settings et al.), that view's.
+   *
+   * Unlike `activeWebContents()` — which the agent perception layer uses and which must keep treating a
+   * system page as viewless — this is what page-level commands (reload, back/forward) act on, so they
+   * work on `tepegoz://` pages too. Their views live outside `views` by design (see
+   * `tabs-internal-page-view.ts`), which is exactly why `reloadActive()` used to be a silent no-op there.
+   */
+  protected activeContentWebContents(): WebContents | undefined {
+    const id = this.store.activeId;
+    if (id === null) return undefined;
+    const wc = (this.views.get(id) ?? this.internalPageViews.get(id))?.webContents;
+    return wc !== undefined && !wc.isDestroyed() ? wc : undefined;
+  }
+
   /** Attach our WebContents event handlers to a browsed view (creation / cross-window adopt). */
   protected wireView(id: string, view: WebContentsView): void {
     installViewHandlers(this.viewWiringHost(), id, view);

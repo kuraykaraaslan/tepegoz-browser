@@ -36,6 +36,11 @@ import {
 export interface ShortcutTargets {
   /** The page the key was pressed on. */
   page: WebContents | null;
+  /** Reload the window's active tab, `hard` skipping the cache. Routed through the tab model rather
+   *  than acting on `page` directly so it also reloads an internal (`tepegoz://…`) page, whose
+   *  webContents `page` (agent-perception `activeWebContents()`) deliberately never resolves. Absent
+   *  where there is no tab model. */
+  reloadActiveTab?: (hard: boolean) => void;
   /** Close the active tab of the window the key arrived on. Absent where there is no tab model. */
   closeActiveTab?: () => void;
   /** Open a new private (disposable) window. Injected for the same cycle reason as `page`. */
@@ -95,10 +100,18 @@ export function handleWindowShortcut(
       viewSourcePage(pageWc);
       return true;
     case 'reload':
+      if (targets.reloadActiveTab !== undefined) {
+        targets.reloadActiveTab(false);
+        return true;
+      }
       if (pageWc === null) return false;
       reloadPage(pageWc);
       return true;
     case 'hardReload':
+      if (targets.reloadActiveTab !== undefined) {
+        targets.reloadActiveTab(true);
+        return true;
+      }
       if (pageWc === null) return false;
       reloadPage(pageWc, true);
       return true;

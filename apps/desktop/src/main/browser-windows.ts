@@ -106,6 +106,9 @@ export function openWindow(opts?: {
     }
     const targets = {
       page: pageWc,
+      // Through the model, not `pageWc`: the omnibox often holds focus when Ctrl+R is pressed on a
+      // `tepegoz://…` tab, whose webContents `activeWebContents()` never returns.
+      reloadActiveTab: (hard: boolean) => tabs?.reloadActive(hard),
       closeActiveTab: () => {
         const activeId = tabs?.getState().activeId ?? null;
         if (activeId !== null) tabs?.closeTab(activeId);

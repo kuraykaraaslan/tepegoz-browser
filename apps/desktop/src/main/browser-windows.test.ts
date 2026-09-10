@@ -27,6 +27,7 @@ const wt = vi.hoisted(() => ({
   getState: vi.fn(() => ({ activeId: 'a1' })),
   closeTab: vi.fn(),
   activeWebContents: vi.fn(() => null),
+  reloadActive: vi.fn(),
   refreshState: vi.fn(),
 }));
 const tm = vi.hoisted(() => ({
@@ -53,7 +54,11 @@ const power = vi.hoisted(() => ({ reconcileTrayPowerBlocker: vi.fn() }));
 vi.mock('./power-lifecycle', () => power);
 const shortcut = vi.hoisted(() => ({
   handleWindowShortcut: vi.fn<
-    (win: unknown, input: unknown, targets: { closeActiveTab: () => void }) => boolean
+    (
+      win: unknown,
+      input: unknown,
+      targets: { closeActiveTab: () => void; reloadActiveTab: (hard: boolean) => void },
+    ) => boolean
   >(() => false),
 }));
 vi.mock('./keyboard-shortcuts', () => shortcut);
@@ -275,6 +280,22 @@ describe('the window lifecycle handlers', () => {
     onKey(ev2, { type: 'keyDown' });
     expect(ev2.preventDefault).toHaveBeenCalled();
     expect(wt.closeTab).toHaveBeenCalledWith('a1');
+  });
+
+  it('chrome before-input-event gives the shortcut handler a reloadActiveTab that hits the tab model', async () => {
+    const { openWindow } = await load();
+    openWindow();
+    const onKey = handlerFor(winInstance.webContents, 'before-input-event')!;
+
+    zoom.handleZoomShortcut.mockReturnValue(false);
+    shortcut.handleWindowShortcut.mockImplementation(
+      (_w: unknown, _i: unknown, targets: { reloadActiveTab: (hard: boolean) => void }) => {
+        targets.reloadActiveTab(true);
+        return true;
+      },
+    );
+    onKey({ preventDefault: vi.fn() }, { type: 'keyDown' });
+    expect(wt.reloadActive).toHaveBeenCalledWith(true);
   });
 });
 
