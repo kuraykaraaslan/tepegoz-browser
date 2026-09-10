@@ -219,6 +219,37 @@ describe('ChatStore — messages', () => {
     ChatStore.upsertMessage(db, message('p1', 'cv1', { reactions: [{ emoji: '👍', count: 2, me: true }] }));
     expect(ChatStore.listMessages(db, 'cv1')[0]?.reactions).toEqual([{ emoji: '👍', count: 2, me: true }]);
   });
+
+  describe('searchMessages', () => {
+    beforeEach(() => {
+      ChatStore.upsertConversation(db, conversation('cv2', 'acc', 'ada@example.com'));
+      ChatStore.upsertMessage(db, message('p1', 'cv1', { body: 'Şişli toplantısı yarın', originTs: 10 }));
+      ChatStore.upsertMessage(db, message('p2', 'cv1', { body: 'kahve içelim mi', originTs: 20 }));
+      ChatStore.upsertMessage(db, message('p3', 'cv2', { body: 'toplantı notları hazır', originTs: 30 }));
+    });
+
+    it('matches fold-insensitively (Turkish) and returns newest-first', () => {
+      const hits = ChatStore.searchMessages(db, { text: 'TOPLANTI' });
+      expect(hits.map((m) => m.protocolId)).toEqual(['p3', 'p1']);
+    });
+
+    it('scopes to one conversation / one account', () => {
+      expect(ChatStore.searchMessages(db, { text: 'toplanti', conversationId: 'cv1' }).map((m) => m.protocolId)).toEqual(['p1']);
+      expect(ChatStore.searchMessages(db, { text: 'toplanti', accountId: 'other' })).toEqual([]);
+    });
+
+    it('ignores redacted messages and blank / wildcard-only needles', () => {
+      ChatStore.redactMessage(db, 'cv1', 'p1');
+      expect(ChatStore.searchMessages(db, { text: 'toplanti' }).map((m) => m.protocolId)).toEqual(['p3']);
+      expect(ChatStore.searchMessages(db, { text: '   ' })).toEqual([]);
+      expect(ChatStore.searchMessages(db, { text: '%' })).toEqual([]);
+    });
+
+    it('treats a "%" in the query literally, not as a wildcard', () => {
+      ChatStore.upsertMessage(db, message('p9', 'cv1', { body: '100% sure', originTs: 40 }));
+      expect(ChatStore.searchMessages(db, { text: '100% sure' }).map((m) => m.protocolId)).toEqual(['p9']);
+    });
+  });
 });
 
 describe('ChatStore — receipts', () => {

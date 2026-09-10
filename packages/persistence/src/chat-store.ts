@@ -361,6 +361,39 @@ export class ChatStore {
     return rows.map(rowToMessage).reverse();
   }
 
+  /**
+   * Fold-insensitive substring search over message bodies (Turkish-aware via `foldForSearch`),
+   * newest-first. Redacted messages have an empty `body_fold` so they never match. Optionally scoped
+   * to one account or one conversation.
+   */
+  static searchMessages(
+    db: Db,
+    opts: { text: string; accountId?: string; conversationId?: string; limit?: number },
+  ): ChatMessage[] {
+    const needle = foldForSearch(opts.text).trim();
+    if (needle.length === 0) return [];
+    const n = Math.max(1, Math.min(Math.trunc(opts.limit ?? 50), 200));
+    // Escape LIKE metacharacters in the (already folded) needle; `\` is the ESCAPE char below.
+    const escaped = needle.replace(/[\\%_]/g, (ch) => `\\${ch}`);
+    const where = ["body_fold <> ''", "body_fold LIKE '%' || ? || '%' ESCAPE '\\'"];
+    const params: unknown[] = [escaped];
+    if (opts.accountId !== undefined) {
+      where.push('account_id = ?');
+      params.push(opts.accountId);
+    }
+    if (opts.conversationId !== undefined) {
+      where.push('conversation_id = ?');
+      params.push(opts.conversationId);
+    }
+    params.push(n);
+    const rows = db
+      .prepare(
+        `SELECT * FROM chat_messages WHERE ${where.join(' AND ')} ORDER BY origin_ts DESC LIMIT ?`,
+      )
+      .all(...params) as ChatMessageRow[];
+    return rows.map(rowToMessage);
+  }
+
   static upsertMessage(db: Db, message: ChatMessage): void {
     db.prepare(
       `INSERT INTO chat_messages (
