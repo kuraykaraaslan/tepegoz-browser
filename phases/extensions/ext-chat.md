@@ -382,7 +382,9 @@ Functional DoD. · **Depends on:** X-chat.1 · **Branch:** `main` · **Risk:** l
       branching lands with IRC/Matrix_).
 - [x] **Message timeline** — linkified text (safe — no auto-navigation), reactions row,
       edited/redacted markers, system events, delivery/read state, typing indicator, date separators,
-      "new messages" divider. _Reply quoting + "jump to unread" scroll: deferred._
+      "new messages" divider, **reply quoting** (a one-line preview of the replied-to original when it
+      is in the loaded window; an optional `onJumpToMessage` makes it a jump button). _Full
+      "jump to unread" auto-scroll still deferred — `onJumpToMessage` is the seam for it._
 - [x] **Composer** — text, attachment hook (`OutgoingMessage.mediaPath`), reply/edit affordances,
       send on Enter / newline on Shift-Enter. _Emoji picker: deferred._ Per-conversation mute landed
       2026-09-10 — a header toggle (DM + room), `useChatState.setMuted` (optimistic

@@ -160,4 +160,59 @@ describe('MessageTimeline', () => {
     );
     expect(screen.getByText('👍 3')).toBeDefined();
   });
+
+  it('quotes the original of a reply that is in the window', () => {
+    wrap(
+      <MessageTimeline
+        messages={[
+          msg({ id: 'a', protocolId: 'orig', senderName: 'Alice', body: 'the original point' }),
+          msg({ id: 'b', protocolId: 'p2', senderName: 'Bob', senderAddress: 'bob@x', body: 'I agree', replyToId: 'orig' }),
+        ]}
+        now={T0}
+      />,
+    );
+    const quote = screen.getByLabelText('In reply to Alice');
+    expect(quote.textContent).toContain('Alice');
+    expect(quote.textContent).toContain('the original point');
+  });
+
+  it('renders no quote when the reply target is not loaded', () => {
+    wrap(
+      <MessageTimeline
+        messages={[msg({ protocolId: 'p2', body: 'reply into the void', replyToId: 'missing' })]}
+        now={T0}
+      />,
+    );
+    expect(screen.queryByLabelText(/In reply to/)).toBeNull();
+  });
+
+  it('makes the quote a button that jumps to the original when onJumpToMessage is given', () => {
+    const onJumpToMessage = vi.fn();
+    wrap(
+      <MessageTimeline
+        messages={[
+          msg({ id: 'a', protocolId: 'orig', body: 'source' }),
+          msg({ id: 'b', protocolId: 'p2', body: 'echo', replyToId: 'orig' }),
+        ]}
+        now={T0}
+        onJumpToMessage={onJumpToMessage}
+      />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: /In reply to/ }));
+    expect(onJumpToMessage).toHaveBeenCalledWith('orig');
+  });
+
+  it('trims a long quoted body', () => {
+    const long = 'x'.repeat(400);
+    wrap(
+      <MessageTimeline
+        messages={[
+          msg({ id: 'a', protocolId: 'orig', body: long }),
+          msg({ id: 'b', protocolId: 'p2', body: 'ok', replyToId: 'orig' }),
+        ]}
+        now={T0}
+      />,
+    );
+    expect(screen.getByText(`${'x'.repeat(120)}…`)).toBeDefined();
+  });
 });

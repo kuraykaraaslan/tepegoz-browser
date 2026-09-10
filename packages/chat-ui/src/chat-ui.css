@@ -409,6 +409,33 @@
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
+.chat-msg__quote {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  margin-bottom: 3px;
+  padding: 3px 8px;
+  max-width: 100%;
+  border-inline-start: 3px solid var(--cu-primary);
+  border-radius: 3px;
+  background: var(--cu-surface-raised);
+  color: var(--cu-text-secondary);
+  font: inherit;
+  font-size: 12px;
+  text-align: start;
+  cursor: default;
+}
+button.chat-msg__quote {
+  cursor: pointer;
+}
+.chat-msg__quote-sender {
+  font-weight: 600;
+}
+.chat-msg__quote-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .chat-msg__link {
   color: var(--cu-primary-on-surface);
   text-decoration: underline;

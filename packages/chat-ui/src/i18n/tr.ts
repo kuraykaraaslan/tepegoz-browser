@@ -49,6 +49,8 @@ export const tr: ChatUiStrings = {
     edited: 'düzenlendi',
     redacted: 'Mesaj silindi',
     newMessages: 'Yeni mesajlar',
+    inReplyTo: 'Şu mesaja yanıt',
+    quoteAttachment: 'Ek',
   },
   delivery: {
     pending: 'Gönderiliyor…',

@@ -6,6 +6,9 @@ import { MessageMedia, type ResolveMedia } from './MessageMedia';
 import { buildTimeline, type BuildTimelineOptions } from './timeline';
 import { daySeparatorLabel, formatClockTime } from './time';
 
+/** Longest quoted-reply snippet shown inline before it is trimmed with an ellipsis. */
+export const QUOTE_SNIPPET_MAX = 120;
+
 export interface MessageTimelineProps {
   messages: readonly ChatMessage[];
   /** `id` of the last read message — positions the "new messages" divider. */
@@ -25,7 +28,47 @@ export interface MessageTimelineProps {
    */
   resolveMedia?: ResolveMedia | undefined;
   onOpenMedia?: ((mediaRef: string) => void) | undefined;
+  /** Scroll to / focus the quoted original when its preview is clicked. Absent ⇒ the quote is inert. */
+  onJumpToMessage?: (protocolId: string) => void;
   groupWindowMs?: BuildTimelineOptions<ChatMessage>['groupWindowMs'];
+}
+
+/** A one-line preview of the message a reply points at, when that original is in the loaded window. */
+function QuotedReply({
+  original,
+  strings,
+  onJump,
+}: Readonly<{
+  original: ChatMessage;
+  strings: ChatUiStrings;
+  onJump: ((protocolId: string) => void) | undefined;
+}>) {
+  const sender = original.senderName.trim() || original.senderAddress;
+  const text = original.redacted
+    ? strings.timeline.redacted
+    : original.body.length > QUOTE_SNIPPET_MAX
+      ? `${original.body.slice(0, QUOTE_SNIPPET_MAX)}…`
+      : original.body || strings.timeline.quoteAttachment;
+  const inner = (
+    <>
+      <span className="chat-msg__quote-sender">{sender}</span>
+      <span className="chat-msg__quote-text">{text}</span>
+    </>
+  );
+  return onJump !== undefined ? (
+    <button
+      type="button"
+      className="chat-msg__quote"
+      aria-label={`${strings.timeline.inReplyTo} ${sender}`}
+      onClick={() => onJump(original.protocolId)}
+    >
+      {inner}
+    </button>
+  ) : (
+    <div className="chat-msg__quote" aria-label={`${strings.timeline.inReplyTo} ${sender}`}>
+      {inner}
+    </div>
+  );
 }
 
 function MessageBody({
@@ -82,8 +125,8 @@ function Reactions({ message }: Readonly<{ message: ChatMessage }>) {
 
 /**
  * The message timeline: day separators, a single "new messages" divider, and consecutive same-sender
- * messages collapsed under one header. Text is linkified but never auto-navigated; media / reply
- * quoting land in a later slice.
+ * messages collapsed under one header. Text is linkified but never auto-navigated. A reply shows a
+ * one-line quote of its original when that original is in the loaded window.
  */
 export function MessageTimeline({
   messages,
@@ -93,6 +136,7 @@ export function MessageTimeline({
   onOpenLink,
   resolveMedia,
   onOpenMedia,
+  onJumpToMessage,
   groupWindowMs,
 }: Readonly<MessageTimelineProps>) {
   const s = useT(chatUiDict);
@@ -101,6 +145,7 @@ export function MessageTimeline({
     lastReadId,
     ...(groupWindowMs !== undefined ? { groupWindowMs } : {}),
   });
+  const byProtocolId = new Map(messages.map((m) => [m.protocolId, m]));
 
   return (
     <ol className="chat-timeline">
@@ -137,6 +182,13 @@ export function MessageTimeline({
                   {formatClockTime(message.originTs || message.receivedAt, locale)}
                 </time>
               </span>
+            )}
+            {message.replyToId !== null && byProtocolId.has(message.replyToId) && (
+              <QuotedReply
+                original={byProtocolId.get(message.replyToId)!}
+                strings={s}
+                onJump={onJumpToMessage}
+              />
             )}
             {(message.body !== '' || message.redacted) && (
               <MessageBody message={message} strings={s} onOpenLink={onOpenLink} />
