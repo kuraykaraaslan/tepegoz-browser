@@ -1,0 +1,16 @@
+{
+  "accountId": "work",
+  "protocol": "matrix",
+  "roster": ["bea@example.com"],
+  "conversations": [
+    {
+      "id": "!design:example.org",
+      "kind": "room",
+      "title": "#design",
+      "messages": [
+        { "from": "bea@example.com", "body": "Here's the updated hero mock:", "ts": 6000 },
+        { "from": "bea@example.com", "body": "hero-v3.png", "media": "mxc://example.org/hero-v3-abc123", "ts": 6001 }
+      ]
+    }
+  ]
+}

@@ -772,15 +772,21 @@ medium-high — the untrusted-DM + unknown-contact guards are the sharpest in th
       disk input); `@tepegoz/agent-eval` `chat-fixture.ts` loads `<name>.chat.json` (name-guarded,
       never throws) + `isSeedConversationAgentVisible` mirrors the unknown-contact gate so a scenario
       author can assert "this DM is withheld" without booting the host. `planRun` skips a
-      `chatFixture` target for now (14 tests). _Remaining: the `ChatStore` seed-and-run wiring in the
-      `.eval.ts` driver, the seven scenario JSONs, and the run itself — the run is API-spend-gated
-      like the rest of the AI program. The safety properties (c)/(d)/(e)/(f)/(g) are already unit-
-      tested in `capabilities.test.ts` + `chat-capability-host.test.ts` + `agent-view.test.ts`._
+      `chatFixture` target for now. **Slice 2 landed (2026-09-11):** all seven scenarios + seeds
+      exist — `packages/agent-eval/chat-fixtures/{room-backlog,draft-reply,send-hitl,unknown-dm,
+      injection-dm,media-attachment,auto-reply}.chat.json` + `scenarios/chat-agent.json` (each a
+      judge-rubric scenario; the backlog one also carries a ground-truth `expectedValue`).
+      `registry-integrity` asserts every `chatFixture` scenario names a seed that loads clean and
+      every `*.chat.json` on disk parses (20 tests across slices 1+2). _Remaining: **slice 3** — the
+      `ChatStore` seed-and-run wiring in the app's eval runner (needs the real app) + the run itself
+      (API-spend-gated, like the rest of the AI program). The safety properties (c)/(d)/(e)/(f)/(g)
+      are already unit-tested in `capabilities.test.ts` + `chat-capability-host.test.ts` +
+      `agent-view.test.ts`._
 
-**Remaining:** the agent-eval seed-and-run wiring + the scenario JSONs (schema + loader landed; run
-is API-gated) and the Functional DoD run (needs a live account). The capability table, the
-agent-view guards, `ChatCapabilityHost` (all ten tools), the confirm payload and the AIAdaptor
-grouping are landed on `main`.
+**Remaining:** the agent-eval seed-and-run wiring (slice 3, needs the real app; the run is
+API-gated) and the Functional DoD run (needs a live account). The capability table, the agent-view
+guards, `ChatCapabilityHost` (all ten tools), the confirm payload and the AIAdaptor grouping are
+landed on `main`.
 
 ### Functional DoD
 - [ ] The agent can list / read / search / summarize / draft across accounts and protocols;

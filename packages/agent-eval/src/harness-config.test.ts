@@ -23,12 +23,14 @@ afterEach(() => {
 
 describe('paths', () => {
   it('launches the app DIRECTORY, not the built entry file (getAppPath must stay apps/desktop)', async () => {
-    const { appDir, appEntry, repoRoot, fixturesDir, scenariosDir, labelsPath } = await load({});
+    const { appDir, appEntry, repoRoot, fixturesDir, scenariosDir, chatFixturesDir, labelsPath } =
+      await load({});
     expect(appDir).toBe(join(repoRoot, 'apps', 'desktop'));
     expect(appEntry.startsWith(appDir)).toBe(true);
     expect(appDir.startsWith(repoRoot)).toBe(true);
     expect(fixturesDir.startsWith(repoRoot)).toBe(true);
     expect(scenariosDir).toContain('scenarios');
+    expect(chatFixturesDir).toContain('chat-fixtures');
     expect(labelsPath).toContain('human-labels.json');
   });
 });

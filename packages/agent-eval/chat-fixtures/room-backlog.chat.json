@@ -1,0 +1,20 @@
+{
+  "accountId": "work",
+  "protocol": "xmpp",
+  "roster": ["bea@example.com", "cy@example.com", "dan@example.com"],
+  "conversations": [
+    {
+      "id": "deploys@conf.example.com",
+      "kind": "room",
+      "title": "#deploys",
+      "messages": [
+        { "from": "bea@example.com", "body": "The v4.2 release is cut. Planning to deploy Friday at 15:00 UTC.", "ts": 1000 },
+        { "from": "cy@example.com", "body": "Works for me. Anyone worried about the migration on chat_search?", "ts": 1001 },
+        { "from": "bea@example.com", "body": "Migration 23 is idempotent and backfills in a transaction. Tested on a copy of prod.", "ts": 1002 },
+        { "from": "dan@example.com", "body": "I'll be on call. Rollback is the previous tag, one command.", "ts": 1003 },
+        { "from": "cy@example.com", "body": "Freeze starts Thursday 12:00 UTC then. No merges to main after that.", "ts": 1004 },
+        { "from": "bea@example.com", "body": "Confirmed. I'll send the go/no-go in this room at 14:30 Friday.", "ts": 1005 }
+      ]
+    }
+  ]
+}

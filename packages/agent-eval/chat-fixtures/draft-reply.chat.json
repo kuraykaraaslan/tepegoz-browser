@@ -1,0 +1,17 @@
+{
+  "accountId": "work",
+  "protocol": "xmpp",
+  "roster": ["bob@example.com"],
+  "conversations": [
+    {
+      "id": "bob@example.com",
+      "kind": "dm",
+      "title": "Bob",
+      "messages": [
+        { "from": "bob@example.com", "body": "Can you send me the staging URL for the new dashboard? Heading into a review in 10.", "ts": 2000 },
+        { "from": "me", "body": "One sec, digging it up.", "ts": 2001 },
+        { "from": "bob@example.com", "body": "No rush — just before 3pm ideally.", "ts": 2002 }
+      ]
+    }
+  ]
+}

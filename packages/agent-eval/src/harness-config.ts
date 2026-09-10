@@ -13,6 +13,8 @@ export const here = dirname(fileURLToPath(import.meta.url));
 export const repoRoot = resolve(here, '../../..');
 export const fixturesDir = join(repoRoot, 'test-fixtures', 'sites');
 export const scenariosDir = join(here, '..', 'scenarios');
+/** Seeds for `chatFixture` scenarios (X-chat.6): `<name>.chat.json` per {@link ChatEvalFixtureSchema}. */
+export const chatFixturesDir = join(here, '..', 'chat-fixtures');
 export const labelsPath = join(here, '..', 'calibration', 'human-labels.json');
 // Launch the app DIRECTORY (Electron resolves the entry via apps/desktop/package.json "main"), NOT the
 // built entry file directly. Passing out/main/index.js makes Electron set app.getAppPath() to out/main/,

@@ -1,0 +1,15 @@
+{
+  "accountId": "work",
+  "protocol": "xmpp",
+  "roster": ["team@example.com"],
+  "conversations": [
+    {
+      "id": "standup@conf.example.com",
+      "kind": "room",
+      "title": "#standup",
+      "messages": [
+        { "from": "team@example.com", "body": "Standup in 5 in here. Drop your update if you can't make it.", "ts": 3000 }
+      ]
+    }
+  ]
+}

@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { existsSync } from 'node:fs';
-import { join } from 'node:path';
-import { fixturesDir, scenariosDir } from './harness-config';
+import { existsSync, readdirSync } from 'node:fs';
+import { basename, join } from 'node:path';
+import { chatFixturesDir, fixturesDir, scenariosDir } from './harness-config';
+import { loadChatFixture } from './chat-fixture';
 import { loadScenarios } from './scenario-registry';
 
 /**
@@ -33,6 +34,30 @@ describe('the shipped scenario registry', () => {
       .map((s) => ({ id: s.id, fixture: (s.target as { fixture: string }).fixture }))
       .filter(({ fixture }) => !existsSync(join(fixturesDir, fixture, 'index.html')));
     expect(missing).toEqual([]);
+  });
+
+  it('every chatFixture scenario names a seed that loads clean (X-chat.6)', () => {
+    const bad = scenarios
+      .filter((s) => 'chatFixture' in s.target)
+      .map((s) => ({ id: s.id, name: (s.target as { chatFixture: string }).chatFixture }))
+      .map(({ id, name }) => ({ id, name, error: loadChatFixture(chatFixturesDir, name).error }))
+      .filter(({ error }) => error !== null);
+    expect(bad).toEqual([]);
+  });
+
+  it('every *.chat.json seed on disk parses (no orphan / malformed seed)', () => {
+    let files: string[] = [];
+    try {
+      files = readdirSync(chatFixturesDir).filter((f) => f.endsWith('.chat.json'));
+    } catch {
+      files = [];
+    }
+    expect(files.length).toBeGreaterThan(0);
+    const broken = files
+      .map((f) => basename(f, '.chat.json'))
+      .map((name) => ({ name, error: loadChatFixture(chatFixturesDir, name).error }))
+      .filter(({ error }) => error !== null);
+    expect(broken).toEqual([]);
   });
 
   it('asserts something checkable per scenario (no scenario that can never fail)', () => {
