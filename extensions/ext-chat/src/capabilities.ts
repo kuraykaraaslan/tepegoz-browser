@@ -119,6 +119,16 @@ export function chatCapabilities(): ExtensionCapabilitySet<ChatCapabilityHost> {
       dangerClass: 'state_changing',
       requiresIdempotencyKey: true,
       inputSchema: CreateMessageArgs,
+      confirmSummary: async (args, host) => {
+        const item = await Promise.resolve(host.getItem(args.accountId, args.conversationId)).catch(
+          () => null,
+        );
+        const target =
+          item !== null
+            ? `${item.kind === 'room' ? 'room' : 'chat'} “${item.title}” · account ${args.accountId}`
+            : `conversation ${args.conversationId} · account ${args.accountId}`;
+        return `Send this message to ${target}:\n\n${args.body}`;
+      },
       handler: (args, host) =>
         host.createMessage({
           accountId: args.accountId,

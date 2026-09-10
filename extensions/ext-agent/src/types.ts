@@ -96,6 +96,12 @@ export interface AgentApprovalRequest {
   biometric: boolean;
   argsPreview: string;
   /**
+   * A tool-supplied plain-language description of this exact call (target + effect) — e.g. "Send this
+   * message to chat “Bea” … <body>" for `chat_create_message`. Shown in place of {@link argsPreview}
+   * when present. Display only; the decision was already made in main.
+   */
+  summary?: string;
+  /**
    * The risk class main derived for THIS call from the tool AND its arguments — so the prompt can say
    * what kind of act is being asked for ("this would enter a password") instead of a flat "a tool wants
    * to change state", which is what trains a user to click through. Display only: the decision was

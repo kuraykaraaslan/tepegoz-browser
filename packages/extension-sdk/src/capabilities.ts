@@ -46,6 +46,13 @@ export interface ExtensionCapabilityDef<A = unknown, H = unknown> {
   /** Executes the capability; receives validated args + the injected host. May be sync or async
    *  (the gateway awaits the result). */
   handler: (args: A, host: H) => unknown;
+  /**
+   * A human-readable one-paragraph description of THIS call for the HITL confirm surface — e.g. the
+   * target conversation + the message body a `create_message` would send, instead of a flat JSON
+   * args preview. Receives validated args + the injected host (so it can resolve an opaque id to a
+   * name); may be async. The gateway awaits it and puts the result on `ConfirmRequest.summary`.
+   */
+  confirmSummary?: (args: A, host: H) => string | Promise<string>;
 }
 
 /**
@@ -57,6 +64,8 @@ export interface ExtensionCapability<H = unknown> {
   descriptor: ToolDescriptor;
   inputSchema: z.ZodType<unknown>;
   handler: (args: unknown, host: H) => unknown;
+  /** {@link ExtensionCapabilityDef.confirmSummary}, `A` erased at this boundary. */
+  confirmSummary?: (args: unknown, host: H) => string | Promise<string>;
 }
 
 /** The capability set contributed by one extension (its id + its normalized capabilities). */
@@ -90,6 +99,9 @@ export function capability<A, H>(def: ExtensionCapabilityDef<A, H>): ExtensionCa
     inputSchema: def.inputSchema,
     // The gateway has already validated `args` against `inputSchema` by the time this runs.
     handler: (args: unknown, host: H) => def.handler(args as A, host),
+    ...(def.confirmSummary !== undefined
+      ? { confirmSummary: (args: unknown, host: H) => def.confirmSummary!(args as A, host) }
+      : {}),
   };
 }
 

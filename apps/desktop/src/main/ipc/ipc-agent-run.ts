@@ -344,6 +344,9 @@ export function registerAgentRunIpc(): void {
         reason: req.policy.reason,
         biometric: req.policy.biometric,
         argsPreview: safeArgsPreview(req.args),
+        // A tool-supplied plain-language description of the exact call (target + effect), shown in
+        // place of the raw args preview when the tool provides one.
+        ...(req.summary !== undefined ? { summary: req.summary } : {}),
         // Display only — main already decided. Lets the modal name the act instead of showing a flat
         // "a tool wants to change state", which is what trains a user to click through.
         ...(req.risk !== undefined ? { riskTier: req.risk.tier } : {}),

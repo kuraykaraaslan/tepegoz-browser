@@ -115,3 +115,30 @@ describe('chatCapabilities — handlers delegate to the host', () => {
     expect(mocks.listItems).toHaveBeenCalledWith('work');
   });
 });
+
+describe('chat_create_message — confirmSummary', () => {
+  const summary = byId.get('chat_create_message')!.confirmSummary!;
+
+  it('names the target conversation + account and shows the body', async () => {
+    const { mocks, host } = fakeHost();
+    mocks.getItem.mockResolvedValueOnce({
+      conversationId: 'c1',
+      accountId: 'work',
+      kind: 'room',
+      title: 'Weekly Sync',
+      unread: 0,
+      lastMessagePreview: null,
+      isKnownContact: true,
+      topic: null,
+      participants: [],
+    } as unknown as null);
+    const text = await summary({ accountId: 'work', conversationId: 'c1', body: 'running late' }, host);
+    expect(text).toBe('Send this message to room “Weekly Sync” · account work:\n\nrunning late');
+  });
+
+  it('falls back to the conversation id when the item cannot be resolved', async () => {
+    const { host } = fakeHost();
+    const text = await summary({ accountId: 'work', conversationId: 'c9', body: 'hi' }, host);
+    expect(text).toBe('Send this message to conversation c9 · account work:\n\nhi');
+  });
+});

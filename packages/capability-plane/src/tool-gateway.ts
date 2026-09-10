@@ -167,6 +167,16 @@ export default class ToolGateway {
     if (policy.decision === 'ask') {
       const confirmHandler =
         scoped !== undefined ? scoped.confirmHandler : ToolGateway.confirmHandler;
+      // Tool-supplied plain-language description of this exact call. A throw / rejection here must
+      // never block the confirm — fall back to the generic args preview.
+      let summary: string | undefined;
+      if (tool.confirmSummary !== undefined) {
+        try {
+          summary = await tool.confirmSummary(parsed.data);
+        } catch {
+          summary = undefined;
+        }
+      }
       const approved =
         confirmHandler !== null &&
         (await confirmHandler({
@@ -174,6 +184,7 @@ export default class ToolGateway {
           policy,
           args: parsed.data,
           risk,
+          ...(summary !== undefined ? { summary } : {}),
           ...(ctx.targetUrl !== undefined ? { targetUrl: ctx.targetUrl } : {}),
         }));
       // A biometric verifier, when installed, is binding — its refusal overrides a clicked "yes",

@@ -176,9 +176,15 @@ export function PanelModals({
               </p>
             </div>
           )}
-          <pre className="mt-2 max-h-24 overflow-auto rounded bg-surface-base p-2 text-xs text-text-secondary">
-            {approval.argsPreview}
-          </pre>
+          {approval.summary !== undefined ? (
+            <p className="mt-2 max-h-40 overflow-auto whitespace-pre-wrap rounded bg-surface-base p-2 text-xs text-text-primary">
+              {approval.summary}
+            </p>
+          ) : (
+            <pre className="mt-2 max-h-24 overflow-auto rounded bg-surface-base p-2 text-xs text-text-secondary">
+              {approval.argsPreview}
+            </pre>
+          )}
           {approval.biometric && <p className="mt-2 text-xs text-amber-600">{a.biometricNote}</p>}
           {/* Commerce: an informational caution, not a blocker — the legal position is contested, and
               telling the user once is honest where refusing outright would be us deciding for them. */}

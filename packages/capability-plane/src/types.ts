@@ -17,6 +17,12 @@ export interface RegisteredTool<T = unknown> {
   inputSchema: InputValidator<T>;
   /** Executes the tool. May be sync or async; the gateway awaits the result. */
   handler: (args: T) => unknown;
+  /**
+   * A human-readable description of THIS call for the HITL confirm surface (the target + the effect,
+   * instead of a raw args preview). The gateway awaits it and puts the result on
+   * {@link ConfirmRequest.summary}. A throw here is swallowed — the confirm still renders.
+   */
+  confirmSummary?: (args: T) => string | Promise<string>;
 }
 
 export interface InvokeContext {
@@ -46,6 +52,11 @@ export interface ConfirmRequest {
    * covering `credential`. Optional so an older confirm handler keeps compiling.
    */
   risk?: RiskClassification | undefined;
+  /**
+   * A tool-supplied human-readable description of this exact call ({@link RegisteredTool.confirmSummary}),
+   * for the confirm surface to show instead of a flat args preview. Absent when the tool provides none.
+   */
+  summary?: string | undefined;
 }
 
 /** Audit record for every gated invocation (fed to the Event Journal later). */

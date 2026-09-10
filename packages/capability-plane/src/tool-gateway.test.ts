@@ -38,6 +38,7 @@ function register(opts: {
   requiresIdempotencyKey?: boolean;
   validator?: InputValidator<unknown>;
   handler?: (args: unknown) => unknown;
+  confirmSummary?: (args: unknown) => string | Promise<string>;
 }): void {
   CapabilityRegistry.register({
     descriptor: {
@@ -50,6 +51,7 @@ function register(opts: {
     },
     inputSchema: opts.validator ?? passAny,
     handler: opts.handler ?? (() => 'ok'),
+    ...(opts.confirmSummary !== undefined ? { confirmSummary: opts.confirmSummary } : {}),
   });
 }
 
@@ -84,6 +86,32 @@ describe('ToolGateway.invoke', () => {
     expect(await ToolGateway.invoke('form_update_field', {})).toBe('ok');
     ToolGateway.setConfirmHandler(() => Promise.resolve(false));
     expect(asError(await ToolGateway.invoke('form_update_field', {})).code).toBe('FORBIDDEN');
+  });
+
+  it("passes a tool's confirmSummary to the confirm handler, swallowing a throw", async () => {
+    const seen: (string | undefined)[] = [];
+    ToolGateway.setConfirmHandler((req) => {
+      seen.push(req.summary);
+      return Promise.resolve(true);
+    });
+
+    register({
+      id: 'chat_create_message',
+      dangerClass: 'state_changing',
+      confirmSummary: (args) => `send «${(args as { body: string }).body}»`,
+    });
+    await ToolGateway.invoke('chat_create_message', { body: 'hi' });
+    expect(seen).toEqual(['send «hi»']);
+
+    register({
+      id: 'form_update_field',
+      dangerClass: 'state_changing',
+      confirmSummary: () => {
+        throw new Error('summary blew up');
+      },
+    });
+    await ToolGateway.invoke('form_update_field', {});
+    expect(seen).toEqual(['send «hi»', undefined]); // throw → no summary, confirm still ran
   });
 
   it('denies a destructive action on a sensitive site (lockout, no prompt)', async () => {
