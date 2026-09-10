@@ -1,6 +1,7 @@
 import { useT } from '@tepegoz/i18n/react';
 import { occupantCount, type RoomNotifyLevel, type RoomView } from '@tepegoz/chat-core';
 import { chatUiDict } from './i18n';
+import { NotEncryptedBadge } from './NotEncryptedBadge';
 
 export interface RoomHeaderProps {
   /** The room's display name / address. */
@@ -14,6 +15,8 @@ export interface RoomHeaderProps {
   /** The room's notification level; the picker is shown only when `onSetNotifyLevel` is also given. */
   notifyLevel?: RoomNotifyLevel;
   onSetNotifyLevel?: (level: RoomNotifyLevel) => void;
+  /** The room's protocol offers no end-to-end encryption (IRC) — show the plaintext marker. */
+  notEncrypted?: boolean;
 }
 
 /** The conversation header for a MUC room: name, topic, member count, and a members toggle. */
@@ -25,6 +28,7 @@ export function RoomHeader({
   onToggleMembers,
   notifyLevel = 'all',
   onSetNotifyLevel,
+  notEncrypted = false,
 }: Readonly<RoomHeaderProps>) {
   const s = useT(chatUiDict);
   const topic = (room?.subject ?? '').trim() || topicFallback.trim();
@@ -35,6 +39,7 @@ export function RoomHeader({
       <div className="chat-room-header__id">
         <h2>{name}</h2>
         <p className="chat-room-header__topic">{topic !== '' ? topic : s.room.noTopicHeader}</p>
+        {notEncrypted && <NotEncryptedBadge />}
       </div>
       <div className="chat-room-header__actions">
         {onSetNotifyLevel !== undefined && (

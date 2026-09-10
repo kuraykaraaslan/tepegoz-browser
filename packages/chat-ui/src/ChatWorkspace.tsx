@@ -7,6 +7,7 @@ import { chatUiDict } from './i18n';
 import { Composer } from './Composer';
 import { ConversationList } from './ConversationList';
 import { MessageTimeline } from './MessageTimeline';
+import { NotEncryptedBadge } from './NotEncryptedBadge';
 import { RoomBrowser } from './RoomBrowser';
 import { RoomHeader } from './RoomHeader';
 import { RoomMemberList } from './RoomMemberList';
@@ -83,6 +84,13 @@ export function ChatWorkspace({
     : [];
   const typing = selected ? chat.client.typing[selected.id] ?? [] : [];
   const selectedRoom = selected ? chat.client.rooms[selected.id] : undefined;
+  // IRC has no end-to-end encryption at any layer — surface that on every one of its conversations.
+  // Derived from the account protocol rather than an adapter-caps round-trip: the fact is static and
+  // total, and the presentational leaf takes no IPC-contract dependency to learn it.
+  const selectedProtocol = selected
+    ? chat.accounts.find((a) => a.id === selected.accountId)?.protocol
+    : undefined;
+  const notEncrypted = selectedProtocol === 'irc';
 
   const noAccounts = !chat.loading && chat.accounts.length === 0;
 
@@ -193,6 +201,7 @@ export function ChatWorkspace({
                   membersOpen={membersOpen}
                   onToggleMembers={() => setMembersOpen((v) => !v)}
                   notifyLevel={selected.notifyLevel}
+                  notEncrypted={notEncrypted}
                   {...(chat.setRoomNotifyLevel !== null
                     ? {
                         onSetNotifyLevel: (level: RoomNotifyLevel) => {
@@ -204,6 +213,7 @@ export function ChatWorkspace({
               ) : (
                 <header className="chat-workspace__conv-head">
                   <h2>{conversationTitle(selected)}</h2>
+                  {notEncrypted && <NotEncryptedBadge />}
                   {typing.length > 0 && (
                     <span className="chat-workspace__typing">{s.workspace.typing}</span>
                   )}

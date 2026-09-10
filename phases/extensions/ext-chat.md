@@ -540,9 +540,17 @@ to the ordered symbol string, `IrcSession.prefixSymbols` (default `@+`) is set f
 `namesReplyToEvents` fans a `353` line out to one `room-membership` (`joined: true`) per occupant with
 the leading status symbol peeled and mapped to `role` (`~&@%` → moderator, else participant); `366` is
 ignored and does not stall the stream. The recorded-trace suite now asserts the fanned NAMES batch. 9
-new tests. Still open on the deliverable: flood-protection send queue, `TOPIC` surfacing (needs a new
-`ChatEvent` variant), SASL `EXTERNAL` (needs a richer `sasl` config shape). Next: runtime DoD (local
-ergo). ·
+new tests. Then the **anti-flood send queue** — client-initiated lines (PRIVMSG / JOIN / PART / NICK /
+AWAY / CHATHISTORY) go through an ircd-style penalty pacer on `IrcSession` (a short burst back-to-back,
+then `FLOOD_PENALTY_MS` spacing) so a burst does not trip the server's excess-flood kill;
+`write()` stays immediate for registration / PONG / QUIT, `enqueue()` is the paced path, disconnect
+drops the pending queue. Then the **"not encrypted" UI marker** — IRC's caps already carry
+`e2ee: false`; `@tepegoz/chat-ui` now renders a `<NotEncryptedBadge>` (self-localized `notEncrypted`
+/ `ircPlaintext`, en + tr) in both the DM and room conversation headers for any account whose protocol
+is `irc`, derived from the account protocol so the presentational leaf takes no adapter-caps IPC
+round-trip. **The `Caps` deliverable is now closed.** Still open on the big `IRC adapter` box:
+`TOPIC` surfacing (needs a new `ChatEvent` variant), SASL `EXTERNAL` (needs a richer `sasl` config
+shape). Next: runtime DoD (local ergo). ·
 **Depends on:** X-chat.1 (contract) + X-chat.2/.3 (UI) · **Branch:** `main` · **Risk:** low-medium.
 
 ### Deliverables
@@ -552,9 +560,10 @@ ergo). ·
       `away-notify`, `extended-join`), channel join/part/topic/names, PRIVMSG/NOTICE, CTCP
       (`ACTION`), `chathistory` backfill, NickServ interaction, auto-rejoin on reconnect, ISUPPORT
       parsing (`CHANTYPES`, `PREFIX`, `CASEMAPPING`), flood-protection send queue.
-- [ ] **Caps** — `e2ee: false` (protocol has none), `edits: false`, `reactions: false`,
-      `receipts: false` unless `message-tags` + a draft spec is present. The UI shows "not
-      encrypted" for IRC conversations.
+- [x] **Caps** — `e2ee: false` (protocol has none), `edits: false`, `reactions: false`,
+      `receipts: false` unless `message-tags` + a draft spec is present. `IRC_CAPS` sets all four
+      off; `@tepegoz/chat-ui`'s `<NotEncryptedBadge>` marks every IRC conversation (DM + room
+      headers) "Not encrypted" / "Şifresiz", with the plaintext explanation as its tooltip.
 - [x] Recorded-trace fixture suite — `irc/recorded-trace.test.ts` plays a full Libera-style session
       (`CAP LS 302` multi-line → SASL PLAIN → `001`–`005` ISUPPORT split across lines → MOTD → JOIN +
       `353`/`366` NAMES, channel PRIVMSG, CTCP ACTION, NOTICE, DM, KICK, QUIT) through `IrcAdapter`

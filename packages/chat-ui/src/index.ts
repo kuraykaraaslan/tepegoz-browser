@@ -33,6 +33,7 @@ export {
 } from './mention-autocomplete';
 export { RoomMemberList, type RoomMemberListProps } from './RoomMemberList';
 export { RoomHeader, type RoomHeaderProps } from './RoomHeader';
+export { NotEncryptedBadge } from './NotEncryptedBadge';
 export {
   filterRoomListings,
   sortRoomListings,

@@ -246,6 +246,39 @@ describe('ChatWorkspace', () => {
     await waitFor(() => expect(joinChatRoom).toHaveBeenCalledWith('work', 'general@conf.example'));
   });
 
+  it('marks IRC conversations as not encrypted, in both the DM and room headers', async () => {
+    const { port } = makePort({
+      listChatAccounts: () =>
+        Promise.resolve({
+          accounts: [
+            { id: 'work', label: 'Libera', displayName: '', protocol: 'irc', color: null, order: 0 },
+          ],
+          states: { work: 'online' },
+        }),
+      listChatConversations: () =>
+        Promise.resolve([
+          conv(),
+          conv({ id: '#tepegoz', kind: 'room', address: '#tepegoz', name: '#tepegoz' }),
+        ]),
+    });
+    wrap(<ChatWorkspace port={port} />);
+
+    fireEvent.click(await screen.findByRole('button', { name: /Bob/ }));
+    await screen.findByText('hi there');
+    expect(screen.getByText('Not encrypted')).toBeDefined();
+
+    fireEvent.click(screen.getByRole('button', { name: /#tepegoz/ }));
+    await waitFor(() => expect(screen.getByText('Not encrypted')).toBeDefined());
+  });
+
+  it('does not mark XMPP conversations as not encrypted', async () => {
+    const { port } = makePort();
+    wrap(<ChatWorkspace port={port} />);
+    fireEvent.click(await screen.findByRole('button', { name: /Bob/ }));
+    await screen.findByText('hi there');
+    expect(screen.queryByText('Not encrypted')).toBeNull();
+  });
+
   it('reflects a pushed typing change in the conversation header', async () => {
     const { port, emit } = makePort();
     wrap(<ChatWorkspace port={port} />);

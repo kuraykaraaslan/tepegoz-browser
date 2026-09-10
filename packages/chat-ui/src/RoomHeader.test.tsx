@@ -67,6 +67,17 @@ describe('RoomHeader', () => {
     expect(onSetNotifyLevel).toHaveBeenCalledWith('none');
   });
 
+  it('shows the "not encrypted" marker only when the room protocol has no E2EE', () => {
+    const { rerender } = wrap(<RoomHeader name="r" membersOpen onToggleMembers={vi.fn()} />);
+    expect(screen.queryByText('Not encrypted')).toBeNull();
+    rerender(
+      <I18nProvider locale="en">
+        <RoomHeader name="r" membersOpen onToggleMembers={vi.fn()} notEncrypted />
+      </I18nProvider>,
+    );
+    expect(screen.getByText('Not encrypted')).toBeDefined();
+  });
+
   it('falls back to the stored topic, then to a placeholder', () => {
     const { rerender } = wrap(
       <RoomHeader name="r" topicFallback="stored topic" membersOpen onToggleMembers={vi.fn()} />,
