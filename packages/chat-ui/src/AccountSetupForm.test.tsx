@@ -88,6 +88,91 @@ describe('AccountSetupForm', () => {
         <AccountSetupForm onAdd={vi.fn()} />
       </I18nProvider>,
     );
-    expect(screen.getByRole('heading', { name: 'XMPP hesabı ekle' })).toBeDefined();
+    expect(screen.getByRole('heading', { name: 'Hesap ekle' })).toBeDefined();
+  });
+
+  it('defaults to the XMPP protocol', () => {
+    wrap(<AccountSetupForm onAdd={vi.fn()} />);
+    // The XMPP-only JID field is present by default; IRC's Nickname / Matrix's User ID are not.
+    expect(screen.getByLabelText('Jabber ID (JID)')).toBeDefined();
+    expect(screen.queryByLabelText('Nickname')).toBeNull();
+    expect(screen.queryByLabelText('User ID')).toBeNull();
+  });
+
+  describe('IRC', () => {
+    function switchToIrc(): void {
+      fireEvent.change(screen.getByLabelText('Protocol'), { target: { value: 'irc' } });
+    }
+
+    it('blocks submit and shows IRC field errors, port required unlike XMPP', () => {
+      const onAdd = vi.fn();
+      wrap(<AccountSetupForm onAdd={onAdd} />);
+      switchToIrc();
+      fireEvent.click(screen.getByRole('button', { name: 'Add account' }));
+      expect(onAdd).not.toHaveBeenCalled();
+      expect(screen.getByText('Give the account a name.')).toBeDefined();
+      expect(screen.getByText('Enter a nickname with no spaces.')).toBeDefined();
+      expect(screen.getByText('Enter the server address.')).toBeDefined();
+      expect(screen.getByText('Enter the port.')).toBeDefined();
+    });
+
+    it('submits a valid IRC account with no password (no SASL)', () => {
+      const onAdd = vi.fn<OnAdd>();
+      wrap(<AccountSetupForm onAdd={onAdd} />);
+      switchToIrc();
+      fireEvent.change(screen.getByLabelText('Account name'), { target: { value: 'Libera' } });
+      fireEvent.change(screen.getByLabelText('Nickname'), { target: { value: 'ada' } });
+      fireEvent.change(screen.getByLabelText('Server host'), { target: { value: 'irc.libera.chat' } });
+      fireEvent.change(screen.getByLabelText('Port'), { target: { value: '6697' } });
+      fireEvent.click(screen.getByRole('button', { name: 'Add account' }));
+      expect(onAdd).toHaveBeenCalledTimes(1);
+      const [arg] = onAdd.mock.calls.at(0) ?? [];
+      expect(arg).toMatchObject({
+        account: {
+          id: 'libera',
+          server: { protocol: 'irc', server: 'irc.libera.chat', port: 6697, tls: true, nick: 'ada', sasl: false },
+        },
+        secret: '',
+      });
+    });
+  });
+
+  describe('Matrix', () => {
+    function switchToMatrix(): void {
+      fireEvent.change(screen.getByLabelText('Protocol'), { target: { value: 'matrix' } });
+    }
+
+    it('blocks submit and shows Matrix field errors', () => {
+      const onAdd = vi.fn();
+      wrap(<AccountSetupForm onAdd={onAdd} />);
+      switchToMatrix();
+      fireEvent.click(screen.getByRole('button', { name: 'Add account' }));
+      expect(onAdd).not.toHaveBeenCalled();
+      expect(screen.getByText('Enter the homeserver URL.')).toBeDefined();
+      expect(screen.getByText('Enter your Matrix user ID.')).toBeDefined();
+      expect(screen.getByText('Enter your password.')).toBeDefined();
+    });
+
+    it('submits a valid Matrix account', () => {
+      const onAdd = vi.fn<OnAdd>();
+      wrap(<AccountSetupForm onAdd={onAdd} />);
+      switchToMatrix();
+      fireEvent.change(screen.getByLabelText('Account name'), { target: { value: 'Matrix' } });
+      fireEvent.change(screen.getByLabelText('Homeserver URL'), {
+        target: { value: 'https://matrix.example.org' },
+      });
+      fireEvent.change(screen.getByLabelText('User ID'), { target: { value: '@ada:example.org' } });
+      fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'sekret' } });
+      fireEvent.click(screen.getByRole('button', { name: 'Add account' }));
+      expect(onAdd).toHaveBeenCalledTimes(1);
+      const [arg] = onAdd.mock.calls.at(0) ?? [];
+      expect(arg).toMatchObject({
+        account: {
+          id: 'matrix',
+          server: { protocol: 'matrix', homeserverUrl: 'https://matrix.example.org', userId: '@ada:example.org' },
+        },
+        secret: 'sekret',
+      });
+    });
   });
 });
