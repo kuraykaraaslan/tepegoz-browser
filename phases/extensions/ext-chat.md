@@ -769,8 +769,18 @@ state summary, a *change* now surfaces the same way IRC's `TOPIC` and XMPP's `<s
 DoD-template checklist.
 
 ### Functional DoD
-- [ ] A Matrix account adds, syncs rooms + spaces, sends/receives text + media + reactions + edits in
-      **unencrypted** rooms, survives a sync drop and a token invalidation.
+- [~] A Matrix account adds, syncs rooms + spaces, sends/receives text + media + reactions + edits in
+      **unencrypted** rooms, survives a sync drop and a token invalidation. **Connect + room message
+      exchange + history backfill verified live (2026-09-12)** against a real, unprivileged local
+      Synapse (no root, no Docker — `matrix-synapse` installs from prebuilt PyPI wheels into a plain
+      `python3 -m venv`, no Rust/C toolchain needed; the generated config already binds a plaintext
+      HTTP listener with SQLite storage, exactly right for a throwaway test server): two accounts
+      connect, exchange a room message, and a `/messages` backfill returns it after a reconnect. No
+      adapter bug found (unlike the IRC live run) — a useful negative result. Kept as a permanent
+      opt-in regression check: `packages/chat-transport-node/src/matrix-live-synapse.manual.test.ts`,
+      gated behind `TEPEGOZ_LIVE_MATRIX=1`. **Still open:** spaces, media, reactions, edits, sync-drop
+      recovery, token invalidation, and the desktop app / Playwright e2e (X-chat.10) — this exercised
+      only the core messaging + history path directly through the adapter.
 - [ ] Sub-phase DoD template ✔.
 
 ---
