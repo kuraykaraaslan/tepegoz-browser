@@ -683,8 +683,25 @@ emit the same `room-topic` event — follow-up wiring under X-chat.3 / .5. ·
       and asserts exactly the surfaced message / membership events, numerics ignored.
 
 ### Functional DoD
-- [ ] Connect to a local IRC server (ergo), join a channel, send/receive, backfill via
+- [~] Connect to a local IRC server (ergo), join a channel, send/receive, backfill via
       `chathistory`, reconnect + auto-rejoin; the UI correctly shows IRC as unencrypted.
+      **Protocol half verified live (2026-09-12)** — a real `ergo` instance run locally (no Docker:
+      the static release binary, under WSL, reachable from the Windows host over the WSL2
+      localhost-forwarding path) and driven through the *real* `IrcAdapter` +
+      `@tepegoz/chat-transport-node` (not a fixture): connect, join, send/receive between two live
+      sessions, disconnect + reconnect + rejoin, and a chathistory backfill that actually returns
+      the pre-reconnect message. This is what found and fixed a real bug (see X-chat.10's fuzz/
+      regression note below and the commit `fix(chat-adapters): IRC never actually requested the
+      chathistory cap`) — `IRC_WANTED_CAPS` never listed `chathistory`/`draft/chathistory`, so a real
+      ircd's CAP REQ never asked for it and `history()` silently returned nothing forever; every unit
+      test missed it because the fake test server ACKs whatever the test script scripts it to,
+      independent of what the client's `CAP REQ` line actually contained. Kept as a permanent
+      opt-in regression check: `packages/chat-transport-node/src/irc-live-ergo.manual.test.ts`,
+      gated behind `TEPEGOZ_LIVE_IRC=1` so it can't break anyone's default `pnpm test` / CI run
+      without a live server running. **Still open:** the same exercise through the actual desktop
+      app (`ChatAccountRunner`'s own reconnect/auto-rejoin path, not just the raw adapter) and eyes
+      on the real `<NotEncryptedBadge>` rendering in a running Electron window — those need the
+      Playwright `_electron` e2e this bullet originally asked for (X-chat.10).
 - [ ] Sub-phase DoD template ✔.
 
 ---
