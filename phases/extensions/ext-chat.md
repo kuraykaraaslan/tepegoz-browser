@@ -418,12 +418,11 @@ X-chat.1 · **Branch:** `main` · **Risk:** low.
 ### Deliverables
 - [x] **`@tepegoz/chat-ui`** — conversation list (unread/mention badges, account grouping + colour),
       roster panel (presence, groups, add/remove contact, `from`-subscription pending marker), account
-      setup flow (XMPP fields; _adapter-caps branching lands with IRC/Matrix_ — **still true as of
-      2026-09-12**: X-chat.4 and X-chat.5 both shipped "code-complete" without ever adding it, so
-      `AccountSetupForm` is still XMPP-only — no `validateIrcAccountForm` / `validateMatrixAccountForm`
-      exists anywhere in `chat-ui`. A person cannot add an IRC or Matrix account through the app
-      today, full stop, despite both adapters working end-to-end — found while writing X-chat.10's
-      live e2e, which had to fall back to the XMPP-only path for exactly this reason). The **message timeline
+      setup flow (XMPP fields **+ IRC + Matrix, closed 2026-09-12** — `AccountFormState` became a
+      protocol-tagged superset, `validateIrcAccountForm` / `validateMatrixAccountForm` joined
+      `validateXmppAccountForm`, `<AccountSetupForm>` grew a Protocol selector switching the rendered
+      field set. Found and closed while writing X-chat.10's live e2e, which had needed the XMPP-only
+      fallback for exactly this gap). The **message timeline
       is windowed** (`buildTimeline` `maxMessages`, default `TIMELINE_WINDOW` = 200) — a very long room
       keeps only the most-recent N in the DOM behind one "N earlier messages not shown" row, with the
       day separators and the "new messages" divider recomputed against the visible slice. _Conversation
@@ -729,10 +728,19 @@ emit the same `room-topic` event — follow-up wiring under X-chat.3 / .5. ·
       independent of what the client's `CAP REQ` line actually contained. Kept as a permanent
       opt-in regression check: `packages/chat-transport-node/src/irc-live-ergo.manual.test.ts`,
       gated behind `TEPEGOZ_LIVE_IRC=1` so it can't break anyone's default `pnpm test` / CI run
-      without a live server running. **Still open:** the same exercise through the actual desktop
-      app (`ChatAccountRunner`'s own reconnect/auto-rejoin path, not just the raw adapter) and eyes
-      on the real `<NotEncryptedBadge>` rendering in a running Electron window — those need the
-      Playwright `_electron` e2e this bullet originally asked for (X-chat.10).
+      without a live server running. **The desktop-app half closed too (2026-09-12)** —
+      `e2e/chat-live-irc.spec.ts` (X-chat.10) drives the real app: real account-setup form
+      (needed IRC fields added to `AccountSetupForm` first, see X-chat.2), real room-browser
+      join-by-address, real composer. It found **two more real bugs**: `chat:add-account` rejected
+      an empty secret (blocking every no-auth IRC account — IRC is the one protocol that doesn't
+      always need one — the vault and adapter already treated empty as "no credential", only the
+      IPC schema disagreed), and `IrcAdapter.sendMessage()` fabricated a receipt id never sent on
+      the wire, so on any server with the `echo-message` cap (ergo, most modern networks) the
+      account-runner's optimistic-echo reconcile and the live echo landed as two different rows —
+      **every message you sent in a room rendered twice.** Both fixed; `IrcSession` gained
+      `ownEchoWaiters` (mirrors the existing `historyWaiters` pattern) so `sendMessage` now resolves
+      with whatever protocolId the echo actually carries. `<NotEncryptedBadge>` verified rendering
+      for real in the running window as part of the same e2e pass.
 - [ ] Sub-phase DoD template ✔.
 
 ---
@@ -802,7 +810,20 @@ DoD-template checklist.
       opt-in regression check: `packages/chat-transport-node/src/matrix-live-synapse.manual.test.ts`,
       gated behind `TEPEGOZ_LIVE_MATRIX=1`. **Still open:** spaces, media, reactions, edits, sync-drop
       recovery, token invalidation, and the desktop app / Playwright e2e (X-chat.10) — this exercised
-      only the core messaging + history path directly through the adapter.
+      only the core messaging + history path directly through the adapter. **The desktop-app e2e
+      attempt (2026-09-12) surfaced a real, unresolved problem instead of closing this further** —
+      `e2e/chat-live-matrix.spec.ts` (needs a second, TLS listener on the test Synapse: the schema
+      requires `homeserverUrl` to start with `https://`, unlike the manual adapter test's plain
+      `:8008`) shows the account stuck in `reconnecting`, never `online`, through the real
+      `ChatConnectionManager`/`ChatAccountRunner` stack — a fresh `POST /login` roughly every ~1s,
+      each one succeeding server-side, i.e. a genuine reconnect loop, not a single stuck attempt.
+      The identical `MatrixAdapter` code has zero issues when driven directly (the manual live test,
+      same Synapse instance) — so this is specific to the connection-manager/TLS path, not the
+      login/sync logic itself, and a read of `chat-core`'s `connection-manager.ts` didn't turn up an
+      obvious culprit (`MatrixSession.nextEvent()` looks correctly built to block rather than end
+      the `events()` generator prematurely, which was the first theory). Needs main-process runtime
+      instrumentation to pin down. Kept as a tracked, reproducible repro (`test.fail()`, diagnostic
+      notes in the file header) rather than deleted or silently left red.
 - [ ] Sub-phase DoD template ✔.
 
 ---
@@ -1057,8 +1078,16 @@ without limit (oldest dropped + `droppedEvents` + a re-armable out-of-band `erro
       had caught** — recorded under X-chat.3 (`sendMessage` never used `type="groupchat"`, so a
       room message went nowhere) and X-chat.2 (a message arriving between `selectConversation` and
       its history fetch resolving was silently dropped from the timeline). Both fixed same-day.
-      **Still open:** an IRC e2e slice and a Matrix e2e slice (same technique, same local servers,
-      not yet written), and the agent-path e2e.
+      **IRC slice landed the same day** — `e2e/chat-live-irc.spec.ts` (`TEPEGOZ_LIVE_IRC=1`),
+      needed the IRC fields added to `AccountSetupForm` first (X-chat.2). Found two more real bugs,
+      both fixed same-day (see X-chat.4's Functional DoD note): `chat:add-account` rejected an empty
+      (no-auth) secret, and `IrcAdapter.sendMessage()` duplicated every room message you sent on a
+      server with `echo-message`. **A Matrix slice was attempted the same day and is NOT closed** —
+      `e2e/chat-live-matrix.spec.ts` exists but is a tracked, reproducible failure
+      (`test.fail()`): the account never reaches `online` through the real connection-manager stack,
+      a genuine reconnect loop not present when driving `MatrixAdapter` directly. See X-chat.5's
+      Functional DoD note for what's known so far. **Still open:** root-causing and fixing the
+      Matrix reconnect loop, and the agent-path e2e.
 - [x] **Perf pass** — a 20k-message room: **timeline windowing ✔** (`buildTimeline` `maxMessages`
       caps the DOM at the most-recent 200 messages + a "N earlier" row). **Search ✔** —
       `searchMessages` hits the `chat_search` FTS5 index (migration 23 backfill + delete trigger;
