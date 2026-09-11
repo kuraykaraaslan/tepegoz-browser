@@ -34,9 +34,12 @@ describe('ChatAddAccountSchema', () => {
     expect(res.success).toBe(true);
   });
 
-  it('rejects a missing / empty / over-long secret and a bad account', () => {
+  it('accepts an empty secret — IRC (and possibly others) can connect with no credential at all', () => {
+    expect(ChatAddAccountSchema.safeParse({ account, secret: '' }).success).toBe(true);
+  });
+
+  it('rejects a missing / over-long secret and a bad account', () => {
     expect(ChatAddAccountSchema.safeParse({ account }).success).toBe(false);
-    expect(ChatAddAccountSchema.safeParse({ account, secret: '' }).success).toBe(false);
     expect(ChatAddAccountSchema.safeParse({ account, secret: 'x'.repeat(4097) }).success).toBe(false);
     expect(
       ChatAddAccountSchema.safeParse({ account: { ...account, id: 'Not A Slug' }, secret: 'p' }).success,

@@ -18,10 +18,12 @@ export const ChatConversationArgSchema = z.object({
 });
 
 /** `chat:add-account` — the account row plus its plaintext secret (crosses ONCE, stored in the
- *  vault by the main process, never echoed back). */
+ *  vault by the main process, never echoed back). Empty is valid — IRC (and possibly a future
+ *  protocol) supports connecting without authenticating at all, and the vault / adapter layer
+ *  already treat an empty secret as "no credential" rather than a malformed one. */
 export const ChatAddAccountSchema = z.object({
   account: ChatAccountSchema,
-  secret: z.string().min(1).max(4096),
+  secret: z.string().max(4096),
 });
 
 /** `chat:get-history` — page one conversation backwards through the archive. */
