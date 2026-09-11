@@ -40,7 +40,8 @@ async function openChatPage(window: Page): Promise<void> {
   // The tab bar exists once the workspace has rendered, regardless of whether any account is
   // configured yet — a title/heading match is ambiguous (it appears in the tab strip too, and
   // again once an account exists), which is what actually broke this the first time round.
-  await expect(window.getByRole('tablist')).toBeVisible({ timeout: 20_000 });
+  // Not a bare 'tablist' role query: the browser chrome has its own tab strip under that same role.
+  await expect(window.getByRole('tab', { name: 'Chats' })).toBeVisible({ timeout: 20_000 });
 }
 
 test('adds a live XMPP account, joins a MUC room, and sees a sent message render', async ({}, testInfo) => {

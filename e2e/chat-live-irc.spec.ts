@@ -28,7 +28,8 @@ async function openChatPage(window: Page): Promise<void> {
   const omnibox = window.getByRole('combobox').first();
   await omnibox.fill('tepegoz://com.tepegoz.chat');
   await omnibox.press('Enter');
-  await expect(window.getByRole('tablist')).toBeVisible({ timeout: 20_000 });
+  // Not a bare 'tablist' role query: the browser chrome has its own tab strip under that same role.
+  await expect(window.getByRole('tab', { name: 'Chats' })).toBeVisible({ timeout: 20_000 });
 }
 
 test('adds a live IRC account, joins a channel, and sees a sent message render', async ({}, testInfo) => {
