@@ -319,8 +319,17 @@ close-out. · **Branch:** `main` · **Risk:** low.
       manual override.
 
 ### Functional DoD
-- [ ] A user adds **two** XMPP accounts; both connect, load the roster with presence, exchange 1:1
-      messages, and backfill history via MAM.
+- [~] A user adds **two** XMPP accounts; both connect, load the roster with presence, exchange 1:1
+      messages, and backfill history via MAM. **Connect + message exchange + MAM backfill verified
+      live (2026-09-12)** against a real, unprivileged local Prosody (no root, no Docker — an
+      `apt-get download` + `dpkg -x` user-space install, see the IRC note below for the same
+      technique): two accounts (`alice@localhost`/`bob@localhost`) connect over STARTTLS + SASL
+      PLAIN, exchange a 1:1 message, and a reconnect's MAM query actually returns it. Unlike the IRC
+      run this one found no adapter bug — a useful negative result. Kept as a permanent opt-in
+      regression check: `packages/chat-transport-node/src/xmpp-live-prosody.manual.test.ts`, gated
+      behind `TEPEGOZ_LIVE_XMPP=1`. **Still open:** roster-with-presence wasn't exercised (the test
+      only proved messaging + MAM), and this is still the adapter directly, not the desktop app —
+      the Playwright `_electron` e2e (X-chat.10) is what closes the rest of this bullet.
 - [ ] Network drop → XEP-0198 resumption (no missed/duplicated messages); a longer outage →
       clean reconnect + MAM catch-up.
 - [ ] Kill-switched profile: accounts show "blocked", no socket opens.
