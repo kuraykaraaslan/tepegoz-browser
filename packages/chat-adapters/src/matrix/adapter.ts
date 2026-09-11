@@ -198,7 +198,13 @@ export class MatrixAdapter implements ChatAdapter {
       this.ctx(session),
     );
     session.nextBatch = result.nextBatch.length > 0 ? result.nextBatch : session.nextBatch;
-    for (const event of result.events) session.push(event);
+    // Room-membership (which establishes the conversation) MUST precede that room's timeline
+    // events. The host persists a 'message' by inserting into `chat_messages`, which carries a
+    // foreign key on `chat_conversations` — pushing events first, as this used to, meant the very
+    // first sync of any account with existing room history threw a FK-constraint error on its first
+    // message, which `ChatConnectionManager.pump()` treats as "the connection dropped" and reconnects
+    // on: a live account could never get past its own initial sync, looping forever. The adapter-level
+    // tests never caught this because they assert on the raw ChatEvent stream, never persist it.
     for (const room of result.rooms) {
       // Spaces are room-shaped but are not chat conversations (their timeline is dropped upstream).
       if (room.isSpace) continue;
@@ -214,6 +220,7 @@ export class MatrixAdapter implements ChatAdapter {
         realJid: null,
       });
     }
+    for (const event of result.events) session.push(event);
     for (const roomId of result.left) {
       session.push({
         type: 'room-membership',

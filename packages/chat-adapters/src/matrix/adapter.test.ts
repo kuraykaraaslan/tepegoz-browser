@@ -96,9 +96,11 @@ describe('MatrixAdapter — connect', () => {
     expect(JSON.parse(String(login?.init.body))).toMatchObject({ type: 'm.login.password' });
 
     const it = adapter.events(session)[Symbol.asyncIterator]();
-    // priming sync pushed: a message + a room-membership for the joined room
-    expect((await it.next()).value).toMatchObject({ type: 'message', message: { body: 'hi' } });
+    // priming sync pushed: a room-membership for the joined room, then its message — the
+    // conversation MUST exist before the host tries to persist a message into it (a real
+    // foreign-key constraint on `chat_messages.conversation_id`, not just a modelling nicety).
     expect((await it.next()).value).toMatchObject({ type: 'room-membership', joined: true });
+    expect((await it.next()).value).toMatchObject({ type: 'message', message: { body: 'hi' } });
     await adapter.disconnect(session);
   });
 
@@ -146,8 +148,8 @@ describe('MatrixAdapter — connect', () => {
     const adapter = new MatrixAdapter();
     const session = (await adapter.connect(creds(), t)) as MatrixSession;
     const it = adapter.events(session)[Symbol.asyncIterator]();
-    expect((await it.next()).value).toMatchObject({ type: 'message', message: { body: 'hi' } });
     expect((await it.next()).value).toMatchObject({ type: 'room-membership', conversationId: '!room:m.example' });
+    expect((await it.next()).value).toMatchObject({ type: 'message', message: { body: 'hi' } });
     await adapter.disconnect(session);
   });
 
