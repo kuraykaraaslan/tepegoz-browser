@@ -401,6 +401,16 @@ the base surface, panels separate by border/elevation. **Buddy-list header:** th
 permanent "Chat" title + a gear button (inline SVG, no icon dep) that opens account management even
 with zero accounts; the no-account notice is a compact inline hint. **Narrow surface:** a `@container`
 query collapses the two-pane layout to one column with a back button in the sidebar dock.
+Then (2026-09-12) a **live-found race fix** — `chat-store`'s message-append fold only tracks a
+conversation once its window is seeded (`state.messages[id] !== undefined`, a deliberate bound so an
+unopened conversation isn't tracked forever), but `useChatState.selectConversation` only seeded the
+window *after* its `getChatHistory` call resolved. A message arriving in that gap — the server's echo
+of one you just sent, most reliably — was silently dropped from the timeline (the unread badge still
+bumped, since that fold path is unconditional, so the only symptom was a message that never
+rendered). Fixed by seeding the window with `[]` synchronously before the fetch starts;
+`seedHistory`'s existing merge-by-`protocolId` combines the eventual real page with whatever arrived
+in between instead of clobbering it. Found by the same live Playwright e2e that found X-chat.3's
+groupchat bug — this was the second half of why the e2e's sent message never appeared.
 
 **Remaining:** the runtime Functional DoD (media round-trip needs a live account). · **Depends on:**
 X-chat.1 · **Branch:** `main` · **Risk:** low.
@@ -408,7 +418,12 @@ X-chat.1 · **Branch:** `main` · **Risk:** low.
 ### Deliverables
 - [x] **`@tepegoz/chat-ui`** — conversation list (unread/mention badges, account grouping + colour),
       roster panel (presence, groups, add/remove contact, `from`-subscription pending marker), account
-      setup flow (XMPP fields; _adapter-caps branching lands with IRC/Matrix_). The **message timeline
+      setup flow (XMPP fields; _adapter-caps branching lands with IRC/Matrix_ — **still true as of
+      2026-09-12**: X-chat.4 and X-chat.5 both shipped "code-complete" without ever adding it, so
+      `AccountSetupForm` is still XMPP-only — no `validateIrcAccountForm` / `validateMatrixAccountForm`
+      exists anywhere in `chat-ui`. A person cannot add an IRC or Matrix account through the app
+      today, full stop, despite both adapters working end-to-end — found while writing X-chat.10's
+      live e2e, which had to fall back to the XMPP-only path for exactly this reason). The **message timeline
       is windowed** (`buildTimeline` `maxMessages`, default `TIMELINE_WINDOW` = 200) — a very long room
       keeps only the most-recent N in the DOM behind one "N earlier messages not shown" row, with the
       day separators and the "new messages" divider recomputed against the visible slice. _Conversation
@@ -559,7 +574,14 @@ the **accounts manager** — `<AccountsManager>`, the Pidgin-style "Accounts" wi
 live connection state + two-click remove), reachable from the workspace gear icon, which previously
 just called `onAddAccount` directly — a single configured account had no visible confirmation
 anywhere in the UI. Paired with `<ProtocolBadge>` (a small xmpp/irc/matrix/bridge glyph, dependency-free)
-shown on account/conversation-list avatars.
+shown on account/conversation-list avatars. Then (2026-09-12) a **real, live-found bug fix** —
+`XmppAdapter.sendMessage()` never sent `type="groupchat"` for a room message (only `react()` had the
+`s.rooms.has(...)` check that decides it), so every room message sent through this adapter was
+silently going nowhere: XEP-0045 requires `groupchat` for a MUC service to broadcast to occupants, a
+plain `type="chat"` to a room JID is not relayed. No fixture-based unit test had caught this; a live
+Playwright e2e against a real Prosody did (see X-chat.10's e2e note) — the composer accepted and
+cleared the input, the message just never arrived anywhere. Fixed + a regression test asserting the
+stanza's `type` attribute for a room send, which no existing test checked.
 **X-chat.3 is now code-complete — only the runtime DoD (live server) + the sub-phase DoD template
 remain.** ·
 **Depends on:** X-chat.2 · **Branch:** `main` · **Risk:** low-medium.
@@ -1024,10 +1046,19 @@ without limit (oldest dropped + `droppedEvents` + a re-armable out-of-band `erro
       `ChatMessenger.stop()`) drops every connection, `stop()` is idempotent and stops emitting, and
       the next profile's `ChatService` only ever knows what its own profile-scoped `loadAccounts`
       returns. _Bridge-path drop + isolation waits on X-chat.8._
-- [ ] **Playwright `_electron` e2e** — against a local Prosody (XMPP) + ergo (IRC), and a local
+- [~] **Playwright `_electron` e2e** — against a local Prosody (XMPP) + ergo (IRC), and a local
       Synapse (Matrix) if CI budget allows: add account → roster → 1:1 send/receive → join a room →
       get pinged. A second e2e for the agent path (summarize → draft → HITL-stop → unknown-DM
-      withheld).
+      withheld). **XMPP slice landed (2026-09-12)** — `e2e/chat-live-xmpp.spec.ts` drives the real
+      app through a real local Prosody (no Docker/root — see the X-chat.1 Functional DoD note for
+      how it's stood up): the actual account-setup form (host/port/security, since `localhost` has
+      no SRV record), the actual room-browser join-by-address field, the actual composer. Gated
+      behind `TEPEGOZ_LIVE_XMPP=1`. **This is what found two real bugs no fixture-based unit test
+      had caught** — recorded under X-chat.3 (`sendMessage` never used `type="groupchat"`, so a
+      room message went nowhere) and X-chat.2 (a message arriving between `selectConversation` and
+      its history fetch resolving was silently dropped from the timeline). Both fixed same-day.
+      **Still open:** an IRC e2e slice and a Matrix e2e slice (same technique, same local servers,
+      not yet written), and the agent-path e2e.
 - [x] **Perf pass** — a 20k-message room: **timeline windowing ✔** (`buildTimeline` `maxMessages`
       caps the DOM at the most-recent 200 messages + a "N earlier" row). **Search ✔** —
       `searchMessages` hits the `chat_search` FTS5 index (migration 23 backfill + delete trigger;
