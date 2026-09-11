@@ -436,6 +436,30 @@ describe('ChatAccountRunner — actions', () => {
     expect(store.conversations.get('#c')?.topic).toBe('Release week');
   });
 
+  it('a room-membership event for a room never explicitly joined creates the conversation row', async () => {
+    // Regression: Matrix reports every room the account is already a member of on its very first
+    // `/sync` — no `joinRoom()` call in between, unlike a room entered interactively through the
+    // UI (which persists its row directly). Before this fix, `case 'room'` only ever UPDATED an
+    // existing row, so a passively-discovered room got none — and the room's first message event
+    // (same sync, or any later one) violated the real `chat_messages` table's foreign key on
+    // `conversation_id`, crashing the event pump and forcing a reconnect that re-hit the same gap
+    // on every retry: an account with any pre-existing Matrix room history could never come online.
+    const { adapter, store } = await online();
+    expect(store.getConversation('!room:example')).toBeNull();
+    adapter.channel.push({
+      type: 'room-membership',
+      conversationId: '!room:example',
+      address: 'ada@example.com',
+      realJid: null,
+      affiliation: 'none',
+      role: 'participant',
+      joined: true,
+      self: true,
+    });
+    await tick();
+    expect(store.getConversation('!room:example')).toMatchObject({ id: '!room:example', kind: 'room' });
+  });
+
   it('setRoomNotifyLevel patches the stored conversation (creating a stub if needed)', async () => {
     const { runner, store } = await online();
     await runner.setRoomNotifyLevel('room@conf', 'mentions');

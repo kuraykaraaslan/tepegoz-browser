@@ -195,10 +195,27 @@ export class ChatAccountRunner {
         if (!change.removed) this.deps.store.upsertContact(change.contact);
         break;
       case 'room': {
+        const base = this.deps.store.getConversation(change.conversationId);
+        if (base === null) {
+          // A room-membership fold fires for a room Tepegöz never explicitly joined too — Matrix
+          // reports every room the account is already a member of on its very first `/sync`, with
+          // no `joinRoom()` call in between. Without a conversation row here, the FIRST message
+          // event for that room (same sync, or any later one) violates `chat_messages`' foreign key
+          // on `conversation_id` — which crashes the whole event pump and forces a full reconnect,
+          // which re-syncs from scratch and hits the exact same missing row again: an account with
+          // any pre-existing Matrix room history could never get past its own initial sync.
+          this.deps.store.upsertConversation({
+            ...blankConversation(this.accountId, change.conversationId),
+            kind: 'room',
+            name: change.conversationId,
+            topic: change.room.subject,
+            updatedAt: this.deps.now(),
+          });
+          break;
+        }
         // The occupant view is renderer-only, but a topic change is persisted onto the
         // conversation row so it survives a reload (and feeds the header's stored-topic fallback).
-        const base = this.deps.store.getConversation(change.conversationId);
-        if (base !== null && change.room.subject !== base.topic) {
+        if (change.room.subject !== base.topic) {
           this.deps.store.upsertConversation({
             ...base,
             topic: change.room.subject,
