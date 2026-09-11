@@ -7,7 +7,9 @@ import {
   ChatDiscoverRoomsSchema,
   ChatGetHistorySchema,
   ChatJoinRoomSchema,
+  ChatLeaveRoomSchema,
   ChatMarkReadSchema,
+  ChatReactSchema,
   ChatResolveMediaSchema,
   ChatSendMessageSchema,
   ChatSetPresenceSchema,
@@ -76,7 +78,8 @@ export interface ChatIpcService {
       membersOnly: boolean;
     }>
   >;
-  joinRoom: (accountId: string, roomJid: string) => Promise<void>;
+  joinRoom: (accountId: string, roomJid: string) => Promise<string | null>;
+  leaveRoom: (accountId: string, conversationId: string) => Promise<void>;
   setRoomNotifyLevel: (
     accountId: string,
     conversationId: string,
@@ -86,6 +89,13 @@ export interface ChatIpcService {
   setRoomTopic: (accountId: string, conversationId: string, topic: string) => Promise<void>;
   inviteToRoom: (accountId: string, conversationId: string, invitee: string) => Promise<void>;
   resolveMedia: (accountId: string, mediaRef: string) => Promise<{ dataUrl: string } | null>;
+  react: (
+    accountId: string,
+    conversationId: string,
+    messageId: string,
+    emoji: string,
+    on: boolean,
+  ) => Promise<void>;
 }
 
 export function registerChatIpc(service: ChatIpcService): void {
@@ -137,9 +147,14 @@ export function registerChatIpc(service: ChatIpcService): void {
     return service.discoverRooms(accountId, mucService);
   });
 
-  handleAsync(IpcChannels.chatJoinRoom, async (_event, payload): Promise<void> => {
+  handleAsync(IpcChannels.chatJoinRoom, async (_event, payload): Promise<string | null> => {
     const { accountId, roomJid } = ChatJoinRoomSchema.parse(payload);
-    await service.joinRoom(accountId, roomJid);
+    return service.joinRoom(accountId, roomJid);
+  });
+
+  handleAsync(IpcChannels.chatLeaveRoom, async (_event, payload): Promise<void> => {
+    const { accountId, conversationId } = ChatLeaveRoomSchema.parse(payload);
+    await service.leaveRoom(accountId, conversationId);
   });
 
   handleAsync(IpcChannels.chatSetRoomNotifyLevel, async (_event, payload): Promise<void> => {
@@ -165,6 +180,11 @@ export function registerChatIpc(service: ChatIpcService): void {
   handleAsync(IpcChannels.chatResolveMedia, async (_event, payload) => {
     const { accountId, mediaRef } = ChatResolveMediaSchema.parse(payload);
     return service.resolveMedia(accountId, mediaRef);
+  });
+
+  handleAsync(IpcChannels.chatReact, async (_event, payload): Promise<void> => {
+    const { accountId, conversationId, messageId, emoji, on } = ChatReactSchema.parse(payload);
+    await service.react(accountId, conversationId, messageId, emoji, on);
   });
 
   // Handled but not asserted here: `chat:state` is a MAIN→renderer push (webContents.send), not a

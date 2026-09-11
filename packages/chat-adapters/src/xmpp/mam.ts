@@ -16,12 +16,16 @@ const NS_DELAY = 'urn:xmpp:delay';
 
 export interface MamQuery {
   queryId: string;
-  /** Restrict to a conversation partner (bare JID); omit for the whole archive. */
+  /** Restrict to a conversation partner (bare JID); omit for the whole archive. Meaningless (and
+   *  omitted by the caller) alongside {@link to} — a room archive is already scoped to that room. */
   withJid?: string;
   /** Page size (RSM `<max>`). */
   max?: number;
   /** RSM `<before>` cursor from a previous page's `nextCursor`; `''` / omitted → the most recent page. */
   before?: string;
+  /** Route the query to this JID's own archive instead of the account's personal one — a MUC room's
+   *  history lives in the room's archive (XEP-0313 §5), not reflected into every member's archive. */
+  to?: string;
 }
 
 /** Build the MAM `<iq type="set">`. The `queryid` equals the iq id so the adapter's result sink
@@ -37,8 +41,9 @@ export function buildMamQuery(q: MamQuery): string {
     `<max>${String(q.max ?? 50)}</max>`,
     q.before !== undefined ? `<before>${encodeXmlText(q.before)}</before>` : '<before/>',
   ].join('');
+  const to = q.to !== undefined && q.to.length > 0 ? ` to="${encodeXmlText(q.to)}"` : '';
   return (
-    `<iq type="set" id="${encodeXmlText(q.queryId)}">` +
+    `<iq type="set" id="${encodeXmlText(q.queryId)}"${to}>` +
     `<query xmlns="${NS_MAM}" queryid="${encodeXmlText(q.queryId)}">` +
     `<x xmlns="${NS_XDATA}" type="submit">${fields}</x>` +
     `<set xmlns="${NS_RSM}">${rsm}</set>` +

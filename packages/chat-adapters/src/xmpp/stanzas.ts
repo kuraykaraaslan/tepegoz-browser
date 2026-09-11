@@ -1,6 +1,6 @@
 import { bareJid, parseJid } from '@tepegoz/chat-core';
 import type { ChatContact, ChatEvent, ChatMessage, ChatPresence } from '@tepegoz/shared-types';
-import { type XmlElement, child, childText, encodeXmlText, text } from './xml-stream';
+import { type XmlElement, child, childText, children, encodeXmlText, text } from './xml-stream';
 
 /**
  * XMPP stanza ⇄ normalized model. Incoming: `stanzaToEvent` maps a parsed `<message>` / `<presence>`
@@ -18,6 +18,7 @@ export const NS = {
   delay: 'urn:xmpp:delay',
   roster: 'jabber:iq:roster',
   stanzaId: 'urn:xmpp:sid:0',
+  reactions: 'urn:xmpp:reactions:0',
 } as const;
 
 export interface StanzaContext {
@@ -55,6 +56,26 @@ function presenceFromShow(show: string, unavailable: boolean): ChatPresence {
     default:
       return 'online';
   }
+}
+
+export interface ReactionsStanza {
+  /** The message being reacted to. */
+  targetId: string;
+  /** The reacting party's *complete* current emoji set on that message (XEP-0444 §4: a `<reactions>`
+   *  element always carries the full set, never a single add/remove). */
+  emojis: string[];
+}
+
+/** Parse a XEP-0444 `<message><reactions id=…><reaction>…</reaction>…</reactions></message>`. Pure —
+ *  the adapter owns diffing this against what it last knew for that (message, sender) pair. */
+export function parseReactionsStanza(el: XmlElement): ReactionsStanza | null {
+  const reactions = child(el, 'reactions', NS.reactions);
+  const targetId = reactions?.attrs.id;
+  if (reactions === null || targetId === undefined || targetId.length === 0) return null;
+  const emojis = children(reactions, 'reaction', NS.reactions)
+    .map((r) => text(r))
+    .filter((e) => e.length > 0);
+  return { targetId, emojis };
 }
 
 function messageEvent(el: XmlElement, ctx: StanzaContext): ChatEvent | null {
@@ -264,6 +285,22 @@ export function buildReceipt(to: string, messageId: string): string {
 
 export function buildReadMarker(to: string, messageId: string): string {
   return `<message${attrs({ to })}><displayed${attrs({ xmlns: NS.markers, id: messageId })}/></message>`;
+}
+
+/** XEP-0444: always the caller's *complete* current reaction set on `targetId` — an empty `emojis`
+ *  clears every reaction of theirs on that message. */
+export function buildReactions(
+  to: string,
+  targetId: string,
+  emojis: readonly string[],
+  groupchat = false,
+): string {
+  const reactionEls = emojis.map((e) => `<reaction>${encodeXmlText(e)}</reaction>`).join('');
+  return (
+    `<message${attrs({ to, type: groupchat ? 'groupchat' : 'chat' })}>` +
+    `<reactions${attrs({ xmlns: NS.reactions, id: targetId })}>${reactionEls}</reactions>` +
+    `</message>`
+  );
 }
 
 export function buildPresence(show?: 'away' | 'xa' | 'dnd', status?: string): string {

@@ -40,12 +40,14 @@ const svc = {
   setPresence: vi.fn(() => Promise.resolve()),
   markRead: vi.fn(() => Promise.resolve()),
   discoverRooms: vi.fn(() => Promise.resolve([])),
-  joinRoom: vi.fn(() => Promise.resolve()),
+  joinRoom: vi.fn(() => Promise.resolve('general@conf.example')),
+  leaveRoom: vi.fn(() => Promise.resolve()),
   setRoomNotifyLevel: vi.fn(() => Promise.resolve()),
   setMuted: vi.fn(() => Promise.resolve()),
   setRoomTopic: vi.fn(() => Promise.resolve()),
   inviteToRoom: vi.fn(() => Promise.resolve()),
   resolveMedia: vi.fn(() => Promise.resolve({ dataUrl: 'data:image/png;base64,AAAA' })),
+  react: vi.fn(() => Promise.resolve()),
 };
 
 const ev = { senderFrame: { url: TRUSTED }, sender: {} };
@@ -68,7 +70,21 @@ beforeEach(() => {
 });
 
 it('registers every chat channel', () => {
-  expect(h.handlers.size).toBe(16);
+  expect(h.handlers.size).toBe(18);
+});
+
+it('chat:react validates + delegates', async () => {
+  await call(IpcChannels.chatReact, {
+    accountId: 'work',
+    conversationId: 'general@conf.example',
+    messageId: 'm1',
+    emoji: '👍',
+    on: true,
+  });
+  expect(svc.react).toHaveBeenCalledWith('work', 'general@conf.example', 'm1', '👍', true);
+  await expect(
+    call(IpcChannels.chatReact, { accountId: 'work', conversationId: 'c', messageId: 'm1', emoji: '👍' }),
+  ).rejects.toBeDefined();
 });
 
 describe('rooms', () => {
@@ -90,10 +106,18 @@ describe('rooms', () => {
     ).rejects.toBeDefined();
   });
 
-  it('chat:join-room validates + delegates', async () => {
-    await call(IpcChannels.chatJoinRoom, { accountId: 'work', roomJid: 'general@conf.example' });
+  it('chat:join-room validates + delegates + resolves the joined conversation id', async () => {
+    await expect(
+      call(IpcChannels.chatJoinRoom, { accountId: 'work', roomJid: 'general@conf.example' }),
+    ).resolves.toBe('general@conf.example');
     expect(svc.joinRoom).toHaveBeenCalledWith('work', 'general@conf.example');
     await expect(call(IpcChannels.chatJoinRoom, { accountId: 'work', roomJid: 'x' })).rejects.toBeDefined();
+  });
+
+  it('chat:leave-room validates + delegates', async () => {
+    await call(IpcChannels.chatLeaveRoom, { accountId: 'work', conversationId: 'general@conf.example' });
+    expect(svc.leaveRoom).toHaveBeenCalledWith('work', 'general@conf.example');
+    await expect(call(IpcChannels.chatLeaveRoom, { accountId: 'work' })).rejects.toBeDefined();
   });
 
   it('chat:set-room-notify-level validates the enum + delegates', async () => {

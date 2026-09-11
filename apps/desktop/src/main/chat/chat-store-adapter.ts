@@ -18,6 +18,11 @@ export function makeRunnerStore(db: Db): ChatRunnerStore {
     upsertConversation: (conversation) => ChatStore.upsertConversation(db, conversation),
     upsertContact: (contact) => ChatStore.upsertContact(db, contact),
     getConversation: (id) => ChatStore.getConversation(db, id),
+    listMessages: (conversationId) => ChatStore.listMessages(db, conversationId),
+    listRoomIds: (accountId) =>
+      ChatStore.listConversations(db, accountId)
+        .filter((c) => c.kind === 'room')
+        .map((c) => c.id),
   };
 }
 

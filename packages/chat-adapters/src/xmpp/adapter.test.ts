@@ -542,6 +542,20 @@ describe('XmppAdapter — live traffic', () => {
     expect(page.nextCursor).toBe('a1'); // not complete → page further back with <first>
   });
 
+  it("history() for a joined room queries the room's own archive, not the account's", async () => {
+    const { server, adapter, session } = await connected();
+    await adapter.joinRoom(session, 'lobby@conf.example.com');
+
+    const p = adapter.history(session, 'lobby@conf.example.com', null);
+    await tick();
+    const q = server.lastWritten();
+    expect(q).toContain('to="lobby@conf.example.com"');
+    expect(q).not.toContain('var="with"');
+    const id = /id="(mam-\d+)"/.exec(q)?.[1] ?? '';
+    server.send(`<iq type="result" id="${id}"><fin xmlns="urn:xmpp:mam:2" complete="true"/></iq>`);
+    await p;
+  });
+
   it('history() returns nextCursor null when the archive says complete', async () => {
     const { server, adapter, session } = await connected();
     const p = adapter.history(session, 'bob@example.com', 'oldcursor');
@@ -551,6 +565,78 @@ describe('XmppAdapter — live traffic', () => {
     server.send(`<iq type="result" id="${id}"><fin xmlns="urn:xmpp:mam:2" complete="true"/></iq>`);
     const page = await p;
     expect(page).toEqual({ messages: [], nextCursor: null });
+  });
+
+  it('react() resends the whole reaction set on every change (XEP-0444)', async () => {
+    const { server, adapter, session } = await connected();
+    await adapter.react(session, 'bob@example.com', 'm1', '👍', true);
+    expect(server.lastWritten()).toBe(
+      '<message to="bob@example.com" type="chat"><reactions xmlns="urn:xmpp:reactions:0" id="m1">' +
+        '<reaction>👍</reaction></reactions></message>',
+    );
+    await adapter.react(session, 'bob@example.com', 'm1', '🔥', true);
+    expect(server.lastWritten()).toContain('<reaction>👍</reaction><reaction>🔥</reaction>');
+    await adapter.react(session, 'bob@example.com', 'm1', '👍', false);
+    expect(server.lastWritten()).toBe(
+      '<message to="bob@example.com" type="chat"><reactions xmlns="urn:xmpp:reactions:0" id="m1">' +
+        '<reaction>🔥</reaction></reactions></message>',
+    );
+  });
+
+  it('react() sends type="groupchat" for a joined room', async () => {
+    const { server, adapter, session } = await connected();
+    await adapter.joinRoom(session, 'lobby@conf.example.com');
+    await adapter.react(session, 'lobby@conf.example.com', 'm1', '👍', true);
+    expect(server.lastWritten()).toContain('type="groupchat"');
+  });
+
+  it('an incoming <reactions> diffs against what was last seen and surfaces add/remove events', async () => {
+    const { server, adapter, session } = await connected();
+    const it = adapter.events(session)[Symbol.asyncIterator]();
+
+    server.send(
+      '<message from="bob@example.com"><reactions xmlns="urn:xmpp:reactions:0" id="m1">' +
+        '<reaction>👍</reaction><reaction>🔥</reaction></reactions></message>',
+    );
+    expect(await it.next()).toMatchObject({
+      value: {
+        type: 'reaction',
+        conversationId: 'bob@example.com',
+        protocolId: 'm1',
+        senderAddress: 'bob@example.com',
+        emoji: '👍',
+        add: true,
+      },
+    });
+    expect(await it.next()).toMatchObject({ value: { type: 'reaction', emoji: '🔥', add: true } });
+
+    // Bob changes his mind: drops 👍, keeps 🔥 — exactly one event (the drop) should surface.
+    server.send(
+      '<message from="bob@example.com"><reactions xmlns="urn:xmpp:reactions:0" id="m1">' +
+        '<reaction>🔥</reaction></reactions></message>',
+    );
+    expect(await it.next()).toMatchObject({
+      value: { type: 'reaction', protocolId: 'm1', emoji: '👍', add: false },
+    });
+  });
+
+  it('a MUC room reaction is addressed to the occupant (nick), not the bare room JID', async () => {
+    const { server, adapter, session } = await connected();
+    await adapter.joinRoom(session, 'lobby@conf.example.com');
+    const it = adapter.events(session)[Symbol.asyncIterator]();
+    server.send(
+      '<message from="lobby@conf.example.com/Carol" type="groupchat">' +
+        '<reactions xmlns="urn:xmpp:reactions:0" id="m1"><reaction>🎉</reaction></reactions></message>',
+    );
+    expect(await it.next()).toMatchObject({
+      value: {
+        type: 'reaction',
+        conversationId: 'lobby@conf.example.com',
+        senderAddress: 'lobby@conf.example.com/Carol',
+        emoji: '🎉',
+        add: true,
+      },
+    });
   });
 
   it('disconnect is idempotent', async () => {

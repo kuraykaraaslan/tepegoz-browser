@@ -188,9 +188,8 @@ export const chatIpcService: ChatIpcService = {
   markRead: (accountId, conversationId, protocolId) =>
     requireService().markRead(accountId, conversationId, protocolId),
   discoverRooms: (accountId, service) => requireService().discoverRooms(accountId, service),
-  joinRoom: async (accountId, roomJid) => {
-    await requireService().joinRoom(accountId, roomJid);
-  },
+  joinRoom: (accountId, roomJid) => requireService().joinRoom(accountId, roomJid),
+  leaveRoom: (accountId, conversationId) => requireService().leaveRoom(accountId, conversationId),
   setRoomNotifyLevel: (accountId, conversationId, level) =>
     requireService().setRoomNotifyLevel(accountId, conversationId, level),
   setMuted: (accountId, conversationId, muted) =>
@@ -200,6 +199,8 @@ export const chatIpcService: ChatIpcService = {
   inviteToRoom: (accountId, conversationId, invitee) =>
     requireService().inviteToRoom(accountId, conversationId, invitee),
   resolveMedia: (accountId, mediaRef) => requireService().resolveMedia(accountId, mediaRef),
+  react: (accountId, conversationId, messageId, emoji, on) =>
+    requireService().react(accountId, conversationId, messageId, emoji, on),
 };
 
 /** Test seam. */

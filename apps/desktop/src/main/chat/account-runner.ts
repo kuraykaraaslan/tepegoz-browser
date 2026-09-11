@@ -32,6 +32,10 @@ export interface ChatRunnerStore {
   upsertConversation: (conversation: ChatConversation) => void;
   upsertContact: (contact: ChatContact) => void;
   getConversation: (id: string) => ChatConversation | null;
+  /** Newest-first-then-reversed page of everything already persisted for this conversation. */
+  listMessages: (conversationId: string) => ChatMessage[];
+  /** Every room-kind conversation id already known for this account — who to rejoin on connect. */
+  listRoomIds: (accountId: string) => string[];
 }
 
 /** What the runner pushes to the renderer (the desktop maps these onto an IPC channel). */
@@ -108,6 +112,11 @@ export class ChatAccountRunner {
         connect: (creds, transport) =>
           deps.adapter.connect(creds as never, transport as never).then((s) => {
             this.session = s;
+            // Fire-and-forget: a room's presence subscription lives only in the live session, so
+            // every reconnect (including a cold app start) starts with an empty occupant list and
+            // no ability to send until we resubscribe. One room failing to rejoin (banned, deleted,
+            // offline) must not affect the others or the connection itself.
+            void this.rejoinKnownRooms();
             return s as never;
           }),
         disconnect: (s) => deps.adapter.disconnect(s as ChatSession),
@@ -206,6 +215,20 @@ export class ChatAccountRunner {
     this.deps.emit({ kind: 'change', accountId: this.accountId, change });
   }
 
+  /** True for a message this account itself sent. A DM's `senderAddress` is directly comparable to
+   *  `selfBareJid`, but a room message's is protocol-shaped (XMPP: the full occupant JID
+   *  `room@service/nick`; IRC: the bare nick; Matrix: the bare user id already) — so a room compares
+   *  against its own `selfNick` instead, which every adapter's occupant fold derives in that same
+   *  shape (see `chat-core`'s `RoomView`; `useChatState`'s `messageIsOwn` mirrors this for the UI). */
+  private isFromSelf(message: ChatMessage): boolean {
+    const room = this.state.roomView(message.conversationId);
+    if (room === undefined) return message.senderAddress === this.selfBareJid;
+    if (room.selfNick === null) return false;
+    const slash = message.senderAddress.indexOf('/');
+    const nick = slash === -1 ? message.senderAddress : message.senderAddress.slice(slash + 1);
+    return nick === room.selfNick;
+  }
+
   /** Route an inbound message through `decideNotification` and raise one if it survives. */
   private maybeNotify(message: ChatMessage): void {
     if (this.deps.notify === undefined || message.redacted || message.body === '') return;
@@ -213,7 +236,7 @@ export class ChatAccountRunner {
     const decision = decideNotification({
       isRoom: conversation?.kind === 'room',
       ...(conversation !== null ? { level: conversation.notifyLevel, muted: conversation.muted } : {}),
-      fromSelf: message.senderAddress === this.selfBareJid,
+      fromSelf: this.isFromSelf(message),
       selfNames: this.selfNames,
       body: message.body,
     });
@@ -297,6 +320,34 @@ export class ChatAccountRunner {
     conversationId: string,
     before: string | null,
   ): Promise<{ messages: ChatMessage[]; nextCursor: string | null }> {
+    // Opening a conversation for the first time: local storage already holds everything this
+    // account has ever seen for it, so show that immediately — independent of live connectivity
+    // and of whether the server (or, for a MUC room, its conference component) supports MAM at
+    // all — then fold in whatever a live fetch adds. `before !== null` (scrolling further back)
+    // keeps the live-only path below: local storage has no matching page for an opaque MAM cursor.
+    if (before === null) {
+      const local = this.deps.store.listMessages(conversationId);
+      let live: { messages: ChatMessage[]; nextCursor: string | null } | null = null;
+      if (this.session !== null) {
+        try {
+          live = await this.deps.adapter.history(this.session, conversationId, null);
+        } catch {
+          live = null;
+        }
+      }
+      const merged = new Map<string, ChatMessage>();
+      for (const m of local) merged.set(m.protocolId, m);
+      if (live !== null) {
+        for (const m of live.messages) merged.set(m.protocolId, m);
+        for (const change of this.state.seedHistory(conversationId, live.messages)) {
+          this.applyChange(change);
+        }
+      }
+      return {
+        messages: [...merged.values()].sort((a, b) => a.originTs - b.originTs),
+        nextCursor: live?.nextCursor ?? null,
+      };
+    }
     const page = await this.deps.adapter.history(this.requireSession(), conversationId, before);
     for (const change of this.state.seedHistory(conversationId, page.messages)) {
       this.applyChange(change);
@@ -320,6 +371,19 @@ export class ChatAccountRunner {
     const conversation = await this.deps.adapter.joinRoom(this.requireSession(), roomJid);
     this.deps.store.upsertConversation(conversation);
     return conversation.id;
+  }
+
+  /** Resubscribe to every room already known for this account — see the `connect` wrapper above. */
+  private async rejoinKnownRooms(): Promise<void> {
+    if (this.deps.adapter.joinRoom === undefined) return;
+    for (const roomId of this.deps.store.listRoomIds(this.accountId)) {
+      try {
+        await this.joinRoom(roomId);
+      } catch {
+        // Best-effort, one room at a time — a single failure (banned, deleted, offline) must not
+        // stop the rest from rejoining.
+      }
+    }
   }
 
   async leaveRoom(conversationId: string): Promise<void> {

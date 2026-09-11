@@ -6,8 +6,10 @@ import {
   buildChatState,
   buildMessage,
   buildPresence,
+  buildReactions,
   buildReadMarker,
   buildReceipt,
+  parseReactionsStanza,
   stanzaToEvent,
   type StanzaContext,
 } from './stanzas';
@@ -282,5 +284,36 @@ describe('outgoing builders', () => {
     expect(buildReadMarker('b@x', 'm1')).toContain('urn:xmpp:chat-markers:0');
     expect(buildPresence()).toBe('<presence/>');
     expect(buildPresence('away', 'brb')).toBe('<presence><show>away</show><status>brb</status></presence>');
+  });
+
+  it('buildReactions sends the full set (XEP-0444), chat by default and groupchat when asked', () => {
+    const q = buildReactions('b@x', 'm1', ['👍', '🔥']);
+    expect(q).toBe(
+      '<message to="b@x" type="chat"><reactions xmlns="urn:xmpp:reactions:0" id="m1">' +
+        '<reaction>👍</reaction><reaction>🔥</reaction></reactions></message>',
+    );
+    expect(buildReactions('room@conf', 'm1', [], true)).toBe(
+      '<message to="room@conf" type="groupchat"><reactions xmlns="urn:xmpp:reactions:0" id="m1"></reactions></message>',
+    );
+  });
+});
+
+describe('parseReactionsStanza', () => {
+  it('reads the target id and the full emoji set', () => {
+    const el = parseOne(
+      '<message from="b@x/p"><reactions xmlns="urn:xmpp:reactions:0" id="m1">' +
+        '<reaction>👍</reaction><reaction>🔥</reaction></reactions></message>',
+    );
+    expect(parseReactionsStanza(el)).toEqual({ targetId: 'm1', emojis: ['👍', '🔥'] });
+  });
+
+  it('an empty <reactions/> means "cleared everything"', () => {
+    const el = parseOne('<message><reactions xmlns="urn:xmpp:reactions:0" id="m1"/></message>');
+    expect(parseReactionsStanza(el)).toEqual({ targetId: 'm1', emojis: [] });
+  });
+
+  it('returns null for a message with no <reactions>, or a wrong-namespace one', () => {
+    expect(parseReactionsStanza(parseOne('<message><body>hi</body></message>'))).toBeNull();
+    expect(parseReactionsStanza(parseOne('<message><reactions id="m1"/></message>'))).toBeNull();
   });
 });

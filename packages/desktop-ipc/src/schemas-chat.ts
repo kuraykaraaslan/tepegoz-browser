@@ -67,6 +67,12 @@ export const ChatJoinRoomSchema = z.object({
   roomJid: z.string().min(3).max(512),
 });
 
+/** `chat:leave-room` — leave a joined room. */
+export const ChatLeaveRoomSchema = z.object({
+  accountId: z.string().min(1).max(64),
+  conversationId: z.string().min(1).max(128),
+});
+
 export const CHAT_ROOM_NOTIFY_LEVELS = ['all', 'mentions', 'none'] as const;
 
 /** `chat:set-room-notify-level` — persist a room's notification level. */
@@ -101,4 +107,13 @@ export const ChatInviteToRoomSchema = z.object({
 export const ChatResolveMediaSchema = z.object({
   accountId: z.string().min(1).max(64),
   mediaRef: z.string().min(1).max(2048),
+});
+
+/** `chat:react` — add / remove one emoji reaction of the local user's on a message. */
+export const ChatReactSchema = z.object({
+  accountId: z.string().min(1).max(64),
+  conversationId: z.string().min(1).max(128),
+  messageId: z.string().min(1).max(128),
+  emoji: z.string().min(1).max(64),
+  on: z.boolean(),
 });

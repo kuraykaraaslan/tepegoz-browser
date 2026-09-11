@@ -44,6 +44,12 @@ class FakeStore implements ChatRunnerStore {
   getConversation(): ChatConversation | null {
     return null;
   }
+  listMessages(): [] {
+    return [];
+  }
+  listRoomIds(): [] {
+    return [];
+  }
 }
 
 function fakeSecrets(initial: Record<string, string> = {}): ChatSecretStore & { store: Map<string, string> } {

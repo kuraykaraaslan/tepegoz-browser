@@ -104,6 +104,22 @@ describe('account + message commands', () => {
       accountId: 'work',
       roomJid: 'general@conf.example',
     });
+    void chatApi.leaveChatRoom('work', 'general@conf.example');
+    expect(invoke).toHaveBeenCalledWith(IpcChannels.chatLeaveRoom, {
+      accountId: 'work',
+      conversationId: 'general@conf.example',
+    });
+  });
+
+  it('reactToChatMessage → { accountId, conversationId, messageId, emoji, on }', () => {
+    void chatApi.reactToChatMessage('work', 'room@conf', 'm1', '👍', true);
+    expect(invoke).toHaveBeenCalledWith(IpcChannels.chatReact, {
+      accountId: 'work',
+      conversationId: 'room@conf',
+      messageId: 'm1',
+      emoji: '👍',
+      on: true,
+    });
   });
 
   it('setChatRoomNotifyLevel → { accountId, conversationId, level }', () => {

@@ -33,11 +33,13 @@ export const chatApi: Pick<
   | 'markChatRead'
   | 'discoverChatRooms'
   | 'joinChatRoom'
+  | 'leaveChatRoom'
   | 'setChatRoomNotifyLevel'
   | 'setChatMuted'
   | 'setChatRoomTopic'
   | 'inviteToChatRoom'
   | 'resolveChatMedia'
+  | 'reactToChatMessage'
   | 'onChatState'
 > = {
   listChatAccounts: () => invoke<ChatAccountsSnapshot>(IpcChannels.chatListAccounts),
@@ -68,7 +70,9 @@ export const chatApi: Pick<
   discoverChatRooms: (accountId: string, service: string) =>
     invoke<ChatRoomSummary[]>(IpcChannels.chatDiscoverRooms, { accountId, service }),
   joinChatRoom: (accountId: string, roomJid: string) =>
-    invoke<void>(IpcChannels.chatJoinRoom, { accountId, roomJid }),
+    invoke<string | null>(IpcChannels.chatJoinRoom, { accountId, roomJid }),
+  leaveChatRoom: (accountId: string, conversationId: string) =>
+    invoke<void>(IpcChannels.chatLeaveRoom, { accountId, conversationId }),
   setChatRoomNotifyLevel: (accountId: string, conversationId: string, level: RoomNotifyLevel) =>
     invoke<void>(IpcChannels.chatSetRoomNotifyLevel, { accountId, conversationId, level }),
   setChatMuted: (accountId: string, conversationId: string, muted: boolean) =>
@@ -79,6 +83,13 @@ export const chatApi: Pick<
     invoke<void>(IpcChannels.chatInviteToRoom, { accountId, conversationId, invitee }),
   resolveChatMedia: (accountId: string, mediaRef: string) =>
     invoke<{ dataUrl: string } | null>(IpcChannels.chatResolveMedia, { accountId, mediaRef }),
+  reactToChatMessage: (
+    accountId: string,
+    conversationId: string,
+    messageId: string,
+    emoji: string,
+    on: boolean,
+  ) => invoke<void>(IpcChannels.chatReact, { accountId, conversationId, messageId, emoji, on }),
   onChatState: (callback: (event: ChatStateEvent) => void) => {
     const listener = (_event: unknown, payload: ChatStateEvent): void => {
       callback(payload);

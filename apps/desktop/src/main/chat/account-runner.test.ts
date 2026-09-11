@@ -114,6 +114,16 @@ class FakeStore implements ChatRunnerStore {
   getConversation(id: string): ChatConversation | null {
     return this.conversations.get(id) ?? null;
   }
+  listMessages(conversationId: string): ChatMessage[] {
+    return this.messages
+      .filter((m) => m.conversationId === conversationId)
+      .sort((a, b) => a.originTs - b.originTs);
+  }
+  listRoomIds(accountId: string): string[] {
+    return [...this.conversations.values()]
+      .filter((c) => c.kind === 'room' && c.accountId === accountId)
+      .map((c) => c.id);
+  }
 }
 
 const account: ChatAccount = {
@@ -227,6 +237,93 @@ describe('ChatAccountRunner — connect + ingest', () => {
     await tick();
     expect(store.redacted).toEqual([['bob@example.com', 'm1']]);
   });
+
+  it('rejoins every already-known room on connect, so occupants + send ability come back after a restart', async () => {
+    const { runner, adapter, store } = harness();
+    store.upsertConversation({
+      id: 'known@conf.example',
+      accountId: 'acc',
+      kind: 'room',
+      address: 'known@conf.example',
+      name: 'known',
+      topic: '',
+      memberCount: 0,
+      unread: 3,
+      mentions: 0,
+      lastReadId: null,
+      muted: false,
+      notifyLevel: 'all',
+      isKnownContact: true,
+      updatedAt: 1,
+    });
+    // A DM must never be treated as a room to rejoin.
+    store.upsertConversation({
+      id: 'bob@example.com',
+      accountId: 'acc',
+      kind: 'dm',
+      address: 'bob@example.com',
+      name: 'Bob',
+      topic: '',
+      memberCount: 2,
+      unread: 0,
+      mentions: 0,
+      lastReadId: null,
+      muted: false,
+      notifyLevel: 'all',
+      isKnownContact: true,
+      updatedAt: 1,
+    });
+
+    runner.start();
+    await tick();
+
+    expect(adapter.joinRoom).toHaveBeenCalledTimes(1);
+    expect(adapter.joinRoom).toHaveBeenCalledWith(expect.anything(), 'known@conf.example');
+  });
+
+  it('one room failing to rejoin does not block the others or the connection', async () => {
+    const { runner, adapter, store } = harness();
+    store.upsertConversation({
+      id: 'banned@conf.example',
+      accountId: 'acc',
+      kind: 'room',
+      address: 'banned@conf.example',
+      name: 'banned',
+      topic: '',
+      memberCount: 0,
+      unread: 0,
+      mentions: 0,
+      lastReadId: null,
+      muted: false,
+      notifyLevel: 'all',
+      isKnownContact: true,
+      updatedAt: 1,
+    });
+    store.upsertConversation({
+      id: 'ok@conf.example',
+      accountId: 'acc',
+      kind: 'room',
+      address: 'ok@conf.example',
+      name: 'ok',
+      topic: '',
+      memberCount: 0,
+      unread: 0,
+      mentions: 0,
+      lastReadId: null,
+      muted: false,
+      notifyLevel: 'all',
+      isKnownContact: true,
+      updatedAt: 1,
+    });
+    adapter.joinRoom.mockImplementationOnce(() => Promise.reject(new Error('banned')));
+
+    runner.start();
+    await tick();
+
+    expect(runner.connState).toBe('online');
+    expect(adapter.joinRoom).toHaveBeenCalledTimes(2);
+    expect(adapter.joinRoom).toHaveBeenCalledWith(expect.anything(), 'ok@conf.example');
+  });
 });
 
 describe('ChatAccountRunner — actions', () => {
@@ -266,6 +363,32 @@ describe('ChatAccountRunner — actions', () => {
     const page = await runner.history('bob@example.com', null);
     expect(page.messages).toHaveLength(1);
     expect(store.messages.map((m) => m.protocolId)).toEqual(['h1']);
+  });
+
+  it('history returns what is already persisted locally even while disconnected', async () => {
+    const { runner, adapter, store } = harness();
+    // Never started — no session — a live MAM fetch is impossible.
+    store.upsertMessage(incomingMessage('h1', 'earlier').message);
+    const page = await runner.history('bob@example.com', null);
+    expect(page.messages.map((m) => m.protocolId)).toEqual(['h1']);
+    expect(adapter.history).not.toHaveBeenCalled();
+  });
+
+  it('history falls back to local storage when the live fetch fails (e.g. no MAM support)', async () => {
+    const { runner, adapter, store } = await online();
+    store.upsertMessage(incomingMessage('h1', 'earlier').message);
+    adapter.history.mockRejectedValueOnce(new Error('feature-not-implemented'));
+    const page = await runner.history('bob@example.com', null);
+    expect(page.messages.map((m) => m.protocolId)).toEqual(['h1']);
+  });
+
+  it('history merges local + live, live winning on a duplicate protocol id', async () => {
+    const { runner, adapter, store } = await online();
+    store.upsertMessage(incomingMessage('h1', 'stale local copy').message);
+    adapter.historyPages = [{ ...incomingMessage('h1', 'fresh from server').message, originTs: 500 }];
+    const page = await runner.history('bob@example.com', null);
+    expect(page.messages).toHaveLength(1);
+    expect(page.messages[0]?.body).toBe('fresh from server');
   });
 
   it('roster persists every contact', async () => {
@@ -517,6 +640,36 @@ describe('ChatAccountRunner — notifications', () => {
       protocolId: 'm2',
       redactedAt: 9,
     });
+    await tick();
+    expect(notifications).toEqual([]);
+  });
+
+  it('does not notify for the account\'s own room message — matched by occupant nick, not raw address', async () => {
+    const { adapter, store, notifications } = await online();
+    store.conversations.set('room@conf', {
+      id: 'room@conf', accountId: 'acc', kind: 'room', address: 'room@conf', name: 'Room', topic: '',
+      memberCount: 1, unread: 0, mentions: 0, lastReadId: null, muted: false, notifyLevel: 'all',
+      isKnownContact: true, updatedAt: 1,
+    });
+    // Self-presence (XEP-0045 status 110 equivalent) — sets this account's nick in the room.
+    adapter.channel.push({
+      type: 'room-membership',
+      conversationId: 'room@conf',
+      address: 'room@conf/Ada',
+      realJid: null,
+      affiliation: 'member',
+      role: 'participant',
+      joined: true,
+      self: true,
+    });
+    await tick();
+    // Our own message, echoed back by the MUC — `senderAddress` is the room-prefixed occupant JID,
+    // never equal to `selfBareJid` (ada@example.com), which is exactly the bug this test guards.
+    const own = incomingMessage('r1', 'my own line');
+    own.message.conversationId = 'room@conf';
+    own.message.senderAddress = 'room@conf/Ada';
+    own.message.senderName = 'Ada';
+    adapter.channel.push(own);
     await tick();
     expect(notifications).toEqual([]);
   });

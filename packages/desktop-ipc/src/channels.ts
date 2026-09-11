@@ -267,6 +267,8 @@ export const IpcChannels = {
   chatDiscoverRooms: 'chat:discover-rooms',
   /** Renderer→main: join a MUC room by its bare JID. */
   chatJoinRoom: 'chat:join-room',
+  /** Renderer→main: leave a room — the conversation stays in history but stops being "known". */
+  chatLeaveRoom: 'chat:leave-room',
   /** Renderer→main: set a room's notification level (all / mentions / none). */
   chatSetRoomNotifyLevel: 'chat:set-room-notify-level',
   /** Renderer→main: mute / unmute one conversation (DM or room). */
@@ -277,6 +279,8 @@ export const IpcChannels = {
   chatInviteToRoom: 'chat:invite-to-room',
   /** Renderer→main: resolve a message's `mediaRef` to a quarantined `data:` URL (main fetches). */
   chatResolveMedia: 'chat:resolve-media',
+  /** Renderer→main: add / remove one of the local user's emoji reactions on a message. */
+  chatReact: 'chat:react',
   /** Main→renderer push: per-account connection state + folded conversation/roster changes. */
   chatState: 'chat:state',
   /** Renderer→main: the identity of every built-in extension (from the validated on-disk catalog). */

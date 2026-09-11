@@ -102,8 +102,12 @@ export interface ChatApi {
   markChatRead(accountId: string, conversationId: string, protocolId: string): Promise<void>;
   /** Browse a MUC service's advertised rooms. */
   discoverChatRooms(accountId: string, service: string): Promise<ChatRoomSummary[]>;
-  /** Join a MUC room by its bare JID. */
-  joinChatRoom(accountId: string, roomJid: string): Promise<void>;
+  /** Join a MUC room by its bare JID. Resolves the joined conversation's id, or `null` when the
+   *  adapter has no MUC support. */
+  joinChatRoom(accountId: string, roomJid: string): Promise<string | null>;
+  /** Leave a joined room — the conversation stays in local history but drops out of the "known"
+   *  chats list until rejoined. */
+  leaveChatRoom(accountId: string, conversationId: string): Promise<void>;
   /** Persist a room's notification level. */
   setChatRoomNotifyLevel(
     accountId: string,
@@ -122,6 +126,15 @@ export interface ChatApi {
    * egress-bound download and size-caps it; `null` when the ref is unresolvable or too large.
    */
   resolveChatMedia(accountId: string, mediaRef: string): Promise<{ dataUrl: string } | null>;
+  /** Add / remove one of the local user's emoji reactions on a message. `messageId` is the message's
+   *  `protocolId`. Throws if the protocol has no reaction support (surfaced to the caller). */
+  reactToChatMessage(
+    accountId: string,
+    conversationId: string,
+    messageId: string,
+    emoji: string,
+    on: boolean,
+  ): Promise<void>;
   /** Subscribe to the `chat:state` push. Returns an unsubscribe. */
   onChatState(callback: (event: ChatStateEvent) => void): () => void;
 }

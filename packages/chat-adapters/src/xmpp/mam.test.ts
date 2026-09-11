@@ -32,6 +32,13 @@ describe('buildMamQuery', () => {
     expect(q).toContain('<before>abc</before>');
     expect(q).toContain('<max>50</max>');
   });
+
+  it('routes to a room archive via `to`, with no `to` at all by default', () => {
+    const roomQuery = buildMamQuery({ queryId: 'q3', to: 'room@conf.example' });
+    expect(roomQuery).toContain('<iq type="set" id="q3" to="room@conf.example">');
+    const personalQuery = buildMamQuery({ queryId: 'q4' });
+    expect(personalQuery).not.toContain(' to="');
+  });
 });
 
 describe('parseMamResult', () => {
