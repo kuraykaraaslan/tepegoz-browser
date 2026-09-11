@@ -521,6 +521,36 @@ Then (2026-09-11) the **room-invite vertical slice** — `ChatAdapter.inviteToRo
 `chat:invite-to-room` (`ChatInviteToRoomSchema`), `ChatService`/`ChatAccountRunner.inviteToRoom`,
 `ChatApi.inviteToChatRoom` + preload, `useChatState.inviteToRoom`, and an **Invite** field in
 `<RoomHeader>`. The `buildMucInvite` deliverable is closed.
+Then (2026-09-11) **leave-room reaches the human, not just the agent** — `chat_delete_item` already
+let the agent leave a room, but a person had no UI path to do the same; `chat:leave-room`
+(`ChatLeaveRoomSchema`) + `ChatIpcService.leaveRoom` (was a no-op passthrough gap) +
+`ChatApi.leaveChatRoom` + preload + `useChatState.leaveRoom` + a **Leave** icon action in
+`<RoomHeader>` (two-click confirm, closes the panel on leave). Then **reactions become interactive** —
+`<MessageTimeline>`'s reaction row was display-only; `onReact` + an optimistic `toggleReaction` fold in
+`chat-store` wire it to `useChatState.react` → `chat:react` (new channel + `ChatReactSchema`) →
+`ChatService.react` (already existed for the agent's `chat_update_item`, now reachable from the UI
+too). The **XMPP wire implementation landed alongside it** — XEP-0444 `<reactions>` stanza build/parse
+in `chat-adapters` (`buildReactions` / `parseReactionsStanza`), `XmppAdapter.react()` (resends the
+whole current set, per the wire protocol), and a live-message handler that diffs the always-complete
+incoming set into the add/remove `reaction` events the fold already understood from Matrix. Then a
+**MUC-history bug fix** — `XmppAdapter.history()` was querying the account's personal MAM archive for
+a room conversation; XEP-0313 §5 archives a room's history under the room's own JID, not reflected
+into members' archives, so a room with real history showed none (or, where a server did reflect it,
+could show the bare room JID as sender instead of the occupant nick). `MamQuery.to` routes a room
+query to `s.rooms`-tracked room JIDs. Then **reconnect resilience** — `ChatAccountRunner` now rejoins
+every previously-known room on connect (a room's presence subscription only ever lived in the live
+session, so a cold start or a reconnect silently left every room un-joined with no way to send until
+the user manually rejoined); `history()` on first open of a conversation now returns what is already
+in local storage immediately (merged with a live fetch when connected) rather than depending on
+connectivity to show anything. Also fixed: **own-message detection for rooms** was DM-only
+(`senderAddress !== peerAddress`), so every room message rendered as someone else's; both
+`ChatWorkspace`'s bubble-alignment and the account-runner's own-echo notification suppression now
+compare against the room's `selfNick` the same way `chat-core`'s `RoomView` already tracks it. Then
+the **accounts manager** — `<AccountsManager>`, the Pidgin-style "Accounts" window (every account +
+live connection state + two-click remove), reachable from the workspace gear icon, which previously
+just called `onAddAccount` directly — a single configured account had no visible confirmation
+anywhere in the UI. Paired with `<ProtocolBadge>` (a small xmpp/irc/matrix/bridge glyph, dependency-free)
+shown on account/conversation-list avatars.
 **X-chat.3 is now code-complete — only the runtime DoD (live server) + the sub-phase DoD template
 remain.** ·
 **Depends on:** X-chat.2 · **Branch:** `main` · **Risk:** low-medium.
