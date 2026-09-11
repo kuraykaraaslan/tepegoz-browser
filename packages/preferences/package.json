@@ -21,10 +21,10 @@
     "@tepegoz/shared-types": "workspace:*",
     "@tepegoz/extension-sdk": "workspace:*",
     "@tepegoz/json-store": "workspace:*",
-    "zod": "3.25.76"
+    "zod": "4.5.4"
   },
   "devDependencies": {
-    "@types/node": "^22.10.2",
+    "@types/node": "^26.5.0",
     "typescript": "^5.7.2",
     "vitest": "^3.2.6"
   }

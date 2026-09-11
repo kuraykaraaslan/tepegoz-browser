@@ -27,7 +27,7 @@
   },
   "devDependencies": {
     "@tepegoz/security-policy": "workspace:*",
-    "@types/react": "^18.3.18",
+    "@types/react": "^19.2.18",
     "typescript": "^5.7.2",
     "vitest": "^3.2.6"
   },
