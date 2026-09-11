@@ -48,6 +48,9 @@ const DEFAULT_PORT_PLAIN = 6667;
 const MAX_BUFFER = 1 << 20; // 1 MiB of un-terminated bytes → the peer is misbehaving
 const IRC_HISTORY_LIMIT = 50;
 const IRC_HISTORY_TIMEOUT_MS = 15_000;
+/** How long `sendMessage` waits for the server's own-echo (`echo-message` cap) before falling back
+ *  to a synthetic receipt id — see the `ownEchoWaiters` note on {@link IrcSession}. */
+const IRC_OWN_ECHO_TIMEOUT_MS = 5_000;
 /** Anti-flood (classic ircd penalty model): every queued client line costs this much send budget… */
 const FLOOD_PENALTY_MS = 2000;
 /** …and up to this much budget may be spent ahead of real time before sends are paced out. */
@@ -70,6 +73,16 @@ export class IrcSession implements ChatSession {
   readonly batches = new Map<string, { type: string; target: string; lines: IrcMessage[] }>();
   /** A pending `history()` call, keyed by folded target. */
   readonly historyWaiters = new Map<string, (lines: IrcMessage[]) => void>();
+  /**
+   * FIFO queues of `sendMessage` calls awaiting the server's own-echo (`echo-message` cap), keyed by
+   * folded target. Without this, `sendMessage`'s receipt carried a locally-fabricated id never sent
+   * on the wire, so the account-runner's optimistic-echo reconcile settled on a DIFFERENT id than
+   * the one the live echo event (its real `msgid`, or the same synthetic fallback
+   * `messages.ts#synthProtocolId` derives) would carry — every sent message duplicated once the
+   * echo arrived, since `chat-store`'s dedup is by exact `protocolId`. Resolving the receipt from
+   * the matching echo instead makes both paths converge on one id.
+   */
+  readonly ownEchoWaiters = new Map<string, Array<(protocolId: string) => void>>();
 
   private buffer = '';
   private readonly queue: ChatEvent[] = [];
@@ -347,7 +360,16 @@ export class IrcAdapter implements ChatAdapter {
       }
     }
     const event = ircMessageToEvent(msg, ctx);
-    if (event !== null) session.push(event);
+    if (event !== null) {
+      // Our own echoed message (`echo-message` cap) resolves the matching `sendMessage` — see the
+      // `ownEchoWaiters` note on `IrcSession`. FIFO: our own sends to one conversation are ordered,
+      // and so are their echoes.
+      if (event.type === 'message' && event.message.senderAddress === session.nick) {
+        const queue = session.ownEchoWaiters.get(session.fold(event.message.conversationId));
+        queue?.shift()?.(event.message.protocolId);
+      }
+      session.push(event);
+    }
     // A KICK is both a membership change (above) and a visible system line in the channel.
     const kick = ircKickSystemMessage(msg, ctx);
     if (kick !== null) session.push(kick);
@@ -418,9 +440,28 @@ export class IrcAdapter implements ChatAdapter {
 
   sendMessage(session: ChatSession, conv: ConvId, body: OutgoingMessage): Promise<SendReceipt> {
     const s = session as IrcSession;
-    s.enqueue(buildIrcPrivmsg(conv, body.body));
     const ts = Date.now();
-    return Promise.resolve({ protocolId: `${String(ts)}~${s.nick}~${body.body.slice(0, 40)}`, ts });
+    const fallback = { protocolId: `${String(ts)}~${s.nick}~${body.body.slice(0, 40)}`, ts };
+    s.enqueue(buildIrcPrivmsg(conv, body.body));
+    if (!s.ircCaps.has('echo-message')) return Promise.resolve(fallback);
+
+    const target = s.fold(conv);
+    return new Promise<SendReceipt>((resolve) => {
+      let onEcho: (protocolId: string) => void = () => undefined;
+      const timer = setTimeout(() => {
+        const queue = s.ownEchoWaiters.get(target);
+        const idx = queue?.indexOf(onEcho) ?? -1;
+        if (queue !== undefined && idx !== -1) queue.splice(idx, 1);
+        resolve(fallback);
+      }, IRC_OWN_ECHO_TIMEOUT_MS);
+      onEcho = (protocolId: string): void => {
+        clearTimeout(timer);
+        resolve({ protocolId, ts });
+      };
+      const queue = s.ownEchoWaiters.get(target) ?? [];
+      queue.push(onEcho);
+      s.ownEchoWaiters.set(target, queue);
+    });
   }
 
   markRead(): Promise<void> {

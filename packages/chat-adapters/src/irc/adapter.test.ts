@@ -173,6 +173,55 @@ describe('IrcAdapter — live traffic', () => {
     expect(session.joined.has('#room')).toBe(false);
   });
 
+  it('with echo-message, sendMessage resolves with the SAME protocolId the live echo event carries', async () => {
+    // Regression: sendMessage used to fabricate its own id, never sent on the wire — the server's
+    // own-echo (a real msgid, or the recorded-trace fixture's fallback) never matched it, so the
+    // account-runner's optimistic-echo reconcile and the live echo landed as two different rows
+    // (chat-store dedups by exact protocolId). Found live against a real ergo server.
+    const server = new FakeServer();
+    const adapter = new IrcAdapter();
+    const p = adapter.connect(creds(), server);
+    await tick();
+    server.send('CAP * LS :message-tags server-time echo-message');
+    server.send('CAP ada ACK :message-tags server-time echo-message');
+    server.send(':irc.example 001 ada :Welcome ada');
+    const session = (await p) as IrcSession;
+
+    const it = adapter.events(session)[Symbol.asyncIterator]();
+    const sendP = adapter.sendMessage(session, '#chan', { body: 'yo', replyToId: null, mediaPath: null });
+    await tick();
+    expect(server.lastWritten()).toBe('PRIVMSG #chan :yo');
+
+    // The server reflects our own PRIVMSG back, tagged with its real message id.
+    server.send('@msgid=srv-echo-1 :ada!a@h PRIVMSG #chan :yo');
+
+    const receipt = await sendP;
+    expect(receipt.protocolId).toBe('srv-echo-1');
+    const echoed = await it.next();
+    expect(echoed.value).toMatchObject({ type: 'message', message: { protocolId: 'srv-echo-1', body: 'yo' } });
+  });
+
+  it('with echo-message ACKed but no echo received, sendMessage still resolves (fallback id, not a hang)', async () => {
+    vi.useFakeTimers();
+    try {
+      const server = new FakeServer();
+      const adapter = new IrcAdapter();
+      const p = adapter.connect(creds(), server);
+      await vi.advanceTimersByTimeAsync(0);
+      server.send('CAP * LS :echo-message');
+      server.send('CAP ada ACK :echo-message');
+      server.send(':irc.example 001 ada :Welcome ada');
+      const session = (await p) as IrcSession;
+
+      const receiptP = adapter.sendMessage(session, '#chan', { body: 'yo', replyToId: null, mediaPath: null });
+      await vi.advanceTimersByTimeAsync(5_000);
+      const receipt = await receiptP;
+      expect(receipt.protocolId).toMatch(/^\d+~ada~yo$/);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('a KICK surfaces as both a room-membership leave and a system message', async () => {
     const { adapter, server, session } = await connected();
     const it = adapter.events(session)[Symbol.asyncIterator]();
