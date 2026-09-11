@@ -123,6 +123,44 @@ describe('useChatState', () => {
     expect(spy).not.toHaveBeenCalled(); // already seeded
   });
 
+  it('a message pushed before the history fetch resolves is not dropped from a freshly opened conversation', async () => {
+    // Regression: found by a live e2e run where a message sent immediately after joining a brand
+    // new room never rendered (the conversation's unread badge still bumped — that fold path is
+    // unconditional — but chat-store's message-append path only fires when the conversation's
+    // message window is already seeded, and a race meant the live event arrived before
+    // `getChatHistory`'s response did).
+    let resolveHistory: ((page: { messages: ChatMessage[]; nextCursor: null }) => void) | null = null;
+    const { port, emit } = makePort({
+      listChatConversations: () => Promise.resolve([conv({ accountId: 'home' })]),
+      getChatHistory: () =>
+        new Promise((resolve) => {
+          resolveHistory = resolve;
+        }),
+    });
+    const { result } = renderHook(() => useChatState(port));
+    await waitFor(() => expect(result.current.conversations.length).toBe(1));
+
+    act(() => {
+      result.current.selectConversation('c1');
+    });
+    // The history fetch is still pending — a live message arrives before it resolves.
+    act(() => {
+      emit({
+        kind: 'change',
+        accountId: 'home',
+        change: { kind: 'message', conversationId: 'c1', message: msg({ protocolId: 'live', receivedAt: 999 }) },
+      });
+    });
+    expect(result.current.client.messages.c1?.some((m) => m.protocolId === 'live')).toBe(true);
+
+    // The history page resolves afterwards and merges in rather than clobbering the live arrival.
+    act(() => {
+      resolveHistory?.({ messages: [msg({ protocolId: 'h1' })], nextCursor: null });
+    });
+    await waitFor(() => expect(result.current.client.messages.c1?.length).toBe(2));
+    expect(result.current.client.messages.c1?.map((m) => m.protocolId).sort()).toEqual(['h1', 'live']);
+  });
+
   it('applies a pushed change event and a connection-state event', async () => {
     const { port, emit } = makePort({
       listChatConversations: () => Promise.resolve([conv({ accountId: 'home' })]),
@@ -147,8 +185,8 @@ describe('useChatState', () => {
     expect(result.current.connectionStates.home).toBe('error');
   });
 
-  it('send() posts to the active account + selected conversation', async () => {
-    const { port, sendChatMessage } = makePort({
+  it('send() posts to the active account + selected conversation, then marks its own message read', async () => {
+    const { port, sendChatMessage, markChatRead } = makePort({
       listChatConversations: () => Promise.resolve([conv({ accountId: 'home' })]),
     });
     const { result } = renderHook(() => useChatState(port));
@@ -156,6 +194,8 @@ describe('useChatState', () => {
     act(() => {
       result.current.selectConversation('c1');
     });
+    await waitFor(() => expect(markChatRead).toHaveBeenCalledWith('home', 'c1', 'h1')); // the history-open mark
+    markChatRead.mockClear();
 
     await act(async () => {
       await result.current.send('hello', { replyToId: 'r1' });
@@ -165,6 +205,8 @@ describe('useChatState', () => {
       replyToId: 'r1',
       mediaPath: null,
     });
+    // Your own just-sent message must never sit past the "new messages" divider.
+    expect(markChatRead).toHaveBeenCalledWith('home', 'c1', 'srv-1');
   });
 
   it('send() is a no-op with nothing selected', async () => {

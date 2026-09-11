@@ -125,6 +125,16 @@ export function useChatState(port: ChatClientPort): UseChatState {
       setSelectedConversationId(conversationId);
       if (conversationId === null || activeAccountId === null) return;
       if (client.messages[conversationId] !== undefined) return;
+      // Mark this conversation as tracked BEFORE the history fetch resolves, not after —
+      // `chat-store`'s `applyChatChange` only folds a live 'message' event into a conversation
+      // whose window is already seeded (`state.messages[id] !== undefined`) so it never grows the
+      // set of tracked conversations unbounded. Seeding with `[]` synchronously closes the race
+      // where a message sent (or received) right after opening a brand-new conversation arrives
+      // before `getChatHistory` resolves and would otherwise be silently dropped from the timeline
+      // (the conversation's unread badge still bumps either way, since that fold path doesn't
+      // check the window) — `seedHistory` merges by `protocolId`, so the later real page's messages
+      // combine with whatever arrived in the interim instead of overwriting it.
+      setClient((prev) => seedHistory(prev, conversationId, []));
       void (async () => {
         const page = await port.getChatHistory(activeAccountId, conversationId);
         setClient((prev) => seedHistory(prev, conversationId, page.messages));
@@ -140,11 +150,15 @@ export function useChatState(port: ChatClientPort): UseChatState {
   const send = useCallback(
     async (text: string, opts?: { replyToId?: string | null }): Promise<void> => {
       if (activeAccountId === null || selectedConversationId === null) return;
-      await port.sendChatMessage(activeAccountId, selectedConversationId, {
+      const { protocolId } = await port.sendChatMessage(activeAccountId, selectedConversationId, {
         body: text,
         replyToId: opts?.replyToId ?? null,
         mediaPath: null,
       });
+      // Your own message must never land past the "new messages" divider — without this, the
+      // timeline's `lastReadId` stays at whatever it was before you typed, so `buildTimeline` reads
+      // the message you JUST sent as unread and draws the divider above it.
+      await port.markChatRead(activeAccountId, selectedConversationId, protocolId);
     },
     [port, activeAccountId, selectedConversationId],
   );
