@@ -191,7 +191,21 @@ describe('XmppAdapter — live traffic', () => {
     const receipt = await adapter.sendMessage(session, 'bob@example.com', { body: 'hi <there>', replyToId: null, mediaPath: null });
     expect(receipt.protocolId).toMatch(/^t-/);
     expect(server.lastWritten()).toContain('<body>hi &lt;there&gt;</body>');
+    expect(server.lastWritten()).toContain('type="chat"');
     expect(session.sm.unackedCount).toBe(1);
+  });
+
+  it('sendMessage to a joined room uses type="groupchat" (XEP-0045) — a plain "chat" message is not broadcast to occupants', async () => {
+    const { server, adapter, session } = await connected();
+    await adapter.joinRoom(session, 'general@conf.example.com');
+    await adapter.sendMessage(session, 'general@conf.example.com', {
+      body: 'hi room',
+      replyToId: null,
+      mediaPath: null,
+    });
+    const sent = server.lastWritten();
+    expect(sent).toContain('type="groupchat"');
+    expect(sent).not.toContain('type="chat"');
   });
 
   it('setPresence and markRead write the right stanzas', async () => {
