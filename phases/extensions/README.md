@@ -71,15 +71,20 @@ These are not restated per-document beyond a pointer; they are the price of bein
 
 ## Shared prerequisite work (blocks both docs)
 
-- [ ] **Extend `ExtensionPermissionSchema`** (`@tepegoz/extension-sdk`) past the current closed set
+- [x] **Extend `ExtensionPermissionSchema`** (`@tepegoz/extension-sdk`) past the current closed set
       (`tabs` · `read-page` · `write-page` · `navigate` · `network`). New host capabilities these
       extensions need a name for: `accounts` (hold server credentials), `background-connection`
-      (keep a socket open while the surface is closed), `notifications`, `contacts`. The SDK comment
-      already anticipates this ("Extend the enum as new host capabilities ship").
+      (keep a socket open while the surface is closed), `notifications`, `contacts`. Landed with
+      X-chat.1 (`packages/extension-sdk/src/manifest.ts`); `extensions/ext-chat`'s manifest declares
+      all four.
 - [ ] **A `background-connection` supervisor** in `@tepegoz/extension-host` — today an extension's
       runtime is tied to a renderer surface being open. A mail/chat account must stay connected (or on
       a defined reconnect/backoff schedule) with every surface closed, and must drop cleanly on
-      disable, on profile switch, and on a kill-switch egress block.
+      disable, on profile switch, and on a kill-switch egress block. **Still open** — X-chat.1 built
+      this as bespoke chat-only wiring (`ChatMessenger.init/stop/reconcile/notifyEgressChange` called
+      directly from the desktop bootstrap), not a generic mechanism in `@tepegoz/extension-host` keyed
+      off the `background-connection` permission; a second consumer (`ext-mail`) would duplicate it
+      rather than reuse it. Promoting it to a real shared supervisor is still owed.
 - [ ] **Adapter-as-subprocess contract** — generalise `manifest.mcpServer` (stdio) into the shape a
       third-party mail/chat adapter or a protocol *bridge* would use: no host access, its own egress
       binding, every result normalised and re-validated before the core sees it, every tool still
