@@ -86,6 +86,7 @@ export {
   seedRoster,
   seedHistory,
   patchConversation,
+  toggleReaction,
   applyChatChange,
   applyChatChanges,
   type ChatClientState,
@@ -101,6 +102,7 @@ export type {
 } from './types';
 export { presenceMeta, type PresenceMeta, type PresenceTone } from './presence';
 export { PresenceBadge, type PresenceBadgeProps } from './PresenceBadge';
+export { ProtocolBadge, type ProtocolBadgeProps, type ChatProtocolKind } from './ProtocolBadge';
 export { Avatar, avatarHue, avatarInitials, type AvatarProps, type AvatarSize } from './Avatar';
 export {
   conversationTitle,
@@ -112,3 +114,4 @@ export {
   type AccountGroup,
 } from './conversation-list';
 export { ConversationList, type ConversationListProps } from './ConversationList';
+export { AccountsManager, type AccountsManagerProps } from './AccountsManager';

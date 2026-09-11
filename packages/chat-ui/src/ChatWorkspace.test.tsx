@@ -119,7 +119,7 @@ describe('ChatWorkspace', () => {
     expect(onAddAccount).toHaveBeenCalled();
   });
 
-  it('shows an always-on left header with a gear that opens account management', async () => {
+  it('shows an always-on left header with a gear that opens the accounts manager', async () => {
     const onAddAccount = vi.fn();
     const { port } = makePort({
       listChatAccounts: () =>
@@ -127,7 +127,7 @@ describe('ChatWorkspace', () => {
           accounts: [
             { id: 'work', label: 'Work', displayName: '', protocol: 'xmpp', color: null, order: 0 },
           ],
-          states: {},
+          states: { work: 'online' },
         }),
       listChatConversations: () => Promise.resolve([]),
       getChatRoster: () => Promise.resolve([]),
@@ -136,7 +136,40 @@ describe('ChatWorkspace', () => {
     // header present even with an account configured (no "add account" hint then)
     expect(await screen.findByText('Chat')).toBeDefined();
     fireEvent.click(screen.getByRole('button', { name: 'Accounts' }));
+
+    // The one configured account is listed here — this is what was missing before: a single
+    // account had no visible confirmation anywhere that it had actually been saved.
+    expect(await screen.findByRole('heading', { name: 'Accounts' })).toBeDefined();
+    expect(screen.getByText('Work')).toBeDefined();
+    expect(onAddAccount).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Add account' }));
     expect(onAddAccount).toHaveBeenCalled();
+  });
+
+  it('removes an account from the accounts manager after a confirming second click', async () => {
+    const removeChatAccount = vi.fn(() => Promise.resolve());
+    const { port } = makePort({
+      listChatAccounts: () =>
+        Promise.resolve({
+          accounts: [
+            { id: 'work', label: 'Work', displayName: '', protocol: 'xmpp', color: null, order: 0 },
+          ],
+          states: { work: 'online' },
+        }),
+      listChatConversations: () => Promise.resolve([]),
+      getChatRoster: () => Promise.resolve([]),
+      removeChatAccount,
+    });
+    wrap(<ChatWorkspace port={port} />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Accounts' }));
+    await screen.findByText('Work');
+
+    const remove = screen.getByRole('button', { name: 'Remove' });
+    fireEvent.click(remove);
+    expect(removeChatAccount).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'Click again to remove' }));
+    await waitFor(() => expect(removeChatAccount).toHaveBeenCalledWith('work'));
   });
 
   it('lists conversations, opens one, and renders its timeline', async () => {
@@ -236,6 +269,41 @@ describe('ChatWorkspace', () => {
     expect(screen.getByText('Bea')).toBeDefined();
   });
 
+  it('recognises the local user\'s own room messages by occupant nick, not by address equality', async () => {
+    const { port, emit } = makePort({
+      listChatConversations: () =>
+        Promise.resolve([conv({ id: 'room@conf', kind: 'room', address: 'room@conf', name: 'Room' })]),
+      getChatHistory: () =>
+        Promise.resolve({
+          messages: [
+            msg({ id: 'm1', protocolId: 'p1', senderAddress: 'room@conf/Bea', body: 'their line' }),
+            msg({ id: 'm2', protocolId: 'p2', senderAddress: 'room@conf/me', body: 'my line' }),
+          ],
+          nextCursor: null,
+        }),
+    });
+    wrap(<ChatWorkspace port={port} />);
+    fireEvent.click(await screen.findByRole('button', { name: /Room/ }));
+    await screen.findByText('their line');
+
+    act(() => {
+      emit({
+        kind: 'change',
+        accountId: 'work',
+        change: {
+          kind: 'room',
+          conversationId: 'room@conf',
+          room: { joined: true, selfNick: 'me', subject: '', occupants: {} },
+        },
+      } as never);
+    });
+
+    await waitFor(() =>
+      expect(screen.getByText('my line').closest('.chat-msg')?.getAttribute('data-own')).toBe('true'),
+    );
+    expect(screen.getByText('their line').closest('.chat-msg')?.getAttribute('data-own')).toBe('false');
+  });
+
   it('shows a Rooms tab only when the port supports MUC, and joins from it', async () => {
     const plain = makePort();
     wrap(<ChatWorkspace port={plain.port} />);
@@ -243,7 +311,11 @@ describe('ChatWorkspace', () => {
     expect(screen.queryByRole('tab', { name: 'Find a room' })).toBeNull();
     cleanup();
 
-    const joinChatRoom = vi.fn(() => Promise.resolve());
+    let joined = false;
+    const joinChatRoom = vi.fn((): Promise<string | null> => {
+      joined = true;
+      return Promise.resolve('general@conf.example');
+    });
     const { port } = makePort({
       discoverChatRooms: () =>
         Promise.resolve([
@@ -257,6 +329,12 @@ describe('ChatWorkspace', () => {
           },
         ]),
       joinChatRoom,
+      listChatConversations: () =>
+        Promise.resolve(
+          joined
+            ? [conv(), conv({ id: 'general@conf.example', kind: 'room', name: 'General' })]
+            : [conv()],
+        ),
     });
     wrap(<ChatWorkspace port={port} />);
     fireEvent.click(await screen.findByRole('tab', { name: 'Find a room' }));
@@ -264,6 +342,9 @@ describe('ChatWorkspace', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Browse' }));
     fireEvent.click(await screen.findByText('General'));
     await waitFor(() => expect(joinChatRoom).toHaveBeenCalledWith('work', 'general@conf.example'));
+    // Joining must actually open the room, not just switch to the chats tab (the reported bug: the
+    // panel flipped tabs but the conversation never appeared because its row was never re-seeded).
+    await waitFor(() => expect(screen.getByRole('heading', { name: 'General' })).toBeDefined());
   });
 
   it('marks IRC conversations as not encrypted, in both the DM and room headers', async () => {

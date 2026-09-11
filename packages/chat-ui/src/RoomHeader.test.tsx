@@ -139,8 +139,8 @@ describe('RoomHeader', () => {
     fireEvent.change(field, { target: { value: 'carol@example.org' } });
     fireEvent.keyDown(field, { key: 'Enter' });
     expect(onInvite).toHaveBeenCalledWith('carol@example.org');
-    // field hidden again; a blank commit does nothing
-    expect(screen.queryByLabelText('Invite')).toBeNull();
+    // field hidden again (back to just the icon button); a blank commit does nothing
+    expect(screen.queryByRole('textbox', { name: 'Invite' })).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'Invite' }));
     fireEvent.keyDown(screen.getByLabelText('Invite'), { key: 'Escape' });
     expect(onInvite).toHaveBeenCalledTimes(1);
@@ -149,6 +149,22 @@ describe('RoomHeader', () => {
   it('hides the invite affordance entirely without a handler', () => {
     wrap(<RoomHeader name="general" membersOpen={false} onToggleMembers={vi.fn()} />);
     expect(screen.queryByRole('button', { name: 'Invite' })).toBeNull();
+  });
+
+  it('leaves the room only after a confirming second click, and hides the action without a handler', () => {
+    const onLeave = vi.fn();
+    wrap(
+      <RoomHeader name="general" membersOpen={false} onToggleMembers={vi.fn()} onLeave={onLeave} />,
+    );
+    const leave = screen.getByRole('button', { name: 'Leave room' });
+    fireEvent.click(leave);
+    expect(onLeave).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'Click again to leave' }));
+    expect(onLeave).toHaveBeenCalledTimes(1);
+
+    cleanup();
+    wrap(<RoomHeader name="general" membersOpen={false} onToggleMembers={vi.fn()} />);
+    expect(screen.queryByRole('button', { name: 'Leave room' })).toBeNull();
   });
 
   it('falls back to the stored topic, then to a placeholder', () => {

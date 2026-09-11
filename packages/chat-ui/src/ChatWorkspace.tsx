@@ -1,9 +1,10 @@
 import { useMemo, useState } from 'react';
 import { useT } from '@tepegoz/i18n/react';
 import './chat-ui.css';
-import type { RoomNotifyLevel } from '@tepegoz/chat-core';
+import type { RoomNotifyLevel, RoomView } from '@tepegoz/chat-core';
 import type { ChatContact, ChatConversation, ChatMessage } from '@tepegoz/shared-types';
 import { chatUiDict } from './i18n';
+import { AccountsManager } from './AccountsManager';
 import { Avatar } from './Avatar';
 import { Composer } from './Composer';
 import { ConversationList } from './ConversationList';
@@ -30,6 +31,25 @@ export interface ChatWorkspaceProps {
 }
 
 type LeftTab = 'chats' | 'contacts' | 'rooms';
+
+/**
+ * Is this message the local user's own? A DM has exactly two parties, so anything not from the
+ * peer is ours. A room has no such shortcut — protocols disagree on what `senderAddress` holds for
+ * a room message (XMPP: the full occupant JID `room@service/nick`; IRC: the bare nick; Matrix: the
+ * bare user id) — so this compares against the room's `selfNick`, which every adapter's occupant
+ * fold already derives in that SAME shape (see `chat-core`'s `RoomView`).
+ */
+function messageIsOwn(
+  message: ChatMessage,
+  selected: ChatConversation,
+  selectedRoom: RoomView | undefined,
+): boolean {
+  if (selected.kind === 'dm') return message.senderAddress !== selected.address;
+  if (selectedRoom?.selfNick == null) return false;
+  const slash = message.senderAddress.indexOf('/');
+  const nick = slash === -1 ? message.senderAddress : message.senderAddress.slice(slash + 1);
+  return nick === selectedRoom.selfNick;
+}
 
 /** Inline gear — chat-ui is a string-free leaf with no icon dependency, so the glyph lives here. */
 function GearIcon() {
@@ -58,6 +78,7 @@ export function ChatWorkspace({
   const chat = useChatState(port);
   const [tab, setTab] = useState<LeftTab>('chats');
   const [membersOpen, setMembersOpen] = useState(false);
+  const [managingAccounts, setManagingAccounts] = useState(false);
 
   // Prefer an explicit `resolveMedia` prop; otherwise adapt the port's `resolveChatMedia` for the
   // active account. The host still returns a LOCAL `data:` URL — `<MessageMedia>` re-checks.
@@ -77,6 +98,7 @@ export function ChatWorkspace({
     id: a.id,
     label: a.label,
     color: a.color,
+    protocol: a.protocol,
   }));
 
   const rosterList = useMemo(
@@ -108,6 +130,29 @@ export function ChatWorkspace({
 
   const noAccounts = !chat.loading && chat.accounts.length === 0;
 
+  if (managingAccounts) {
+    return (
+      <div className="chat-workspace">
+        <AccountsManager
+          accounts={chat.accounts}
+          connectionStates={chat.connectionStates}
+          onClose={() => setManagingAccounts(false)}
+          {...(onAddAccount !== undefined
+            ? {
+                onAdd: () => {
+                  setManagingAccounts(false);
+                  onAddAccount();
+                },
+              }
+            : {})}
+          {...(chat.removeAccount !== null
+            ? { onRemove: (accountId: string) => void chat.removeAccount?.(accountId) }
+            : {})}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="chat-workspace">
       {chat.accounts.length > 1 && (
@@ -131,17 +176,15 @@ export function ChatWorkspace({
         <aside className="chat-workspace__left">
           <div className="chat-workspace__left-head">
             <span className="chat-workspace__left-title">{s.workspace.title}</span>
-            {onAddAccount !== undefined && (
-              <button
-                type="button"
-                className="chat-workspace__icon-btn"
-                aria-label={s.workspace.manageAccounts}
-                title={s.workspace.manageAccounts}
-                onClick={onAddAccount}
-              >
-                <GearIcon />
-              </button>
-            )}
+            <button
+              type="button"
+              className="chat-workspace__icon-btn"
+              aria-label={s.workspace.manageAccounts}
+              title={s.workspace.manageAccounts}
+              onClick={() => setManagingAccounts(true)}
+            >
+              <GearIcon />
+            </button>
           </div>
           {noAccounts && (
             <p className="chat-workspace__no-accounts">
@@ -254,6 +297,9 @@ export function ChatWorkspace({
                   {...(chat.inviteToRoom !== null
                     ? { onInvite: (who: string) => void chat.inviteToRoom?.(selected.id, who) }
                     : {})}
+                  {...(chat.leaveRoom !== null
+                    ? { onLeave: () => void chat.leaveRoom?.(selected.id) }
+                    : {})}
                 />
               ) : (
                 <header className="chat-workspace__conv-head">
@@ -284,11 +330,19 @@ export function ChatWorkspace({
               )}
               <div className="chat-workspace__conv-body">
                 <MessageTimeline
+                  key={selected.id}
                   messages={messages}
                   lastReadId={selected.lastReadId}
-                  isOwn={(m) => selected.kind === 'dm' && m.senderAddress !== selected.address}
+                  isOwn={(m) => messageIsOwn(m, selected, selectedRoom)}
                   resolveMedia={effectiveResolveMedia}
                   onOpenMedia={onOpenMedia}
+                  {...(chat.react !== null
+                    ? {
+                        onReact: (protocolId: string, emoji: string, on: boolean) => {
+                          void chat.react?.(selected.id, protocolId, emoji, on);
+                        },
+                      }
+                    : {})}
                 />
                 {selected.kind === 'room' && membersOpen && selectedRoom !== undefined && (
                   <RoomMemberList room={selectedRoom} />

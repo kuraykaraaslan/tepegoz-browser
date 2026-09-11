@@ -8,6 +8,7 @@ import {
   seedConversations,
   seedHistory,
   seedRoster,
+  toggleReaction,
   type ChatClientState,
 } from './chat-store';
 import { sortConversations } from './conversation-list';
@@ -19,6 +20,8 @@ export interface UseChatState {
   connectionStates: Readonly<Record<string, ChatConnState>>;
   activeAccountId: string | null;
   setActiveAccount: (accountId: string) => void;
+  /** Remove a configured account — `null` when the port does not support it. */
+  removeAccount: ((accountId: string) => Promise<void>) | null;
   client: ChatClientState;
   /** Conversations of the active account, most-recent first. */
   conversations: readonly ChatConversation[];
@@ -35,6 +38,13 @@ export interface UseChatState {
   setRoomTopic: ((conversationId: string, topic: string) => Promise<void>) | null;
   /** Invite a contact to a room — `null` when the port does not support it. */
   inviteToRoom: ((conversationId: string, invitee: string) => Promise<void>) | null;
+  /** Leave a joined room — `null` when the port does not support it. */
+  leaveRoom: ((conversationId: string) => Promise<void>) | null;
+  /** Add / remove one of the local user's emoji reactions on a message — `null` when the port does
+   *  not support it. `protocolId` addresses the message. */
+  react:
+    | ((conversationId: string, protocolId: string, emoji: string, on: boolean) => Promise<void>)
+    | null;
   refresh: () => Promise<void>;
   /** MUC — present only when the port supports rooms. */
   rooms:
@@ -144,6 +154,21 @@ export function useChatState(port: ChatClientPort): UseChatState {
     setSelectedConversationId(null);
   }, []);
 
+  const { removeChatAccount } = port;
+  const removeAccount = useMemo(() => {
+    if (removeChatAccount === undefined) return null;
+    return async (accountId: string): Promise<void> => {
+      await removeChatAccount(accountId);
+      // Drop a stale active-account pointer so `refresh` picks the next available account instead
+      // of leaving the panel wired to an id that no longer exists.
+      if (activeAccountId === accountId) {
+        setActiveAccountId(null);
+        setSelectedConversationId(null);
+      }
+      await refresh();
+    };
+  }, [removeChatAccount, activeAccountId, refresh]);
+
   const { setChatRoomNotifyLevel } = port;
   const setRoomNotifyLevel = useMemo(() => {
     if (setChatRoomNotifyLevel === undefined) return null;
@@ -174,6 +199,23 @@ export function useChatState(port: ChatClientPort): UseChatState {
     };
   }, [setChatRoomTopic, activeAccountId]);
 
+  const { reactToChatMessage } = port;
+  const react = useMemo(() => {
+    if (reactToChatMessage === undefined) return null;
+    return async (
+      conversationId: string,
+      protocolId: string,
+      emoji: string,
+      on: boolean,
+    ): Promise<void> => {
+      if (activeAccountId === null) return;
+      // Optimistic — reverted implicitly if the round trip throws (the caller sees the rejection
+      // and, per the shared error-boundary convention, surfaces it; there is no retry queue here).
+      setClient((prev) => toggleReaction(prev, conversationId, protocolId, emoji, on));
+      await reactToChatMessage(activeAccountId, conversationId, protocolId, emoji, on);
+    };
+  }, [reactToChatMessage, activeAccountId]);
+
   const { inviteToChatRoom } = port;
   const inviteToRoom = useMemo(() => {
     if (inviteToChatRoom === undefined) return null;
@@ -183,6 +225,19 @@ export function useChatState(port: ChatClientPort): UseChatState {
       await inviteToChatRoom(activeAccountId, conversationId, invitee);
     };
   }, [inviteToChatRoom, activeAccountId]);
+
+  const { leaveChatRoom } = port;
+  const leaveRoom = useMemo(() => {
+    if (leaveChatRoom === undefined) return null;
+    return async (conversationId: string): Promise<void> => {
+      if (activeAccountId === null) return;
+      await leaveChatRoom(activeAccountId, conversationId);
+      // The panel has no business staying open on a room the user just walked out of.
+      setSelectedConversationId((current) => (current === conversationId ? null : current));
+      const conversations = await port.listChatConversations(activeAccountId);
+      setClient((prev) => seedConversations(prev, conversations));
+    };
+  }, [leaveChatRoom, activeAccountId, port]);
 
   const conversations = useMemo(() => {
     if (activeAccountId === null) return [];
@@ -201,18 +256,26 @@ export function useChatState(port: ChatClientPort): UseChatState {
           : discoverChatRooms(activeAccountId, service),
       join: async (roomJid: string): Promise<void> => {
         if (activeAccountId === null) return;
-        await joinChatRoom(activeAccountId, roomJid);
-        await refresh();
-        setSelectedConversationId(roomJid);
+        // The adapter's own idea of the room's id (bare-JID-normalized) is the source of truth —
+        // it is what every later push event keys its patches against, so falling back to the raw
+        // input here would silently orphan the conversation the moment the two diverge.
+        const conversationId = (await joinChatRoom(activeAccountId, roomJid)) ?? roomJid;
+        // `applyChatChange`'s 'conversation' case only patches a row that already exists (see
+        // chat-store.ts) — a freshly joined room has no row yet, so an explicit re-seed is the only
+        // way the panel learns about it before selecting it.
+        const conversations = await port.listChatConversations(activeAccountId);
+        setClient((prev) => seedConversations(prev, conversations));
+        selectConversation(conversationId);
       },
     };
-  }, [discoverChatRooms, joinChatRoom, activeAccountId, refresh]);
+  }, [discoverChatRooms, joinChatRoom, activeAccountId, port, selectConversation]);
 
   return {
     accounts,
     connectionStates,
     activeAccountId,
     setActiveAccount,
+    removeAccount,
     client,
     conversations,
     selectedConversationId,
@@ -223,6 +286,8 @@ export function useChatState(port: ChatClientPort): UseChatState {
     setMuted,
     setRoomTopic,
     inviteToRoom,
+    leaveRoom,
+    react,
     refresh,
     rooms,
   };

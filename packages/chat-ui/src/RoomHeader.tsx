@@ -5,6 +5,90 @@ import { Avatar } from './Avatar';
 import { chatUiDict } from './i18n';
 import { NotEncryptedBadge } from './NotEncryptedBadge';
 
+/**
+ * Small inline icons for the toolbar — `chat-ui` is a string-free leaf with no icon-font dependency
+ * (see `GearIcon` in `ChatWorkspace.tsx`), so a compact icon toolbar draws its own glyphs rather than
+ * pulling in an icon library.
+ */
+function InviteIcon() {
+  return (
+    <svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true" focusable="false">
+      <circle cx="8" cy="7" r="3.1" fill="none" stroke="currentColor" strokeWidth="1.5" />
+      <path
+        d="M2.5 17c.5-3.3 2.9-5.2 5.5-5.2s5 1.9 5.5 5.2"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+      />
+      <path d="M16 6v5M13.5 8.5h5" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function MuteIcon({ muted }: Readonly<{ muted: boolean }>) {
+  return (
+    <svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true" focusable="false">
+      <path
+        d="M6 8v3a3.5 3.5 0 0 0 7 0V7.2M9.5 3.3A2.2 2.2 0 0 1 13 5.2v.3"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+      />
+      <path d="M6 16.2h7M9.5 13.3v2.9" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+      {muted && (
+        <path d="M3.5 3.5l13 13" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+      )}
+    </svg>
+  );
+}
+
+function MembersIcon() {
+  return (
+    <svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true" focusable="false">
+      <circle cx="7" cy="6.5" r="2.6" fill="none" stroke="currentColor" strokeWidth="1.5" />
+      <path
+        d="M2.3 16c.4-3 2.3-4.7 4.7-4.7s4.3 1.7 4.7 4.7"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+      />
+      <path
+        d="M12.3 4.3c1.3.3 2.2 1.4 2.2 2.7 0 1.2-.8 2.3-2 2.6M14 11.6c1.9.5 3.2 2 3.6 4.2"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+function LeaveIcon() {
+  return (
+    <svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true" focusable="false">
+      <path
+        d="M8 3.3H4.7A1.2 1.2 0 0 0 3.5 4.5v11A1.2 1.2 0 0 0 4.7 16.7H8"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M9 10h7.5M13.3 6.8l3.2 3.2-3.2 3.2"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 export interface RoomHeaderProps {
   /** The room's display name / address. */
   name: string;
@@ -26,6 +110,8 @@ export interface RoomHeaderProps {
   onSetTopic?: (topic: string) => void;
   /** Invite a contact to the room; the "Invite" affordance is shown only when this is given. */
   onInvite?: (invitee: string) => void;
+  /** Leave the room; the action is shown only when this is given (a second click confirms it). */
+  onLeave?: () => void;
 }
 
 /** The conversation header for a MUC room: name, topic, member count, and a members toggle. */
@@ -42,6 +128,7 @@ export function RoomHeader({
   onToggleMuted,
   onSetTopic,
   onInvite,
+  onLeave,
 }: Readonly<RoomHeaderProps>) {
   const s = useT(chatUiDict);
   const topic = (room?.subject ?? '').trim() || topicFallback.trim();
@@ -51,6 +138,7 @@ export function RoomHeader({
   const [draft, setDraft] = useState(topic);
   const [inviting, setInviting] = useState(false);
   const [invitee, setInvitee] = useState('');
+  const [leaveArmed, setLeaveArmed] = useState(false);
   const commitInvite = (): void => {
     const who = invitee.trim();
     setInviting(false);
@@ -94,7 +182,9 @@ export function RoomHeader({
             />
           ) : (
             <p className="chat-room-header__topic">
-              {topic !== '' ? topic : s.room.noTopicHeader}
+              <span className="chat-room-header__topic-text" title={topic !== '' ? topic : undefined}>
+                {topic !== '' ? topic : s.room.noTopicHeader}
+              </span>
               {onSetTopic !== undefined && (
                 <button
                   type="button"
@@ -134,26 +224,31 @@ export function RoomHeader({
           ) : (
             <button
               type="button"
-              className="chat-room-header__invite"
+              className="chat-room-header__icon-btn"
+              title={s.room.invite}
+              aria-label={s.room.invite}
               onClick={() => setInviting(true)}
             >
-              {s.room.invite}
+              <InviteIcon />
             </button>
           ))}
         {onToggleMuted !== undefined && (
           <button
             type="button"
-            className="chat-room-header__mute"
+            className="chat-room-header__icon-btn"
+            title={muted ? s.workspace.unmute : s.workspace.mute}
+            aria-label={muted ? s.workspace.unmute : s.workspace.mute}
             aria-pressed={muted}
             onClick={onToggleMuted}
           >
-            {muted ? s.workspace.unmute : s.workspace.mute}
+            <MuteIcon muted={muted} />
           </button>
         )}
         {onSetNotifyLevel !== undefined && (
           <select
             className="chat-room-header__notify"
             aria-label={s.room.notify}
+            title={s.room.notify}
             value={notifyLevel}
             onChange={(e) => {
               const v = e.target.value;
@@ -167,12 +262,31 @@ export function RoomHeader({
         )}
         <button
           type="button"
-          className="chat-room-header__members-toggle"
+          className="chat-room-header__icon-btn chat-room-header__members-toggle"
+          title={`${count} ${s.room.showMembers}`}
+          aria-label={`${count} ${s.room.showMembers}`}
           aria-pressed={membersOpen}
           onClick={onToggleMembers}
         >
-          {count} {s.room.showMembers}
+          <MembersIcon />
+          <span aria-hidden="true">{count}</span>
         </button>
+        {onLeave !== undefined && (
+          <button
+            type="button"
+            className="chat-room-header__icon-btn chat-room-header__leave"
+            data-armed={leaveArmed}
+            title={leaveArmed ? s.room.leaveConfirm : s.room.leave}
+            aria-label={leaveArmed ? s.room.leaveConfirm : s.room.leave}
+            onClick={() => {
+              if (leaveArmed) onLeave();
+              else setLeaveArmed(true);
+            }}
+            onBlur={() => setLeaveArmed(false)}
+          >
+            <LeaveIcon />
+          </button>
+        )}
       </div>
     </header>
   );

@@ -184,7 +184,7 @@ describe('useChatState', () => {
     expect(noRooms.current.rooms).toBeNull();
 
     const discoverChatRooms = vi.fn(() => Promise.resolve([]));
-    const joinChatRoom = vi.fn(() => Promise.resolve());
+    const joinChatRoom = vi.fn(() => Promise.resolve('room@conf'));
     const listChatConversations = vi
       .fn<(a?: string) => Promise<import('@tepegoz/shared-types').ChatConversation[]>>()
       .mockResolvedValueOnce([])
@@ -204,6 +204,9 @@ describe('useChatState', () => {
     });
     expect(joinChatRoom).toHaveBeenCalledWith('home', 'room@conf');
     await waitFor(() => expect(result.current.selectedConversationId).toBe('room@conf'));
+    // The joined room must actually be selectable, not just referenced by id — this is what was
+    // broken before: the panel would flip to the chats tab with nothing to show.
+    expect(result.current.client.conversations['room@conf']).toBeDefined();
   });
 
   it('setRoomNotifyLevel is null without port support; otherwise patches optimistically + calls the port', async () => {
@@ -290,6 +293,30 @@ describe('useChatState', () => {
       await result.current.inviteToRoom?.('room@conf', 'carol@example.org');
     });
     expect(inviteToChatRoom).toHaveBeenCalledWith('home', 'room@conf', 'carol@example.org');
+  });
+
+  it('leaveRoom is null without port support; otherwise calls the port and deselects the room', async () => {
+    const plain = makePort();
+    const { result: noSupport } = renderHook(() => useChatState(plain.port));
+    await waitFor(() => expect(noSupport.current.loading).toBe(false));
+    expect(noSupport.current.leaveRoom).toBeNull();
+
+    const leaveChatRoom = vi.fn(() => Promise.resolve());
+    const { port } = makePort({
+      leaveChatRoom,
+      listChatConversations: () =>
+        Promise.resolve([conv({ id: 'room@conf', accountId: 'home', kind: 'room' })]),
+    });
+    const { result } = renderHook(() => useChatState(port));
+    await waitFor(() => expect(result.current.conversations.length).toBe(1));
+    act(() => result.current.selectConversation('room@conf'));
+    expect(result.current.selectedConversationId).toBe('room@conf');
+
+    await act(async () => {
+      await result.current.leaveRoom?.('room@conf');
+    });
+    expect(leaveChatRoom).toHaveBeenCalledWith('home', 'room@conf');
+    expect(result.current.selectedConversationId).toBeNull();
   });
 
   it('switching accounts clears the selection', async () => {

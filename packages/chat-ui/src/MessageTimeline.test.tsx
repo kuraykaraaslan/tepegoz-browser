@@ -8,6 +8,10 @@ import { MessageTimeline } from './MessageTimeline';
 
 afterEach(cleanup);
 
+// jsdom does not implement scrollIntoView (or real layout, so scrollHeight/scrollTop are inert) —
+// stub it so the scroll-on-open effect can run and be asserted on rather than silently no-op'ing.
+Element.prototype.scrollIntoView = vi.fn();
+
 const T0 = new Date(2026, 2, 15, 10, 0, 0).getTime();
 
 function msg(over: Partial<ChatMessage> = {}): ChatMessage {
@@ -35,6 +39,11 @@ function msg(over: Partial<ChatMessage> = {}): ChatMessage {
 const wrap = (ui: ReactElement) => render(<I18nProvider locale="en">{ui}</I18nProvider>);
 
 describe('MessageTimeline', () => {
+  it('shows an empty-state placeholder instead of a bare empty list', () => {
+    wrap(<MessageTimeline messages={[]} now={T0} />);
+    expect(screen.getByText('No messages yet')).toBeDefined();
+  });
+
   it('renders a day separator and the message body', () => {
     wrap(<MessageTimeline messages={[msg({ body: 'hello world' })]} now={T0} />);
     expect(screen.getByText('Today')).toBeDefined();
@@ -54,7 +63,9 @@ describe('MessageTimeline', () => {
     expect(screen.getAllByText('Alice')).toHaveLength(1);
   });
 
-  it('renders the "new messages" divider', () => {
+  it('renders the "new messages" divider and scrolls to it on open (Telegram-style)', () => {
+    const scrollIntoView = vi.fn();
+    Element.prototype.scrollIntoView = scrollIntoView;
     wrap(
       <MessageTimeline
         messages={[msg({ id: 'a' }), msg({ id: 'b', originTs: T0 + 1000 })]}
@@ -63,6 +74,23 @@ describe('MessageTimeline', () => {
       />,
     );
     expect(screen.getByText('New messages')).toBeDefined();
+    expect(scrollIntoView).toHaveBeenCalledWith({ block: 'start' });
+  });
+
+  it('scrolls to the newest message on open when there is no unread divider', () => {
+    // jsdom has no real layout — fake a tall, scrolled-past-the-top list to prove the effect drives
+    // scrollTop from scrollHeight rather than merely not throwing.
+    Object.defineProperty(HTMLElement.prototype, 'scrollHeight', {
+      configurable: true,
+      value: 4000,
+    });
+    const { container } = wrap(
+      <MessageTimeline messages={[msg({ id: 'a' }), msg({ id: 'b', originTs: T0 + 1000 })]} now={T0} />,
+    );
+    const list = container.querySelector('.chat-timeline') as HTMLOListElement;
+    expect(list.scrollTop).toBe(4000);
+    // @ts-expect-error restoring jsdom's own accessor pair
+    delete HTMLElement.prototype.scrollHeight;
   });
 
   it('shows a redacted placeholder instead of the body', () => {
@@ -151,14 +179,54 @@ describe('MessageTimeline', () => {
     expect(screen.queryByText('Loading attachment…')).toBeNull();
   });
 
-  it('renders a reactions row', () => {
+  it('renders a reactions row as inert (read-only) without onReact', () => {
     wrap(
       <MessageTimeline
         messages={[msg({ reactions: [{ emoji: '👍', count: 3, me: true }] })]}
         now={T0}
       />,
     );
-    expect(screen.getByText('👍 3')).toBeDefined();
+    const reaction = screen.getByText('👍 3');
+    expect(reaction).toBeDefined();
+    expect(reaction.closest('button')).toBeNull();
+  });
+
+  it('clicking an existing reaction toggles it via onReact', () => {
+    const onReact = vi.fn();
+    wrap(
+      <MessageTimeline
+        messages={[msg({ protocolId: 'srv-1', reactions: [{ emoji: '👍', count: 3, me: true }] })]}
+        now={T0}
+        onReact={onReact}
+      />,
+    );
+    fireEvent.click(screen.getByText('👍 3'));
+    expect(onReact).toHaveBeenCalledWith('srv-1', '👍', false);
+  });
+
+  it('the "+" quick-react button opens a picker; picking an emoji reacts and closes it', () => {
+    const onReact = vi.fn();
+    wrap(<MessageTimeline messages={[msg({ protocolId: 'srv-1' })]} now={T0} onReact={onReact} />);
+    expect(screen.queryByRole('menu')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Add reaction' }));
+    expect(screen.getByRole('menu')).toBeDefined();
+    fireEvent.click(screen.getByRole('menuitem', { name: '❤️' }));
+    expect(onReact).toHaveBeenCalledWith('srv-1', '❤️', true);
+    expect(screen.queryByRole('menu')).toBeNull();
+  });
+
+  it('every message keeps its own timestamp even when the sender header is collapsed', () => {
+    wrap(
+      <MessageTimeline
+        messages={[
+          msg({ id: 'a', protocolId: 'a', body: 'one', originTs: T0 }),
+          msg({ id: 'b', protocolId: 'b', body: 'two', originTs: T0 + 30_000 }),
+        ]}
+        now={T0}
+      />,
+    );
+    expect(document.querySelectorAll('.chat-msg__time')).toHaveLength(2);
+    expect(screen.getAllByText('Alice')).toHaveLength(1); // still collapsed
   });
 
   it('windows a very long conversation and shows an "earlier messages" row', () => {

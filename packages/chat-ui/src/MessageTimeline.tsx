@@ -1,3 +1,4 @@
+import { useLayoutEffect, useRef, useState } from 'react';
 import { useLocale, useT } from '@tepegoz/i18n/react';
 import type { ChatMessage } from '@tepegoz/shared-types';
 import { Avatar } from './Avatar';
@@ -34,6 +35,8 @@ export interface MessageTimelineProps {
   onOpenMedia?: ((mediaRef: string) => void) | undefined;
   /** Scroll to / focus the quoted original when its preview is clicked. Absent ⇒ the quote is inert. */
   onJumpToMessage?: (protocolId: string) => void;
+  /** Add / remove the local user's reaction on a message. Absent ⇒ reactions render read-only. */
+  onReact?: (protocolId: string, emoji: string, on: boolean) => void;
   groupWindowMs?: BuildTimelineOptions<ChatMessage>['groupWindowMs'];
   /** Keep at most this many most-recent messages in the DOM (default {@link TIMELINE_WINDOW}); a
    *  `0` renders everything. Older messages collapse into one "N earlier messages" row. */
@@ -117,15 +120,71 @@ function MessageBody({
   );
 }
 
-function Reactions({ message }: Readonly<{ message: ChatMessage }>) {
-  if (message.reactions.length === 0) return null;
+/** A short, fixed quick-react set — not a full emoji picker, just the common few (Telegram's own
+ *  default bar is the same idea). */
+const QUICK_REACTIONS = ['👍', '❤️', '😂', '😮', '😢', '👏'];
+
+function ReactionsBar({
+  message,
+  strings,
+  onReact,
+}: Readonly<{
+  message: ChatMessage;
+  strings: ChatUiStrings;
+  onReact: ((protocolId: string, emoji: string, on: boolean) => void) | undefined;
+}>) {
+  const [pickerOpen, setPickerOpen] = useState(false);
+  if (message.reactions.length === 0 && onReact === undefined) return null;
   return (
     <span className="chat-msg__reactions">
-      {message.reactions.map((r) => (
-        <span key={r.emoji} className="chat-msg__reaction" data-me={r.me}>
-          {r.emoji} {r.count}
+      {message.reactions.map((r) =>
+        onReact === undefined ? (
+          <span key={r.emoji} className="chat-msg__reaction" data-me={r.me}>
+            {r.emoji} {r.count}
+          </span>
+        ) : (
+          <button
+            key={r.emoji}
+            type="button"
+            className="chat-msg__reaction"
+            data-me={r.me}
+            aria-pressed={r.me}
+            onClick={() => onReact(message.protocolId, r.emoji, !r.me)}
+          >
+            {r.emoji} {r.count}
+          </button>
+        ),
+      )}
+      {onReact !== undefined && (
+        <span className="chat-msg__react-add">
+          <button
+            type="button"
+            className="chat-msg__reaction chat-msg__reaction--add"
+            aria-label={strings.timeline.addReaction}
+            aria-expanded={pickerOpen}
+            onClick={() => setPickerOpen((v) => !v)}
+          >
+            +
+          </button>
+          {pickerOpen && (
+            <span className="chat-msg__react-picker" role="menu">
+              {QUICK_REACTIONS.map((emoji) => (
+                <button
+                  key={emoji}
+                  type="button"
+                  role="menuitem"
+                  onClick={() => {
+                    onReact(message.protocolId, emoji, true);
+                    setPickerOpen(false);
+                  }}
+                >
+                  {emoji}
+                </button>
+              ))}
+            </span>
+          )}
         </span>
-      ))}
+      )}
     </span>
   );
 }
@@ -144,11 +203,18 @@ export function MessageTimeline({
   resolveMedia,
   onOpenMedia,
   onJumpToMessage,
+  onReact,
   groupWindowMs,
   maxMessages = TIMELINE_WINDOW,
 }: Readonly<MessageTimelineProps>) {
   const s = useT(chatUiDict);
   const locale = useLocale();
+  const listRef = useRef<HTMLOListElement>(null);
+  // Position once per mount (the host keys this component by conversation id, so a conversation
+  // switch remounts it) the first time messages actually arrive — history loads asynchronously, so
+  // the initial render is often still empty. Guarded past that point: a live message arriving later
+  // must never yank the reader's scroll position back down.
+  const positioned = useRef(false);
   const items = buildTimeline(messages, {
     lastReadId,
     maxMessages,
@@ -156,8 +222,30 @@ export function MessageTimeline({
   });
   const byProtocolId = new Map(messages.map((m) => [m.protocolId, m]));
 
+  useLayoutEffect(() => {
+    if (positioned.current || messages.length === 0) return;
+    positioned.current = true;
+    const el = listRef.current;
+    if (el === null) return;
+    // Telegram-style: land on the unread divider when there is one, otherwise the newest message.
+    const divider = el.querySelector('.chat-timeline__unread');
+    if (divider !== null && typeof divider.scrollIntoView === 'function') {
+      divider.scrollIntoView({ block: 'start' });
+    } else {
+      el.scrollTop = el.scrollHeight;
+    }
+  }, [messages.length]);
+
+  if (items.length === 0) {
+    return (
+      <ol className="chat-timeline" ref={listRef}>
+        <li className="chat-timeline__empty">{s.timeline.empty}</li>
+      </ol>
+    );
+  }
+
   return (
-    <ol className="chat-timeline">
+    <ol className="chat-timeline" ref={listRef}>
       {items.map((item) => {
         if (item.kind === 'day') {
           return (
@@ -183,6 +271,15 @@ export function MessageTimeline({
         const { message, startsGroup } = item;
         const own = isOwn?.(message) ?? false;
         const senderName = message.senderName.trim() || message.senderAddress;
+
+        if (message.kind === 'system') {
+          return (
+            <li key={item.key} className="chat-msg" data-kind="system">
+              <MessageBody message={message} strings={s} onOpenLink={onOpenLink} />
+            </li>
+          );
+        }
+
         return (
           <li
             key={item.key}
@@ -191,40 +288,44 @@ export function MessageTimeline({
             data-own={own}
             data-starts-group={startsGroup}
           >
-            {startsGroup && (
-              <span className="chat-msg__meta">
-                {!own && (
+            {!own && (
+              <span className="chat-msg__gutter">
+                {startsGroup && (
                   <Avatar name={senderName} seed={message.senderAddress || senderName} size="sm" />
                 )}
-                <span className="chat-msg__sender">{senderName}</span>
+              </span>
+            )}
+            <div className="chat-msg__bubble">
+              {startsGroup && !own && <span className="chat-msg__sender">{senderName}</span>}
+              {message.replyToId !== null && byProtocolId.has(message.replyToId) && (
+                <QuotedReply
+                  original={byProtocolId.get(message.replyToId)!}
+                  strings={s}
+                  onJump={onJumpToMessage}
+                />
+              )}
+              {(message.body !== '' || message.redacted) && (
+                <MessageBody message={message} strings={s} onOpenLink={onOpenLink} />
+              )}
+              {message.mediaRef !== null && resolveMedia !== undefined && (
+                <MessageMedia
+                  mediaRef={message.mediaRef}
+                  resolveMedia={resolveMedia}
+                  onOpenMedia={onOpenMedia}
+                />
+              )}
+              <span className="chat-msg__foot">
+                {own && (
+                  <span className="chat-msg__delivery" data-state={message.deliveryState}>
+                    {s.delivery[message.deliveryState]}
+                  </span>
+                )}
                 <time className="chat-msg__time">
                   {formatClockTime(message.originTs || message.receivedAt, locale)}
                 </time>
               </span>
-            )}
-            {message.replyToId !== null && byProtocolId.has(message.replyToId) && (
-              <QuotedReply
-                original={byProtocolId.get(message.replyToId)!}
-                strings={s}
-                onJump={onJumpToMessage}
-              />
-            )}
-            {(message.body !== '' || message.redacted) && (
-              <MessageBody message={message} strings={s} onOpenLink={onOpenLink} />
-            )}
-            {message.mediaRef !== null && resolveMedia !== undefined && (
-              <MessageMedia
-                mediaRef={message.mediaRef}
-                resolveMedia={resolveMedia}
-                onOpenMedia={onOpenMedia}
-              />
-            )}
-            <Reactions message={message} />
-            {own && (
-              <span className="chat-msg__delivery" data-state={message.deliveryState}>
-                {s.delivery[message.deliveryState]}
-              </span>
-            )}
+              <ReactionsBar message={message} strings={s} onReact={onReact} />
+            </div>
           </li>
         );
       })}

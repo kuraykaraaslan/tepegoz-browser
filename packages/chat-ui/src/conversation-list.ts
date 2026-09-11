@@ -11,6 +11,8 @@ export interface ChatAccountRef {
   id: string;
   label: string;
   color?: string | null;
+  /** `ChatAccount['server']['protocol']` — drives each row's {@link ProtocolBadge}. */
+  protocol?: string;
 }
 
 /** `name` when the protocol gave us one, otherwise the raw address (JID / room / nick). */

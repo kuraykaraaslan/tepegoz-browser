@@ -1,5 +1,12 @@
 export const en = {
   /** Own-presence + contact-presence labels (XMPP show values). */
+  /** Network identity badge on a conversation row / account row. */
+  protocol: {
+    xmpp: 'XMPP',
+    irc: 'IRC',
+    matrix: 'Matrix',
+    bridge: 'Bridged network',
+  },
   presence: {
     online: 'Online',
     away: 'Away',
@@ -57,6 +64,9 @@ export const en = {
     /** Button + field label for inviting a contact to the room. */
     invite: 'Invite',
     invitePlaceholder: 'user@example.org',
+    /** Leave-room action — a second click (see {@link leaveConfirm}) confirms it. */
+    leave: 'Leave room',
+    leaveConfirm: 'Click again to leave',
   },
   media: {
     loading: 'Loading attachment…',
@@ -66,6 +76,8 @@ export const en = {
     open: 'Open attachment',
   },
   timeline: {
+    /** Shown in place of the message list when a conversation has no messages loaded yet. */
+    empty: 'No messages yet',
     /** Marks a message the sender later edited. */
     edited: 'edited',
     /** Stands in for a message the sender retracted. */
@@ -78,6 +90,8 @@ export const en = {
     inReplyTo: 'In reply to',
     /** Stands in for the quoted body when the original was an attachment with no text. */
     quoteAttachment: 'Attachment',
+    /** Accessible label for the "+" button that opens the quick-reaction picker. */
+    addReaction: 'Add reaction',
   },
   delivery: {
     pending: 'Sending…',
@@ -118,6 +132,24 @@ export const en = {
     notEncrypted: 'Not encrypted',
     /** Tooltip / detail for {@link notEncrypted} on IRC, which has no encryption at all. */
     ircPlaintext: 'IRC has no end-to-end encryption — messages are readable by the server.',
+  },
+  accountsManager: {
+    title: 'Accounts',
+    add: 'Add account',
+    remove: 'Remove',
+    /** Shown on a remove button after a first click, before the second (confirming) click. */
+    removeConfirm: 'Click again to remove',
+    empty: 'No accounts yet.',
+    back: 'Back',
+    connState: {
+      idle: 'Not connected',
+      connecting: 'Connecting…',
+      online: 'Connected',
+      reconnecting: 'Reconnecting…',
+      blocked: 'Blocked',
+      error: 'Connection error',
+      stopped: 'Disconnected',
+    },
   },
   roster: {
     title: 'Contacts',

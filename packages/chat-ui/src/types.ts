@@ -41,6 +41,8 @@ export type ChatStateEvent =
 /** The slice of the bridge the {@link useChatState} hook drives. */
 export interface ChatClientPort {
   listChatAccounts(): Promise<ChatAccountsSnapshot>;
+  /** Remove a configured account — optional; the accounts manager's remove action needs it. */
+  removeChatAccount?: (accountId: string) => Promise<void>;
   listChatConversations(accountId?: string): Promise<ChatConversation[]>;
   getChatRoster(accountId: string): Promise<ChatContact[]>;
   getChatHistory(
@@ -58,7 +60,9 @@ export interface ChatClientPort {
   onChatState(callback: (event: ChatStateEvent) => void): () => void;
   /** MUC support — optional; the room browser is shown only when both are provided. */
   discoverChatRooms?: (accountId: string, service: string) => Promise<RoomListing[]>;
-  joinChatRoom?: (accountId: string, roomJid: string) => Promise<void>;
+  joinChatRoom?: (accountId: string, roomJid: string) => Promise<string | null>;
+  /** Leave a joined room — optional; the room-header leave action needs it. */
+  leaveChatRoom?: (accountId: string, conversationId: string) => Promise<void>;
   /** Persist a room's notification level — optional; the header picker needs it. */
   setChatRoomNotifyLevel?: (
     accountId: string,
@@ -76,4 +80,13 @@ export interface ChatClientPort {
    * {@link ChatWorkspace} feeds it to `<MessageMedia>` so attachments render inline.
    */
   resolveChatMedia?: (accountId: string, mediaRef: string) => Promise<{ dataUrl: string } | null>;
+  /** Add / remove one of the local user's emoji reactions on a message — optional; the reaction row
+   *  is read-only without it. `messageId` is the message's `protocolId`. */
+  reactToChatMessage?: (
+    accountId: string,
+    conversationId: string,
+    messageId: string,
+    emoji: string,
+    on: boolean,
+  ) => Promise<void>;
 }

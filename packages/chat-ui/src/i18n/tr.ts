@@ -1,6 +1,12 @@
 import type { ChatUiStrings } from './en';
 
 export const tr: ChatUiStrings = {
+  protocol: {
+    xmpp: 'XMPP',
+    irc: 'IRC',
+    matrix: 'Matrix',
+    bridge: 'Köprülü ağ',
+  },
   presence: {
     online: 'Çevrimiçi',
     away: 'Uzakta',
@@ -42,6 +48,8 @@ export const tr: ChatUiStrings = {
     editTopic: 'Konuyu düzenle',
     invite: 'Davet et',
     invitePlaceholder: 'kullanici@ornek.org',
+    leave: 'Odadan ayrıl',
+    leaveConfirm: 'Ayrılmak için tekrar tıklayın',
   },
   media: {
     loading: 'Ek yükleniyor…',
@@ -49,12 +57,14 @@ export const tr: ChatUiStrings = {
     open: 'Eki aç',
   },
   timeline: {
+    empty: 'Henüz mesaj yok',
     edited: 'düzenlendi',
     redacted: 'Mesaj silindi',
     newMessages: 'Yeni mesajlar',
     earlierHidden: 'önceki mesaj gösterilmiyor',
     inReplyTo: 'Şu mesaja yanıt',
     quoteAttachment: 'Ek',
+    addReaction: 'Tepki ekle',
   },
   delivery: {
     pending: 'Gönderiliyor…',
@@ -82,6 +92,23 @@ export const tr: ChatUiStrings = {
     unmute: 'Sesi aç',
     notEncrypted: 'Şifresiz',
     ircPlaintext: 'IRC uçtan uca şifreleme sunmaz — mesajlar sunucu tarafından okunabilir.',
+  },
+  accountsManager: {
+    title: 'Hesaplar',
+    add: 'Hesap ekle',
+    remove: 'Kaldır',
+    removeConfirm: 'Kaldırmak için tekrar tıklayın',
+    empty: 'Henüz hesap yok.',
+    back: 'Geri',
+    connState: {
+      idle: 'Bağlı değil',
+      connecting: 'Bağlanıyor…',
+      online: 'Bağlı',
+      reconnecting: 'Yeniden bağlanıyor…',
+      blocked: 'Engellendi',
+      error: 'Bağlantı hatası',
+      stopped: 'Bağlantı kesildi',
+    },
   },
   roster: {
     title: 'Kişiler',

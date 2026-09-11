@@ -53,6 +53,40 @@ export function patchConversation(
   };
 }
 
+/**
+ * Optimistically flip the local user's reaction on one loaded message — the server echo (a folded
+ * `reaction` change, or a fresh history read) is the source of truth and will settle over this.
+ * No-op when the conversation's messages are not loaded or the message is not in the loaded window.
+ */
+export function toggleReaction(
+  state: ChatClientState,
+  conversationId: string,
+  protocolId: string,
+  emoji: string,
+  on: boolean,
+): ChatClientState {
+  const list = state.messages[conversationId];
+  if (list === undefined) return state;
+  const idx = list.findIndex((m) => m.protocolId === protocolId);
+  if (idx === -1) return state;
+  const message = list[idx];
+  if (message === undefined) return state;
+
+  const reactions = on
+    ? message.reactions.some((r) => r.emoji === emoji)
+      ? message.reactions.map((r) =>
+          r.emoji === emoji && !r.me ? { ...r, count: r.count + 1, me: true } : r,
+        )
+      : [...message.reactions, { emoji, count: 1, me: true }]
+    : message.reactions
+        .map((r) => (r.emoji === emoji && r.me ? { ...r, count: r.count - 1, me: false } : r))
+        .filter((r) => r.count > 0);
+
+  const nextList = [...list];
+  nextList[idx] = { ...message, reactions };
+  return { ...state, messages: { ...state.messages, [conversationId]: nextList } };
+}
+
 function orderMessages(list: readonly ChatMessage[]): ChatMessage[] {
   return [...list].sort(
     (a, b) =>
