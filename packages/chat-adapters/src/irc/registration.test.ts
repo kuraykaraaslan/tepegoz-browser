@@ -34,6 +34,25 @@ describe('IrcRegistration — no SASL', () => {
     expect(feed(r, ':srv 001 ada :Welcome ada')).toEqual([{ kind: 'registered', nick: 'ada' }]);
   });
 
+  it('requests chathistory under either its draft or finalised name', () => {
+    // Regression: IRC_WANTED_CAPS silently omitted both names, so a real chathistory-capable
+    // server (e.g. ergo, which still advertises the draft name) never got a CAP REQ for it — the
+    // ACKed-caps set stayed empty and `IrcAdapter.history()` returned no messages forever, with no
+    // unit test able to catch it (a fake test server ACKs whatever the test script tells it to,
+    // independent of what the client actually requested).
+    const draft = reg();
+    draft.start();
+    expect(feed(draft, 'CAP * LS :draft/chathistory batch')).toEqual([
+      'CAP REQ :batch draft/chathistory',
+    ]);
+
+    const finalised = reg();
+    finalised.start();
+    expect(feed(finalised, 'CAP * LS :chathistory batch')).toEqual([
+      'CAP REQ :batch chathistory',
+    ]);
+  });
+
   it('ignores an unknown CAP subcommand and a duplicate CAP END trigger', () => {
     const r = reg();
     r.start();

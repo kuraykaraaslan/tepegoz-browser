@@ -24,6 +24,11 @@ export const IRC_WANTED_CAPS = [
   'chghost',
   'setname',
   'sasl',
+  // Both names requested — servers still on the unfinalised spec advertise `draft/chathistory`
+  // (ergo, as of this writing), finalised servers advertise `chathistory`; `IrcAdapter.history()`
+  // already checks for either in the ACKed set.
+  'chathistory',
+  'draft/chathistory',
 ] as const;
 
 /**
