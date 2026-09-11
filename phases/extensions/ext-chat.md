@@ -806,24 +806,27 @@ DoD-template checklist.
       `python3 -m venv`, no Rust/C toolchain needed; the generated config already binds a plaintext
       HTTP listener with SQLite storage, exactly right for a throwaway test server): two accounts
       connect, exchange a room message, and a `/messages` backfill returns it after a reconnect. No
-      adapter bug found (unlike the IRC live run) — a useful negative result. Kept as a permanent
-      opt-in regression check: `packages/chat-transport-node/src/matrix-live-synapse.manual.test.ts`,
-      gated behind `TEPEGOZ_LIVE_MATRIX=1`. **Still open:** spaces, media, reactions, edits, sync-drop
-      recovery, token invalidation, and the desktop app / Playwright e2e (X-chat.10) — this exercised
-      only the core messaging + history path directly through the adapter. **The desktop-app e2e
-      attempt (2026-09-12) surfaced a real, unresolved problem instead of closing this further** —
-      `e2e/chat-live-matrix.spec.ts` (needs a second, TLS listener on the test Synapse: the schema
-      requires `homeserverUrl` to start with `https://`, unlike the manual adapter test's plain
-      `:8008`) shows the account stuck in `reconnecting`, never `online`, through the real
-      `ChatConnectionManager`/`ChatAccountRunner` stack — a fresh `POST /login` roughly every ~1s,
-      each one succeeding server-side, i.e. a genuine reconnect loop, not a single stuck attempt.
-      The identical `MatrixAdapter` code has zero issues when driven directly (the manual live test,
-      same Synapse instance) — so this is specific to the connection-manager/TLS path, not the
-      login/sync logic itself, and a read of `chat-core`'s `connection-manager.ts` didn't turn up an
-      obvious culprit (`MatrixSession.nextEvent()` looks correctly built to block rather than end
-      the `events()` generator prematurely, which was the first theory). Needs main-process runtime
-      instrumentation to pin down. Kept as a tracked, reproducible repro (`test.fail()`, diagnostic
-      notes in the file header) rather than deleted or silently left red.
+      adapter bug found in that pass — a useful negative result. Kept as a permanent opt-in
+      regression check: `packages/chat-transport-node/src/matrix-live-synapse.manual.test.ts`, gated
+      behind `TEPEGOZ_LIVE_MATRIX=1`. **The desktop-app e2e attempt found — and closed — a real bug
+      the adapter-level test structurally couldn't (2026-09-12).** `e2e/chat-live-matrix.spec.ts`
+      (needs a second, TLS listener on the test Synapse: the schema requires `homeserverUrl` to
+      start with `https://`, unlike the manual adapter test's plain `:8008`) showed the account stuck
+      `reconnecting`, never `online` — a fresh `POST /login` roughly every ~1s, each one succeeding
+      server-side. Root-caused with temporary main-process `console.error` instrumentation (piped via
+      Playwright's `app.process().stdout`): `ChatConnectionManager.pump()` treats any error thrown
+      while processing an event as "the connection dropped" and reconnects; the actual error was
+      `FOREIGN KEY constraint failed` from `ChatStore.upsertMessage`, from two compounding gaps: (1)
+      `MatrixAdapter.syncOnce()` pushed a batch's `message` events before that batch's
+      `room-membership` events, and (2) more fundamentally, `ChatAccountRunner.applyChange`'s
+      `'room'` case only ever *updated* an existing conversation row, never created one — fine for a
+      room joined interactively (`joinRoom()` persists its row directly) but Matrix reports every
+      room the account is *already* a member of on its first `/sync`, with no `joinRoom()` call
+      involved. **Any real Matrix account with pre-existing room history could never get past its
+      own initial sync.** Both fixed; the adapter-level manual test never caught either because its
+      fake in-memory store has no foreign key to violate — only the real SQLite-backed app does.
+      **Still open:** spaces, media, reactions, edits, sync-drop recovery, token invalidation — the
+      e2e so far only exercises connect + room message + join.
 - [ ] Sub-phase DoD template ✔.
 
 ---
@@ -1082,12 +1085,15 @@ without limit (oldest dropped + `droppedEvents` + a re-armable out-of-band `erro
       needed the IRC fields added to `AccountSetupForm` first (X-chat.2). Found two more real bugs,
       both fixed same-day (see X-chat.4's Functional DoD note): `chat:add-account` rejected an empty
       (no-auth) secret, and `IrcAdapter.sendMessage()` duplicated every room message you sent on a
-      server with `echo-message`. **A Matrix slice was attempted the same day and is NOT closed** —
-      `e2e/chat-live-matrix.spec.ts` exists but is a tracked, reproducible failure
-      (`test.fail()`): the account never reaches `online` through the real connection-manager stack,
-      a genuine reconnect loop not present when driving `MatrixAdapter` directly. See X-chat.5's
-      Functional DoD note for what's known so far. **Still open:** root-causing and fixing the
-      Matrix reconnect loop, and the agent-path e2e.
+      server with `echo-message`. **Matrix slice landed the same day too** — `e2e/chat-live-matrix.spec.ts`
+      (`TEPEGOZ_LIVE_MATRIX=1`, needs a TLS listener added to the test Synapse). Found and fixed the
+      biggest bug of the three: a real Matrix account with any pre-existing room history could never
+      complete its own initial sync (a foreign-key violation on the first message for a passively-
+      discovered room, treated by `ChatConnectionManager` as a dropped connection — an infinite
+      reconnect loop). See X-chat.5's Functional DoD note for the full diagnosis. **All three
+      protocol e2e slices are now green.** **Still open:** the agent-path e2e, and broadening each
+      protocol's e2e beyond "connect, join, send one message" (roster/presence, media, reactions,
+      edits, XEP-0198 resumption, kill-switch).
 - [x] **Perf pass** — a 20k-message room: **timeline windowing ✔** (`buildTimeline` `maxMessages`
       caps the DOM at the most-recent 200 messages + a "N earlier" row). **Search ✔** —
       `searchMessages` hits the `chat_search` FTS5 index (migration 23 backfill + delete trigger;
