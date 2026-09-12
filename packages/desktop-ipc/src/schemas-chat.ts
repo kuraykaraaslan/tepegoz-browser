@@ -105,6 +105,12 @@ export const ChatInviteToRoomSchema = z.object({
   invitee: z.string().min(1).max(320),
 });
 
+/** `chat:add-contact` — add a contact to the roster and request their presence. */
+export const ChatAddContactSchema = z.object({
+  accountId: z.string().min(1).max(64),
+  address: z.string().min(1).max(320),
+});
+
 /** `chat:resolve-media` — turn a message `mediaRef` (a protocol URI) into a quarantined data URL. */
 export const ChatResolveMediaSchema = z.object({
   accountId: z.string().min(1).max(64),

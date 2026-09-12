@@ -34,6 +34,7 @@ class FakeAdapter {
     }),
   );
   inviteToRoom = vi.fn(() => Promise.resolve());
+  addContact = vi.fn(() => Promise.resolve());
 }
 
 class FakeStore implements ChatRunnerStore {
@@ -237,6 +238,8 @@ describe('ChatService — delegation', () => {
     await service.setRoomNotifyLevel('a', 'room@conf', 'none');
     await service.inviteToRoom('a', 'general@conf.example', 'carol@x.com');
     expect(adapter.inviteToRoom).toHaveBeenCalledWith(expect.anything(), 'general@conf.example', 'carol@x.com');
+    await service.addContact('a', 'bob@x.com');
+    expect(adapter.addContact).toHaveBeenCalledWith(expect.anything(), 'bob@x.com');
     expect(adapter.setPresence).toHaveBeenCalled();
     expect(adapter.roster).toHaveBeenCalled();
     expect(adapter.history).toHaveBeenCalled();

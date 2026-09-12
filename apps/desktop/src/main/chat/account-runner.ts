@@ -439,6 +439,13 @@ export class ChatAccountRunner {
     await this.deps.adapter.inviteToRoom(this.requireSession(), conversationId, invitee);
   }
 
+  async addContact(address: string): Promise<void> {
+    if (this.deps.adapter.addContact === undefined) {
+      throw new Error('this protocol has no roster / contacts concept');
+    }
+    await this.deps.adapter.addContact(this.requireSession(), address);
+  }
+
   async react(conversationId: string, messageId: string, emoji: string, on: boolean): Promise<void> {
     if (this.deps.adapter.react === undefined) {
       throw new Error('this protocol does not support reactions');

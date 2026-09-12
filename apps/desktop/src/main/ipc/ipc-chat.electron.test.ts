@@ -35,6 +35,7 @@ const svc = {
   removeAccount: vi.fn(() => Promise.resolve()),
   listConversations: vi.fn(() => []),
   getRoster: vi.fn(() => []),
+  addContact: vi.fn(() => Promise.resolve()),
   getHistory: vi.fn(() => Promise.resolve({ messages: [], nextCursor: null })),
   sendMessage: vi.fn(() => Promise.resolve('srv-1')),
   setPresence: vi.fn(() => Promise.resolve()),
@@ -70,7 +71,7 @@ beforeEach(() => {
 });
 
 it('registers every chat channel', () => {
-  expect(h.handlers.size).toBe(18);
+  expect(h.handlers.size).toBe(19);
 });
 
 it('chat:react validates + delegates', async () => {
@@ -85,6 +86,12 @@ it('chat:react validates + delegates', async () => {
   await expect(
     call(IpcChannels.chatReact, { accountId: 'work', conversationId: 'c', messageId: 'm1', emoji: '👍' }),
   ).rejects.toBeDefined();
+});
+
+it('chat:add-contact validates + delegates', async () => {
+  await call(IpcChannels.chatAddContact, { accountId: 'work', address: 'bob@example.com' });
+  expect(svc.addContact).toHaveBeenCalledWith('work', 'bob@example.com');
+  await expect(call(IpcChannels.chatAddContact, { accountId: 'work', address: '' })).rejects.toBeDefined();
 });
 
 describe('rooms', () => {

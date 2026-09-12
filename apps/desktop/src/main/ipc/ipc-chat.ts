@@ -4,6 +4,7 @@ import type { ChatContact, ChatConversation, ChatMessage } from '@tepegoz/shared
 import {
   ChatAccountIdArgSchema,
   ChatAddAccountSchema,
+  ChatAddContactSchema,
   ChatDiscoverRoomsSchema,
   ChatGetHistorySchema,
   ChatJoinRoomSchema,
@@ -49,6 +50,7 @@ export interface ChatIpcService {
   removeAccount: (accountId: string) => Promise<void>;
   listConversations: (accountId?: string) => ChatConversation[];
   getRoster: (accountId: string) => ChatContact[];
+  addContact: (accountId: string, address: string) => Promise<void>;
   getHistory: (
     accountId: string,
     conversationId: string,
@@ -185,6 +187,11 @@ export function registerChatIpc(service: ChatIpcService): void {
   handleAsync(IpcChannels.chatReact, async (_event, payload): Promise<void> => {
     const { accountId, conversationId, messageId, emoji, on } = ChatReactSchema.parse(payload);
     await service.react(accountId, conversationId, messageId, emoji, on);
+  });
+
+  handleAsync(IpcChannels.chatAddContact, async (_event, payload): Promise<void> => {
+    const { accountId, address } = ChatAddContactSchema.parse(payload);
+    await service.addContact(accountId, address);
   });
 
   // Handled but not asserted here: `chat:state` is a MAIN→renderer push (webContents.send), not a

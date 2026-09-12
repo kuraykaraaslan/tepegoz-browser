@@ -232,6 +232,10 @@ export class ChatService {
     return this.require(accountId).inviteToRoom(conversationId, invitee);
   }
 
+  async addContact(accountId: string, address: string): Promise<void> {
+    return this.require(accountId).addContact(address);
+  }
+
   async react(
     accountId: string,
     conversationId: string,

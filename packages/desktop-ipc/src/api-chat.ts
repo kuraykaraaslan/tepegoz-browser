@@ -85,6 +85,9 @@ export interface ChatApi {
   /** Every conversation, or just one account's when `accountId` is given. */
   listChatConversations(accountId?: string): Promise<ChatConversation[]>;
   getChatRoster(accountId: string): Promise<ChatContact[]>;
+  /** Add a contact to the roster and request their presence. Throws if the protocol has no
+   *  roster/subscription concept (IRC, Matrix) — surfaced to the caller. */
+  addChatContact(accountId: string, address: string): Promise<void>;
   /** Page one conversation backwards; omit `before` for the most-recent page. */
   getChatHistory(
     accountId: string,
