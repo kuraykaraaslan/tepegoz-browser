@@ -99,7 +99,7 @@ async function createPublicRoom(): Promise<string> {
   return room.room_id;
 }
 
-test('adds a live Matrix account, joins a room, and sees a sent message render', async ({}, testInfo) => {
+test('adds a live Matrix account, joins a room, sends a message, and reacts to it', async ({}, testInfo) => {
   testInfo.setTimeout(90_000);
   // The self-signed test cert isn't in Node's default trust store — scoped to this one process, and
   // only for the fixture-setup fetch above (the launched Electron app trusts it via
@@ -161,6 +161,12 @@ test('adds a live Matrix account, joins a room, and sees a sent message render',
     await composer.press('Enter');
 
     await expect(window.getByText(body)).toBeVisible({ timeout: 20_000 });
+
+    // React to our own message (m.reaction) — the same UI path XMPP's XEP-0444 test exercises.
+    await window.waitForTimeout(1000);
+    await window.getByRole('button', { name: 'Add reaction' }).click();
+    await window.getByRole('menuitem', { name: '👍' }).click();
+    await expect(window.getByRole('button', { name: '👍 1' })).toBeVisible({ timeout: 10_000 });
   } finally {
     await app.close();
   }

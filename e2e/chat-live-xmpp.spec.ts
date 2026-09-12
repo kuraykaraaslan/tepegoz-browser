@@ -44,7 +44,7 @@ async function openChatPage(window: Page): Promise<void> {
   await expect(window.getByRole('tab', { name: 'Chats' })).toBeVisible({ timeout: 20_000 });
 }
 
-test('adds a live XMPP account, joins a MUC room, and sees a sent message render', async ({}, testInfo) => {
+test('adds a live XMPP account, joins a MUC room, sends a message, and reacts to it', async ({}, testInfo) => {
   testInfo.setTimeout(90_000);
   const profileDir = join(process.cwd(), '.chat-live-xmpp-profile');
   mkdirSync(profileDir, { recursive: true });
@@ -105,6 +105,15 @@ test('adds a live XMPP account, joins a MUC room, and sees a sent message render
     await composer.press('Enter');
 
     await expect(window.getByText(body)).toBeVisible({ timeout: 20_000 });
+
+    // React to our own message (XEP-0444) — a room message must be picked up by the wire echo
+    // before the reconcile settles it under its real protocolId, so give that a moment before
+    // reacting; reacting against the temp optimistic-echo id would react to a message the server
+    // never heard of.
+    await window.waitForTimeout(1000);
+    await window.getByRole('button', { name: 'Add reaction' }).click();
+    await window.getByRole('menuitem', { name: '👍' }).click();
+    await expect(window.getByRole('button', { name: '👍 1' })).toBeVisible({ timeout: 10_000 });
   } finally {
     await app.close();
   }
