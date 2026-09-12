@@ -302,9 +302,16 @@ close-out. · **Branch:** `main` · **Risk:** low.
       (`SCRAM-SHA-1/256`, `PLAIN`, `EXTERNAL`), STARTTLS + direct TLS, resource binding, session,
       **XEP-0198** stream management (h-acks, resumption), roster get/push (`jabber:iq:roster`),
       presence (`0012` last-activity optional), `0280` carbons, `0313` MAM (paged history),
-      `0085` chat states (typing), `0184` delivery receipts, `0363` HTTP file upload, service
-      discovery (`0030`), `0198`-driven reconnect with exponential backoff. Stanza handling is
-      **pure** + fixture-tested; only the socket is injected.
+      `0085` chat states (typing), `0184` delivery receipts, service discovery (`0030`),
+      `0198`-driven reconnect with exponential backoff. Stanza handling is **pure** + fixture-tested;
+      only the socket is injected. **`0363` HTTP file upload was never built** — found 2026-09-12
+      while scoping a live media-round-trip e2e (this line used to list it as shipped alongside
+      everything else here, which was doc-drift, not a checked fact: `XmppAdapter.sendMessage`
+      (`xmpp/adapter.ts`) never reads `OutgoingMessage.mediaPath`, `stanzas.ts`'s `buildMessage` has
+      no media field, and `XmppAdapter` defines no `resolveMedia` at all — Matrix is the only adapter
+      that does). `Composer.tsx` also has no attach affordance yet — `mediaPath` is hardcoded `null`
+      in `useChatState.send`. Three prerequisites for X-chat.2's media-round-trip Functional DoD line,
+      none started: a Composer attach control, XEP-0363 upload, `XmppAdapter.resolveMedia`.
 - [x] **desktop `ChatService`** — account CRUD, credential vault resolve (`safeStorage`),
       `ChatTransport` over Node `net`/`tls`/WebSocket bound to the profile egress, adapter lifecycle,
       DB writes, IPC surface (zod-gated channels + preload bridge).
