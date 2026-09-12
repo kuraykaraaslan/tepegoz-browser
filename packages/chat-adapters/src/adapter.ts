@@ -84,6 +84,11 @@ export interface ChatAdapter {
   disconnect(session: ChatSession): Promise<void>;
 
   roster(session: ChatSession): Promise<ChatContact[]>;
+  /** Add a contact to the roster and request to see their presence. Optional — a protocol with no
+   *  roster/subscription concept (IRC, Matrix) omits it; the UI hides the add-contact affordance
+   *  when it's absent. The contact itself arrives asynchronously via the usual roster-change event
+   *  once the server roster-pushes it back (and again once the subscription is approved). */
+  addContact?(session: ChatSession, address: string): Promise<void>;
   setPresence(session: ChatSession, presence: ChatPresence, statusText?: string): Promise<void>;
 
   listConversations(session: ChatSession): Promise<ChatConversation[]>;

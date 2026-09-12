@@ -266,6 +266,21 @@ describe('XmppAdapter — live traffic', () => {
     await expect(adapter.roster(session)).rejects.toThrow(/timed out/);
   });
 
+  it('addContact sets the roster item then requests presence — in that order, only after the ack', async () => {
+    const { server, adapter, session } = await connected();
+    const p = adapter.addContact?.(session, 'bob@example.com');
+    await tick();
+    // The subscription request must not jump ahead of the roster-add ack.
+    expect(server.written.some((l) => l.includes('type="subscribe"'))).toBe(false);
+    const id = /id="(roster-add-\d+)"/.exec(server.lastWritten())?.[1] ?? '';
+    expect(server.lastWritten()).toBe(
+      `<iq type="set" id="${id}"><query xmlns="jabber:iq:roster"><item jid="bob@example.com"/></query></iq>`,
+    );
+    server.send(`<iq type="result" id="${id}"/>`);
+    await p;
+    expect(server.lastWritten()).toBe('<presence to="bob@example.com" type="subscribe"/>');
+  });
+
   it('routes a streamed MAM result to its query sink, not the event stream', async () => {
     const { server, adapter, session } = await connected();
     const seen: string[] = [];

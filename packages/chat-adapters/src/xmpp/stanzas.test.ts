@@ -9,6 +9,8 @@ import {
   buildReactions,
   buildReadMarker,
   buildReceipt,
+  buildRosterAdd,
+  buildSubscribeRequest,
   parseReactionsStanza,
   stanzaToEvent,
   type StanzaContext,
@@ -295,6 +297,16 @@ describe('outgoing builders', () => {
     expect(buildReactions('room@conf', 'm1', [], true)).toBe(
       '<message to="room@conf" type="groupchat"><reactions xmlns="urn:xmpp:reactions:0" id="m1"></reactions></message>',
     );
+  });
+
+  it('buildRosterAdd sets a bare roster item with no groups or name', () => {
+    expect(buildRosterAdd('r1', 'bob@x.com')).toBe(
+      '<iq type="set" id="r1"><query xmlns="jabber:iq:roster"><item jid="bob@x.com"/></query></iq>',
+    );
+  });
+
+  it('buildSubscribeRequest asks to see the contact\'s presence', () => {
+    expect(buildSubscribeRequest('bob@x.com')).toBe('<presence to="bob@x.com" type="subscribe"/>');
   });
 });
 

@@ -303,6 +303,25 @@ export function buildReactions(
   );
 }
 
+/** RFC 6121 §2.3.1: add `jid` to the roster (no groups, no name) — the server roster-pushes the new
+ *  item back, which `rosterPushEvent` already turns into a `roster-change` event. Adding to the
+ *  roster and asking to see the contact's presence are two separate RFC 6121 steps (this + the
+ *  presence subscription request below); most servers do not do one without the other. */
+export function buildRosterAdd(iqId: string, jid: string): string {
+  return (
+    `<iq type="set" id="${encodeXmlText(iqId)}">` +
+    `<query xmlns="${NS.roster}"><item${attrs({ jid })}/></query>` +
+    `</iq>`
+  );
+}
+
+/** RFC 6121 §3.1: ask to see `jid`'s presence. The contact must approve for `subscription` to ever
+ *  reach `to`/`both` — until then the roster item stays at `none`/`from`, same as any other pending
+ *  add, which the UI already renders as "Awaiting response" (`RosterPanel`'s `pending` marker). */
+export function buildSubscribeRequest(jid: string): string {
+  return `<presence${attrs({ to: jid, type: 'subscribe' })}/>`;
+}
+
 export function buildPresence(show?: 'away' | 'xa' | 'dnd', status?: string): string {
   const inner = [
     show !== undefined ? `<show>${encodeXmlText(show)}</show>` : '',
