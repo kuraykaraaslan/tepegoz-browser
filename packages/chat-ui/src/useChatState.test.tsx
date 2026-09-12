@@ -337,6 +337,26 @@ describe('useChatState', () => {
     expect(inviteToChatRoom).toHaveBeenCalledWith('home', 'room@conf', 'carol@example.org');
   });
 
+  it('addContact is null without port support; otherwise calls the port for the active account', async () => {
+    const plain = makePort();
+    const { result: noSupport } = renderHook(() => useChatState(plain.port));
+    await waitFor(() => expect(noSupport.current.loading).toBe(false));
+    expect(noSupport.current.addContact).toBeNull();
+
+    const addChatContact = vi.fn(() => Promise.resolve());
+    const { port } = makePort({
+      addChatContact,
+      listChatConversations: () => Promise.resolve([conv({ accountId: 'home' })]),
+    });
+    const { result } = renderHook(() => useChatState(port));
+    await waitFor(() => expect(result.current.conversations.length).toBe(1));
+
+    await act(async () => {
+      await result.current.addContact?.('bob@example.org');
+    });
+    expect(addChatContact).toHaveBeenCalledWith('home', 'bob@example.org');
+  });
+
   it('leaveRoom is null without port support; otherwise calls the port and deselects the room', async () => {
     const plain = makePort();
     const { result: noSupport } = renderHook(() => useChatState(plain.port));

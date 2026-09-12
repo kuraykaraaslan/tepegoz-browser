@@ -228,6 +228,18 @@ describe('ChatWorkspace', () => {
     await screen.findByText('hi there');
   });
 
+  it('wires the roster panel\'s add-contact form to the port, for the active account', async () => {
+    const addChatContact = vi.fn(() => Promise.resolve());
+    const { port } = makePort({ addChatContact });
+    wrap(<ChatWorkspace port={port} />);
+    fireEvent.click(await screen.findByRole('tab', { name: 'Contacts' }));
+    fireEvent.change(screen.getByRole('textbox', { name: 'Add contact' }), {
+      target: { value: 'carol@example.org' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Add contact' }));
+    await waitFor(() => expect(addChatContact).toHaveBeenCalledWith('work', 'carol@example.org'));
+  });
+
   it('renders an account switcher with more than one account and switches on click', async () => {
     const { port } = makePort({
       listChatAccounts: () =>

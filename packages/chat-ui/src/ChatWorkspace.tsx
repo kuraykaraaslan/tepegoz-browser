@@ -260,6 +260,7 @@ export function ChatWorkspace({
                   chat.selectConversation(existing.id);
                 }
               }}
+              {...(chat.addContact !== null ? { onAddContact: chat.addContact } : {})}
             />
           )}
           {tab === 'rooms' && chat.rooms !== null && (

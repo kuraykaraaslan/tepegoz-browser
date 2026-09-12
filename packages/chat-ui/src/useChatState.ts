@@ -38,6 +38,9 @@ export interface UseChatState {
   setRoomTopic: ((conversationId: string, topic: string) => Promise<void>) | null;
   /** Invite a contact to a room — `null` when the port does not support it. */
   inviteToRoom: ((conversationId: string, invitee: string) => Promise<void>) | null;
+  /** Add a contact to the roster — `null` when the port does not support it (or the protocol has
+   *  no roster/subscription concept at all). */
+  addContact: ((address: string) => Promise<void>) | null;
   /** Leave a joined room — `null` when the port does not support it. */
   leaveRoom: ((conversationId: string) => Promise<void>) | null;
   /** Add / remove one of the local user's emoji reactions on a message — `null` when the port does
@@ -240,6 +243,17 @@ export function useChatState(port: ChatClientPort): UseChatState {
     };
   }, [inviteToChatRoom, activeAccountId]);
 
+  const { addChatContact } = port;
+  const addContact = useMemo(() => {
+    if (addChatContact === undefined) return null;
+    return async (address: string): Promise<void> => {
+      if (activeAccountId === null) return;
+      // Write-only, same as inviteToRoom — the roster-change push (the server's roster-push, then
+      // again once the subscription is approved) is what actually updates `client.roster`.
+      await addChatContact(activeAccountId, address);
+    };
+  }, [addChatContact, activeAccountId]);
+
   const { leaveChatRoom } = port;
   const leaveRoom = useMemo(() => {
     if (leaveChatRoom === undefined) return null;
@@ -300,6 +314,7 @@ export function useChatState(port: ChatClientPort): UseChatState {
     setMuted,
     setRoomTopic,
     inviteToRoom,
+    addContact,
     leaveRoom,
     react,
     refresh,
