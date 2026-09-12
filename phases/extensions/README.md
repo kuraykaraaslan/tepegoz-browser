@@ -77,14 +77,23 @@ These are not restated per-document beyond a pointer; they are the price of bein
       (keep a socket open while the surface is closed), `notifications`, `contacts`. Landed with
       X-chat.1 (`packages/extension-sdk/src/manifest.ts`); `extensions/ext-chat`'s manifest declares
       all four.
-- [ ] **A `background-connection` supervisor** in `@tepegoz/extension-host` — today an extension's
+- [x] **A `background-connection` supervisor** in `@tepegoz/extension-host` — today an extension's
       runtime is tied to a renderer surface being open. A mail/chat account must stay connected (or on
       a defined reconnect/backoff schedule) with every surface closed, and must drop cleanly on
-      disable, on profile switch, and on a kill-switch egress block. **Still open** — X-chat.1 built
-      this as bespoke chat-only wiring (`ChatMessenger.init/stop/reconcile/notifyEgressChange` called
-      directly from the desktop bootstrap), not a generic mechanism in `@tepegoz/extension-host` keyed
-      off the `background-connection` permission; a second consumer (`ext-mail`) would duplicate it
-      rather than reuse it. Promoting it to a real shared supervisor is still owed.
+      disable, on profile switch, and on a kill-switch egress block. **Landed 2026-09-13 (`feat/chat`):**
+      `BackgroundConnectionSupervisor` (`packages/extension-host/src/background-connection-supervisor.ts`)
+      — a `provide(extensionId, init/stop/reconcile/notifyEgressChange)` registry that fans each of the
+      four lifecycle calls out to every registered provider, isolating one provider's failure from the
+      rest (a broken mail account must never stop chat's `init`/`stop`/etc., or vice versa). Deliberately
+      thin: it does not itself gate on the extension's enabled state — each provider already does that
+      internally, the same way `ChatService.start()` always has — so this is a pure promotion of the
+      existing bespoke wiring, not a behaviour change. `background-connection.electron.ts` is the
+      main-process singleton (mirrors `capability-supervisor.electron.ts`); `main/index.ts`'s startup +
+      `before-quit`, `ipc-content-app.ts`'s two prefs-reconcile paths, and `ipc-network.ts`'s
+      `broadcastNetworkState` now call `BackgroundConnectionService.init/stop/reconcile/
+      notifyEgressChange()` instead of `ChatMessenger.*` directly — `com.tepegoz.chat` is registered as
+      the first (and so far only) provider. A future `ext-mail` gets all four lifecycle hooks by calling
+      `provide()` once, instead of duplicating these four call sites.
 - [x] **Adapter-as-subprocess contract** — generalise `manifest.mcpServer` (stdio) into the shape a
       third-party mail/chat adapter or a protocol *bridge* would use: no host access, its own egress
       binding, every result normalised and re-validated before the core sees it, every tool still
