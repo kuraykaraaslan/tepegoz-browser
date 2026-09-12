@@ -1020,8 +1020,10 @@ whole trust UI.
 
 ## X-chat.8 — Bridge framework (out-of-process)
 
-**Status:** ⏸ Blocked on the shared prerequisite (generalise `manifest.mcpServer` into a subprocess
-adapter contract) · **Depends on:** X-chat.1 · **Branch:** `feat/chat-bridge-framework`
+**Status:** ⬜ Not started — the shared design prerequisite (generalise `manifest.mcpServer` into a
+subprocess adapter contract) is no longer blocking: [ADR-0048](../../docs/adr/0048-adapter-subprocess-contract.md)
+landed 2026-09-12 (design only, no code — the `Deliverables` below remain entirely unbuilt).
+· **Depends on:** X-chat.1 · **Branch:** `feat/chat-bridge-framework`
 **Risk:** high — this is a new trust surface; the isolation has to be real.
 
 ### Deliverables

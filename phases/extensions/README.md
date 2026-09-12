@@ -85,8 +85,15 @@ These are not restated per-document beyond a pointer; they are the price of bein
       directly from the desktop bootstrap), not a generic mechanism in `@tepegoz/extension-host` keyed
       off the `background-connection` permission; a second consumer (`ext-mail`) would duplicate it
       rather than reuse it. Promoting it to a real shared supervisor is still owed.
-- [ ] **Adapter-as-subprocess contract** — generalise `manifest.mcpServer` (stdio) into the shape a
+- [x] **Adapter-as-subprocess contract** — generalise `manifest.mcpServer` (stdio) into the shape a
       third-party mail/chat adapter or a protocol *bridge* would use: no host access, its own egress
       binding, every result normalised and re-validated before the core sees it, every tool still
-      behind the one PEP. ([ADR-0018](../../docs/adr/0018-mcp-client.md) is the starting point;
-      an addendum ADR is owed.)
+      behind the one PEP. **Addendum ADR landed 2026-09-12:**
+      [ADR-0048](../../docs/adr/0048-adapter-subprocess-contract.md) — design only, no
+      implementation; a `manifest.adapterSubprocess` capability declaration alongside `mcpServer`,
+      isolation guarantees generalized from [ADR-0047](../../docs/adr/0047-chat-protocol-adapter-and-bridge-trust-model.md)
+      §4 (own state dir, own egress binding, no host RPC beyond the extension's own adapter
+      interface, crash isolation, signed package, never bundled), typed RPC over the extension's own
+      adapter interface rather than MCP tool-call semantics. **Still owed:** the actual
+      `@tepegoz/ext-chat` X-chat.8 bridge framework that implements this contract — this checklist
+      item is the design prerequisite, not the framework itself.

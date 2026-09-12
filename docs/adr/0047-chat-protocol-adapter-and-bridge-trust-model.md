@@ -12,6 +12,9 @@
   [ADR-0039](0039-user-granted-sensitive-capabilities.md) (per-use grants) ·
   [ADR-0045](0045-multi-profile-isolation.md) (per-profile isolation)
 - **Sibling:** ADR-0046 (Mail adapter trust model — owed, `ext-mail` X-mail.1)
+- **Generalized by:** [ADR-0048](0048-adapter-subprocess-contract.md) — §4 below ("Bridge subprocess
+  isolation") is that ADR's first concrete instance; a future bridge should build against ADR-0048's
+  contract rather than this file's chat-specific wording
 
 ## Context
 
