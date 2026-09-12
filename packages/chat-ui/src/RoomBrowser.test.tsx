@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import type { ReactElement } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { I18nProvider } from '@tepegoz/i18n/react';
 import { RoomBrowser } from './RoomBrowser';
 import type { RoomListing } from './room-browser';
@@ -91,19 +91,55 @@ describe('RoomBrowser', () => {
     await screen.findByText('No rooms found');
   });
 
-  it('joins by raw address and clears the field', () => {
+  it('joins by raw address and clears the field', async () => {
     const onJoin = vi.fn();
     wrap(<RoomBrowser discoverRooms={() => Promise.resolve([])} onJoin={onJoin} />);
     const input = screen.getByLabelText('Join by address');
     fireEvent.change(input, { target: { value: '  room@conf.example  ' } });
     fireEvent.click(screen.getByRole('button', { name: 'Join' }));
     expect(onJoin).toHaveBeenCalledWith('room@conf.example');
-    expect(input).toHaveProperty('value', '');
+    await waitFor(() => expect(input).toHaveProperty('value', ''));
   });
 
   it('does not browse an empty service', () => {
     const discoverRooms = vi.fn(() => Promise.resolve([]));
     wrap(<RoomBrowser discoverRooms={discoverRooms} onJoin={vi.fn()} />);
     expect(screen.getByRole('button', { name: 'Browse' })).toHaveProperty('disabled', true);
+  });
+
+  it('a rejected join surfaces an error instead of silently doing nothing', async () => {
+    const onJoin = vi.fn(() => Promise.reject(new Error('not connected')));
+    wrap(<RoomBrowser discoverRooms={() => Promise.resolve([])} onJoin={onJoin} />);
+    const input = screen.getByLabelText('Join by address');
+    fireEvent.change(input, { target: { value: '#test' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Join' }));
+
+    await screen.findByRole('alert');
+    expect(screen.getByRole('alert').textContent).toMatch(/couldn't join/i);
+    // The address is kept (not cleared) so the user can see what they tried and retry.
+    expect(input).toHaveProperty('value', '#test');
+
+    // Editing the address clears the stale error.
+    fireEvent.change(input, { target: { value: '#test2' } });
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
+
+  it('canBrowse=false hides the browse form but still joins by address, with the given placeholder', () => {
+    const onJoin = vi.fn();
+    wrap(
+      <RoomBrowser
+        discoverRooms={vi.fn()}
+        onJoin={onJoin}
+        canBrowse={false}
+        addressPlaceholder="#channel"
+      />,
+    );
+    expect(screen.queryByRole('button', { name: 'Browse' })).toBeNull();
+    expect(screen.getByText(/no room directory/i)).toBeDefined();
+    const input = screen.getByLabelText('Join by address');
+    expect(input).toHaveProperty('placeholder', '#channel');
+    fireEvent.change(input, { target: { value: '#test' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Join' }));
+    expect(onJoin).toHaveBeenCalledWith('#test');
   });
 });

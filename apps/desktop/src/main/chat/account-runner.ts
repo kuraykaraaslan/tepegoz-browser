@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto';
+import { AppError } from '@tepegoz/libs';
 import type {
   ChatAccount,
   ChatContact,
@@ -83,6 +84,11 @@ export interface AccountRunnerDeps {
   notify?: (notification: ChatNotification) => void;
   /** Record a redacted "message sent" fact in the Event Journal. Optional. */
   audit?: (event: ChatAuditEvent) => void;
+  /** Read an attachment's bytes out of the file-operations sandbox, for `sendMessage`'s `mediaPath`
+   *  → `uploadMedia` → `mediaRef` step. Optional — a `mediaPath` on a deps-less runner (or a
+   *  protocol whose adapter has no `uploadMedia`) throws rather than silently dropping the
+   *  attachment; see `sendMessage`. */
+  readMediaBytes?: (sandboxPath: string) => Promise<{ bytes: Uint8Array; mime: string; filename: string }>;
 }
 
 const NOTIFY_BODY_MAX = 180;
@@ -285,15 +291,43 @@ export class ChatAccountRunner {
   }
 
   private requireSession(): ChatSession {
-    if (this.session === null) throw new Error(`chat account ${this.accountId} is not connected`);
+    // A plain Error here used to collapse to an opaque "500 Internal error" at the IPC boundary
+    // (toBoundary maps anything that isn't an AppError that way) — indistinguishable from a real
+    // main-process fault, and useless to whoever hit it (e.g. joining a room the instant an account
+    // is added, before its connection has finished handshaking).
+    if (this.session === null) {
+      throw new AppError(`Chat account "${this.accountId}" is not connected`, 409);
+    }
     return this.session;
+  }
+
+  /** `mediaPath` → bytes (sandbox read) → `adapter.uploadMedia` → a protocol `mediaRef`. Throws
+   *  rather than silently dropping the attachment: no `readMediaBytes` deps wired, or an adapter
+   *  with no `uploadMedia` (the protocol has no media repo — a caller should have checked
+   *  `session.caps.media` first, same convention as every other optional-capability method). */
+  private async uploadAttachment(session: ChatSession, mediaPath: string): Promise<string> {
+    if (this.deps.adapter.uploadMedia === undefined) {
+      throw new AppError('this protocol has no media upload support', 501);
+    }
+    if (this.deps.readMediaBytes === undefined) {
+      throw new AppError('no media reader configured for this account', 501);
+    }
+    const media = await this.deps.readMediaBytes(mediaPath);
+    return this.deps.adapter.uploadMedia(session, media);
   }
 
   async sendMessage(
     conversationId: string,
-    body: { body: string; replyToId?: string | null },
+    body: { body: string; replyToId?: string | null; mediaPath?: string | null },
   ): Promise<string> {
     const session = this.requireSession();
+    // Upload BEFORE the optimistic echo, so a slow/failed upload never shows a "sent" bubble for an
+    // attachment that never went anywhere — the echo only appears once the real mediaRef is known.
+    const mediaRef =
+      body.mediaPath !== undefined && body.mediaPath !== null
+        ? await this.uploadAttachment(session, body.mediaPath)
+        : null;
+
     const tempId = `local-${String(this.deps.now())}-${String(++this.tempSeq)}`;
     const bareJid = deriveBareJid(this.deps.account);
     const temp: ChatMessage = {
@@ -303,9 +337,9 @@ export class ChatAccountRunner {
       protocolId: tempId,
       senderAddress: bareJid,
       senderName: this.deps.account.displayName,
-      kind: 'text',
+      kind: mediaRef !== null ? 'media' : 'text',
       body: body.body,
-      mediaRef: null,
+      mediaRef,
       replyToId: body.replyToId ?? null,
       reactions: [],
       editedAt: null,
@@ -325,6 +359,7 @@ export class ChatAccountRunner {
       body: body.body,
       replyToId: body.replyToId ?? null,
       mediaPath: null,
+      mediaRef,
     });
     const settled: ChatMessage = { ...temp, id: receipt.protocolId, protocolId: receipt.protocolId, deliveryState: 'sent' };
     for (const change of this.state.reconcileSend(conversationId, tempId, settled)) {
@@ -459,21 +494,21 @@ export class ChatAccountRunner {
 
   async addContact(address: string): Promise<void> {
     if (this.deps.adapter.addContact === undefined) {
-      throw new Error('this protocol has no roster / contacts concept');
+      throw new AppError('this protocol has no roster / contacts concept', 501);
     }
     await this.deps.adapter.addContact(this.requireSession(), address);
   }
 
   async removeContact(address: string): Promise<void> {
     if (this.deps.adapter.removeContact === undefined) {
-      throw new Error('this protocol has no roster / contacts concept');
+      throw new AppError('this protocol has no roster / contacts concept', 501);
     }
     await this.deps.adapter.removeContact(this.requireSession(), address);
   }
 
   async react(conversationId: string, messageId: string, emoji: string, on: boolean): Promise<void> {
     if (this.deps.adapter.react === undefined) {
-      throw new Error('this protocol does not support reactions');
+      throw new AppError('this protocol does not support reactions', 501);
     }
     await this.deps.adapter.react(this.requireSession(), conversationId, messageId, emoji, on);
   }
@@ -488,7 +523,7 @@ export class ChatAccountRunner {
     if (this.deps.adapter.resolveMedia === undefined) return null;
     const locator = this.deps.adapter.resolveMedia(this.requireSession(), mediaRef);
     if (locator === null) return null;
-    if (!this.deps.mayEgress()) throw new Error('chat egress is blocked by the kill-switch');
+    if (!this.deps.mayEgress()) throw new AppError('chat egress is blocked by the kill-switch', 403);
 
     const res = await this.deps.transport.fetch(locator.url, {
       method: 'GET',

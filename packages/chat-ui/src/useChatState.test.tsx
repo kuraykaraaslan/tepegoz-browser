@@ -103,6 +103,29 @@ describe('useChatState', () => {
     expect(result.current.conversations.map((c) => c.id)).toEqual(['c2', 'c1']);
   });
 
+  it('unifies conversations across every account, and selecting one from a non-active account follows it there', async () => {
+    const { port } = makePort({
+      listChatConversations: () =>
+        Promise.resolve([
+          conv({ id: 'home-1', accountId: 'home', updatedAt: 100 }),
+          conv({ id: 'work-1', accountId: 'work', updatedAt: 200 }),
+        ]),
+    });
+    const { result } = renderHook(() => useChatState(port));
+    await waitFor(() => expect(result.current.conversations.length).toBe(2));
+    // Both accounts' rows show up in one list, most-recent first, regardless of which account tab
+    // is "active" — this is the unified Chats tab.
+    expect(result.current.conversations.map((c) => c.id)).toEqual(['work-1', 'home-1']);
+    expect(result.current.activeAccountId).toBe('home');
+
+    // Selecting a conversation that belongs to the OTHER account follows the switcher to it, so the
+    // composer / roster / rooms tabs stay pointed at the account that actually owns it.
+    act(() => {
+      result.current.selectConversation('work-1');
+    });
+    expect(result.current.activeAccountId).toBe('work');
+  });
+
   it('selecting a conversation loads history once and marks it read', async () => {
     const { port, markChatRead } = makePort({
       listChatConversations: () => Promise.resolve([conv({ accountId: 'home' })]),

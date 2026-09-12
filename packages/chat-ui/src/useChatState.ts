@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { ChatConnState, RoomNotifyLevel } from '@tepegoz/chat-core';
 import type { ChatConversation } from '@tepegoz/shared-types';
 import {
@@ -23,7 +23,7 @@ export interface UseChatState {
   /** Remove a configured account — `null` when the port does not support it. */
   removeAccount: ((accountId: string) => Promise<void>) | null;
   client: ChatClientState;
-  /** Conversations of the active account, most-recent first. */
+  /** Conversations across every configured account, most-recent first. */
   conversations: readonly ChatConversation[];
   selectedConversationId: string | null;
   selectConversation: (conversationId: string | null) => void;
@@ -62,9 +62,10 @@ export interface UseChatState {
 
 /**
  * Binds a {@link ChatClientPort} (the desktop bridge, or a fake in tests) to a live view: accounts and
- * their connection state, the active account's conversations, and the open conversation's message
- * window. Main computes every fold and pushes it over `onChatState`; this hook just seeds from the
- * reads and applies the changes.
+ * their connection state, every account's conversations (the store already folds them together —
+ * `listChatConversations()` with no id returns all of them, most-recently-updated first), the active
+ * account's roster, and the open conversation's message window. Main computes every fold and pushes
+ * it over `onChatState`; this hook just seeds from the reads and applies the changes.
  */
 export function useChatState(port: ChatClientPort): UseChatState {
   const [accounts, setAccounts] = useState<readonly ChatAccountSummary[]>([]);
@@ -73,7 +74,6 @@ export function useChatState(port: ChatClientPort): UseChatState {
   const [client, setClient] = useState<ChatClientState>(emptyChatClientState);
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const seededConversations = useRef(false);
 
   const refresh = useCallback(async (): Promise<void> => {
     const snapshot = await port.listChatAccounts();
@@ -95,19 +95,31 @@ export function useChatState(port: ChatClientPort): UseChatState {
     };
   }, [refresh]);
 
-  // Whenever the active account changes, (re)seed its conversations + roster.
+  // The Chats tab is a unified inbox across every account, not just the active one — (re)seed the
+  // full conversation set whenever the account roster changes (an account added or removed), rather
+  // than keying this off `activeAccountId` the way the roster fetch below does.
+  const accountIdsKey = accounts.map((a) => a.id).join(',');
+  useEffect(() => {
+    if (accountIdsKey === '') return;
+    let cancelled = false;
+    void (async () => {
+      const conversations = await port.listChatConversations();
+      if (!cancelled) setClient((prev) => seedConversations(prev, conversations));
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // accountIdsKey (not `accounts`) is the intentional re-run trigger — `accounts` gets a new
+    // array identity on every refresh() even when its contents are unchanged.
+  }, [port, accountIdsKey]);
+
+  // Whenever the active account changes, (re)seed its roster (conversations are unified above).
   useEffect(() => {
     if (activeAccountId === null) return;
     let cancelled = false;
-    seededConversations.current = false;
     void (async () => {
-      const [conversations, roster] = await Promise.all([
-        port.listChatConversations(activeAccountId),
-        port.getChatRoster(activeAccountId),
-      ]);
-      if (cancelled) return;
-      setClient((prev) => seedRoster(seedConversations(prev, conversations), roster));
-      seededConversations.current = true;
+      const roster = await port.getChatRoster(activeAccountId);
+      if (!cancelled) setClient((prev) => seedRoster(prev, roster));
     })();
     return () => {
       cancelled = true;
@@ -128,7 +140,15 @@ export function useChatState(port: ChatClientPort): UseChatState {
   const selectConversation = useCallback(
     (conversationId: string | null): void => {
       setSelectedConversationId(conversationId);
-      if (conversationId === null || activeAccountId === null) return;
+      if (conversationId === null) return;
+      // The unified Chats tab can select a conversation belonging to any configured account, not
+      // just the one the account switcher currently shows — resolve the owning account from the
+      // conversation itself (falling back to `activeAccountId` for a brand-new row not seeded yet,
+      // e.g. one just joined) and follow the switcher to it so the composer / roster / room tabs
+      // stay pointed at the right account.
+      const accountId = client.conversations[conversationId]?.accountId ?? activeAccountId;
+      if (accountId === null) return;
+      if (accountId !== activeAccountId) setActiveAccountId(accountId);
       if (client.messages[conversationId] !== undefined) return;
       // Mark this conversation as tracked BEFORE the history fetch resolves, not after —
       // `chat-store`'s `applyChatChange` only folds a live 'message' event into a conversation
@@ -141,15 +161,15 @@ export function useChatState(port: ChatClientPort): UseChatState {
       // combine with whatever arrived in the interim instead of overwriting it.
       setClient((prev) => seedHistory(prev, conversationId, []));
       void (async () => {
-        const page = await port.getChatHistory(activeAccountId, conversationId);
+        const page = await port.getChatHistory(accountId, conversationId);
         setClient((prev) => seedHistory(prev, conversationId, page.messages));
         const newest = page.messages.at(-1);
         if (newest !== undefined) {
-          await port.markChatRead(activeAccountId, conversationId, newest.protocolId);
+          await port.markChatRead(accountId, conversationId, newest.protocolId);
         }
       })();
     },
-    [port, activeAccountId, client.messages],
+    [port, activeAccountId, client.conversations, client.messages],
   );
 
   const send = useCallback(
@@ -275,17 +295,19 @@ export function useChatState(port: ChatClientPort): UseChatState {
       await leaveChatRoom(activeAccountId, conversationId);
       // The panel has no business staying open on a room the user just walked out of.
       setSelectedConversationId((current) => (current === conversationId ? null : current));
-      const conversations = await port.listChatConversations(activeAccountId);
+      // The unified list spans every account — a full re-seed needs the full set, not just this
+      // account's (seedConversations replaces the whole map, so a scoped fetch here would silently
+      // drop every other account's rows).
+      const conversations = await port.listChatConversations();
       setClient((prev) => seedConversations(prev, conversations));
     };
   }, [leaveChatRoom, activeAccountId, port]);
 
-  const conversations = useMemo(() => {
-    if (activeAccountId === null) return [];
-    return sortConversations(
-      Object.values(client.conversations).filter((c) => c.accountId === activeAccountId),
-    );
-  }, [client.conversations, activeAccountId]);
+  /** Every account's conversations, most-recently-active first (the unified Chats tab). */
+  const conversations = useMemo(
+    () => sortConversations(Object.values(client.conversations)),
+    [client.conversations],
+  );
 
   const { discoverChatRooms, joinChatRoom } = port;
   const rooms = useMemo(() => {
@@ -303,8 +325,9 @@ export function useChatState(port: ChatClientPort): UseChatState {
         const conversationId = (await joinChatRoom(activeAccountId, roomJid)) ?? roomJid;
         // `applyChatChange`'s 'conversation' case only patches a row that already exists (see
         // chat-store.ts) — a freshly joined room has no row yet, so an explicit re-seed is the only
-        // way the panel learns about it before selecting it.
-        const conversations = await port.listChatConversations(activeAccountId);
+        // way the panel learns about it before selecting it. Fetch the full set (see `leaveRoom`
+        // above) since seedConversations replaces the whole map.
+        const conversations = await port.listChatConversations();
         setClient((prev) => seedConversations(prev, conversations));
         selectConversation(conversationId);
       },
