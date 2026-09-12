@@ -48,6 +48,9 @@ export interface ChatClientPort {
   /** Add a contact to the roster and request their presence — optional; the roster panel's
    *  add-contact affordance needs it. Throws if the protocol has no roster/subscription concept. */
   addChatContact?: (accountId: string, address: string) => Promise<void>;
+  /** Remove a contact from the roster and cancel any subscription — optional for the same reason as
+   *  {@link addChatContact}. */
+  removeChatContact?: (accountId: string, address: string) => Promise<void>;
   getChatHistory(
     accountId: string,
     conversationId: string,

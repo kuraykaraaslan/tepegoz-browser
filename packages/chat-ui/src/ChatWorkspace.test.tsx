@@ -240,6 +240,15 @@ describe('ChatWorkspace', () => {
     await waitFor(() => expect(addChatContact).toHaveBeenCalledWith('work', 'carol@example.org'));
   });
 
+  it('wires the roster panel\'s remove-contact control to the port, for the active account', async () => {
+    const removeChatContact = vi.fn(() => Promise.resolve());
+    const { port } = makePort({ removeChatContact });
+    wrap(<ChatWorkspace port={port} />);
+    fireEvent.click(await screen.findByRole('tab', { name: 'Contacts' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Remove Bob' }));
+    await waitFor(() => expect(removeChatContact).toHaveBeenCalledWith('work', 'bob@x.example'));
+  });
+
   it('renders an account switcher with more than one account and switches on click', async () => {
     const { port } = makePort({
       listChatAccounts: () =>

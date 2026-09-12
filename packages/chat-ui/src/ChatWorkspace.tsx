@@ -261,6 +261,9 @@ export function ChatWorkspace({
                 }
               }}
               {...(chat.addContact !== null ? { onAddContact: chat.addContact } : {})}
+              {...(chat.removeContact !== null
+                ? { onRemoveContact: (contact) => chat.removeContact?.(contact.address) }
+                : {})}
             />
           )}
           {tab === 'rooms' && chat.rooms !== null && (

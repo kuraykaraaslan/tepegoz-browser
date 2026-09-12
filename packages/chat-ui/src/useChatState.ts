@@ -41,6 +41,8 @@ export interface UseChatState {
   /** Add a contact to the roster — `null` when the port does not support it (or the protocol has
    *  no roster/subscription concept at all). */
   addContact: ((address: string) => Promise<void>) | null;
+  /** Remove a contact from the roster — `null` for the same reason as {@link addContact}. */
+  removeContact: ((address: string) => Promise<void>) | null;
   /** Leave a joined room — `null` when the port does not support it. */
   leaveRoom: ((conversationId: string) => Promise<void>) | null;
   /** Add / remove one of the local user's emoji reactions on a message — `null` when the port does
@@ -254,6 +256,17 @@ export function useChatState(port: ChatClientPort): UseChatState {
     };
   }, [addChatContact, activeAccountId]);
 
+  const { removeChatContact } = port;
+  const removeContact = useMemo(() => {
+    if (removeChatContact === undefined) return null;
+    return async (address: string): Promise<void> => {
+      if (activeAccountId === null) return;
+      // Write-only, same as addContact — the server's roster-push (subscription now "remove") is
+      // what actually updates `client.roster`.
+      await removeChatContact(activeAccountId, address);
+    };
+  }, [removeChatContact, activeAccountId]);
+
   const { leaveChatRoom } = port;
   const leaveRoom = useMemo(() => {
     if (leaveChatRoom === undefined) return null;
@@ -315,6 +328,7 @@ export function useChatState(port: ChatClientPort): UseChatState {
     setRoomTopic,
     inviteToRoom,
     addContact,
+    removeContact,
     leaveRoom,
     react,
     refresh,
