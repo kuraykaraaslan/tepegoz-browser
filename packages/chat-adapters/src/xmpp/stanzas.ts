@@ -322,6 +322,18 @@ export function buildSubscribeRequest(jid: string): string {
   return `<presence${attrs({ to: jid, type: 'subscribe' })}/>`;
 }
 
+/** RFC 6121 §2.5.2: remove `jid` from the roster. This single stanza also cancels any existing
+ *  presence subscription in either direction — the server is responsible for sending the
+ *  corresponding `unsubscribe`/`unsubscribed` on the user's behalf, so no separate presence stanza
+ *  is needed here. */
+export function buildRosterRemove(iqId: string, jid: string): string {
+  return (
+    `<iq type="set" id="${encodeXmlText(iqId)}">` +
+    `<query xmlns="${NS.roster}"><item${attrs({ jid, subscription: 'remove' })}/></query>` +
+    `</iq>`
+  );
+}
+
 export function buildPresence(show?: 'away' | 'xa' | 'dnd', status?: string): string {
   const inner = [
     show !== undefined ? `<show>${encodeXmlText(show)}</show>` : '',

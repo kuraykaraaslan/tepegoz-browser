@@ -10,6 +10,7 @@ import {
   buildReadMarker,
   buildReceipt,
   buildRosterAdd,
+  buildRosterRemove,
   buildSubscribeRequest,
   parseReactionsStanza,
   stanzaToEvent,
@@ -307,6 +308,12 @@ describe('outgoing builders', () => {
 
   it('buildSubscribeRequest asks to see the contact\'s presence', () => {
     expect(buildSubscribeRequest('bob@x.com')).toBe('<presence to="bob@x.com" type="subscribe"/>');
+  });
+
+  it('buildRosterRemove sets subscription="remove" on the item', () => {
+    expect(buildRosterRemove('r1', 'bob@x.com')).toBe(
+      '<iq type="set" id="r1"><query xmlns="jabber:iq:roster"><item jid="bob@x.com" subscription="remove"/></query></iq>',
+    );
   });
 });
 

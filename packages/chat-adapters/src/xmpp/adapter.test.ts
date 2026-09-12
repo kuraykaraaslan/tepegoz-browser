@@ -281,6 +281,21 @@ describe('XmppAdapter — live traffic', () => {
     expect(server.lastWritten()).toBe('<presence to="bob@example.com" type="subscribe"/>');
   });
 
+  it('removeContact sends one roster-remove iq and needs no separate presence stanza', async () => {
+    const { server, adapter, session } = await connected();
+    const p = adapter.removeContact?.(session, 'bob@example.com');
+    await tick();
+    const id = /id="(roster-remove-\d+)"/.exec(server.lastWritten())?.[1] ?? '';
+    expect(server.lastWritten()).toBe(
+      `<iq type="set" id="${id}"><query xmlns="jabber:iq:roster"><item jid="bob@example.com" subscription="remove"/></query></iq>`,
+    );
+    server.send(`<iq type="result" id="${id}"/>`);
+    await p;
+    expect(server.written.some((l) => l.includes('type="subscribe"') || l.includes('type="unsubscribe"'))).toBe(
+      false,
+    );
+  });
+
   it('routes a streamed MAM result to its query sink, not the event stream', async () => {
     const { server, adapter, session } = await connected();
     const seen: string[] = [];

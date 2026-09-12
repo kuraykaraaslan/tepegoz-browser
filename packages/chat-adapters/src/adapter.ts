@@ -89,6 +89,9 @@ export interface ChatAdapter {
    *  when it's absent. The contact itself arrives asynchronously via the usual roster-change event
    *  once the server roster-pushes it back (and again once the subscription is approved). */
   addContact?(session: ChatSession, address: string): Promise<void>;
+  /** Remove a contact from the roster and cancel any presence subscription with them. Optional for
+   *  the same reason as {@link addContact}. */
+  removeContact?(session: ChatSession, address: string): Promise<void>;
   setPresence(session: ChatSession, presence: ChatPresence, statusText?: string): Promise<void>;
 
   listConversations(session: ChatSession): Promise<ChatConversation[]>;
