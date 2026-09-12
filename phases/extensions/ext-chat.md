@@ -243,8 +243,9 @@ wrong is expensive later.
 ## X-chat.1 — XMPP adapter + connection spine
 
 **Status:** 🟢 Code-complete (2026-09-09) — the full stack is landed on `main`; only the runtime DoD
-(two live accounts, XEP-0198 resumption, kill-switch behaviour) and the DoD-template close-out remain,
-and those need a real server to exercise. **The renderer has no chat UI yet — that is X-chat.2.**
+(two live accounts with presence, XEP-0198 resumption) and the DoD-template close-out remain, and
+those need a real server to exercise. **Kill-switch behaviour verified live 2026-09-12** — see the
+Functional DoD below. **The renderer has no chat UI yet — that is X-chat.2.**
 - `@tepegoz/chat-adapters` — the full pure XMPP client: `XmlStreamParser` (incremental, bounded,
   fail-closed) · stanza↔`ChatEvent` mapping (message/presence/roster/receipts/chat-states/correction/
   retraction/MAM) · `<stream:features>` + SASL (PLAIN + SCRAM-SHA-1/256 via Web Crypto, RFC 5802
@@ -339,7 +340,15 @@ close-out. · **Branch:** `main` · **Risk:** low.
       the Playwright `_electron` e2e (X-chat.10) is what closes the rest of this bullet.
 - [ ] Network drop → XEP-0198 resumption (no missed/duplicated messages); a longer outage →
       clean reconnect + MAM catch-up.
-- [ ] Kill-switched profile: accounts show "blocked", no socket opens.
+- [x] Kill-switched profile: accounts show "blocked", no socket opens. **Verified live (2026-09-12)**
+      — `e2e/chat-live-xmpp-killswitch.spec.ts` reuses the Phase 5 network-binding kill-switch
+      (`spike-tunnel-binding.spec.ts`'s pattern): a General binding pointed at a connection whose
+      port nothing listens on never reaches `up`, so `chatMayEgress()` reads false and
+      `ChatConnectionManager.attemptConnect` (`packages/chat-core/src/connection-manager.ts`) — which
+      checks it BEFORE calling `adapter.connect()` — sets the account straight to `blocked` with no
+      dial attempt at all. Confirmed the account never transiently shows `connecting`/`online` while
+      blocked, and that lifting the binding lets the same account connect for real. 4 consecutive
+      clean runs.
 - [ ] XMPP stanza engine meets the `packages/**` coverage floor against fixtures.
 - [ ] Sub-phase DoD template ✔.
 
