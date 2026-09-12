@@ -47,18 +47,33 @@ describe('parseMamResult', () => {
     `<forwarded xmlns="urn:xmpp:forward:0"><delay xmlns="urn:xmpp:delay" stamp="${stamp}"/>${inner}</forwarded>` +
     `</result></message>`;
 
-  it('extracts the forwarded message and uses the archive id + delay timestamp', () => {
+  it('extracts the forwarded message and uses the delay timestamp', () => {
     const m = parseMamResult(
       el(wrap(`<message from="bob@x.com/p" type="chat" id="orig"><body>hi</body></message>`)),
       ctx,
     );
     expect(m).toMatchObject({
       body: 'hi',
-      protocolId: 'arch-1',
-      id: 'arch-1',
       senderAddress: 'bob@x.com',
       originTs: Date.parse('2020-01-01T00:00:00Z'),
     });
+  });
+
+  it('prefers the stanza\'s own id over the archive id, so a live delivery and its MAM catch-up dedup', () => {
+    // Regression: the same message arrives with a DIFFERENT id depending on the path — its own `id`
+    // attribute (or XEP-0359 stanza-id) live, vs the MAM archive envelope's `<result id=…>` id if
+    // that used to win. Dedup in the store and the renderer is keyed on protocolId, so the two paths
+    // must agree on which id a given message has.
+    const m = parseMamResult(
+      el(wrap(`<message from="bob@x.com/p" type="chat" id="orig"><body>hi</body></message>`)),
+      ctx,
+    );
+    expect(m).toMatchObject({ protocolId: 'orig', id: 'orig' });
+  });
+
+  it('falls back to the archive id when the stanza has no id of its own', () => {
+    const raw = `<message><result xmlns="urn:xmpp:mam:2" queryid="q1" id="arch-9"><forwarded xmlns="urn:xmpp:forward:0"><message from="b@x.com/p" type="chat"><body>x</body></message></forwarded></result></message>`;
+    expect(parseMamResult(el(raw), ctx)?.protocolId).toBe('arch-9');
   });
 
   it('falls back to the original protocol id when no archive id is present', () => {

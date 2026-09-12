@@ -1,5 +1,5 @@
 import type { ChatMessage } from '@tepegoz/shared-types';
-import { type StanzaContext, stanzaToEvent } from './stanzas';
+import { NS, type StanzaContext, stanzaToEvent } from './stanzas';
 import { type XmlElement, child, childText, encodeXmlText } from './xml-stream';
 
 /**
@@ -68,10 +68,18 @@ export function parseMamResult(resultEl: XmlElement, ctx: StanzaContext): ChatMe
   });
   if (event === null || event.type !== 'message') return null;
 
-  // The archive id (`<result id=…>`) is the stable per-message id; prefer it as the protocol id.
+  // Prefer the stanza's OWN id — its `id` attribute, or a XEP-0359 `<stanza-id>` — the exact same
+  // priority `messageEvent` (in `stanzas.ts`) uses when this same message arrives LIVE instead of
+  // through MAM. Preferring the archive id (`<result id=…>`) whenever present, as this used to,
+  // broke dedup between the two paths: a message delivered live (id from the original stanza) and
+  // the identical message later caught up via MAM (id from the archive envelope) never matched by
+  // protocolId, so both got stored and rendered as separate rows. The archive id remains the
+  // fallback for a stanza that truly has neither kind of id — not every client sets one reliably.
+  const stanzaOwnId = inner.attrs.id ?? child(inner, 'stanza-id', NS.stanzaId)?.attrs.id;
   const archiveId = result.attrs.id;
-  return archiveId !== undefined && archiveId.length > 0
-    ? { ...event.message, protocolId: archiveId, id: archiveId }
+  const protocolId = stanzaOwnId ?? archiveId;
+  return protocolId !== undefined && protocolId.length > 0
+    ? { ...event.message, protocolId, id: protocolId }
     : event.message;
 }
 
