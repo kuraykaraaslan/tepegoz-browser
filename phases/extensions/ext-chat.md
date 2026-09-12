@@ -502,6 +502,43 @@ arrives). Fixed by having `addContact`/`removeContact` call `roster()` themselve
 session needs it, instead of depending on some earlier caller having done so — see
 `XmppSession.rosterInterested` / `ensureRosterInterest`.
 
+Then (2026-09-12) the **Chats tab unified across every account** — a real gap, not just a UX
+preference: `groupConversationsByAccount` (the per-account section headers in `<ConversationList>`)
+had existed since the initial conversation-list build with its own tests, but nothing above it ever
+fed it more than one account's rows — `useChatState.conversations` filtered to `activeAccountId`, so
+a second configured account's conversations were reachable only by switching the account-switcher tab
+away from them, never visible alongside. The store already supported the fix with no schema change:
+`ChatStore.listConversations(db, accountId?)` returns every account's rows (most-recently-updated
+first) when `accountId` is omitted, and the IPC channel / preload bridge already passed it through
+untouched — only `useChatState` never called it that way. Fixed by seeding the conversation map from
+`port.listChatConversations()` (no id) keyed off the account list rather than the active account, so
+`<ConversationList>`'s existing multi-account grouping now actually renders; `selectConversation`
+resolves the owning account from the clicked row (falling back to `activeAccountId` for a
+just-joined room with no row yet) and follows the account switcher to it, so the composer / roster /
+room tabs stay pointed at whichever account the open conversation actually belongs to.
+
+Then (2026-09-12) **room browsing stopped pretending IRC and Matrix have a directory** — `<RoomBrowser>`
+worded its only room-join affordance entirely in XMPP terms (a "conference service" to browse XEP-0030
+style, and a `room@conference.example.org` join-by-address placeholder), with no indication that
+IRC (`IrcAdapter.joinRoom` — X-chat.4) and Matrix (`MatrixAdapter.joinRoom` — X-chat.5) already support
+joining a channel/room by its own address; both simply have no `discoverRooms` (IRC has no listing
+command in the adapter, and Matrix's room directory is explicitly deferred, see X-chat.5's deliverable
+note), so the "browse" half of the tab silently returned nothing for them, reading as "rooms aren't
+supported on this protocol" even though joining by address already worked underneath. `<RoomBrowser>`
+gained `canBrowse` (hides the browse form, shows a short explanatory note instead — join-by-address is
+unconditional either way) and `addressPlaceholder`; `<ChatWorkspace>` derives both from the active
+account's protocol (`xmpp` browses, `irc`/`matrix` get `#channel` / `#room:matrix.example.org`
+placeholders). No adapter or IPC change — this was UI wording hiding an already-working path.
+A second, real bug turned up right behind it, live-reported the same day: joining a room whose join
+actually *failed* (account still reconnecting, bad address, refused by the server) looked identical
+to success — `<RoomBrowser>`'s `onJoin` was fire-and-forget (`void chat.rooms?.join(jid)`) and
+`<ChatWorkspace>` switched to the Chats tab unconditionally, so a rejected join landed on an empty
+pane with no room and no error, reading as "IRC rooms just don't work." `onJoin` is now
+awaited — `<RoomBrowser>` shows a `joinError` message on rejection (cleared on the next edit, address
+kept so the user can retry) and disables the Join button mid-flight; `<ChatWorkspace>` only flips to
+the Chats tab once the join actually resolves, staying on the room browser (with the visible error)
+otherwise.
+
 **Remaining:** the runtime Functional DoD (media round-trip needs a live account). · **Depends on:**
 X-chat.1 · **Branch:** `main` · **Risk:** low.
 
