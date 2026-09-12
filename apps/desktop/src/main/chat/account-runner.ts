@@ -162,9 +162,26 @@ export class ChatAccountRunner {
     for (const change of this.state.applyRaw(raw)) this.applyChange(change);
   }
 
+  /** `chat_messages.conversation_id` is a foreign key onto `chat_conversations` — a message for a
+   *  conversation that has no row yet (a DM's very first-ever message, before any `conversation`
+   *  fold or explicit open) would otherwise violate it and crash the whole event pump into a
+   *  reconnect loop that hits the exact same missing row again. Same shape as the `'room'` case
+   *  below (found first, for Matrix's passive room discovery); DMs need the identical guard because
+   *  `foldConversation`'s `'message'` change is emitted and applied BEFORE its paired `'conversation'`
+   *  change reaches here, so that one is too late to rely on. */
+  private ensureConversation(conversationId: string): void {
+    if (this.deps.store.getConversation(conversationId) === null) {
+      this.deps.store.upsertConversation({
+        ...blankConversation(this.accountId, conversationId),
+        updatedAt: this.deps.now(),
+      });
+    }
+  }
+
   private applyChange(change: ChatStateChange): void {
     switch (change.kind) {
       case 'message':
+        this.ensureConversation(change.message.conversationId);
         this.deps.store.upsertMessage(change.message);
         this.maybeNotify(change.message);
         break;
@@ -175,6 +192,7 @@ export class ChatAccountRunner {
             change.message?.protocolId ?? change.protocolId,
           );
         } else {
+          this.ensureConversation(change.message.conversationId);
           this.deps.store.upsertMessage(change.message);
         }
         break;

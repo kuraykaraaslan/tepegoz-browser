@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import type { ChatAccount, ChatContact, ChatConversation, ChatMessage } from '@tepegoz/shared-types';
 import { XMPP_CAPS } from '@tepegoz/chat-adapters';
+import { openDatabase, migrate, ChatStore } from '@tepegoz/persistence';
 import {
   ChatAccountRunner,
   type AccountRunnerDeps,
@@ -8,6 +9,7 @@ import {
   type ChatRunnerStore,
   type RunnerEmit,
 } from './account-runner';
+import { makeRunnerStore } from './chat-store-adapter';
 
 const tick = (): Promise<void> => new Promise((r) => setTimeout(r, 0));
 
@@ -474,6 +476,21 @@ describe('ChatAccountRunner — actions', () => {
     expect(store.getConversation('!room:example')).toMatchObject({ id: '!room:example', kind: 'room' });
   });
 
+  it('a message from a contact with no prior conversation creates the conversation row first', async () => {
+    // Regression, same shape as the room-membership one above but for a plain 1:1: chat-core's
+    // `foldConversation` emits a `'message'` change and its paired `'conversation'` change together,
+    // message FIRST — so by the time `applyChange` reached the real `ChatStore.upsertMessage` for a
+    // DM's very first-ever message, no `chat_conversations` row existed yet and the FK on
+    // `chat_messages.conversation_id` threw, crashing the event pump (confirmed against the real
+    // SQLite-backed store, not this fixture, which doesn't enforce the constraint and so never
+    // caught it).
+    const { adapter, store } = await online();
+    expect(store.getConversation('bob@example.com')).toBeNull();
+    adapter.channel.push(incomingMessage('p1', 'hi'));
+    await tick();
+    expect(store.getConversation('bob@example.com')).toMatchObject({ id: 'bob@example.com', kind: 'dm' });
+  });
+
   it('setRoomNotifyLevel patches the stored conversation (creating a stub if needed)', async () => {
     const { runner, store } = await online();
     await runner.setRoomNotifyLevel('room@conf', 'mentions');
@@ -733,5 +750,38 @@ describe('ChatAccountRunner — notifications', () => {
     await tick();
     expect(notifications.map((n) => n.body)).toEqual(['hey Ada can you look']);
     void runner;
+  });
+});
+
+describe('ChatAccountRunner — against the real ChatStore', () => {
+  // `FakeStore` above has no foreign keys, so it cannot catch a bug where the caller writes a
+  // message before the conversation row exists — which is exactly what happened here. This suite
+  // exists to run the same event sequences against the real, migrated, in-memory SQLite store so a
+  // constraint violation actually throws instead of being silently absorbed by a fixture.
+  it('a brand-new DM contact\'s first message does not violate the chat_messages foreign key', async () => {
+    const db = openDatabase(':memory:');
+    migrate(db);
+    ChatStore.upsertAccount(db, account);
+    const adapter = new FakeAdapter();
+    const { deps } = makeDeps({ adapter, store: makeRunnerStore(db) });
+    const runner = new ChatAccountRunner(deps);
+    runner.start();
+    await tick();
+    expect(runner.connState).toBe('online');
+
+    // Before the fix, `ChatStore.upsertMessage` threw "FOREIGN KEY constraint failed" here — a
+    // synchronous throw inside `ChatAccountRunner.ingest`'s for-loop, which aborted BEFORE the
+    // paired 'conversation' change (queued right after 'message' in the same batch) ever ran, and
+    // propagated up into `ChatConnectionManager.pump`'s catch-all, which treats any pump fault as a
+    // dropped stream and reconnects — into the exact same first message again: an account could
+    // never get past a new contact's first DM.
+    adapter.channel.push(incomingMessage('p1', 'hi'));
+    await tick();
+
+    expect(runner.connState).toBe('online');
+    expect(makeRunnerStore(db).getConversation('bob@example.com')).toMatchObject({
+      id: 'bob@example.com',
+      kind: 'dm',
+    });
   });
 });
