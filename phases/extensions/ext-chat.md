@@ -412,12 +412,24 @@ rendered). Fixed by seeding the window with `[]` synchronously before the fetch 
 in between instead of clobbering it. Found by the same live Playwright e2e that found X-chat.3's
 groupchat bug — this was the second half of why the e2e's sent message never appeared.
 
+Then (2026-09-12) **add/remove-contact wired end-to-end.** `RosterPanel`'s `onAddContact` /
+`onRemoveContact` had existed since it was built, with their own component tests, but nothing above
+them ever called a real adapter — this doc previously listed "add/remove contact" as an already-shipped
+`@tepegoz/chat-ui` deliverable on the strength of that leaf-level UI alone. Closed as two matching
+vertical slices: `ChatAdapter.addContact?`/`removeContact?` (XMPP: RFC 6121 §2.3.1 roster-add + a
+presence `subscribe`, ordered so a failed add never leaves a dangling subscription; §2.5.2 roster-remove
+is one `iq set` with `subscription="remove"` that also cancels any existing subscription, no second
+stanza needed) → `ChatAccountRunner` (throws for protocols with no roster concept, e.g. IRC/Matrix) →
+`ChatService` → zod-gated `chat:add-contact` / `chat:remove-contact` IPC → preload → `ChatClientPort` →
+`useChatState` (`null` when the port/protocol doesn't support it) → `ChatWorkspace`'s `<RosterPanel>`.
+
 **Remaining:** the runtime Functional DoD (media round-trip needs a live account). · **Depends on:**
 X-chat.1 · **Branch:** `main` · **Risk:** low.
 
 ### Deliverables
 - [x] **`@tepegoz/chat-ui`** — conversation list (unread/mention badges, account grouping + colour),
-      roster panel (presence, groups, add/remove contact, `from`-subscription pending marker), account
+      roster panel (presence, groups, add/remove contact — wired to a real adapter 2026-09-12, XMPP
+      only, see below — `from`-subscription pending marker), account
       setup flow (XMPP fields **+ IRC + Matrix, closed 2026-09-12** — `AccountFormState` became a
       protocol-tagged superset, `validateIrcAccountForm` / `validateMatrixAccountForm` joined
       `validateXmppAccountForm`, `<AccountSetupForm>` grew a Protocol selector switching the rendered
