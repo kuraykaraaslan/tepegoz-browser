@@ -129,6 +129,36 @@ describe('applyChatChange', () => {
     expect(state.conversations.c1?.updatedAt).toBe(700);
   });
 
+  it('a message for a conversation this client has never seen at all creates a stub row', () => {
+    // Regression: the first-ever message from a contact with no prior conversation silently
+    // vanished — `bumpConversation` returned the unchanged state for an unknown conversationId, so
+    // nothing was ever added to `state.conversations`, and it stayed that way until the next full
+    // `listChatConversations` reseed (an account switch or app reload). The row this creates is a
+    // stub (address/name = the raw id) good enough to render and open; the real fields arrive on
+    // the next reseed.
+    const state = applyChatChange(emptyChatClientState(), {
+      kind: 'message',
+      conversationId: 'carol@x.example',
+      message: msg({ conversationId: 'carol@x.example', accountId: 'home', receivedAt: 900 }),
+    });
+    expect(state.conversations['carol@x.example']).toMatchObject({
+      id: 'carol@x.example',
+      accountId: 'home',
+      kind: 'dm',
+      address: 'carol@x.example',
+      updatedAt: 900,
+    });
+  });
+
+  it('a message for a never-seen ROOM conversation (id contains "/") stubs kind: room', () => {
+    const state = applyChatChange(emptyChatClientState(), {
+      kind: 'message',
+      conversationId: 'room@conf.example/carol',
+      message: msg({ conversationId: 'room@conf.example/carol', accountId: 'home' }),
+    });
+    expect(state.conversations['room@conf.example/carol']).toMatchObject({ kind: 'room' });
+  });
+
   it('message-updated replaces or removes by protocolId', () => {
     let state = seedHistory(opened(), 'c1', [msg({ protocolId: 'p1' })]);
     state = applyChatChange(state, {

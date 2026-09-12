@@ -147,6 +147,10 @@ export function applyChatChange(state: ChatClientState, change: ChatStateChange)
       return { ...state, messages: { ...state.messages, [change.conversationId]: next } };
     }
     case 'conversation': {
+      // A no-op for an unknown id is safe here specifically because `chat-core`'s `foldConversation`
+      // always emits a 'conversation' change together with (never before) the 'message' change for
+      // any event that could introduce a brand-new conversation — and `bumpConversation` below
+      // creates the stub row first. There is no accountId on this change to build one here directly.
       const existing = state.conversations[change.conversationId];
       if (existing === undefined) return state;
       return {
@@ -199,13 +203,38 @@ export function applyChatChange(state: ChatClientState, change: ChatStateChange)
 }
 
 /** Nudge a conversation's `updatedAt` (and its stub, if we have no row) so the list reorders. */
+/** A conversation row good enough to render and open, for a live push that named a conversation
+ *  this client has never seen before (most commonly: the first-ever message from a contact with no
+ *  prior history) — the real row (name, topic, member count, …) arrives on the next full
+ *  `listChatConversations` seed (account switch, reload); until then this is strictly better than
+ *  the message silently vanishing from the UI, which is what happened before this existed. Mirrors
+ *  `apps/desktop/src/main/chat/account-runner.ts`'s `blankConversation` fallback for the same gap
+ *  on the store side. */
+function stubConversation(conversationId: string, accountId: string): ChatConversation {
+  return {
+    id: conversationId,
+    accountId,
+    kind: conversationId.includes('/') ? 'room' : 'dm',
+    address: conversationId,
+    name: conversationId,
+    topic: '',
+    memberCount: 0,
+    unread: 0,
+    mentions: 0,
+    lastReadId: null,
+    muted: false,
+    notifyLevel: 'all',
+    isKnownContact: false,
+    updatedAt: 0,
+  };
+}
+
 function bumpConversation(
   state: ChatClientState,
   conversationId: string,
   message: ChatMessage,
 ): ChatClientState {
-  const existing = state.conversations[conversationId];
-  if (existing === undefined) return state;
+  const existing = state.conversations[conversationId] ?? stubConversation(conversationId, message.accountId);
   const at = message.receivedAt || message.originTs;
   if (at <= existing.updatedAt) return state;
   return {
