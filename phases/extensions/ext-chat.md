@@ -301,11 +301,13 @@ close-out. · **Branch:** `main` · **Risk:** low.
       coverage registration.
 - [x] **XMPP adapter** (`xmpp/`) — XML stream parser (incremental, namespace-aware), SASL
       (`SCRAM-SHA-1/256`, `PLAIN`, `EXTERNAL`), STARTTLS + direct TLS, resource binding, session,
-      **XEP-0198** stream management (h-acks, resumption), roster get/push (`jabber:iq:roster`),
-      presence (`0012` last-activity optional), `0280` carbons, `0313` MAM (paged history),
-      `0085` chat states (typing), `0184` delivery receipts, service discovery (`0030`),
-      `0198`-driven reconnect with exponential backoff. Stanza handling is **pure** + fixture-tested;
-      only the socket is injected. **`0363` HTTP file upload was never built** — found 2026-09-12
+      **XEP-0198** stream management (h-acks; the `resumeXml`/`canResume`/`previd` primitives exist
+      and are fixture-tested but have **no caller** — see the X-chat.1 Functional DoD note, found
+      2026-09-12), roster get/push (`jabber:iq:roster`), presence (`0012` last-activity optional),
+      `0280` carbons, `0313` MAM (paged history), `0085` chat states (typing), `0184` delivery
+      receipts, service discovery (`0030`), reconnect with exponential backoff (generic, not
+      0198-resumption-driven — every reconnect does a full fresh bind). Stanza handling is **pure** +
+      fixture-tested; only the socket is injected. **`0363` HTTP file upload was never built** — found 2026-09-12
       while scoping a live media-round-trip e2e (this line used to list it as shipped alongside
       everything else here, which was doc-drift, not a checked fact: `XmppAdapter.sendMessage`
       (`xmpp/adapter.ts`) never reads `OutgoingMessage.mediaPath`, `stanzas.ts`'s `buildMessage` has
@@ -338,8 +340,28 @@ close-out. · **Branch:** `main` · **Risk:** low.
       behind `TEPEGOZ_LIVE_XMPP=1`. **Still open:** roster-with-presence wasn't exercised (the test
       only proved messaging + MAM), and this is still the adapter directly, not the desktop app —
       the Playwright `_electron` e2e (X-chat.10) is what closes the rest of this bullet.
-- [ ] Network drop → XEP-0198 resumption (no missed/duplicated messages); a longer outage →
-      clean reconnect + MAM catch-up.
+- [~] Network drop → XEP-0198 resumption (no missed/duplicated messages); a longer outage →
+      clean reconnect + MAM catch-up. **Investigated + partially verified live (2026-09-12).** XEP-0198
+      resumption itself is NOT wired — `StreamManager.resumeXml`/`canResume`/`previd`
+      (`xmpp/stream-management.ts`) are pure, fixture-tested primitives with no caller anywhere in
+      `negotiator.ts` / `adapter.ts`: every reconnect, dropped or not, does a full fresh bind, never
+      `<resume/>`. This doc previously listed "resumption" as a shipped part of the checked-off XMPP
+      adapter deliverable on the strength of those primitives alone. What IS verified live —
+      `e2e/chat-live-xmpp-resumption.spec.ts`, a transparent TCP passthrough
+      (`e2e/tcp-passthrough.ts`) simulating the drop without touching the real Prosody — is the
+      achievable half: a drop is detected, the account does a full clean reconnect through the same
+      passthrough, and a message sent while it was down is recovered via MAM with no duplicate once
+      the conversation reopens (no missed, no duplicated — just not via `<resume/>`). Building this
+      found and fixed two more real bugs along the way: a brand-new contact's first-ever message
+      crashed the event pump (FK violation on `chat_messages.conversation_id`, same shape as the
+      earlier Matrix passive-room-discovery bug) and, once fixed, never rendered in the Chats tab at
+      all (the renderer's live-push reducer only ever patched an existing conversation row, never
+      added a new one); and MAM catch-up silently duplicated any message already delivered live,
+      since `parseMamResult` preferred a different id than the live delivery path for the identical
+      stanza. **Remaining for a full ✔:** wire actual `<resume/>` (needs a design decision — carry
+      SM state across a `ChatConnectionManager` reconnect, or make resumption fully internal to one
+      long-lived `XmppSession` — not attempted this session, scoped as real feature work, not a
+      quick fix).
 - [x] Kill-switched profile: accounts show "blocked", no socket opens. **Verified live (2026-09-12)**
       — `e2e/chat-live-xmpp-killswitch.spec.ts` reuses the Phase 5 network-binding kill-switch
       (`spike-tunnel-binding.spec.ts`'s pattern): a General binding pointed at a connection whose
