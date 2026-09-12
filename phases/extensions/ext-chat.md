@@ -243,9 +243,10 @@ wrong is expensive later.
 ## X-chat.1 — XMPP adapter + connection spine
 
 **Status:** 🟢 Code-complete (2026-09-09) — the full stack is landed on `main`; only the runtime DoD
-(two live accounts with presence, XEP-0198 resumption) and the DoD-template close-out remain, and
-those need a real server to exercise. **Kill-switch behaviour verified live 2026-09-12** — see the
-Functional DoD below. **The renderer has no chat UI yet — that is X-chat.2.**
+(two live accounts with presence, XEP-0198 resumption) remains needing a real server, plus the
+DoD-template close-out (gated on that). **Kill-switch behaviour verified live 2026-09-12; the
+coverage-floor DoD line closed the same day with no live server needed** — see the Functional DoD
+below. **The renderer has no chat UI yet — that is X-chat.2.**
 - `@tepegoz/chat-adapters` — the full pure XMPP client: `XmlStreamParser` (incremental, bounded,
   fail-closed) · stanza↔`ChatEvent` mapping (message/presence/roster/receipts/chat-states/correction/
   retraction/MAM) · `<stream:features>` + SASL (PLAIN + SCRAM-SHA-1/256 via Web Crypto, RFC 5802
@@ -371,7 +372,13 @@ close-out. · **Branch:** `main` · **Risk:** low.
       dial attempt at all. Confirmed the account never transiently shows `connecting`/`online` while
       blocked, and that lifting the binding lets the same account connect for real. 4 consecutive
       clean runs.
-- [ ] XMPP stanza engine meets the `packages/**` coverage floor against fixtures.
+- [x] XMPP stanza engine meets the `packages/**` coverage floor against fixtures. **Verified
+      2026-09-12** — `packages/chat-adapters/src/xmpp/**` measures **S98.27 / B89.45 / F98.12 /
+      L98.27** against the gate's current `packages/**` floor (S95/B89/F93/L95, `vitest.coverage.
+      config.ts`): clears all four, branches by the thinnest margin (0.45pt) of any dimension here.
+      `xml-stream.ts` (96.86/90.9) and `adapter.ts` (95.94/80.3) carry the two weakest branch numbers
+      in the subtree — worth a look before the floor itself ratchets up again, but not a blocker
+      today.
 - [ ] Sub-phase DoD template ✔.
 
 ---
