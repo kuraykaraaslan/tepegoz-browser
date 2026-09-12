@@ -24,6 +24,12 @@ importers:
       '@playwright/test':
         specifier: ^1.49.1
         version: 1.61.1
+      '@tepegoz/chat-adapters':
+        specifier: workspace:*
+        version: link:packages/chat-adapters
+      '@tepegoz/chat-transport-node':
+        specifier: workspace:*
+        version: link:packages/chat-transport-node
       '@tepegoz/i18n':
         specifier: workspace:*
         version: link:packages/i18n
