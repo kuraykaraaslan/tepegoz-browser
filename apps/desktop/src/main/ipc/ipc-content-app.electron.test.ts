@@ -98,8 +98,14 @@ const mcp = vi.hoisted(() => ({
   reconcile: vi.fn(() => Promise.resolve()),
 }));
 vi.mock('../mcp/supervisor.electron', () => ({ default: mcp }));
-const chatMessenger = vi.hoisted(() => ({ reconcile: vi.fn(), notifyEgressChange: vi.fn() }));
-vi.mock('../chat/chat-service.electron', () => ({ default: chatMessenger }));
+const backgroundConnections = vi.hoisted(() => ({
+  provide: vi.fn(),
+  init: vi.fn(),
+  stop: vi.fn(),
+  reconcile: vi.fn(),
+  notifyEgressChange: vi.fn(),
+}));
+vi.mock('../extensions/background-connection.electron', () => ({ default: backgroundConnections }));
 const extCaps = vi.hoisted(() => ({ reconcile: vi.fn() }));
 vi.mock('../extensions/capability-supervisor.electron', () => ({ default: extCaps }));
 const fileOps = vi.hoisted(() => ({ reconcile: vi.fn() }));
@@ -261,6 +267,7 @@ describe('prefsSet / prefsReset', () => {
     expect(prefs.update).toHaveBeenCalledWith({ __defaults: true });
     expect(mcp.reconcile).toHaveBeenCalled();
     expect(extCaps.reconcile).toHaveBeenCalled();
+    expect(backgroundConnections.reconcile).toHaveBeenCalled();
     expect(adblockHost.init).toHaveBeenCalled();
     expect(typoHost.init).toHaveBeenCalled();
     expect(translateHost.init).toHaveBeenCalled();
@@ -271,6 +278,7 @@ describe('prefsSet / prefsReset', () => {
     call(CH.prefsSet, { theme: 'light' });
     expect(mcp.reconcile).not.toHaveBeenCalled();
     expect(extCaps.reconcile).not.toHaveBeenCalled();
+    expect(backgroundConnections.reconcile).not.toHaveBeenCalled();
     expect(fileOps.reconcile).not.toHaveBeenCalled();
     expect(siteZoom.reapplyZoomEverywhere).not.toHaveBeenCalled();
     expect(adblockHost.init).not.toHaveBeenCalled();
@@ -291,6 +299,7 @@ describe('prefsSet / prefsReset', () => {
     });
     expect(mcp.reconcile).toHaveBeenCalledTimes(1);
     expect(extCaps.reconcile).toHaveBeenCalledTimes(1);
+    expect(backgroundConnections.reconcile).toHaveBeenCalledTimes(1);
     expect(fileOps.reconcile).toHaveBeenCalledTimes(1);
     expect(siteZoom.reapplyZoomEverywhere).toHaveBeenCalledWith([]);
     expect(adblockHost.init).toHaveBeenCalledTimes(1);
@@ -341,6 +350,7 @@ describe('settingsExport / settingsImport', () => {
     expect(prefs.update).toHaveBeenCalledWith({ theme: 'dark', locale: 'tr' });
     expect(mcp.reconcile).toHaveBeenCalled();
     expect(extCaps.reconcile).toHaveBeenCalled();
+    expect(backgroundConnections.reconcile).toHaveBeenCalled();
     expect(adblockHost.init).toHaveBeenCalled();
     expect(surfaceTheme.applyNativeThemeSource).toHaveBeenCalled();
     expect(publicSettings.broadcastPublicSettings).toHaveBeenCalled();

@@ -5,3 +5,8 @@ export {
   ActionInterceptorSupervisor,
   type ActionInterceptorSupervisorDeps,
 } from './action-interceptor-supervisor';
+export {
+  BackgroundConnectionSupervisor,
+  type BackgroundConnectionProvider,
+  type BackgroundConnectionSupervisorDeps,
+} from './background-connection-supervisor';

@@ -53,7 +53,8 @@ import BindingService from './network/binding-service.electron';
 import { broadcastNetworkState } from './ipc/ipc-network';
 import PopupWindowManager from './popup-window';
 import McpService from './mcp/supervisor.electron';
-import ChatMessenger from './chat/chat-service.electron';
+import ChatMessenger, { CHAT_EXTENSION_ID } from './chat/chat-service.electron';
+import BackgroundConnectionService from './extensions/background-connection.electron';
 import ExtensionCapabilityService from './extensions/capability-supervisor.electron';
 import ActionInterceptorService from './extensions/action-interceptors.electron';
 import popupBlockerHost from './extensions/popup-blocker-host.electron';
@@ -393,10 +394,25 @@ if (!app.requestSingleInstanceLock()) {
         // Off in safe mode — an MCP server is third-party code this process spawns.
         if (!safeMode) McpService.start();
         // The messenger extension (`com.tepegoz.chat`): connect its enabled accounts in the background.
-        // `init()` builds the service unconditionally; `start()` inside it is what checks the extension
-        // preference, so a later enable-toggle (`ChatMessenger.reconcile()`) can spin the accounts up.
+        // Registered as a `BackgroundConnectionService` provider (the shared prerequisite
+        // `phases/extensions/README.md` owed) rather than calling `ChatMessenger` directly — a future
+        // `ext-mail` provider gets the same init/stop/reconcile/notifyEgressChange fan-out for free
+        // instead of duplicating these four call sites. `init()` builds the service unconditionally;
+        // `start()` inside it is what checks the extension preference, so a later enable-toggle
+        // (`BackgroundConnectionService.reconcile()`) can spin the accounts up.
         // Off in safe mode — a background socket to a chat server is third-party-reachable code.
-        if (!safeMode) void ChatMessenger.init();
+        if (!safeMode) {
+          BackgroundConnectionService.provide({
+            extensionId: CHAT_EXTENSION_ID,
+            init: () => ChatMessenger.init(),
+            stop: () => ChatMessenger.stop(),
+            reconcile: () => ChatMessenger.reconcile(),
+            notifyEgressChange: () => {
+              ChatMessenger.notifyEgressChange();
+            },
+          });
+          void BackgroundConnectionService.init();
+        }
         // The agent's built-in browser/tab/journal tools are always-on, package-owned builtins
         // (ADR-0021/0024 update), registered directly into the CapabilityRegistry behind the same
         // ToolGateway PEP — like the file_* tools — bound to their injected hosts. They belong to their
@@ -505,7 +521,7 @@ if (!app.requestSingleInstanceLock()) {
     TabDiscardService.stop();
     SafeBrowsingService.stop();
     void McpService.stop();
-    void ChatMessenger.stop();
+    void BackgroundConnectionService.stop();
     PopupWindowManager.close();
     TabManager.persistNow();
     // Fire-and-forget on purpose: Electron may take the process down mid-clear, and the startup
