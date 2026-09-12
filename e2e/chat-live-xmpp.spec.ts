@@ -44,8 +44,8 @@ async function openChatPage(window: Page): Promise<void> {
   await expect(window.getByRole('tab', { name: 'Chats' })).toBeVisible({ timeout: 20_000 });
 }
 
-test('adds a live XMPP account, joins a MUC room, sends a message, and reacts to it', async ({}, testInfo) => {
-  testInfo.setTimeout(90_000);
+test('adds a live XMPP account, joins a MUC room, sends a message, reacts to it, and manages a roster contact', async ({}, testInfo) => {
+  testInfo.setTimeout(120_000);
   const profileDir = join(process.cwd(), '.chat-live-xmpp-profile');
   mkdirSync(profileDir, { recursive: true });
   writeFileSync(join(profileDir, 'preferences.json'), '{"locale":"en"}');
@@ -114,6 +114,18 @@ test('adds a live XMPP account, joins a MUC room, sends a message, and reacts to
     await window.getByRole('button', { name: 'Add reaction' }).click();
     await window.getByRole('menuitem', { name: '👍' }).click();
     await expect(window.getByRole('button', { name: '👍 1' })).toBeVisible({ timeout: 10_000 });
+
+    // Roster: add a contact (RFC 6121 roster-add + presence subscribe) through the real Contacts
+    // tab, then remove it (roster-remove) — both round-trip through Prosody's roster-push, which is
+    // what actually updates the panel (the add/remove calls themselves are fire-and-forget).
+    await window.getByRole('tab', { name: 'Contacts' }).click();
+    await window.getByRole('textbox', { name: 'Add contact' }).fill('bob@localhost');
+    await window.getByRole('button', { name: 'Add contact' }).click();
+    const removeBob = window.getByRole('button', { name: 'Remove bob@localhost' });
+    await expect(removeBob).toBeVisible({ timeout: 10_000 });
+
+    await removeBob.click();
+    await expect(removeBob).toHaveCount(0, { timeout: 10_000 });
   } finally {
     await app.close();
   }

@@ -101,6 +101,63 @@ describe.skipIf(process.env.TEPEGOZ_LIVE_XMPP !== '1')('XmppAdapter — live Pro
     }
   }
 
+  /** Same skip-anything-unrelated shape as {@link waitForMessageBody}, for a `roster-change` with a
+   *  given `removed` flag. Takes a live iterator rather than (adapter, session) — unlike
+   *  `waitForMessageBody`, this is called twice in a row in the remove test, and a fresh
+   *  `events(session)[Symbol.asyncIterator]()` each time replayed the same already-consumed event
+   *  instead of continuing past it. Also must filter on `removed`, not just the address: Prosody
+   *  pushes a roster-change for `bob@localhost` a *second* time shortly after the add (when the
+   *  presence-subscribe request lands and the roster item's `ask` flag flips) — matching on address
+   *  alone can pick up that second `removed: false` push instead of the actual remove. */
+  async function waitForRosterChange(
+    it: AsyncIterator<unknown>,
+    address: string,
+    removed: boolean,
+    timeoutMs = 8000,
+  ): Promise<unknown> {
+    const deadline = Date.now() + timeoutMs;
+    for (;;) {
+      const remaining = deadline - Date.now();
+      if (remaining <= 0) {
+        throw new Error(
+          `timed out after ${String(timeoutMs)}ms waiting for a removed=${String(removed)} roster-change for "${address}"`,
+        );
+      }
+      const timeout = new Promise<never>((_resolve, reject) => {
+        setTimeout(() => reject(new Error('per-event timeout')), remaining);
+      });
+      const result: IteratorResult<unknown> = await Promise.race([it.next(), timeout]);
+      const value = result.value as
+        | { type?: unknown; removed?: unknown; contact?: { address?: unknown } }
+        | null;
+      if (value?.type === 'roster-change' && value.contact?.address === address && value.removed === removed) {
+        return value;
+      }
+    }
+  }
+
+  it('addContact adds a roster item; the server pushes it back as a roster-change', async () => {
+    const alice = await connect('alice', 'alicepw123');
+    const it = alice.adapter.events(alice.session)[Symbol.asyncIterator]();
+    // No preceding `roster()` call — `addContact` must make itself an "interested resource" (RFC
+    // 6121 §2.1) on its own, or Prosody silently drops the live push below.
+    await alice.adapter.addContact?.(alice.session, 'bob@localhost');
+    const event = await waitForRosterChange(it, 'bob@localhost', false);
+    expect(event).toMatchObject({ type: 'roster-change', removed: false, contact: { address: 'bob@localhost' } });
+    await alice.adapter.disconnect(alice.session);
+  }, 15_000);
+
+  it('removeContact removes a roster item; the server pushes back subscription="remove"', async () => {
+    const alice = await connect('alice', 'alicepw123');
+    const it = alice.adapter.events(alice.session)[Symbol.asyncIterator]();
+    await alice.adapter.addContact?.(alice.session, 'bob@localhost');
+    await waitForRosterChange(it, 'bob@localhost', false);
+    await alice.adapter.removeContact?.(alice.session, 'bob@localhost');
+    const event = await waitForRosterChange(it, 'bob@localhost', true);
+    expect(event).toMatchObject({ type: 'roster-change', removed: true, contact: { address: 'bob@localhost' } });
+    await alice.adapter.disconnect(alice.session);
+  }, 15_000);
+
   it('connects two accounts, exchanges a 1:1 message, and backfills via MAM', async () => {
     const alice = await connect('alice', 'alicepw123');
     const bob = await connect('bob', 'bobpw123');

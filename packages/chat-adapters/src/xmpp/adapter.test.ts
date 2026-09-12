@@ -266,10 +266,21 @@ describe('XmppAdapter — live traffic', () => {
     await expect(adapter.roster(session)).rejects.toThrow(/timed out/);
   });
 
+  /** `addContact`/`removeContact` must first become an "interested resource" (RFC 6121 §2.1) — a
+   *  live server only pushes a roster-change back to a resource that has requested its roster at
+   *  least once — before sending their own roster set. Answers that implicit `roster` get so both
+   *  tests below can go straight to asserting the add/remove-specific stanza. */
+  async function ackImplicitRosterGet(server: { lastWritten: () => string; send: (s: string) => void }): Promise<void> {
+    await tick();
+    const id = /id="(roster-\d+)"/.exec(server.lastWritten())?.[1] ?? '';
+    server.send(`<iq type="result" id="${id}"><query xmlns="jabber:iq:roster"/></iq>`);
+    await tick();
+  }
+
   it('addContact sets the roster item then requests presence — in that order, only after the ack', async () => {
     const { server, adapter, session } = await connected();
     const p = adapter.addContact?.(session, 'bob@example.com');
-    await tick();
+    await ackImplicitRosterGet(server);
     // The subscription request must not jump ahead of the roster-add ack.
     expect(server.written.some((l) => l.includes('type="subscribe"'))).toBe(false);
     const id = /id="(roster-add-\d+)"/.exec(server.lastWritten())?.[1] ?? '';
@@ -284,7 +295,7 @@ describe('XmppAdapter — live traffic', () => {
   it('removeContact sends one roster-remove iq and needs no separate presence stanza', async () => {
     const { server, adapter, session } = await connected();
     const p = adapter.removeContact?.(session, 'bob@example.com');
-    await tick();
+    await ackImplicitRosterGet(server);
     const id = /id="(roster-remove-\d+)"/.exec(server.lastWritten())?.[1] ?? '';
     expect(server.lastWritten()).toBe(
       `<iq type="set" id="${id}"><query xmlns="jabber:iq:roster"><item jid="bob@example.com" subscription="remove"/></query></iq>`,
@@ -294,6 +305,21 @@ describe('XmppAdapter — live traffic', () => {
     expect(server.written.some((l) => l.includes('type="subscribe"') || l.includes('type="unsubscribe"'))).toBe(
       false,
     );
+  });
+
+  it('addContact skips the roster get on a second call once this session is already interested', async () => {
+    const { server, adapter, session } = await connected();
+    const rosterP = adapter.roster(session);
+    await ackImplicitRosterGet(server);
+    await rosterP;
+    const p = adapter.addContact?.(session, 'carol@example.com');
+    await tick();
+    const id = /id="(roster-add-\d+)"/.exec(server.lastWritten())?.[1] ?? '';
+    expect(server.lastWritten()).toBe(
+      `<iq type="set" id="${id}"><query xmlns="jabber:iq:roster"><item jid="carol@example.com"/></query></iq>`,
+    );
+    server.send(`<iq type="result" id="${id}"/>`);
+    await p;
   });
 
   it('routes a streamed MAM result to its query sink, not the event stream', async () => {
