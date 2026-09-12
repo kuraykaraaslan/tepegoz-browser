@@ -422,6 +422,15 @@ is one `iq set` with `subscription="remove"` that also cancels any existing subs
 stanza needed) → `ChatAccountRunner` (throws for protocols with no roster concept, e.g. IRC/Matrix) →
 `ChatService` → zod-gated `chat:add-contact` / `chat:remove-contact` IPC → preload → `ChatClientPort` →
 `useChatState` (`null` when the port/protocol doesn't support it) → `ChatWorkspace`'s `<RosterPanel>`.
+Extending `e2e/chat-live-xmpp.spec.ts` with a live add/remove-contact round trip against Prosody found
+an **eighth** real bug the same day: `addContact`/`removeContact` silently produced no `roster-change`
+event on a session that hadn't called `roster()` first, because RFC 6121 §2.1 only pushes roster
+changes live to a resource that has requested its roster at least once ("interested resource") —
+confirmed at the wire level in `xmpp-live-prosody.manual.test.ts` (no `roster()` call ⇒ Prosody acks the
+add with an empty `<iq type="result"/>` and nothing else; add `roster()` first ⇒ the expected push
+arrives). Fixed by having `addContact`/`removeContact` call `roster()` themselves the first time a
+session needs it, instead of depending on some earlier caller having done so — see
+`XmppSession.rosterInterested` / `ensureRosterInterest`.
 
 **Remaining:** the runtime Functional DoD (media round-trip needs a live account). · **Depends on:**
 X-chat.1 · **Branch:** `main` · **Risk:** low.
