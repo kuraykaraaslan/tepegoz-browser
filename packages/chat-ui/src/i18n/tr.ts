@@ -76,6 +76,7 @@ export const tr: ChatUiStrings = {
   workspace: {
     /** The left column's own heading, above the tabs. */
     title: 'Sohbet',
+    loading: 'Yükleniyor…',
     /** Accessible name for the gear button that opens account management / add-account. */
     manageAccounts: 'Hesaplar',
     chatsTab: 'Sohbetler',

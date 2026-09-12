@@ -130,6 +130,20 @@ export function ChatWorkspace({
 
   const noAccounts = !chat.loading && chat.accounts.length === 0;
 
+  // While the first accounts/conversations fetch is in flight, `noAccounts` stays false (it doesn't
+  // know yet whether there's anything to show) and the grid below renders with both panes empty — a
+  // sparse two-column layout for a fraction of a second, easy to misread as broken. Showing an
+  // explicit, obviously-intentional loading state here instead of the empty grid is uglier to skip.
+  if (chat.loading) {
+    return (
+      <div className="chat-workspace">
+        <p className="chat-workspace__loading" role="status">
+          {s.workspace.loading}
+        </p>
+      </div>
+    );
+  }
+
   if (managingAccounts) {
     return (
       <div className="chat-workspace">

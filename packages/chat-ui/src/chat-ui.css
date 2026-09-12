@@ -342,6 +342,21 @@
 .chat-workspace__conv-body > .chat-timeline {
   flex: 1;
 }
+/* Spans BOTH of `.chat-workspace`'s grid rows (it's the row-2-only `1fr` track that gives the
+ * workspace its full height — a plain, unpositioned child would only occupy row 1's `auto` track
+ * and collapse to its own content height, which is exactly the "short while loading" flash this
+ * exists to replace). */
+.chat-workspace__loading {
+  grid-row: 1 / -1;
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  margin: 0;
+  color: var(--cu-text-secondary);
+  font-size: 14px;
+}
 .chat-workspace__no-selection {
   margin: auto;
   max-width: 30ch;

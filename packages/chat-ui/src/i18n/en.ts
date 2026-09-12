@@ -103,6 +103,8 @@ export const en = {
   workspace: {
     /** The left column's own heading, above the tabs. */
     title: 'Chat',
+    /** Shown full-surface while the first accounts/conversations fetch is still in flight. */
+    loading: 'Loading…',
     /** Accessible name for the gear button that opens account management / add-account. */
     manageAccounts: 'Accounts',
     /** Left-column tab: the conversation list. */

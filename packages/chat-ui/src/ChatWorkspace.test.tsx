@@ -5,7 +5,7 @@ import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-libra
 import { I18nProvider } from '@tepegoz/i18n/react';
 import type { ChatContact, ChatConversation, ChatMessage } from '@tepegoz/shared-types';
 import { ChatWorkspace } from './ChatWorkspace';
-import type { ChatClientPort, ChatStateEvent } from './types';
+import type { ChatAccountsSnapshot, ChatClientPort, ChatStateEvent } from './types';
 
 afterEach(cleanup);
 
@@ -98,6 +98,27 @@ function makePort(over: Partial<ChatClientPort> = {}): {
 }
 
 describe('ChatWorkspace', () => {
+  it('shows a full-surface loading state instead of a sparse empty shell while accounts are still loading', async () => {
+    let resolveAccounts!: (v: ChatAccountsSnapshot) => void;
+    const { port } = makePort({
+      listChatAccounts: () =>
+        new Promise<ChatAccountsSnapshot>((resolve) => {
+          resolveAccounts = resolve;
+        }),
+    });
+    wrap(<ChatWorkspace port={port} />);
+
+    expect(screen.getByRole('status')).toHaveProperty('textContent', 'Loading…');
+    // Neither the "no accounts" empty shell nor the normal chats tab exist yet — only the loading
+    // state, so there is nothing sparse-looking on screen to flash a short layout.
+    expect(screen.queryByRole('tab', { name: 'Chats' })).toBeNull();
+    expect(screen.queryByText('Add a chat account to get started.')).toBeNull();
+
+    resolveAccounts({ accounts: [], states: {} });
+    await screen.findByText('Add a chat account to get started.');
+    expect(screen.queryByRole('status')).toBeNull();
+  });
+
   it('invites adding an account while still showing the chats/contacts shell', async () => {
     const onAddAccount = vi.fn();
     const { port } = makePort({
