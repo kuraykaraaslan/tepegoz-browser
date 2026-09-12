@@ -2,10 +2,12 @@ import { describe, expect, it } from 'vitest';
 import {
   ChatAccountSchema,
   ChatAddAccountSchema,
+  ChatAddContactSchema,
   ChatConversationArgSchema,
   ChatDiscoverRoomsSchema,
   ChatGetHistorySchema,
   ChatJoinRoomSchema,
+  ChatRemoveContactSchema,
   ChatSetRoomNotifyLevelSchema,
   ChatSetMutedSchema,
   ChatSetRoomTopicSchema,
@@ -87,6 +89,25 @@ describe('ChatSetPresenceSchema', () => {
       ChatSetPresenceSchema.safeParse({ accountId: 'a', presence: 'dnd', statusText: 'x'.repeat(513) })
         .success,
     ).toBe(false);
+  });
+});
+
+describe('roster channels', () => {
+  it('ChatAddContactSchema needs a non-empty account id and address', () => {
+    expect(ChatAddContactSchema.safeParse({ accountId: 'a', address: 'bob@example.com' }).success).toBe(
+      true,
+    );
+    expect(ChatAddContactSchema.safeParse({ accountId: 'a', address: '' }).success).toBe(false);
+    expect(ChatAddContactSchema.safeParse({ accountId: '', address: 'bob@example.com' }).success).toBe(
+      false,
+    );
+  });
+
+  it('ChatRemoveContactSchema needs a non-empty account id and address', () => {
+    expect(
+      ChatRemoveContactSchema.safeParse({ accountId: 'a', address: 'bob@example.com' }).success,
+    ).toBe(true);
+    expect(ChatRemoveContactSchema.safeParse({ accountId: 'a', address: '' }).success).toBe(false);
   });
 });
 

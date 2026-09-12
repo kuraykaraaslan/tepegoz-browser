@@ -283,6 +283,8 @@ export const IpcChannels = {
   chatReact: 'chat:react',
   /** Renderer→main: add a contact to the roster and request their presence. */
   chatAddContact: 'chat:add-contact',
+  /** Renderer→main: remove a contact from the roster and cancel any subscription. */
+  chatRemoveContact: 'chat:remove-contact',
   /** Main→renderer push: per-account connection state + folded conversation/roster changes. */
   chatState: 'chat:state',
   /** Renderer→main: the identity of every built-in extension (from the validated on-disk catalog). */

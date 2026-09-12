@@ -36,6 +36,7 @@ const svc = {
   listConversations: vi.fn(() => []),
   getRoster: vi.fn(() => []),
   addContact: vi.fn(() => Promise.resolve()),
+  removeContact: vi.fn(() => Promise.resolve()),
   getHistory: vi.fn(() => Promise.resolve({ messages: [], nextCursor: null })),
   sendMessage: vi.fn(() => Promise.resolve('srv-1')),
   setPresence: vi.fn(() => Promise.resolve()),
@@ -71,7 +72,7 @@ beforeEach(() => {
 });
 
 it('registers every chat channel', () => {
-  expect(h.handlers.size).toBe(19);
+  expect(h.handlers.size).toBe(20);
 });
 
 it('chat:react validates + delegates', async () => {
@@ -92,6 +93,14 @@ it('chat:add-contact validates + delegates', async () => {
   await call(IpcChannels.chatAddContact, { accountId: 'work', address: 'bob@example.com' });
   expect(svc.addContact).toHaveBeenCalledWith('work', 'bob@example.com');
   await expect(call(IpcChannels.chatAddContact, { accountId: 'work', address: '' })).rejects.toBeDefined();
+});
+
+it('chat:remove-contact validates + delegates', async () => {
+  await call(IpcChannels.chatRemoveContact, { accountId: 'work', address: 'bob@example.com' });
+  expect(svc.removeContact).toHaveBeenCalledWith('work', 'bob@example.com');
+  await expect(
+    call(IpcChannels.chatRemoveContact, { accountId: 'work', address: '' }),
+  ).rejects.toBeDefined();
 });
 
 describe('rooms', () => {

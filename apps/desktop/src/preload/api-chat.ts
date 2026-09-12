@@ -28,6 +28,7 @@ export const chatApi: Pick<
   | 'listChatConversations'
   | 'getChatRoster'
   | 'addChatContact'
+  | 'removeChatContact'
   | 'getChatHistory'
   | 'sendChatMessage'
   | 'setChatPresence'
@@ -54,6 +55,8 @@ export const chatApi: Pick<
     invoke<ChatContact[]>(IpcChannels.chatGetRoster, { accountId }),
   addChatContact: (accountId: string, address: string) =>
     invoke<void>(IpcChannels.chatAddContact, { accountId, address }),
+  removeChatContact: (accountId: string, address: string) =>
+    invoke<void>(IpcChannels.chatRemoveContact, { accountId, address }),
   getChatHistory: (accountId: string, conversationId: string, before?: string | null) =>
     invoke<ChatHistoryPage>(IpcChannels.chatGetHistory, {
       accountId,

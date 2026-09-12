@@ -236,6 +236,10 @@ export class ChatService {
     return this.require(accountId).addContact(address);
   }
 
+  async removeContact(accountId: string, address: string): Promise<void> {
+    return this.require(accountId).removeContact(address);
+  }
+
   async react(
     accountId: string,
     conversationId: string,

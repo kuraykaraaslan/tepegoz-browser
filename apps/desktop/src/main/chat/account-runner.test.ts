@@ -60,6 +60,7 @@ class FakeAdapter {
   history = vi.fn(() => Promise.resolve({ messages: this.historyPages, nextCursor: null }));
   roster = vi.fn(() => Promise.resolve(this.rosterContacts));
   addContact = vi.fn(() => Promise.resolve());
+  removeContact = vi.fn(() => Promise.resolve());
   listConversations = vi.fn(() => Promise.resolve([]));
   discoverRooms = vi.fn(() =>
     Promise.resolve([
@@ -429,6 +430,12 @@ describe('ChatAccountRunner — actions', () => {
     const { runner, adapter } = await online();
     await runner.addContact('bob@example.com');
     expect(adapter.addContact).toHaveBeenCalledWith(expect.anything(), 'bob@example.com');
+  });
+
+  it('removeContact delegates to the adapter', async () => {
+    const { runner, adapter } = await online();
+    await runner.removeContact('bob@example.com');
+    expect(adapter.removeContact).toHaveBeenCalledWith(expect.anything(), 'bob@example.com');
   });
 
   it('persists a room-topic change onto the stored conversation row', async () => {

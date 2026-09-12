@@ -111,6 +111,12 @@ export const ChatAddContactSchema = z.object({
   address: z.string().min(1).max(320),
 });
 
+/** `chat:remove-contact` — remove a contact from the roster and cancel any subscription. */
+export const ChatRemoveContactSchema = z.object({
+  accountId: z.string().min(1).max(64),
+  address: z.string().min(1).max(320),
+});
+
 /** `chat:resolve-media` — turn a message `mediaRef` (a protocol URI) into a quarantined data URL. */
 export const ChatResolveMediaSchema = z.object({
   accountId: z.string().min(1).max(64),

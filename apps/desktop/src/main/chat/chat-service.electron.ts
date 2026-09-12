@@ -180,6 +180,7 @@ export const chatIpcService: ChatIpcService = {
     getDb() === null ? [] : listConversations(requireDb(), accountId),
   getRoster: (accountId) => (getDb() === null ? [] : listContacts(requireDb(), accountId)),
   addContact: (accountId, address) => requireService().addContact(accountId, address),
+  removeContact: (accountId, address) => requireService().removeContact(accountId, address),
   getHistory: (accountId, conversationId, before) =>
     requireService().history(accountId, conversationId, before),
   sendMessage: (accountId, conversationId, body) =>

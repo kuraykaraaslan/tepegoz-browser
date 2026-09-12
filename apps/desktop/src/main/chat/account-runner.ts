@@ -446,6 +446,13 @@ export class ChatAccountRunner {
     await this.deps.adapter.addContact(this.requireSession(), address);
   }
 
+  async removeContact(address: string): Promise<void> {
+    if (this.deps.adapter.removeContact === undefined) {
+      throw new Error('this protocol has no roster / contacts concept');
+    }
+    await this.deps.adapter.removeContact(this.requireSession(), address);
+  }
+
   async react(conversationId: string, messageId: string, emoji: string, on: boolean): Promise<void> {
     if (this.deps.adapter.react === undefined) {
       throw new Error('this protocol does not support reactions');
