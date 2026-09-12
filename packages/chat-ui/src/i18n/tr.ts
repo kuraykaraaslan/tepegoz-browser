@@ -26,12 +26,16 @@ export const tr: ChatUiStrings = {
     search: 'Odaları süz',
     joinByAddress: 'Adresle katıl',
     joinByAddressPlaceholder: 'oda@conference.ornek.org',
+    joinByAddressPlaceholderIrc: '#kanal',
+    joinByAddressPlaceholderMatrix: '#oda:matrix.ornek.org',
     join: 'Katıl',
     online: 'çevrimiçi',
     locked: 'Parola gerekli',
     membersOnly: 'Yalnızca üyeler',
     empty: 'Oda bulunamadı',
     loading: 'Odalar yükleniyor…',
+    noBrowse: 'Bu protokolün gözatılabilecek bir oda dizini yok — aşağıdan kanala/odaya adresiyle katılabilirsiniz.',
+    joinError: 'Katılınamadı — adresi ve hesabın bağlı olduğunu kontrol edin.',
   },
   room: {
     members: 'Üyeler',
@@ -97,6 +101,7 @@ export const tr: ChatUiStrings = {
   accountsManager: {
     title: 'Hesaplar',
     add: 'Hesap ekle',
+    edit: 'Düzenle',
     remove: 'Kaldır',
     removeConfirm: 'Kaldırmak için tekrar tıklayın',
     empty: 'Henüz hesap yok.',
@@ -125,6 +130,7 @@ export const tr: ChatUiStrings = {
   },
   setup: {
     title: 'Hesap ekle',
+    editTitle: 'Hesabı düzenle',
     protocol: 'Protokol',
     protocolXmpp: 'XMPP',
     protocolIrc: 'IRC',
@@ -135,6 +141,7 @@ export const tr: ChatUiStrings = {
     jidHint: 'siz@ornek.org',
     password: 'Parola',
     passwordOptionalHint: 'Kimlik doğrulamadan bağlanmak için boş bırakın.',
+    passwordKeepHint: 'Mevcut parolayı korumak için boş bırakın.',
     advanced: 'Bağlantı ayarları',
     host: 'Sunucu adresi',
     hostHint: 'Otomatik bulmak için boş bırakın (SRV).',
@@ -151,6 +158,7 @@ export const tr: ChatUiStrings = {
     userId: 'Kullanıcı Kimliği',
     userIdHint: '@siz:ornek.org',
     add: 'Hesap ekle',
+    save: 'Kaydet',
     cancel: 'Vazgeç',
     errors: {
       labelRequired: 'Hesaba bir ad verin.',

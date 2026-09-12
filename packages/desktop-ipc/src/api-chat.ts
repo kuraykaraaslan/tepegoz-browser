@@ -81,6 +81,16 @@ export interface ChatApi {
    * crosses ONCE — main stores it in the OS keychain and never returns it.
    */
   addChatAccount(account: ChatAccount, secret: string): Promise<void>;
+  /** One account's config for an edit form (no `secretRef`, no secret) — `null` if it no longer
+   *  exists (e.g. removed from elsewhere while the edit dialog was open). */
+  getChatAccount(accountId: string): Promise<Omit<ChatAccount, 'secretRef'> | null>;
+  /**
+   * Update an account's config and, optionally, rotate its secret — same one-way secret crossing as
+   * {@link addChatAccount}. Pass `secret: null` to keep the vault's existing credential unchanged
+   * (distinct from an empty string, which still means "no credential" for a protocol that allows
+   * one, same as on add). Reconnects the account with the new settings.
+   */
+  updateChatAccount(account: ChatAccount, secret: string | null): Promise<void>;
   removeChatAccount(accountId: string): Promise<void>;
   /** Every conversation, or just one account's when `accountId` is given. */
   listChatConversations(accountId?: string): Promise<ChatConversation[]>;

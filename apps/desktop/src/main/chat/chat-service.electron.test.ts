@@ -31,6 +31,7 @@ vi.mock('./chat-secrets.electron', () => ({ default: { get: vi.fn(), set: vi.fn(
 const store = vi.hoisted(() => ({
   listAccounts: vi.fn(() => []),
   listAccountSummaries: vi.fn(() => [{ id: 'a' }]),
+  getAccountForEdit: vi.fn(() => ({ id: 'a' })),
   listConversations: vi.fn(() => [{ id: 'c' }]),
   listContacts: vi.fn(() => [{ id: 'k' }]),
   makeRunnerStore: vi.fn(),
@@ -76,6 +77,7 @@ const fakeService = {
   notifyEgressChange: vi.fn(),
   accountStates: vi.fn(() => ({ a: 'online' })),
   addAccount: vi.fn(() => Promise.resolve()),
+  updateAccount: vi.fn(() => Promise.resolve()),
   removeAccount: vi.fn(() => Promise.resolve()),
   history: vi.fn(() => Promise.resolve({ messages: [], nextCursor: null })),
   sendMessage: vi.fn(() => Promise.resolve('srv-1')),
@@ -221,6 +223,7 @@ describe('chatIpcService — db-absent fallbacks', () => {
     expect(mod.chatIpcService.listConversations()).toEqual([]);
     expect(mod.chatIpcService.getRoster('a')).toEqual([]);
     expect(mod.chatIpcService.accountStates()).toEqual({});
+    expect(mod.chatIpcService.getAccount('a')).toBeNull();
   });
 
   it('reads hit the store when the DB is open', () => {
@@ -228,6 +231,8 @@ describe('chatIpcService — db-absent fallbacks', () => {
     expect(mod.chatIpcService.listConversations('a')).toEqual([{ id: 'c' }]);
     expect(store.listConversations).toHaveBeenCalledWith({ tag: 'db' }, 'a');
     expect(mod.chatIpcService.getRoster('a')).toEqual([{ id: 'k' }]);
+    expect(mod.chatIpcService.getAccount('a')).toEqual({ id: 'a' });
+    expect(store.getAccountForEdit).toHaveBeenCalledWith({ tag: 'db' }, 'a');
   });
 });
 
@@ -236,6 +241,7 @@ describe('chatIpcService — the "not initialised" guard', () => {
     expect(() => mod.chatIpcService.sendMessage('a', 'c', { body: 'x' })).toThrow(/not initialised/);
     expect(() => mod.chatIpcService.markRead('a', 'c', 'm1')).toThrow(/not initialised/);
     expect(() => mod.chatIpcService.getHistory('a', 'c', null)).toThrow(/not initialised/);
+    expect(() => mod.chatIpcService.updateAccount('a', null, { id: 'a' })).toThrow(/not initialised/);
   });
 
   it('every action delegates once a service is set', async () => {
@@ -245,6 +251,8 @@ describe('chatIpcService — the "not initialised" guard', () => {
     expect(fakeService.markRead).toHaveBeenCalledWith('a', 'c', 'm1');
     await mod.chatIpcService.addAccount('a', 'pw', { id: 'a' });
     expect(fakeService.addAccount).toHaveBeenCalledWith({ id: 'a' }, 'pw');
+    await mod.chatIpcService.updateAccount('a', null, { id: 'a' });
+    expect(fakeService.updateAccount).toHaveBeenCalledWith({ id: 'a' }, null);
     await mod.chatIpcService.removeAccount('a');
     expect(fakeService.removeAccount).toHaveBeenCalledWith('a');
     await mod.chatIpcService.getHistory('a', 'c', 'cur');

@@ -29,6 +29,11 @@ export const en = {
     /** Field to join a room by its full address. */
     joinByAddress: 'Join by address',
     joinByAddressPlaceholder: 'room@conference.example.org',
+    /** Address-field placeholder for a protocol with no directory to browse — IRC has a channel
+     *  name, not a JID. */
+    joinByAddressPlaceholderIrc: '#channel',
+    /** Same, for Matrix — a room alias, not a directory entry (the room directory is deferred). */
+    joinByAddressPlaceholderMatrix: '#room:matrix.example.org',
     join: 'Join',
     /** Suffix on a room's occupant count, e.g. "42 online". */
     online: 'online',
@@ -38,6 +43,11 @@ export const en = {
     membersOnly: 'Members only',
     empty: 'No rooms found',
     loading: 'Loading rooms…',
+    /** Shown instead of the browse form for a protocol with no room directory (IRC, Matrix) — the
+     *  address field below still works. */
+    noBrowse: 'This protocol has no room directory to browse — join a channel or room by its address below.',
+    /** The join itself failed (not connected, wrong address, rejected by the server, …). */
+    joinError: "Couldn't join — check the address and that the account is connected.",
   },
   room: {
     /** Heading over the occupant list (a count precedes it: "12 Members"). */
@@ -138,6 +148,7 @@ export const en = {
   accountsManager: {
     title: 'Accounts',
     add: 'Add account',
+    edit: 'Edit',
     remove: 'Remove',
     /** Shown on a remove button after a first click, before the second (confirming) click. */
     removeConfirm: 'Click again to remove',
@@ -170,6 +181,8 @@ export const en = {
   },
   setup: {
     title: 'Add an account',
+    /** Title when {@link AccountSetupFormProps.existingAccount} is set. */
+    editTitle: 'Edit account',
     protocol: 'Protocol',
     protocolXmpp: 'XMPP',
     protocolIrc: 'IRC',
@@ -181,6 +194,9 @@ export const en = {
     password: 'Password',
     /** IRC — password is optional there, so the field needs its own, less demanding hint. */
     passwordOptionalHint: 'Leave blank to connect without authenticating.',
+    /** Editing: the vault secret never round-trips to the form, so blank has to mean "keep the
+     *  current one" rather than "no password" (which is what a blank field means when adding). */
+    passwordKeepHint: 'Leave blank to keep your current password.',
     advanced: 'Connection settings',
     host: 'Server host',
     hostHint: 'Leave blank to look it up automatically (SRV).',
@@ -197,6 +213,8 @@ export const en = {
     userId: 'User ID',
     userIdHint: '@you:example.org',
     add: 'Add account',
+    /** Submit button when {@link AccountSetupFormProps.existingAccount} is set. */
+    save: 'Save',
     cancel: 'Cancel',
     errors: {
       labelRequired: 'Give the account a name.',

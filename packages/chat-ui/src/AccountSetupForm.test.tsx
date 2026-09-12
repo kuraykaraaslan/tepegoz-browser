@@ -137,6 +137,59 @@ describe('AccountSetupForm', () => {
     });
   });
 
+  describe('editing', () => {
+    const existingAccount = {
+      id: 'work',
+      label: 'Work',
+      displayName: '',
+      server: {
+        protocol: 'xmpp' as const,
+        jid: 'ada@example.org',
+        host: null,
+        port: null,
+        security: 'tls' as const,
+        wsUrl: null,
+      },
+      color: null,
+      order: 0,
+      updatedAt: 0,
+      version: 1,
+    };
+
+    it('prefills every field but the password, locks the protocol, and titles/labels itself for editing', () => {
+      wrap(<AccountSetupForm onAdd={vi.fn()} existingAccount={existingAccount} />);
+      expect(screen.getByRole('heading', { name: 'Edit account' })).toBeDefined();
+      expect(screen.getByLabelText('Account name')).toHaveProperty('value', 'Work');
+      expect(screen.getByLabelText('Jabber ID (JID)')).toHaveProperty('value', 'ada@example.org');
+      expect(screen.getByLabelText('Password')).toHaveProperty('value', '');
+      expect(screen.getByText('Leave blank to keep your current password.')).toBeDefined();
+      expect(screen.getByLabelText('Protocol')).toHaveProperty('disabled', true);
+      expect(screen.getByRole('button', { name: 'Save' })).toBeDefined();
+    });
+
+    it('submitting with the password left blank keeps the id and returns secret: null (no validation error)', () => {
+      const onAdd = vi.fn<OnAdd>();
+      wrap(<AccountSetupForm onAdd={onAdd} existingAccount={existingAccount} />);
+      fireEvent.change(screen.getByLabelText('Account name'), { target: { value: 'Work (renamed)' } });
+      fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+      expect(onAdd).toHaveBeenCalledTimes(1);
+      const [arg] = onAdd.mock.calls.at(0) ?? [];
+      expect(arg).toMatchObject({
+        account: { id: 'work', label: 'Work (renamed)' },
+        secret: null,
+      });
+    });
+
+    it('submitting with a new password sets it (not null)', () => {
+      const onAdd = vi.fn<OnAdd>();
+      wrap(<AccountSetupForm onAdd={onAdd} existingAccount={existingAccount} />);
+      fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'new-pw' } });
+      fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+      const [arg] = onAdd.mock.calls.at(0) ?? [];
+      expect(arg).toMatchObject({ secret: 'new-pw' });
+    });
+  });
+
   describe('Matrix', () => {
     function switchToMatrix(): void {
       fireEvent.change(screen.getByLabelText('Protocol'), { target: { value: 'matrix' } });

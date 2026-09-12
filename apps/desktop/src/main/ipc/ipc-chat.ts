@@ -1,9 +1,10 @@
 import { z } from 'zod';
 import { IpcChannels } from '@tepegoz/desktop-ipc';
-import type { ChatContact, ChatConversation, ChatMessage } from '@tepegoz/shared-types';
+import type { ChatAccount, ChatContact, ChatConversation, ChatMessage } from '@tepegoz/shared-types';
 import {
   ChatAccountIdArgSchema,
   ChatAddAccountSchema,
+  ChatUpdateAccountSchema,
   ChatAddContactSchema,
   ChatRemoveContactSchema,
   ChatDiscoverRoomsSchema,
@@ -20,7 +21,7 @@ import {
   ChatSetRoomTopicSchema,
   ChatInviteToRoomSchema,
 } from '@tepegoz/desktop-ipc/schemas';
-import { handle, handleAsync } from './ipc-helpers';
+import { handle, handleAsync, parsePayload } from './ipc-helpers';
 
 /**
  * `chat:*` IPC surface — the renderer's window onto the main-process `ChatService`. Every payload is
@@ -48,6 +49,10 @@ export interface ChatIpcService {
   }>;
   accountStates: () => Record<string, string>;
   addAccount: (accountId: string, plainSecret: string, account: unknown) => Promise<void>;
+  /** One account's config for the edit form (no vault key, no secret) — `null` if it no longer exists. */
+  getAccount: (accountId: string) => Omit<ChatAccount, 'secretRef'> | null;
+  /** `plainSecret: null` keeps the vault's existing credential (see `ChatUpdateAccountSchema`). */
+  updateAccount: (accountId: string, plainSecret: string | null, account: unknown) => Promise<void>;
   removeAccount: (accountId: string) => Promise<void>;
   listConversations: (accountId?: string) => ChatConversation[];
   getRoster: (accountId: string) => ChatContact[];
@@ -111,6 +116,15 @@ export function registerChatIpc(service: ChatIpcService): void {
   handleAsync(IpcChannels.chatAddAccount, async (_event, payload): Promise<void> => {
     const { account, secret } = ChatAddAccountSchema.parse(payload);
     await service.addAccount(account.id, secret, account);
+  });
+
+  handle(IpcChannels.chatGetAccount, (_event, payload): Omit<ChatAccount, 'secretRef'> | null =>
+    service.getAccount(parsePayload(ChatAccountIdArgSchema, payload).accountId),
+  );
+
+  handleAsync(IpcChannels.chatUpdateAccount, async (_event, payload): Promise<void> => {
+    const { account, secret } = parsePayload(ChatUpdateAccountSchema, payload);
+    await service.updateAccount(account.id, secret, account);
   });
 
   handleAsync(IpcChannels.chatRemoveAccount, async (_event, payload): Promise<void> => {

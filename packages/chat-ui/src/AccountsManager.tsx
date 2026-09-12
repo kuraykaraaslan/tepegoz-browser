@@ -1,7 +1,10 @@
 import { useState } from 'react';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faGear, faTrash } from '@fortawesome/free-solid-svg-icons';
 import { useT } from '@tepegoz/i18n/react';
 import type { ChatConnState } from '@tepegoz/chat-core';
 import { chatUiDict } from './i18n';
+import { ACCOUNT_FORM_PROTOCOLS } from './account-form';
 import type { PresenceTone } from './presence';
 import { Avatar } from './Avatar';
 import { ProtocolBadge } from './ProtocolBadge';
@@ -22,6 +25,10 @@ export interface AccountsManagerProps {
   connectionStates: Readonly<Record<string, ChatConnState>>;
   /** Open the add-account flow — optional; the button is hidden without it. */
   onAdd?: (() => void) | undefined;
+  /** Open the edit flow for one account — optional; the row's edit button is hidden without it.
+   *  Also hidden for a `bridge` account (X-chat.8/.9), which this form cannot edit — none exist
+   *  yet, but the guard costs nothing and saves a future dead click. */
+  onEdit?: ((accountId: string) => void) | undefined;
   /** Remove an account — optional; the row's remove button is hidden without it. */
   onRemove?: ((accountId: string) => void) | undefined;
   onClose: () => void;
@@ -37,6 +44,7 @@ export function AccountsManager({
   accounts,
   connectionStates,
   onAdd,
+  onEdit,
   onRemove,
   onClose,
 }: Readonly<AccountsManagerProps>) {
@@ -74,6 +82,17 @@ export function AccountsManager({
                     <span className="chat-presence__label">{s.accountsManager.connState[connState]}</span>
                   </span>
                 </span>
+                {onEdit !== undefined &&
+                  (ACCOUNT_FORM_PROTOCOLS as readonly string[]).includes(account.protocol) && (
+                    <button
+                      type="button"
+                      className="chat-accounts-manager__edit"
+                      onClick={() => onEdit(account.id)}
+                    >
+                      <FontAwesomeIcon icon={faGear} aria-hidden="true" />
+                      {s.accountsManager.edit}
+                    </button>
+                  )}
                 {onRemove !== undefined && (
                   <button
                     type="button"
@@ -89,6 +108,7 @@ export function AccountsManager({
                     }}
                     onBlur={() => setArmed((current) => (current === account.id ? null : current))}
                   >
+                    <FontAwesomeIcon icon={faTrash} aria-hidden="true" />
                     {isArmed ? s.accountsManager.removeConfirm : s.accountsManager.remove}
                   </button>
                 )}

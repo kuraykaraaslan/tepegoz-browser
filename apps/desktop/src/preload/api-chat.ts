@@ -24,6 +24,8 @@ export const chatApi: Pick<
   TepegozApi,
   | 'listChatAccounts'
   | 'addChatAccount'
+  | 'getChatAccount'
+  | 'updateChatAccount'
   | 'removeChatAccount'
   | 'listChatConversations'
   | 'getChatRoster'
@@ -47,6 +49,10 @@ export const chatApi: Pick<
   listChatAccounts: () => invoke<ChatAccountsSnapshot>(IpcChannels.chatListAccounts),
   addChatAccount: (account: ChatAccount, secret: string) =>
     invoke<void>(IpcChannels.chatAddAccount, { account, secret }),
+  getChatAccount: (accountId: string) =>
+    invoke<Omit<ChatAccount, 'secretRef'> | null>(IpcChannels.chatGetAccount, { accountId }),
+  updateChatAccount: (account: ChatAccount, secret: string | null) =>
+    invoke<void>(IpcChannels.chatUpdateAccount, { account, secret }),
   removeChatAccount: (accountId: string) =>
     invoke<void>(IpcChannels.chatRemoveAccount, { accountId }),
   listChatConversations: (accountId?: string) =>

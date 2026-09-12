@@ -125,6 +125,24 @@ export class ChatService {
     if (this.started && this.deps.isEnabled()) await this.spinUp(account);
   }
 
+  /**
+   * Update an account's config and, optionally, its vault secret — `plainSecret === null` keeps the
+   * one already in the vault (the edit form never round-trips a stored secret, so it can only ever
+   * offer "leave blank to keep it" or "type a new one"). The connection settings may have just
+   * changed (host, port, nick, …), so the live runner (if any) is stopped and rebuilt against the
+   * new row rather than patched in place.
+   */
+  async updateAccount(account: ChatAccount, plainSecret: string | null): Promise<void> {
+    const runner = this.runners.get(account.id);
+    if (runner !== undefined) {
+      await runner.stop();
+      this.runners.delete(account.id);
+    }
+    if (plainSecret !== null) await this.deps.secrets.set(account.secretRef, plainSecret);
+    this.deps.persistAccount(account);
+    if (this.started && this.deps.isEnabled()) await this.spinUp(account);
+  }
+
   async removeAccount(id: string): Promise<void> {
     const runner = this.runners.get(id);
     if (runner !== undefined) {

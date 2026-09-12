@@ -79,6 +79,26 @@ describe('AccountsManager', () => {
     expect(screen.queryByRole('button', { name: 'Remove' })).toBeNull();
   });
 
+  it('hides edit buttons without onEdit, calls it with the account id when present, and hides it for a bridge account', () => {
+    const onEdit = vi.fn();
+    wrap(
+      <AccountsManager
+        accounts={[account({ id: 'work' }), account({ id: 'gateway', label: 'Gateway', protocol: 'bridge' })]}
+        connectionStates={{}}
+        onClose={vi.fn()}
+        onEdit={onEdit}
+      />,
+    );
+    const editButtons = screen.getAllByRole('button', { name: 'Edit' });
+    expect(editButtons).toHaveLength(1); // not the bridge row
+    fireEvent.click(editButtons[0] as HTMLElement);
+    expect(onEdit).toHaveBeenCalledWith('work');
+
+    cleanup();
+    wrap(<AccountsManager accounts={[account()]} connectionStates={{}} onClose={vi.fn()} />);
+    expect(screen.queryByRole('button', { name: 'Edit' })).toBeNull();
+  });
+
   it('calls onClose from the back button', () => {
     const onClose = vi.fn();
     wrap(<AccountsManager accounts={[]} connectionStates={{}} onClose={onClose} />);

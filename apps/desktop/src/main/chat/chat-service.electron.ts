@@ -16,6 +16,7 @@ import { createChatCapabilityHost } from './chat-capability-host';
 import FileOperationsHost from '../file-operations/file-operations-host';
 import {
   deleteAccount,
+  getAccountForEdit,
   listAccountSummaries,
   listAccounts,
   listContacts,
@@ -175,6 +176,9 @@ export const chatIpcService: ChatIpcService = {
   accountStates: () => service?.accountStates() ?? {},
   addAccount: (_accountId, plainSecret, account) =>
     requireService().addAccount(account as ChatAccount, plainSecret),
+  getAccount: (accountId) => (getDb() === null ? null : getAccountForEdit(requireDb(), accountId)),
+  updateAccount: (_accountId, plainSecret, account) =>
+    requireService().updateAccount(account as ChatAccount, plainSecret),
   removeAccount: (accountId) => requireService().removeAccount(accountId),
   listConversations: (accountId) =>
     getDb() === null ? [] : listConversations(requireDb(), accountId),

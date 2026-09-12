@@ -389,6 +389,55 @@ describe('ChatWorkspace', () => {
     await waitFor(() => expect(screen.getByRole('heading', { name: 'General' })).toBeDefined());
   });
 
+  it('a failed join stays on the Rooms tab with a visible error, instead of flipping to an empty Chats pane', async () => {
+    const joinChatRoom = vi.fn(() => Promise.reject(new Error('not connected')));
+    const { port } = makePort({
+      discoverChatRooms: () => Promise.resolve([]),
+      joinChatRoom,
+    });
+    wrap(<ChatWorkspace port={port} />);
+    fireEvent.click(await screen.findByRole('tab', { name: 'Find a room' }));
+
+    const input = screen.getByLabelText('Join by address');
+    fireEvent.change(input, { target: { value: '#test' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Join' }));
+
+    await screen.findByRole('alert');
+    // Still on the room browser — this is the reported bug: joining used to switch to the Chats
+    // tab unconditionally, so a failed join (e.g. the account not connected yet) landed on an empty
+    // pane with no room and no visible reason why.
+    expect(screen.getByRole('tab', { name: 'Find a room', selected: true })).toBeDefined();
+  });
+
+  it('an IRC account hides room browsing (no directory) but can still join a channel by address', async () => {
+    const joinChatRoom = vi.fn((): Promise<string | null> => Promise.resolve('#tepegoz'));
+    const { port } = makePort({
+      listChatAccounts: () =>
+        Promise.resolve({
+          accounts: [
+            { id: 'work', label: 'Libera', displayName: '', protocol: 'irc', color: null, order: 0 },
+          ],
+          states: { work: 'online' },
+        }),
+      // IRC has joinRoom but no discoverRooms — the port still exposes both callbacks (a generic
+      // desktop bridge, not an adapter-specific one), so the tab shows; only the protocol tells the
+      // UI discovery is unsupported.
+      discoverChatRooms: vi.fn(),
+      joinChatRoom,
+    });
+    wrap(<ChatWorkspace port={port} />);
+    fireEvent.click(await screen.findByRole('tab', { name: 'Find a room' }));
+
+    expect(screen.queryByRole('button', { name: 'Browse' })).toBeNull();
+    expect(screen.getByText(/no room directory/i)).toBeDefined();
+
+    const input = screen.getByLabelText('Join by address');
+    expect(input).toHaveProperty('placeholder', '#channel');
+    fireEvent.change(input, { target: { value: '#tepegoz' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Join' }));
+    await waitFor(() => expect(joinChatRoom).toHaveBeenCalledWith('work', '#tepegoz'));
+  });
+
   it('marks IRC conversations as not encrypted, in both the DM and room headers', async () => {
     const { port } = makePort({
       listChatAccounts: () =>

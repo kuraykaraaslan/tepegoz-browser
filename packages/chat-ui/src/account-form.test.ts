@@ -1,11 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { ChatAccountSchema } from '@tepegoz/shared-types';
 import {
+  accountFormFromAccount,
   deriveAccountId,
   emptyAccountForm,
   validateIrcAccountForm,
   validateMatrixAccountForm,
   validateXmppAccountForm,
+  type ExistingAccountRef,
 } from './account-form';
 
 const MSG = {
@@ -104,6 +106,104 @@ describe('validateXmppAccountForm', () => {
     const result = validateXmppAccountForm({ ...filled(), port: '   ' }, MSG);
     expect(result.ok).toBe(true);
   });
+
+  it('editing: a blank password is not an error, keeps the existing id/color/order, and returns secret: null', () => {
+    const existing: ExistingAccountRef = {
+      id: 'work',
+      color: '#3366ff',
+      order: 3,
+      server: { protocol: 'xmpp', jid: 'ada@example.org', host: null, port: null, security: 'tls', wsUrl: null },
+    };
+    const result = validateXmppAccountForm({ ...filled(), password: '', label: 'Work (renamed)' }, MSG, existing);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.account.id).toBe('work'); // NOT re-derived from the new label
+    expect(result.account.color).toBe('#3366ff');
+    expect(result.account.order).toBe(3);
+    expect(result.account.label).toBe('Work (renamed)');
+    expect(result.secret).toBeNull();
+  });
+
+  it('editing: typing a new password still sets it (not null)', () => {
+    const existing: ExistingAccountRef = {
+      id: 'work',
+      color: null,
+      order: 0,
+      server: { protocol: 'xmpp', jid: 'ada@example.org', host: null, port: null, security: 'tls', wsUrl: null },
+    };
+    const result = validateXmppAccountForm({ ...filled(), password: 'new-pw' }, MSG, existing);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.secret).toBe('new-pw');
+  });
+});
+
+describe('accountFormFromAccount', () => {
+  it('round-trips every protocol into the form shape, with the password left blank', () => {
+    const xmpp = accountFormFromAccount({
+      id: 'work',
+      label: 'Work',
+      displayName: '',
+      server: {
+        protocol: 'xmpp',
+        jid: 'ada@example.org',
+        host: 'x.example.org',
+        port: 5223,
+        security: 'starttls',
+        wsUrl: 'wss://x.example/ws',
+      },
+      color: null,
+      order: 0,
+      updatedAt: 0,
+      version: 1,
+    });
+    expect(xmpp).toMatchObject({
+      protocol: 'xmpp',
+      label: 'Work',
+      jid: 'ada@example.org',
+      host: 'x.example.org',
+      port: '5223',
+      security: 'starttls',
+      wsUrl: 'wss://x.example/ws',
+      password: '',
+    });
+
+    const irc = accountFormFromAccount({
+      id: 'libera',
+      label: 'Libera',
+      displayName: '',
+      server: { protocol: 'irc', server: 'irc.libera.chat', port: 6697, tls: true, nick: 'ada', sasl: true },
+      color: null,
+      order: 0,
+      updatedAt: 0,
+      version: 1,
+    });
+    expect(irc).toMatchObject({
+      protocol: 'irc',
+      host: 'irc.libera.chat',
+      port: '6697',
+      ircTls: true,
+      nick: 'ada',
+      password: '',
+    });
+
+    const matrix = accountFormFromAccount({
+      id: 'matrix',
+      label: 'Matrix',
+      displayName: '',
+      server: { protocol: 'matrix', homeserverUrl: 'https://matrix.example.org', userId: '@ada:example.org' },
+      color: null,
+      order: 0,
+      updatedAt: 0,
+      version: 1,
+    });
+    expect(matrix).toMatchObject({
+      protocol: 'matrix',
+      homeserverUrl: 'https://matrix.example.org',
+      userId: '@ada:example.org',
+      password: '',
+    });
+  });
 });
 
 describe('validateIrcAccountForm', () => {
@@ -172,6 +272,45 @@ describe('validateIrcAccountForm', () => {
     if (!result.ok) return;
     expect(result.account.server).toMatchObject({ sasl: true });
     expect(result.secret).toBe('sekret');
+  });
+
+  it('editing with a blank password preserves the existing sasl/mechanism instead of turning SASL off', () => {
+    // The form has no toggle for sasl/saslMechanism/preSaslAuth — it only ever infers `sasl` from
+    // whether a password was typed. Blindly reapplying that inference on an edit would silently
+    // disable SASL for any account that had it, every time you edited anything else about the row.
+    const existing: ExistingAccountRef = {
+      id: 'libera',
+      color: null,
+      order: 0,
+      server: {
+        protocol: 'irc',
+        server: 'irc.libera.chat',
+        port: 6697,
+        tls: true,
+        nick: 'ada',
+        sasl: true,
+        saslMechanism: 'external',
+      },
+    };
+    const result = validateIrcAccountForm({ ...filledIrc(), password: '' }, IRC_MSG, existing);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.account.server).toMatchObject({ sasl: true, saslMechanism: 'external' });
+    expect(result.secret).toBeNull();
+  });
+
+  it('editing and typing a new password still opts into SASL (plain), overriding whatever was there', () => {
+    const existing: ExistingAccountRef = {
+      id: 'libera',
+      color: null,
+      order: 0,
+      server: { protocol: 'irc', server: 'irc.libera.chat', port: 6697, tls: true, nick: 'ada', sasl: false },
+    };
+    const result = validateIrcAccountForm({ ...filledIrc(), password: 'new-pw' }, IRC_MSG, existing);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.account.server).toMatchObject({ sasl: true });
+    expect(result.secret).toBe('new-pw');
   });
 });
 

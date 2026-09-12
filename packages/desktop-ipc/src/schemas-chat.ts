@@ -26,6 +26,15 @@ export const ChatAddAccountSchema = z.object({
   secret: z.string().max(4096),
 });
 
+/** `chat:update-account` — like `chat:add-account`, but `secret: null` means "keep the vault's
+ *  existing credential" (the edit form never round-trips a stored secret, so blank has to mean
+ *  "unchanged" rather than "clear it" — distinct from an empty STRING, which still means "no
+ *  credential", same as on add). */
+export const ChatUpdateAccountSchema = z.object({
+  account: ChatAccountSchema,
+  secret: z.string().max(4096).nullable(),
+});
+
 /** `chat:get-history` — page one conversation backwards through the archive. */
 export const ChatGetHistorySchema = z.object({
   accountId: z.string().min(1).max(64),

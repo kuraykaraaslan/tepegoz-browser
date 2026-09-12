@@ -256,6 +256,11 @@ export const IpcChannels = {
   // profile DB; the main-process ChatService owns every socket and pushes state/changes live.
   chatListAccounts: 'chat:list-accounts',
   chatAddAccount: 'chat:add-account',
+  /** Renderer→main: read one account's full (non-secret) config, to prefill an edit form. */
+  chatGetAccount: 'chat:get-account',
+  /** Renderer→main: update an account's config and, optionally, its vault secret (`null` keeps the
+   *  existing one) — reconnects the account with the new settings. */
+  chatUpdateAccount: 'chat:update-account',
   chatRemoveAccount: 'chat:remove-account',
   chatListConversations: 'chat:list-conversations',
   chatGetHistory: 'chat:get-history',

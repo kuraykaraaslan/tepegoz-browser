@@ -207,6 +207,52 @@ describe('ChatService — accounts', () => {
     expect(event).toMatchObject({ kind: 'account-added', accountId: 'new', protocol: 'xmpp' });
   });
 
+  it('updateAccount(secret: null) keeps the vault secret, persists the new config, and reconnects', async () => {
+    const acc = account('a');
+    const { service, adapter, secrets, setAccounts } = harness();
+    setAccounts([acc]);
+    await service.start();
+    await tick();
+    adapter.connect.mockClear();
+    adapter.disconnect.mockClear();
+
+    const renamed: ChatAccount = { ...acc, label: 'Renamed' };
+    await service.updateAccount(renamed, null);
+    await tick();
+
+    expect(adapter.disconnect).toHaveBeenCalledTimes(1); // stopped the stale runner
+    expect(adapter.connect).toHaveBeenCalledTimes(1); // reconnected with the new row
+    expect(secrets.store.get('chat:a')).toBe('s'); // vault secret untouched
+    expect(service.accountStates()).toHaveProperty('a');
+  });
+
+  it('updateAccount(secret: "new") rotates the vault secret', async () => {
+    const acc = account('a');
+    const { service, secrets, setAccounts } = harness();
+    setAccounts([acc]);
+    await service.start();
+    await tick();
+
+    await service.updateAccount(acc, 'new-secret');
+    await tick();
+
+    expect(secrets.store.get('chat:a')).toBe('new-secret');
+  });
+
+  it('updateAccount on an account with no live runner still persists + reconnects (was never started)', async () => {
+    const acc = account('cold');
+    const { service, adapter, setAccounts } = harness();
+    setAccounts([]); // not loaded at start()
+    await service.start();
+    setAccounts([acc]);
+
+    await service.updateAccount(acc, 'hunter2');
+    await tick();
+
+    expect(adapter.connect).toHaveBeenCalledTimes(1);
+    expect(service.accountStates()).toHaveProperty('cold');
+  });
+
   it('removeAccount stops the runner and drops the secret + row', async () => {
     const acc = account('a');
     const { service, adapter, secrets, setAccounts } = harness();

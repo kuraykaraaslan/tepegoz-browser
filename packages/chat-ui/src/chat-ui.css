@@ -1408,7 +1408,11 @@ button.chat-msg__quote {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+.chat-accounts-manager__edit,
 .chat-accounts-manager__remove {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   flex: none;
   padding: 6px 12px;
   border: 1px solid var(--cu-border-strong);
@@ -1418,6 +1422,15 @@ button.chat-msg__quote {
   font: inherit;
   font-size: 12px;
   cursor: pointer;
+}
+.chat-accounts-manager__edit svg,
+.chat-accounts-manager__remove svg {
+  width: 12px;
+  height: 12px;
+}
+.chat-accounts-manager__edit:hover {
+  border-color: var(--cu-primary);
+  color: var(--cu-primary);
 }
 .chat-accounts-manager__remove:hover {
   border-color: #d64545;

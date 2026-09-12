@@ -1,6 +1,7 @@
 import type { ChatConnState, ChatStateChange, RoomNotifyLevel } from '@tepegoz/chat-core';
 import type { RoomListing } from './room-browser';
 import type {
+  ChatAccount,
   ChatContact,
   ChatConversation,
   ChatMessage,
@@ -41,6 +42,12 @@ export type ChatStateEvent =
 /** The slice of the bridge the {@link useChatState} hook drives. */
 export interface ChatClientPort {
   listChatAccounts(): Promise<ChatAccountsSnapshot>;
+  /** Read one account's full (non-secret) config for an edit form — optional; the accounts
+   *  manager's edit action needs it. `null` if the account no longer exists. */
+  getChatAccount?: (accountId: string) => Promise<Omit<ChatAccount, 'secretRef'> | null>;
+  /** Update an account's config and, optionally, its secret (`null` keeps the vault's existing
+   *  one) — optional; the accounts manager's edit action needs it. Reconnects the account. */
+  updateChatAccount?: (account: ChatAccount, secret: string | null) => Promise<void>;
   /** Remove a configured account — optional; the accounts manager's remove action needs it. */
   removeChatAccount?: (accountId: string) => Promise<void>;
   listChatConversations(accountId?: string): Promise<ChatConversation[]>;

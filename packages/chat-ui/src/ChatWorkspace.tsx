@@ -25,6 +25,9 @@ export interface ChatWorkspaceProps {
   port: ChatClientPort;
   /** Open the add-account flow (owned by the host — it collects the secret). */
   onAddAccount?: () => void;
+  /** Open the edit flow for one account (owned by the host, same as {@link onAddAccount} — it reads
+   *  the account's current config and collects a new secret if the user wants one). */
+  onEditAccount?: (accountId: string) => void;
   /** Resolve an attachment's `mediaRef` to a LOCAL resource; absent ⇒ attachments are not shown. */
   resolveMedia?: ResolveMedia | undefined;
   onOpenMedia?: ((mediaRef: string) => void) | undefined;
@@ -71,6 +74,7 @@ function GearIcon() {
 export function ChatWorkspace({
   port,
   onAddAccount,
+  onEditAccount,
   resolveMedia,
   onOpenMedia,
 }: Readonly<ChatWorkspaceProps>) {
@@ -128,6 +132,19 @@ export function ChatWorkspace({
     : undefined;
   const notEncrypted = selectedProtocol === 'irc';
 
+  // The room browser's "Find a room" tab always operates on the active account (not the open
+  // conversation) — only XMPP has a directory to browse (XEP-0030); IRC has no room-listing command
+  // and Matrix's room directory is deferred (see ext-chat.md X-chat.5), so both fall back to
+  // join-by-address only, worded for their own address shape rather than an XMPP JID.
+  const activeProtocol = chat.accounts.find((a) => a.id === chat.activeAccountId)?.protocol;
+  const canBrowseRooms = activeProtocol === 'xmpp';
+  const roomAddressPlaceholder =
+    activeProtocol === 'irc'
+      ? s.roomBrowser.joinByAddressPlaceholderIrc
+      : activeProtocol === 'matrix'
+        ? s.roomBrowser.joinByAddressPlaceholderMatrix
+        : undefined;
+
   const noAccounts = !chat.loading && chat.accounts.length === 0;
 
   // While the first accounts/conversations fetch is in flight, `noAccounts` stays false (it doesn't
@@ -156,6 +173,14 @@ export function ChatWorkspace({
                 onAdd: () => {
                   setManagingAccounts(false);
                   onAddAccount();
+                },
+              }
+            : {})}
+          {...(onEditAccount !== undefined
+            ? {
+                onEdit: (accountId: string) => {
+                  setManagingAccounts(false);
+                  onEditAccount(accountId);
                 },
               }
             : {})}
@@ -269,10 +294,17 @@ export function ChatWorkspace({
           {tab === 'rooms' && chat.rooms !== null && (
             <RoomBrowser
               discoverRooms={chat.rooms.discover}
-              onJoin={(jid) => {
-                void chat.rooms?.join(jid);
-                setTab('chats');
-              }}
+              onJoin={(jid) =>
+                // Only leave the room-browser tab once the join actually succeeds — switching
+                // unconditionally (the previous behaviour) meant a failed join (account not yet
+                // connected, bad address, refused by the server) silently landed on an empty chats
+                // pane with no room and no visible error.
+                chat.rooms?.join(jid).then(() => setTab('chats'))
+              }
+              canBrowse={canBrowseRooms}
+              {...(roomAddressPlaceholder !== undefined
+                ? { addressPlaceholder: roomAddressPlaceholder }
+                : {})}
             />
           )}
         </aside>

@@ -5,6 +5,7 @@ import type { ChatAccount } from '@tepegoz/shared-types';
 import { chatUiDict } from './i18n';
 import {
   ACCOUNT_FORM_PROTOCOLS,
+  accountFormFromAccount,
   emptyAccountForm,
   validateIrcAccountForm,
   validateMatrixAccountForm,
@@ -13,28 +14,44 @@ import {
   type AccountFormField,
   type AccountFormProtocol,
   type AccountFormState,
+  type ExistingAccountRef,
 } from './account-form';
 
 export interface AccountSetupResult {
   account: Omit<ChatAccount, 'secretRef' | 'updatedAt' | 'version'>;
-  secret: string;
+  /** `null` only when editing with the password left blank — see `AccountFormResult`. */
+  secret: string | null;
 }
 
 export interface AccountSetupFormProps {
   onAdd: (result: AccountSetupResult) => void | Promise<void>;
   onCancel?: () => void;
-  /** Disable while a previous add is still in flight. */
+  /** Disable while a previous add/save is still in flight. */
   busy?: boolean;
+  /** Present to edit this account instead of adding a new one: prefills every field but the
+   *  password (the vault secret never round-trips — leaving it blank keeps it unchanged), locks the
+   *  protocol (switching it would really be a different account), and keeps the account's identity
+   *  (`id`/`color`/`order`) stable across the save. */
+  existingAccount?: Omit<ChatAccount, 'secretRef'>;
 }
 
 /**
- * Add-an-account form — one shared shell, a protocol switcher, and a per-protocol field set (XMPP /
- * IRC / Matrix), each with its own `validate*AccountForm`. The password crosses to `onAdd` once and
- * is the caller's job to hand to the vault — it is never held here beyond the keystroke.
+ * Add- (or edit-) an-account form — one shared shell, a protocol switcher, and a per-protocol field
+ * set (XMPP / IRC / Matrix), each with its own `validate*AccountForm`. The password crosses to
+ * `onAdd` once and is the caller's job to hand to the vault — it is never held here beyond the
+ * keystroke, and never prefilled when editing.
  */
-export function AccountSetupForm({ onAdd, onCancel, busy = false }: Readonly<AccountSetupFormProps>) {
+export function AccountSetupForm({
+  onAdd,
+  onCancel,
+  busy = false,
+  existingAccount,
+}: Readonly<AccountSetupFormProps>) {
   const s = useT(chatUiDict);
-  const [form, setForm] = useState<AccountFormState>(emptyAccountForm);
+  const editing = existingAccount !== undefined;
+  const [form, setForm] = useState<AccountFormState>(() =>
+    existingAccount !== undefined ? accountFormFromAccount(existingAccount) : emptyAccountForm(),
+  );
   const [errors, setErrors] = useState<AccountFormErrors>({});
   const [showAdvanced, setShowAdvanced] = useState(false);
   const idBase = useId();
@@ -66,12 +83,21 @@ export function AccountSetupForm({ onAdd, onCancel, busy = false }: Readonly<Acc
 
   const submit = (): void => {
     if (busy) return;
+    const existing: ExistingAccountRef | undefined =
+      existingAccount !== undefined
+        ? {
+            id: existingAccount.id,
+            color: existingAccount.color,
+            order: existingAccount.order,
+            server: existingAccount.server,
+          }
+        : undefined;
     const result =
       form.protocol === 'irc'
-        ? validateIrcAccountForm(form, s.setup.errors)
+        ? validateIrcAccountForm(form, s.setup.errors, existing)
         : form.protocol === 'matrix'
-          ? validateMatrixAccountForm(form, s.setup.errors)
-          : validateXmppAccountForm(form, s.setup.errors);
+          ? validateMatrixAccountForm(form, s.setup.errors, existing)
+          : validateXmppAccountForm(form, s.setup.errors, existing);
     if (!result.ok) {
       setErrors(result.errors);
       return;
@@ -94,13 +120,14 @@ export function AccountSetupForm({ onAdd, onCancel, busy = false }: Readonly<Acc
         submit();
       }}
     >
-      <h2>{s.setup.title}</h2>
+      <h2>{editing ? s.setup.editTitle : s.setup.title}</h2>
 
       <div className="chat-setup__field">
         <label htmlFor={`${idBase}-protocol`}>{s.setup.protocol}</label>
         <select
           id={`${idBase}-protocol`}
           value={form.protocol}
+          disabled={editing}
           onChange={(e) => {
             const next = e.target.value;
             if ((ACCOUNT_FORM_PROTOCOLS as readonly string[]).includes(next)) {
@@ -155,6 +182,7 @@ export function AccountSetupForm({ onAdd, onCancel, busy = false }: Readonly<Acc
               onChange={(e) => set('password', e.target.value)}
               aria-describedby={errors.password !== undefined ? errId('password') : undefined}
             />,
+            editing ? s.setup.passwordKeepHint : undefined,
           )}
           <button
             type="button"
@@ -271,7 +299,7 @@ export function AccountSetupForm({ onAdd, onCancel, busy = false }: Readonly<Acc
               onChange={(e) => set('password', e.target.value)}
               aria-describedby={errors.password !== undefined ? errId('password') : undefined}
             />,
-            s.setup.passwordOptionalHint,
+            editing ? s.setup.passwordKeepHint : s.setup.passwordOptionalHint,
           )}
         </>
       )}
@@ -313,6 +341,7 @@ export function AccountSetupForm({ onAdd, onCancel, busy = false }: Readonly<Acc
               onChange={(e) => set('password', e.target.value)}
               aria-describedby={errors.password !== undefined ? errId('password') : undefined}
             />,
+            editing ? s.setup.passwordKeepHint : undefined,
           )}
         </>
       )}
@@ -324,7 +353,7 @@ export function AccountSetupForm({ onAdd, onCancel, busy = false }: Readonly<Acc
           </button>
         )}
         <button type="submit" disabled={busy}>
-          {s.setup.add}
+          {editing ? s.setup.save : s.setup.add}
         </button>
       </div>
     </form>

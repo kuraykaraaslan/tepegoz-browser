@@ -3,6 +3,7 @@ import { openDatabase, migrate, type Db } from '@tepegoz/persistence';
 import type { ChatAccount, ChatContact, ChatConversation, ChatMessage } from '@tepegoz/shared-types';
 import {
   deleteAccount,
+  getAccountForEdit,
   listAccountSummaries,
   listAccounts,
   listContacts,
@@ -80,6 +81,22 @@ describe('chat-store-adapter — account projections', () => {
     expect(summary).not.toHaveProperty('secretRef');
     // the full row is still available to the service
     expect(listAccounts(db)[0]?.secretRef).toBe('chat:work');
+  });
+
+  it('getAccountForEdit returns the full config minus the vault key, and null for an unknown id', () => {
+    upsertAccount(db, account);
+    expect(getAccountForEdit(db, 'work')).toEqual({
+      id: 'work',
+      label: 'Work',
+      displayName: 'Ada',
+      server: { protocol: 'xmpp', jid: 'ada@x.com', host: null, port: null, security: 'tls', wsUrl: null },
+      color: '#112233',
+      order: 2,
+      updatedAt: 0,
+      version: 1,
+    });
+    expect(getAccountForEdit(db, 'work')).not.toHaveProperty('secretRef');
+    expect(getAccountForEdit(db, 'ghost')).toBeNull();
   });
 
   it('deleteAccount cascades its conversations', () => {

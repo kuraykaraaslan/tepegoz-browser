@@ -51,6 +51,24 @@ export function listAccounts(db: Db): ChatAccount[] {
   return ChatStore.listAccounts(db);
 }
 
+/** One account's config for the edit form — everything `listAccountSummaries` omits, except the
+ *  vault key itself, which still has no reason to cross (the renderer never uses it; only the
+ *  plaintext secret it names is sensitive, and that never round-trips either way). */
+export function getAccountForEdit(db: Db, id: string): Omit<ChatAccount, 'secretRef'> | null {
+  const account = ChatStore.getAccount(db, id);
+  if (account === null) return null;
+  return {
+    id: account.id,
+    label: account.label,
+    displayName: account.displayName,
+    server: account.server,
+    color: account.color,
+    order: account.order,
+    updatedAt: account.updatedAt,
+    version: account.version,
+  };
+}
+
 export function listConversations(db: Db, accountId?: string): ChatConversation[] {
   return ChatStore.listConversations(db, accountId);
 }
