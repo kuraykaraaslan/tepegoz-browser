@@ -316,6 +316,18 @@ close-out. · **Branch:** `main` · **Risk:** low.
       that does). `Composer.tsx` also has no attach affordance yet — `mediaPath` is hardcoded `null`
       in `useChatState.send`. Three prerequisites for X-chat.2's media-round-trip Functional DoD line,
       none started: a Composer attach control, XEP-0363 upload, `XmppAdapter.resolveMedia`.
+      **First slice landed 2026-09-12:** `xmpp/http-upload.ts` — the pure XEP-0363 request builder +
+      slot-response parser (`buildUploadSlotRequest`/`parseUploadSlot`/`parseUploadSlotError`),
+      fixture-tested, mirroring `mam.ts`'s shape. **Deliberately not wired to `uploadMedia`/
+      `sendMessage` yet** — doing so surfaced a real, unresolved design gap, not just missing code:
+      `ChatAccountRunner.sendMessage` only takes `{ body, replyToId }` (no `mediaPath` parameter at
+      all, despite the adapter contract's `uploadMedia` existing); `OutgoingMessageSchema.mediaPath`
+      is read by nothing; and there is no field anywhere to carry an *already-uploaded* `mediaRef`
+      from a host-side upload step into the stanza the adapter builds — `uploadMedia`'s own contract
+      says the **host** reads sandbox bytes and calls it, but `sendMessage` only ever sees a path, not
+      a resolved ref. Wiring this needs a design decision (extend `OutgoingMessage` with a `mediaRef`
+      slot alongside `mediaPath`, and give `ChatAccountRunner.sendMessage` the upload-then-send
+      orchestration it doesn't have today) before more code goes in, not after.
 - [x] **desktop `ChatService`** — account CRUD, credential vault resolve (`safeStorage`),
       `ChatTransport` over Node `net`/`tls`/WebSocket bound to the profile egress, adapter lifecycle,
       DB writes, IPC surface (zod-gated channels + preload bridge).
