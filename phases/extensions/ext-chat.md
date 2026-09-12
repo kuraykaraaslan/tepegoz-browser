@@ -328,6 +328,19 @@ close-out. · **Branch:** `main` · **Risk:** low.
       a resolved ref. Wiring this needs a design decision (extend `OutgoingMessage` with a `mediaRef`
       slot alongside `mediaPath`, and give `ChatAccountRunner.sendMessage` the upload-then-send
       orchestration it doesn't have today) before more code goes in, not after.
+      **Second slice landed the same day:** `XmppAdapter.uploadMedia`/`resolveMedia` are now real —
+      discovers the account's XEP-0030-advertised upload service (cached on the session), requests a
+      slot, `PUT`s the bytes through the injected `ChatTransport.fetch`, returns the public `GET` url
+      as the `mediaRef`; `resolveMedia` is a thin `https://`-only check since XEP-0363's ref already
+      *is* the fetchable url (unlike Matrix's opaque `mxc://`). 5 new tests, live-server-free.
+      **Confirmed the gap above is not XMPP-specific while scoping the next slice:**
+      `MatrixAdapter.sendMessage` (`matrix/adapter.ts`) *also* never reads any media field — it always
+      sends `msgtype: 'm.text'` regardless — despite Matrix's own `uploadMedia`/`resolveMedia` being
+      real and tested (X-chat.5). Neither native adapter's `sendMessage` has ever sent an attachment;
+      only the *receive*-and-render half of media has ever worked, for Matrix only. The
+      `ChatAccountRunner.sendMessage` upload-then-send orchestration is therefore genuinely
+      cross-adapter design work, not a XEP-0363-shaped afterthought — sized accordingly for whoever
+      picks it up next.
 - [x] **desktop `ChatService`** — account CRUD, credential vault resolve (`safeStorage`),
       `ChatTransport` over Node `net`/`tls`/WebSocket bound to the profile egress, adapter lifecycle,
       DB writes, IPC surface (zod-gated channels + preload bridge).
