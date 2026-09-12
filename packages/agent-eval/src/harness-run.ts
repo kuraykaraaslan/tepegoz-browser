@@ -22,7 +22,8 @@ import { tripEscaped } from './escape-metric';
 import type { ScenarioResult } from './report';
 import { judgeScenario, type JudgeMessages } from './judge';
 import type { JudgeSample } from './calibration';
-import { SCRIPTS } from './harness-scripts';
+import { CHAT_SCRIPTS, SCRIPTS } from './harness-scripts';
+import { chatFixtureFile } from './chat-fixture';
 import {
   API_KEY,
   KEEP_RENDERING_WHEN_BACKGROUNDED,
@@ -32,6 +33,7 @@ import {
   REPEAT,
   RUN_CEILING,
   appDir,
+  chatFixturesDir,
 } from './harness-config';
 
 /**
@@ -151,6 +153,47 @@ export function planRun(
   server: FixtureServer,
   work: string,
 ): { entryUrl: string; env: Record<string, string> } | null {
+  // A `chatFixture` scenario (X-chat.6) is not a page — `chat-service.electron.ts` seeds `ChatStore`
+  // from the named fixture and runs the agent's `chat_*` tools against a `ChatCapabilityHost` bound to
+  // a harmless no-op adapter (no socket ever opens). `entryUrl` is a synthetic, never-navigated marker
+  // (kept only because `runOne`/`tripEscaped` always take one) — the app-side hook skips navigation
+  // entirely once `TEPEGOZ_EVAL_CHAT_FIXTURE` is set.
+  if ('chatFixture' in scenario.target) {
+    const name = scenario.target.chatFixture;
+    const fixturePath = join(chatFixturesDir, chatFixtureFile(name));
+    if (!existsSync(fixturePath)) return null;
+    const entryUrl = `chat://eval/${name}`;
+    if (MODE === 'scripted') {
+      const script = CHAT_SCRIPTS[scenario.id];
+      if (script === undefined) return null;
+      const scriptPath = join(work, `${scenario.id}.script.json`);
+      writeFileSync(
+        scriptPath,
+        JSON.stringify({ provider: 'anthropic', replies: script() }),
+        'utf8',
+      );
+      return {
+        entryUrl,
+        env: {
+          TEPEGOZ_EVAL_MODE: 'scripted',
+          TEPEGOZ_EVAL_SCRIPT: scriptPath,
+          TEPEGOZ_EVAL_CHAT_FIXTURE: fixturePath,
+        },
+      };
+    }
+    // live
+    return {
+      entryUrl,
+      env: {
+        TEPEGOZ_EVAL_MODE: 'live',
+        TEPEGOZ_EVAL_PROVIDER: PROVIDER_ID,
+        TEPEGOZ_EVAL_API_KEY: API_KEY,
+        TEPEGOZ_EVAL_CHAT_FIXTURE: fixturePath,
+        ...(RUN_CEILING > 0 ? { TEPEGOZ_EVAL_RUN_CEILING: String(RUN_CEILING) } : {}),
+      },
+    };
+  }
+
   if (MODE === 'scripted') {
     const script = SCRIPTS[scenario.id];
     if (script === undefined || !('fixture' in scenario.target)) return null;
@@ -160,10 +203,6 @@ export function planRun(
     return { entryUrl, env: { TEPEGOZ_EVAL_MODE: 'scripted', TEPEGOZ_EVAL_SCRIPT: scriptPath } };
   }
   // live
-  // A `chatFixture` scenario (X-chat.6) is not a page — it seeds `ChatStore` and runs the `chat_*`
-  // tools against a `ChatCapabilityHost`. That seed-and-run path is a later slice; until it lands the
-  // scenario is reported as skipped in this tier, exactly like a scripted scenario with no script.
-  if ('chatFixture' in scenario.target) return null;
   const entryUrl =
     'fixture' in scenario.target
       ? `${fixtureUrl(server.url, scenario.target.fixture)}index.html`

@@ -147,6 +147,25 @@ describe('planRun', () => {
       expect(written.provider).toBe('anthropic');
       expect(written.replies.length).toBeGreaterThan(1);
     });
+
+    it('writes the chat replay file and points the app at the fixture, not a page (X-chat.6 slice 3)', async () => {
+      const { planRun } = await load({ TEPEGOZ_EVAL_MODE: undefined });
+      const target = { chatFixture: 'room-backlog' };
+      const plan = planRun(scenario('chat_summarise_room_backlog', target), server, work);
+      expect(plan?.entryUrl).toBe('chat://eval/room-backlog');
+      expect(plan?.env.TEPEGOZ_EVAL_MODE).toBe('scripted');
+      expect(plan?.env.TEPEGOZ_EVAL_CHAT_FIXTURE).toMatch(/room-backlog\.chat\.json$/);
+      const scriptPath = plan?.env.TEPEGOZ_EVAL_SCRIPT ?? '';
+      expect(scriptPath).toBe(join(work, 'chat_summarise_room_backlog.script.json'));
+      const written = JSON.parse(readFileSync(scriptPath, 'utf8')) as { replies: string[] };
+      expect(written.replies.length).toBeGreaterThan(1);
+    });
+
+    it('refuses (null) a chatFixture scenario with no authored scripted sequence', async () => {
+      const { planRun } = await load({ TEPEGOZ_EVAL_MODE: undefined });
+      const target = { chatFixture: 'room-backlog' };
+      expect(planRun(scenario('chat_no_script_for_this_one', target), server, work)).toBeNull();
+    });
   });
 
   describe('live tier', () => {
@@ -174,10 +193,27 @@ describe('planRun', () => {
       );
     });
 
-    it('refuses (null) a chatFixture target — the seed-and-run path is a later slice (X-chat.6)', async () => {
-      const { planRun } = await load({ TEPEGOZ_EVAL_MODE: 'live' });
+    it('forwards the provider/key and points a chatFixture target at its seed file (X-chat.6 slice 3)', async () => {
+      const { planRun } = await load({
+        TEPEGOZ_EVAL_MODE: 'live',
+        TEPEGOZ_EVAL_PROVIDER: 'openai',
+        TEPEGOZ_EVAL_API_KEY: 'sk-live',
+      });
       const target = { chatFixture: 'room-backlog' };
-      expect(planRun(scenario('chat_summarise', target), server, work)).toBeNull();
+      const plan = planRun(scenario('chat_summarise_room_backlog', target), server, work);
+      expect(plan?.entryUrl).toBe('chat://eval/room-backlog');
+      expect(plan?.env).toMatchObject({
+        TEPEGOZ_EVAL_MODE: 'live',
+        TEPEGOZ_EVAL_PROVIDER: 'openai',
+        TEPEGOZ_EVAL_API_KEY: 'sk-live',
+      });
+      expect(plan?.env.TEPEGOZ_EVAL_CHAT_FIXTURE).toMatch(/room-backlog\.chat\.json$/);
+    });
+
+    it('refuses (null) a chatFixture target whose seed file does not exist', async () => {
+      const { planRun } = await load({ TEPEGOZ_EVAL_MODE: 'live' });
+      const target = { chatFixture: 'no-such-fixture' };
+      expect(planRun(scenario('chat_ghost', target), server, work)).toBeNull();
     });
 
     it('forwards a run ceiling only when one is set — an unset ceiling stays ABSENT, not the string "0"', async () => {

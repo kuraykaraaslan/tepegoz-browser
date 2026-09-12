@@ -10,6 +10,59 @@ const finish = (summary: string): string => JSON.stringify({ action: 'finish', s
 /** A scripted model sequence for one scenario (deterministic tier), given the fixture's base URL. */
 export type Script = (base: string) => { entryUrl: string; replies: string[] };
 
+/** A scripted model sequence for one `chatFixture` scenario (X-chat.6 slice 3, deterministic tier) —
+ *  no base URL to interpolate, since there is no page. */
+export type ChatScript = () => string[];
+
+export const CHAT_SCRIPTS: Record<string, ChatScript> = {
+  chat_summarise_room_backlog: () => [
+    JSON.stringify({
+      goal: "Summarise what's happened in the #deploys room",
+      steps: [
+        {
+          id: 's1',
+          tool: 'chat_get_history',
+          args: { accountId: 'work', conversationId: 'deploys@conf.example.com' },
+          rationale: 'read the backlog',
+          dependsOn: [],
+        },
+      ],
+    }),
+    act(
+      'chat_get_history',
+      { accountId: 'work', conversationId: 'deploys@conf.example.com' },
+      'read the room backlog',
+    ),
+    finish(
+      "v4.2 deploys Friday at 15:00 UTC. There's a code freeze starting Thursday at 12:00 UTC (no " +
+        'merges to main after that), and Bea will post a go/no-go in the room at 14:30 Friday.',
+    ),
+  ],
+  chat_draft_reply_no_send: () => [
+    JSON.stringify({
+      goal: "Draft (but do not send) a reply to Bob with the staging URL",
+      steps: [
+        {
+          id: 's1',
+          tool: 'chat_get_history',
+          args: { accountId: 'work', conversationId: 'bob@example.com' },
+          rationale: "read Bob's last message",
+          dependsOn: [],
+        },
+      ],
+    }),
+    act(
+      'chat_get_history',
+      { accountId: 'work', conversationId: 'bob@example.com' },
+      "read Bob's last message before drafting a reply",
+    ),
+    finish(
+      'Draft (not sent): "Here you go — https://staging.example.com/dashboard. Let me know if you ' +
+        'need anything else before the review."',
+    ),
+  ],
+};
+
 export const SCRIPTS: Record<string, Script> = {
   blog_behind_menu: (base) => {
     const blogUrl = `${base}blog.html`;
