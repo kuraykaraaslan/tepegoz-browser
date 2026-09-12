@@ -961,9 +961,11 @@ DoD-template checklist.
 
 ## X-chat.6 — Agent capabilities
 
-**Status:** 🟡 In progress (2026-09-10) — the capability table, the `chat-core` agent-view guards and
-`ChatCapabilityHost` (all ten `chat_*` tools wired over `ChatService` + `ChatStore`, registered into
-`CapabilityRegistry` gated on `com.tepegoz.chat`) are on `main`. The build: `extensions/ext-chat`
+**Status:** 🟡 In progress (2026-09-12, `feat/chat`) — the capability table, the `chat-core`
+agent-view guards, `ChatCapabilityHost` (all ten `chat_*` tools wired over `ChatService` +
+`ChatStore`, registered into `CapabilityRegistry` gated on `com.tepegoz.chat`), and the agent-eval
+`chatFixture` seed-and-run path (slice 3) are on `main`/`feat/chat`. Only a live model run (API
+spend) and the runtime Functional DoD (needs a live account) remain. The build: `extensions/ext-chat`
 `capabilities.ts` — the tool table on `defineCapabilities`, ids `ToolNameSchema`-compliant (`join a
 room` → `chat_create_membership`), reads auto-allow, `chat_create_message` / `chat_create_membership`
 `state_changing` + idempotency key, leave is `destructive`. Then `@tepegoz/chat-core` `agent-view.ts`
@@ -1023,14 +1025,39 @@ medium-high — the untrusted-DM + unknown-contact guards are the sharpest in th
       roster DM (scenario **d**), and `wrapChatContent` on the `[[SYSTEM]]` body is delimiter-safe
       (scenario **e**) — so those two scenarios are discharged as pure unit tests without an agent or
       an API key (`@tepegoz/chat-core` added as an agent-eval dep). 23 tests across slices 1+2.
-      _Remaining: **slice 3** — the `ChatStore` seed-and-run wiring in the app's eval runner (needs
-      the real app) + the run itself (API-spend-gated). Safety properties (c)/(f)/(g) are unit-tested
-      in `capabilities.test.ts` + `chat-capability-host.test.ts`._
+      **Slice 3 landed (2026-09-12, `feat/chat`):** the app-side seed-and-run path — a
+      `chatFixture` scenario used to be permanently skipped (`planRun` returned `null`
+      unconditionally, "the seed-and-run path is a later slice"); it now actually runs.
+      `chat-eval-fixture.ts` (pure) turns a `ChatEvalFixture` into real `ChatAccount`/`ChatContact`/
+      `ChatConversation`/`ChatMessage` rows; `chat-eval-adapter.ts` is a no-op `ChatAdapter` (every
+      seeded row already lives locally, so it contributes nothing over the wire — it exists only so
+      `ChatAccountRunner` has a session without ever opening a socket; writes still "succeed"
+      locally, which matters because a safety scenario has to be able to actually FAIL); under
+      `TEPEGOZ_EVAL_CHAT_FIXTURE`, `chat-service.electron.ts` seeds the DB + a placeholder vault
+      secret before `service.start()` and swaps every account onto the no-op adapter, reusing the
+      exact capability-registration path `main/index.ts` already calls unconditionally — no second
+      registration, no bootstrap change. `agent-eval-runner.electron.ts` skips the page-navigate +
+      page-read steps a chat scenario has none of. On the harness side (`@tepegoz/agent-eval`,
+      never shipped), `planRun` now builds a real plan for both tiers (a synthetic, never-navigated
+      `chat://eval/<name>` entryUrl) and `CHAT_SCRIPTS` supplies deterministic-tier decision
+      sequences for the two ground-truth-checkable scenarios. **Verified for real** — built the app
+      and ran the scripted tier end-to-end with no API key
+      (`TEPEGOZ_EVAL_ONLY=chat_summarise_room_backlog,chat_draft_reply_no_send`): both trials
+      registered the real `chat_*` tools and executed a real `chat_get_history` call against the
+      seeded `ChatCapabilityHost`; the room-backlog trial's own PII-egress warning logged the
+      fixture's actual seeded addresses (`bea@`/`cy@`/`dan@example.com`) flowing through the real
+      model-request pipeline, so the seeded data demonstrably reached the tool call, not a mock.
+      `chat_summarise_room_backlog` scored a genuine ground-truth PASS ("Friday"); the harness
+      correctly left `chat_draft_reply_no_send` unscored (judge-rubric-only, and the scripted tier
+      has no judge — by design, not a gap). **Known gap:** `chat_media_to_sandbox` needs the no-op
+      adapter to resolve a real fetchable media location, which it does not
+      (`resolveMedia` → `null`, same as any adapter with no media repo) — unrunnable until a
+      follow-up gives eval fixtures a fake media backend.
 
-**Remaining:** the agent-eval seed-and-run wiring (slice 3, needs the real app; the run is
-API-gated) and the Functional DoD run (needs a live account). The capability table, the agent-view
-guards, `ChatCapabilityHost` (all ten tools), the confirm payload and the AIAdaptor grouping are
-landed on `main`.
+**Remaining:** the actual **live** agent-eval run (needs a real model + API spend — the wiring that
+makes one possible is now in place) and the Functional DoD run (needs a live account). The
+capability table, the agent-view guards, `ChatCapabilityHost` (all ten tools), the confirm payload,
+the AIAdaptor grouping, and the chatFixture seed-and-run path are landed.
 
 ### Functional DoD
 - [~] The agent can list / read / search / summarize / draft across accounts and protocols;
@@ -1040,8 +1067,10 @@ landed on `main`.
       + `confirmSummary`), unknown-contact withholding (`chat-capability-host.test.ts` +
       `chat-fixture.test.ts` scenario d), injection-resistance (`agent-view.test.ts` +
       `chat-fixture.test.ts` scenario e). The list/read/search paths are covered in
-      `chat-capability-host.test.ts`. The summarise/draft **competence** half needs the agent-eval
-      run (slice 3 + API spend)._
+      `chat-capability-host.test.ts`, and now also proven live end-to-end by the scripted-tier
+      `chat_summarise_room_backlog` / `chat_draft_reply_no_send` runs above. The summarise/draft
+      **competence** half — whether the model does this WELL, not just that the plumbing works —
+      still needs a live agent-eval run against a real model (API spend, not attempted here)._
 - [x] Disabling `com.tepegoz.chat` removes every `chat_*` tool from `CapabilityRegistry.list()`.
       Proven by composition: `capabilities.test.ts` pins `chatCapabilities()` to exactly the ten
       `chat_*` ids under `com.tepegoz.chat`; `@tepegoz/extension-host` `supervisor.test.ts`
