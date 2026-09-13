@@ -1024,9 +1024,34 @@ DoD-template checklist.
       this errcode (a clean, invisible recovery, not a visible reconnect) — so the real proof is
       behavioral: send a message before invalidation, force it, then send another after and confirm
       it still arrives. Passed clean on 3 repeat runs, no bug found this time (a useful negative
-      result, same as the initial connect/message pass). **Still open:** spaces, media, edits,
-      sync-drop recovery — the e2e now exercises connect + room message + join + reaction + token
-      recovery.
+      result, same as the initial connect/message pass). **Sync-drop recovery attempted and
+      deferred (2026-09-14) — a real architectural finding, plus an inconclusive harness issue that
+      shouldn't block on further unlimited digging:** tried mirroring the XMPP resumption spec's TCP
+      passthrough. First real finding: `dropAll()` alone doesn't simulate a drop for Matrix the way
+      it does for XMPP — XMPP holds ONE persistent connection, so killing it is a real drop; Matrix's
+      `/sync` opens a fresh short HTTP request per cycle, so a client's very next request just sails
+      through a passthrough that keeps accepting. A `pause()`/`resume()` (refuse new connections
+      outright) would be the real primitive needed, verified working in isolation against a bare
+      `fetch()`. Second real finding, more important: **the connState assertion the XMPP spec uses
+      doesn't apply to Matrix at all** — `MatrixAdapter.syncLoop` retries a failed `/sync` entirely
+      inside its own loop (backoff, `session.push({type:'error', scope:'account'})` as a plain
+      in-band event) without ever letting `events()` end or throw, and `ChatConnectionManager` only
+      flips `connState` when that iterable itself ends — confirmed against `account-state.test.ts`'s
+      own assertion that an `{type:'error', scope:'account'}` event is a no-op for `ChatAccountState`.
+      So the account legitimately never leaves `online` during a Matrix outage, by design — a
+      real, useful discovery about this codebase's own architecture even though the test using it
+      didn't ship. **What didn't get resolved:** driving the real app (not the raw adapter) through
+      the passthrough hit a repeatable `TypeError: fetch failed` on the very first message send —
+      never reproduced against a bare `MatrixAdapter` + `NodeChatTransport()` script through the
+      identical passthrough, which sent fine. Likely something specific to the full app's process/
+      networking context interacting with a naive TCP proxy rather than a product defect (nothing a
+      real user's traffic would ever route through), but not confirmed. Reverted all attempted
+      changes (a `chat-live-matrix-resumption.spec.ts` draft, a `pause()`/`resume()` addition to
+      `tcp-passthrough.ts`) rather than ship a flaky or half-diagnosed test — recorded here so a
+      future attempt starts from "assert behaviorally, not on connState" and "the harness's own
+      fetch-failed quirk, not yet root-caused" instead of re-deriving both from scratch. **Still
+      open:** spaces, media, edits, sync-drop recovery — the e2e now exercises connect + room
+      message + join + reaction + token recovery.
 - [ ] Sub-phase DoD template ✔.
 
 ---
