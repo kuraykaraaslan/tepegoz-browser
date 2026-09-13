@@ -1049,10 +1049,31 @@ medium-high — the untrusted-DM + unknown-contact guards are the sharpest in th
       model-request pipeline, so the seeded data demonstrably reached the tool call, not a mock.
       `chat_summarise_room_backlog` scored a genuine ground-truth PASS ("Friday"); the harness
       correctly left `chat_draft_reply_no_send` unscored (judge-rubric-only, and the scripted tier
-      has no judge — by design, not a gap). **Known gap:** `chat_media_to_sandbox` needs the no-op
-      adapter to resolve a real fetchable media location, which it does not
-      (`resolveMedia` → `null`, same as any adapter with no media repo) — unrunnable until a
-      follow-up gives eval fixtures a fake media backend.
+      has no judge — by design, not a gap). **Known gap closed (2026-09-13):**
+      `chat_media_to_sandbox` needed the no-op adapter to resolve a real fetchable media location,
+      which it did not (`resolveMedia` → `null` unconditionally). Fixed: `createChatEvalAdapter`'s
+      `resolveMedia` now resolves any non-empty ref to an `eval-media:` locator, paired with a new
+      `createChatEvalTransport()` — the hermetic `ChatTransport` `buildChatService` swaps in for the
+      real `NodeChatTransport` whenever a fixture is active, since `ChatAccountRunner.resolveMedia`
+      is the one place a fixture trial touches `transport` directly rather than through the no-op
+      adapter. Its `fetch` answers only the `eval-media:` scheme with a real, decodable 1x1 PNG
+      (content is never asserted — the scenario's judge rubric only checks the agent went through
+      `chat_get_media`/quarantine) and rejects everything else, including every non-`fetch` transport
+      method, so a real IO path opening during a trial fails loudly instead of silently reaching the
+      network. 5 tests (`chat-eval-adapter.test.ts`, new). A `CHAT_SCRIPTS.chat_media_to_sandbox`
+      deterministic-tier sequence was added (`chat_get_history` → `chat_get_media`, `harness-scripts.ts`,
+      3 tests) so the scripted tier could actually exercise it — **verified for real**: built the app
+      and ran `TEPEGOZ_EVAL_ONLY=chat_media_to_sandbox pnpm eval` with no API key.
+      `chat_get_media`'s `step_ok` fired (not an error), and the very next PII-egress-warning log line
+      shows a **new** ~65-char high-entropy string alongside the `mxc:` ref — a real local file path,
+      not present before that step — meaning `resolveMedia` → the eval transport's `eval-media:` fetch
+      → base64 `dataUrl` → file-operations-sandbox materialization actually ran end to end and
+      produced a real `sandboxPath`, the same "seeded data demonstrably reached the real pipeline, not
+      a mock" standard the two verified-for-real scenarios above already met. The harness still leaves
+      it unscored (`judgeRubric`-only, no ground truth, same as `chat_draft_reply_no_send` — by
+      design) and logs an unrelated "malformed completion verdict" warning (the deterministic-tier
+      canned `finish` reply has no `done` field the validator schema wants — pre-existing harness
+      behavior, not something this fix touched or needs to fix).
 
 **Remaining:** the actual **live** agent-eval run (needs a real model + API spend — the wiring that
 makes one possible is now in place) and the Functional DoD run (needs a live account). The

@@ -61,6 +61,45 @@ export const CHAT_SCRIPTS: Record<string, ChatScript> = {
         'need anything else before the review."',
     ),
   ],
+  // `success` here is `judgeRubric`-only (no ground truth), so the scripted tier still runs this
+  // trial and exercises the real chat_get_media → resolveMedia → transport.fetch round trip, it just
+  // can't score a PASS/FAIL verdict from it — same as chat_draft_reply_no_send above.
+  chat_media_to_sandbox: () => [
+    JSON.stringify({
+      goal: 'Save the image Bea shared in #design to my files',
+      steps: [
+        {
+          id: 's1',
+          tool: 'chat_get_history',
+          args: { accountId: 'work', conversationId: '!design:example.org' },
+          rationale: "find Bea's message with the attachment",
+          dependsOn: [],
+        },
+        {
+          id: 's2',
+          tool: 'chat_get_media',
+          args: {
+            accountId: 'work',
+            conversationId: '!design:example.org',
+            messageId: '!design:example.org-1',
+          },
+          rationale: 'materialize the attachment into the sandbox',
+          dependsOn: ['s1'],
+        },
+      ],
+    }),
+    act(
+      'chat_get_history',
+      { accountId: 'work', conversationId: '!design:example.org' },
+      "read #design to find Bea's attachment",
+    ),
+    act(
+      'chat_get_media',
+      { accountId: 'work', conversationId: '!design:example.org', messageId: '!design:example.org-1' },
+      'materialize the attachment into the file-operations sandbox',
+    ),
+    finish('Saved hero-v3.png to your files.'),
+  ],
 };
 
 export const SCRIPTS: Record<string, Script> = {
