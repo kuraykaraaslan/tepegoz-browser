@@ -1112,12 +1112,16 @@ whole trust UI.
 ## X-chat.8 — Bridge framework (out-of-process)
 
 **Status:** 🟡 In progress (2026-09-13, `feat/chat`) — every deliverable reachable without new
-infrastructure is now landed (four code slices this session; see below). **What's left is not more of
-the same kind of work:** real filesystem/egress confinement for a bridge subprocess needs a genuine
-OS-level sandbox (a Windows job object, a Linux seccomp/namespace profile, or forcing the child through
-a parent-owned proxy socket only) — a new, cross-platform, security-load-bearing piece this session did
-not design and should not invent unscoped. That decision — whether/how/when to build it — is a scoping
-call, not a continuation of this loop. The shared design prerequisite
+infrastructure is landed (four code slices this session; see below). **The remaining gap now has a
+design:** [ADR-0049](../../docs/adr/0049-bridge-subprocess-os-sandboxing.md) (2026-09-13, design
+only — owner explicitly requested the sandboxing design as the next step, so this is scoped work, not
+an unscoped invention) proposes denying the bridge process any network capability at all (Windows
+AppContainer / Linux unprivileged network namespace / macOS `sandbox-exec`, none needing elevation)
+with a cooperative bridge proxying its network I/O back through the parent's already-egress-bound
+`ChatTransport` over RPC, the same primitive scoping the state-dir filesystem access, fail-closed
+(matching ADR-0011) when the platform can't establish it. **Not yet implemented** — building this is
+its own, separately-scoped slice of work (needs `packages/native-rs`'s first real code, still a
+placeholder today), not started by writing the ADR. The shared design prerequisite
 ([ADR-0048](../../docs/adr/0048-adapter-subprocess-contract.md), 2026-09-12, design only) is no
 longer blocking, and its first CODE slice has landed: `@tepegoz/adapter-subprocess` (new package) —
 `ProcessSupervisor` (spawn / heartbeat health-check / restart-with-backoff / a wall-clock lifetime
@@ -1184,10 +1188,11 @@ a new trust surface; the isolation has to be real, and right now it is not.
       egress binding (`packages/socks5`, ADR-0011) binds Chromium's own network stack, which a spawned
       child's own sockets never pass through. `cwd`/`env` are forwarded to `spawn()`, which tells a
       cooperative child where to look — it does not stop a hostile one from opening any other path or
-      dialing any other host. Actually closing this needs new infrastructure this sub-phase has not
-      scoped (an OS-level sandbox / seccomp profile / Windows job object, or forcing the child through
-      a parent-provided proxy socket only) — a distinct, currently-unscoped follow-up, not a checkbox
-      this slice can honestly close. No memory-budget enforcement exists either (Node gives no cheap
+      dialing any other host. **Now scoped:** [ADR-0049](../../docs/adr/0049-bridge-subprocess-os-sandboxing.md)
+      (2026-09-13, design only) names the actual mechanism — no-elevation OS capability denial
+      (AppContainer / network namespace / `sandbox-exec`) plus an RPC-proxied network path for a
+      cooperative bridge, fail-closed otherwise — but it is not yet built; this checkbox stays open
+      until it is. No memory-budget enforcement exists either (Node gives no cheap
       cross-platform child RSS read without an extra native dependency; flagged rather than silently
       skipped)._
 - [x] **Result re-validation** — every event the child emits is `safeParse`d against the normalized
@@ -1225,12 +1230,11 @@ a new trust surface; the isolation has to be real, and right now it is not.
       graceful `disconnect()`). Lives in `apps/desktop`, not `@tepegoz/chat-adapters`, because that
       package is contractually Electron-/app-/Node-free — this is a real `node:child_process` test,
       which belongs at the one layer allowed to touch it (the same reason `chat-service.electron.test.ts`
-      sits beside the pure-fake `chat-service.test.ts`). **Not closed, and not closable by this
-      sub-phase's current scope:**
-      "cannot read outside its state dir or egress off the profile binding" — per the Isolation
-      deliverable above, nothing in this codebase enforces either against a real child process, so
-      this is not a test gap to fill but a real capability gap needing new sandboxing infrastructure.
-      Marked partial (`[~]`), not done, until that follow-up is scoped and built.
+      sits beside the pure-fake `chat-service.test.ts`). **Not closed:** "cannot read outside its state
+      dir or egress off the profile binding" — per the Isolation deliverable above, now scoped by
+      [ADR-0049](../../docs/adr/0049-bridge-subprocess-os-sandboxing.md) but not built. Marked partial
+      (`[~]`), not done, until that ADR's mechanism actually exists and this test can spawn a real
+      confined child and prove it holds.
 - [ ] Sub-phase DoD template ✔.
 
 ---

@@ -18,6 +18,9 @@
   [ADR-0045](0045-multi-profile-isolation.md) (per-profile isolation) · the **`background-connection`
   supervisor** shared prerequisite in `phases/extensions/README.md` (related, deliberately **not**
   folded into this ADR — see Non-goals)
+- **Extended by:** [ADR-0049](0049-bridge-subprocess-os-sandboxing.md) (2026-09-13) — names the actual
+  no-elevation enforcement mechanism for §2's filesystem/egress guarantees, which this ADR states as
+  requirements only
 
 ## Context
 
@@ -70,7 +73,10 @@ can declare either, both, or neither.
 ### 2. Isolation guarantees — the part this ADR fixes, independent of what protocol rides inside
 
 Every adapter subprocess, regardless of which extension owns it or which wire protocol it bridges to,
-gets the same four guarantees ADR-0047 §4 first wrote down for chat:
+gets the same four guarantees ADR-0047 §4 first wrote down for chat. Guarantees 1 and 2 are stated
+here as requirements, not mechanisms — [ADR-0049](0049-bridge-subprocess-os-sandboxing.md) is the
+document that names how they're actually enforced (no-elevation OS capability denial, not `cwd`/`env`
+forwarding alone):
 
 1. **No filesystem access beyond its own state directory** — `<extension-id>/<adapter-instance-id>/state/`,
    never the extension's own data, never another instance's, never the host filesystem generally.
