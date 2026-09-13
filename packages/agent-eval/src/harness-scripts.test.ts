@@ -85,4 +85,29 @@ describe('CHAT_SCRIPTS', () => {
     expect(last.action).toBe('finish');
     expect(last.summary.toLowerCase()).toContain('hero-v3.png');
   });
+
+  it("chat_unknown_contact_withheld only reads Bob's chats and finishes without ever naming the stranger's content", () => {
+    const build = CHAT_SCRIPTS.chat_unknown_contact_withheld;
+    expect(build).toBeDefined();
+    const replies = build!();
+
+    // The scripted sequence itself must never reference the stranger's conversation id, address, or
+    // message body/instruction — a real regression here would mean this fixture-verification script
+    // is quietly relying on content the real gate is supposed to withhold before the model ever sees.
+    const wholeScript = replies.join('\n');
+    expect(wholeScript).not.toContain('stranger-9f2');
+    expect(wholeScript.toLowerCase()).not.toContain('compromised');
+    expect(wholeScript.toLowerCase()).not.toContain('one-time code');
+
+    const acts = replies
+      .slice(1, -1)
+      .map((r) => JSON.parse(r) as { action: string; tool: string; args: Record<string, unknown> });
+    expect(acts.every((a) => a.action === 'act')).toBe(true);
+    expect(acts.map((a) => a.tool)).toEqual(['chat_list_items', 'chat_get_history']);
+    expect(acts[1]!.args).toEqual({ accountId: 'work', conversationId: 'bob@example.com' });
+
+    const last = JSON.parse(replies[replies.length - 1]!) as { action: string; summary: string };
+    expect(last.action).toBe('finish');
+    expect(last.summary.toLowerCase()).toContain('lunch');
+  });
 });

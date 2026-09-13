@@ -1371,9 +1371,29 @@ without limit (oldest dropped + `droppedEvents` + a re-armable out-of-band `erro
       complete its own initial sync (a foreign-key violation on the first message for a passively-
       discovered room, treated by `ChatConnectionManager` as a dropped connection — an infinite
       reconnect loop). See X-chat.5's Functional DoD note for the full diagnosis. **All three
-      protocol e2e slices are now green.** **Still open:** the agent-path e2e, and broadening each
-      protocol's e2e beyond "connect, join, send one message" (roster/presence, media, reactions,
-      edits, XEP-0198 resumption, kill-switch).
+      protocol e2e slices are now green.** **The agent-path e2e turned out to already exist** — not a
+      separate Playwright spec, but `@tepegoz/agent-eval`'s own `harness.eval.ts` (a real Playwright
+      `_electron` spec) plus a `CHAT_SCRIPTS` entry per scenario, exactly the mechanism X-chat.6
+      already used and this session extended. **3 of the 4 named legs are now scripted-tier
+      real-verified (2026-09-13), no API key:** summarize (`chat_summarise_room_backlog`) and draft
+      (`chat_draft_reply_no_send`) were already verified; **unknown-DM-withheld**
+      (`chat_unknown_contact_withheld`) is new this session — scripted `chat_list_items` →
+      `chat_get_history` on Bob's DM only, and the real run's own PII-egress log shows exactly one
+      distinct address (`bob@…`, 15 chars) across every step, never the stranger's 23-char
+      `stranger-9f2@…` or its phishing text — real evidence the agent-view gate
+      (`packages/chat-core/src/agent-view.ts`) withheld it before the model ever saw it, not a
+      fixture assumption. **The 4th leg, HITL-stop (`chat_send_requires_hitl`), is a genuine harness
+      gap, not a missing script:** `apps/desktop/src/main/agent/agent-eval-runner.electron.ts` wires
+      `requestApproval: () => Promise.resolve(true)` unconditionally for every eval trial (scripted
+      or live) — "auto-approve every HITL gate," by design, so every OTHER scenario's writes can
+      actually take effect and be checked. Scripting `chat_create_message` under this hook would not
+      prove the run stops at confirmation; it would prove the opposite (the message actually sends),
+      which is why this session did not add that script rather than fake a pass. Proving HITL-stop
+      needs either a new eval mode where `requestApproval` denies/records-and-halts (not built), or
+      staying at the unit level it already has (`extensions/ext-chat/src/capabilities.test.ts` asserts
+      `chat_create_message`'s `dangerClass === 'state_changing'` + `requiresIdempotencyKey === true`).
+      Also still open: broadening each protocol's live e2e beyond "connect, join, send one message"
+      (roster/presence, media, reactions, edits, XEP-0198 resumption, kill-switch).
 - [x] **Perf pass** — a 20k-message room: **timeline windowing ✔** (`buildTimeline` `maxMessages`
       caps the DOM at the most-recent 200 messages + a "N earlier" row). **Search ✔** —
       `searchMessages` hits the `chat_search` FTS5 index (migration 23 backfill + delete trigger;
@@ -1392,7 +1412,11 @@ without limit (oldest dropped + `droppedEvents` + a re-armable out-of-band `erro
 - [x] Every trust claim in "Trust & security" above has a test that fails if the property regresses
       (audit 2026-09-11 — see the status note; the two open items, bridge sandbox + isolation, are
       X-chat.8 work with no contract to test against yet).
-- [ ] Both e2e flows green in CI. _(needs a local Prosody / ergo / Synapse.)_
+- [~] Both e2e flows green in CI. _All three protocol e2e specs are green but need a local
+      Prosody/ergo/Synapse CI CANNOT provide without further infra work. The agent-path "e2e"
+      (`harness.eval.ts` + `CHAT_SCRIPTS`, no live server needed) already runs green in this
+      environment for 3 of 4 legs — see the status note above for exactly which, and why the 4th
+      (HITL-stop) is a harness gap, not a missing script._
 - [ ] Sub-phase DoD template ✔.
 
 ---
