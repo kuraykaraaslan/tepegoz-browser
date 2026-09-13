@@ -1111,7 +1111,13 @@ whole trust UI.
 
 ## X-chat.8 — Bridge framework (out-of-process)
 
-**Status:** 🟡 In progress (2026-09-13, `feat/chat`) — the shared design prerequisite
+**Status:** 🟡 In progress (2026-09-13, `feat/chat`) — every deliverable reachable without new
+infrastructure is now landed (four code slices this session; see below). **What's left is not more of
+the same kind of work:** real filesystem/egress confinement for a bridge subprocess needs a genuine
+OS-level sandbox (a Windows job object, a Linux seccomp/namespace profile, or forcing the child through
+a parent-owned proxy socket only) — a new, cross-platform, security-load-bearing piece this session did
+not design and should not invent unscoped. That decision — whether/how/when to build it — is a scoping
+call, not a continuation of this loop. The shared design prerequisite
 ([ADR-0048](../../docs/adr/0048-adapter-subprocess-contract.md), 2026-09-12, design only) is no
 longer blocking, and its first CODE slice has landed: `@tepegoz/adapter-subprocess` (new package) —
 `ProcessSupervisor` (spawn / heartbeat health-check / restart-with-backoff / a wall-clock lifetime
