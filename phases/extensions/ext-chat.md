@@ -1140,12 +1140,18 @@ for a `protocol: 'bridge'` account via three new injected deps (`resolveBridge`/
 special-casing downstream. Production wiring (`chat-service.electron.ts`) deliberately does not supply
 `resolveBridge` yet — no bridge manifest registry exists (X-chat.9's job) — so a real `bridge` account
 still surfaces as `error`; only the mechanism is real and tested now, not a reachable bridge.
-**Still entirely unbuilt:** filesystem/egress confinement (the `cwd`/`env` a real `resolveBridge` +
-`bridgeStateDirFor` would need to actually enforce — right now they only forward whatever a caller
-gives them, with no verification that a state dir is actually confined or an egress host is actually
-bound), and the trivial echo-bridge Functional DoD below. · **Depends on:** X-chat.1 · **Branch:**
-`feat/chat` (worktree) → `feat/chat-bridge-framework` eventually · **Risk:** high — this is a new trust
-surface; the isolation has to be real.
+**Fourth slice landed 2026-09-13:** the trivial echo bridge itself
+(`apps/desktop/src/main/chat/echo-bridge/`) plus a real-OS-process test suite proving the
+lifecycle/RPC/crash-isolation contract against genuine `node:child_process.spawn` (not `FakeChild`) —
+see the Functional DoD below. **Confirmed unbuilt, and confirmed NOT closable by wiring alone (audited
+this session, not assumed):** filesystem/egress confinement. Nothing in this codebase enforces either
+against an arbitrary child process — `ADR-0022`'s sandbox is an in-process path check inside this
+app's own IPC handlers, and the Phase-5 SOCKS egress binding binds Chromium's own network stack, never
+a spawned child's own sockets. `cwd`/`env` tell a cooperative child where to run; they cannot stop a
+hostile one. Closing this needs new OS-level sandboxing infrastructure — a distinct, currently-unscoped
+follow-up, not a wiring gap `resolveBridge`/`bridgeStateDirFor` could fill. · **Depends on:** X-chat.1 ·
+**Branch:** `feat/chat` (worktree) → `feat/chat-bridge-framework` eventually · **Risk:** high — this is
+a new trust surface; the isolation has to be real, and right now it is not.
 
 ### Deliverables
 - [x] **Subprocess adapter contract** — the `ChatAdapter` methods exposed over a typed RPC to a
@@ -1160,11 +1166,24 @@ surface; the isolation has to be real.
 - [ ] **Isolation** — the child runs with: no filesystem access beyond `Bridges/<id>/state/`, its
       own Phase 5 egress binding (a bridge cannot bypass the profile's kill-switch), no host RPC
       beyond the adapter methods, a wall-clock + memory budget, crash isolation (a bridge crash
-      surfaces as that account going `error`, nothing else). _`ProcessSupervisor` gives wall-clock
-      budget + crash isolation (`onStateChange` → `crashed`) already; state-dir confinement and
-      egress binding are the `cwd`/`env` the `ChatService` integration must pass in — not attempted
-      yet. No memory-budget enforcement exists (Node gives no cheap cross-platform child RSS read
-      without an extra native dependency; flagged rather than silently skipped)._
+      surfaces as that account going `error`, nothing else). **Landed and real-process-tested
+      2026-09-13** (`echo-bridge.electron.test.ts`, a genuine `node:child_process.spawn`, not `FakeChild`):
+      wall-clock budget + crash isolation (`onStateChange` → `crashed`, and — proven against a real
+      forced `SIGKILL` of one account's process — a second, independently-spawned account is entirely
+      unaffected). **Explicitly NOT achievable by passing the right `cwd`/`env` alone, confirmed by
+      auditing the codebase rather than assumed:** state-dir confinement and egress binding. Nothing
+      anywhere in this repo enforces either against an arbitrary child process's own syscalls —
+      `ADR-0022`'s file-operations sandbox is an in-process path-prefix check inside this app's own
+      IPC handlers (meaningless to code with its own direct filesystem access); the Phase-5 SOCKS
+      egress binding (`packages/socks5`, ADR-0011) binds Chromium's own network stack, which a spawned
+      child's own sockets never pass through. `cwd`/`env` are forwarded to `spawn()`, which tells a
+      cooperative child where to look — it does not stop a hostile one from opening any other path or
+      dialing any other host. Actually closing this needs new infrastructure this sub-phase has not
+      scoped (an OS-level sandbox / seccomp profile / Windows job object, or forcing the child through
+      a parent-provided proxy socket only) — a distinct, currently-unscoped follow-up, not a checkbox
+      this slice can honestly close. No memory-budget enforcement exists either (Node gives no cheap
+      cross-platform child RSS read without an extra native dependency; flagged rather than silently
+      skipped)._
 - [x] **Result re-validation** — every event the child emits is `safeParse`d against the normalized
       `ChatEvent` schema in the parent before it touches `chat-core`. _Already satisfied
       architecturally, not by new code in this sub-phase: `ChatAccountState.applyRaw`
@@ -1188,8 +1207,24 @@ surface; the isolation has to be real.
       this deliverable cannot close before it does._
 
 ### Functional DoD
-- [ ] A trivial "echo" bridge runs as a child, its events are re-validated, killing it fails only its
+- [~] A trivial "echo" bridge runs as a child, its events are re-validated, killing it fails only its
       account, and it cannot read outside its state dir or egress off the profile binding (tested).
+      **Landed 2026-09-13:** `apps/desktop/src/main/chat/echo-bridge/` — `echo-bridge.mjs`, a real
+      standalone Node script (no TS build step, exactly like a third-party bridge binary would ship)
+      speaking the RPC contract over real stdio; `echo-bridge.electron.test.ts` spawns it for real (not
+      `FakeChild`) and proves, against actual OS processes: it runs as a child and answers `connect`
+      over real stdio; a message sent through it is echoed back as a real event that `chat-core`'s
+      real `normalizeEvent` accepts as a valid `ChatEvent`; and force-`SIGKILL`ing one account's real
+      process leaves a second, independently-spawned account fully live (real crash isolation, not a
+      graceful `disconnect()`). Lives in `apps/desktop`, not `@tepegoz/chat-adapters`, because that
+      package is contractually Electron-/app-/Node-free — this is a real `node:child_process` test,
+      which belongs at the one layer allowed to touch it (the same reason `chat-service.electron.test.ts`
+      sits beside the pure-fake `chat-service.test.ts`). **Not closed, and not closable by this
+      sub-phase's current scope:**
+      "cannot read outside its state dir or egress off the profile binding" — per the Isolation
+      deliverable above, nothing in this codebase enforces either against a real child process, so
+      this is not a test gap to fill but a real capability gap needing new sandboxing infrastructure.
+      Marked partial (`[~]`), not done, until that follow-up is scoped and built.
 - [ ] Sub-phase DoD template ✔.
 
 ---
