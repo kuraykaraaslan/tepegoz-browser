@@ -583,7 +583,10 @@ X-chat.1 · **Branch:** `main` · **Risk:** low.
 
 ## X-chat.3 — MUC / rooms
 
-**Status:** 🟡 In progress (2026-09-09) — `@tepegoz/chat-adapters` `xmpp/muc.ts` landed: the pure
+**Status:** ✅ Done (2026-09-13) — every deliverable, the Functional DoD (verified live against a
+real Prosody with a real second participant, which found and fixed a real XEP-0045 instant-room bug
+— see below), and the Sub-phase DoD template all verified per-condition, not assumed.
+`@tepegoz/chat-adapters` `xmpp/muc.ts` landed: the pure
 XEP-0045 primitives — `buildMucJoin` (nick + password + history control), `buildMucLeave`,
 `buildMucChangeSubject`, `buildMucInvite`; `parseMucPresence` → `MucOccupant` (nick from the resource,
 affiliation/role, real JID when non-anonymous, self from status 110, raw status codes),
@@ -768,7 +771,19 @@ template remains.** ·
 ### Functional DoD
 - [x] Join a public MUC, send/receive, get pinged, leave; notification levels behave. Verified live
       2026-09-13 against a real Prosody with a real second participant — see the status note above.
-- [ ] Sub-phase DoD template ✔.
+- [x] Sub-phase DoD template ✔ (verified per-condition, 2026-09-13, same pass that closed X-chat.4):
+      **i18n en+tr parity** — room-specific strings (mention autocomplete, `<RoomMemberList>`,
+      `<RoomHeader>`'s notify-level labels, `roomTypingLabel`) live in `chat-ui`'s package dict,
+      covered by its parity test (already re-run green this session). **zod `safeParse`** — every
+      room IPC channel (`chat:join-room` / `leave-room` / `set-room-notify-level` /
+      `set-room-topic` / `invite-to-room` / `discover-rooms`) now goes through `parsePayload`, part
+      of this same session's repo-wide `ipc-chat.ts` fix (see X-chat.10's status note). **`AppError`
+      contract** — same fix. **Coverage** — full `pnpm coverage` gate green with this session's
+      changes. **Migration-safe DB** — `chat-store.test.ts`'s `'round-trips the per-room notify
+      level; defaults to "all"'` test is a real, room-specific round trip (not just the generic
+      account one X-chat.4 relied on), covering `all`/`mentions`/`none` explicitly. **Self-review** —
+      lint + typecheck + full test suites passed before every commit; `git log` confirms no AI
+      attribution trailer (CI-enforced). **The sub-phase's own functional DoD** — ✔ above.
 
 ---
 
