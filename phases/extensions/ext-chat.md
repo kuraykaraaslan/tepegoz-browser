@@ -1111,26 +1111,53 @@ whole trust UI.
 
 ## X-chat.8 — Bridge framework (out-of-process)
 
-**Status:** ⬜ Not started — the shared design prerequisite (generalise `manifest.mcpServer` into a
-subprocess adapter contract) is no longer blocking: [ADR-0048](../../docs/adr/0048-adapter-subprocess-contract.md)
-landed 2026-09-12 (design only, no code — the `Deliverables` below remain entirely unbuilt).
-· **Depends on:** X-chat.1 · **Branch:** `feat/chat-bridge-framework`
-**Risk:** high — this is a new trust surface; the isolation has to be real.
+**Status:** 🟡 In progress (2026-09-13, `feat/chat`) — the shared design prerequisite
+([ADR-0048](../../docs/adr/0048-adapter-subprocess-contract.md), 2026-09-12, design only) is no
+longer blocking, and its first CODE slice has landed: `@tepegoz/adapter-subprocess` (new package) —
+`ProcessSupervisor` (spawn / heartbeat health-check / restart-with-backoff / a wall-clock lifetime
+budget / a terminal `crashed` state past `maxRestarts`, a stability window that resets the restart
+streak once the child stays up past the first backoff delay) + `rpc-envelope.ts` (the typed
+newline-JSON RPC framing over stdio ADR-0048 §3 calls for — the consuming extension's own adapter
+interface on the wire, never MCP's `tools/call` shape; a bounded, incremental `LineBuffer` matching
+`XmlStreamParser`'s fail-closed convention). Electron-free, `node:child_process`-free (the real spawn
+is injected) — 34 tests, no real OS process ever spawned in the suite.
+`@tepegoz/extension-sdk`'s `manifest.adapterSubprocess` (protocol/command/args/env/declaredEgressHosts,
+closed `protocol` enum) is the manifest declaration ADR-0048 §1 named, a sibling to `mcpServer`.
+**Still entirely unbuilt:** everything below that turns this generic supervisor into an actual chat
+bridge — a `ChatAdapter`-over-subprocess consumer, the `ChatService` integration, filesystem/egress
+confinement (properties of the `cwd`/`env`/OS profile binding the caller must supply — the supervisor
+itself has no such enforcement), event re-validation against `ChatEvent`, and the trivial echo-bridge
+Functional DoD below. · **Depends on:** X-chat.1 · **Branch:** `feat/chat` (worktree) →
+`feat/chat-bridge-framework` eventually · **Risk:** high — this is a new trust surface; the isolation
+has to be real.
 
 ### Deliverables
-- [ ] **Subprocess adapter contract** — the `ChatAdapter` methods exposed over a typed RPC to a
+- [~] **Subprocess adapter contract** — the `ChatAdapter` methods exposed over a typed RPC to a
       child process; lifecycle (spawn / health-check / restart-with-backoff / kill), a manifest shape
-      declaring the bridge's protocol + required tokens + declared egress hosts.
+      declaring the bridge's protocol + required tokens + declared egress hosts. **The generic
+      supervisor + manifest declaration are landed** (`@tepegoz/adapter-subprocess`,
+      `manifest.adapterSubprocess`); **still owed:** the actual `ChatAdapter` methods (connect /
+      roster / send / events / …) mapped onto `call()`/`onEvent()` as a concrete
+      `SubprocessChatAdapter`, and a "required tokens" declaration (not yet part of the manifest
+      shape — deferred until a first real bridge needs it, per ADR-0048's "shape TBD at
+      implementation time").
 - [ ] **Isolation** — the child runs with: no filesystem access beyond `Bridges/<id>/state/`, its
       own Phase 5 egress binding (a bridge cannot bypass the profile's kill-switch), no host RPC
       beyond the adapter methods, a wall-clock + memory budget, crash isolation (a bridge crash
-      surfaces as that account going `error`, nothing else).
+      surfaces as that account going `error`, nothing else). _`ProcessSupervisor` gives wall-clock
+      budget + crash isolation (`onStateChange` → `crashed`) already; state-dir confinement and
+      egress binding are the `cwd`/`env` the `ChatService` integration must pass in — not attempted
+      yet. No memory-budget enforcement exists (Node gives no cheap cross-platform child RSS read
+      without an extra native dependency; flagged rather than silently skipped)._
 - [ ] **Result re-validation** — every event the child emits is `safeParse`d against the normalized
-      `ChatEvent` schema in the parent before it touches `chat-core`.
+      `ChatEvent` schema in the parent before it touches `chat-core`. _`onEvent` delivers the raw
+      `params` from a decoded frame verbatim — the `ChatEvent` `safeParse` step is the consumer's
+      job, not yet written._
 - [ ] **Supervisor** in `ChatService` — treats bridge accounts like native ones for the UI + agent,
       routes through the child for I/O.
 - [ ] **Packaging** — a bridge is a signed package ([Phase 3](../product/phase-3-backend-cloud-extensions.md)
-      supply-chain gate), never bundled with the app.
+      supply-chain gate), never bundled with the app. _Phase 3 itself is Not started (~4-6 months) —
+      this deliverable cannot close before it does._
 
 ### Functional DoD
 - [ ] A trivial "echo" bridge runs as a child, its events are re-validated, killing it fails only its

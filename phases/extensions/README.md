@@ -103,6 +103,10 @@ These are not restated per-document beyond a pointer; they are the price of bein
       isolation guarantees generalized from [ADR-0047](../../docs/adr/0047-chat-protocol-adapter-and-bridge-trust-model.md)
       §4 (own state dir, own egress binding, no host RPC beyond the extension's own adapter
       interface, crash isolation, signed package, never bundled), typed RPC over the extension's own
-      adapter interface rather than MCP tool-call semantics. **Still owed:** the actual
-      `@tepegoz/ext-chat` X-chat.8 bridge framework that implements this contract — this checklist
-      item is the design prerequisite, not the framework itself.
+      adapter interface rather than MCP tool-call semantics. **First code slice landed 2026-09-13:**
+      `@tepegoz/adapter-subprocess` — the generic spawn/health-check/restart-with-backoff supervisor
+      + the typed newline-JSON RPC envelope, plus the `manifest.adapterSubprocess` declaration itself
+      (`@tepegoz/extension-sdk`). **Still owed:** the actual `@tepegoz/ext-chat` X-chat.8 bridge
+      framework — a `ChatAdapter`-over-subprocess consumer, the `ChatService` integration, state-dir
+      / egress confinement, `ChatEvent` re-validation, and a first bridge — this checklist item is
+      the design prerequisite plus its shared mechanics, not the framework itself.
