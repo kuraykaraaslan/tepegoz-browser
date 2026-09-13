@@ -1434,7 +1434,22 @@ identically (`<S extends z.ZodTypeAny>(schema: S, …): z.infer<S>`). ·
       staying at the unit level it already has (`extensions/ext-chat/src/capabilities.test.ts` asserts
       `chat_create_message`'s `dangerClass === 'state_changing'` + `requiresIdempotencyKey === true`).
       Also still open: broadening each protocol's live e2e beyond "connect, join, send one message"
-      (roster/presence, media, reactions, edits, XEP-0198 resumption, kill-switch).
+      (roster/presence, media, reactions, edits, XEP-0198 resumption, kill-switch). **Re-verified live
+      2026-09-13, `feat/chat` worktree** — all five live specs (`chat-live-{xmpp,irc,matrix,
+      xmpp-killswitch,xmpp-resumption}.spec.ts`) run for real against the still-running WSL test
+      servers (Prosody/ergo/Synapse, up since 2026-09-12) and pass, confirming this session's
+      `ChatService`/`ipc-chat.ts` changes are not a regression. **Worktree gotcha, worth recording:**
+      the first run in this worktree failed all four TLS-based specs (XMPP × 3, Matrix) with every
+      account going straight to `error` — looked exactly like a real regression. Root cause: `git
+      worktree` does not share gitignored files with the checkout it was created from, and
+      `.prosody-test-ca.crt` / `.synapse-test-ca.crt` (the `NODE_EXTRA_CA_CERTS` files these specs
+      need to trust the servers' self-signed certs) are gitignored, so a fresh worktree simply doesn't
+      have them. IRC has no TLS and passed the whole time, which is what pointed at a cert problem
+      rather than a code one; the low-level `xmpp-live-prosody.manual.test.ts` (bypasses the full app)
+      also still passed, confirming the adapter/transport layer was never the issue. Fixed by copying
+      the running servers' actual certs out of WSL (`wsl cat .../certs/localhost.crt >
+      .prosody-test-ca.crt`, same for `synapse/certs/localhost.crt` → `.synapse-test-ca.crt`) into the
+      worktree root — a one-time step any new worktree running these specs needs to repeat.
 - [x] **Perf pass** — a 20k-message room: **timeline windowing ✔** (`buildTimeline` `maxMessages`
       caps the DOM at the most-recent 200 messages + a "N earlier" row). **Search ✔** —
       `searchMessages` hits the `chat_search` FTS5 index (migration 23 backfill + delete trigger;
