@@ -114,7 +114,7 @@ export function registerChatIpc(service: ChatIpcService): void {
   }));
 
   handleAsync(IpcChannels.chatAddAccount, async (_event, payload): Promise<void> => {
-    const { account, secret } = ChatAddAccountSchema.parse(payload);
+    const { account, secret } = parsePayload(ChatAddAccountSchema, payload);
     await service.addAccount(account.id, secret, account);
   });
 
@@ -128,90 +128,90 @@ export function registerChatIpc(service: ChatIpcService): void {
   });
 
   handleAsync(IpcChannels.chatRemoveAccount, async (_event, payload): Promise<void> => {
-    await service.removeAccount(ChatAccountIdArgSchema.parse(payload).accountId);
+    await service.removeAccount(parsePayload(ChatAccountIdArgSchema, payload).accountId);
   });
 
   handle(IpcChannels.chatListConversations, (_event, payload): ChatConversation[] =>
-    service.listConversations(OptionalAccountIdSchema.parse(payload) ?? undefined),
+    service.listConversations(parsePayload(OptionalAccountIdSchema, payload) ?? undefined),
   );
 
   handle(IpcChannels.chatGetRoster, (_event, payload): ChatContact[] =>
-    service.getRoster(ChatAccountIdArgSchema.parse(payload).accountId),
+    service.getRoster(parsePayload(ChatAccountIdArgSchema, payload).accountId),
   );
 
   handleAsync(IpcChannels.chatGetHistory, async (_event, payload) => {
-    const { accountId, conversationId, before } = ChatGetHistorySchema.parse(payload);
+    const { accountId, conversationId, before } = parsePayload(ChatGetHistorySchema, payload);
     return service.getHistory(accountId, conversationId, before);
   });
 
   handleAsync(IpcChannels.chatSendMessage, async (_event, payload): Promise<{ protocolId: string }> => {
-    const { accountId, conversationId, body } = ChatSendMessageSchema.parse(payload);
+    const { accountId, conversationId, body } = parsePayload(ChatSendMessageSchema, payload);
     const protocolId = await service.sendMessage(accountId, conversationId, body);
     return { protocolId };
   });
 
   handleAsync(IpcChannels.chatSetPresence, async (_event, payload): Promise<void> => {
-    const { accountId, presence, statusText } = ChatSetPresenceSchema.parse(payload);
+    const { accountId, presence, statusText } = parsePayload(ChatSetPresenceSchema, payload);
     await service.setPresence(accountId, presence, statusText);
   });
 
   handleAsync(IpcChannels.chatMarkRead, async (_event, payload): Promise<void> => {
-    const { accountId, conversationId, protocolId } = ChatMarkReadSchema.parse(payload);
+    const { accountId, conversationId, protocolId } = parsePayload(ChatMarkReadSchema, payload);
     await service.markRead(accountId, conversationId, protocolId);
   });
 
   handleAsync(IpcChannels.chatDiscoverRooms, async (_event, payload) => {
-    const { accountId, service: mucService } = ChatDiscoverRoomsSchema.parse(payload);
+    const { accountId, service: mucService } = parsePayload(ChatDiscoverRoomsSchema, payload);
     return service.discoverRooms(accountId, mucService);
   });
 
   handleAsync(IpcChannels.chatJoinRoom, async (_event, payload): Promise<string | null> => {
-    const { accountId, roomJid } = ChatJoinRoomSchema.parse(payload);
+    const { accountId, roomJid } = parsePayload(ChatJoinRoomSchema, payload);
     return service.joinRoom(accountId, roomJid);
   });
 
   handleAsync(IpcChannels.chatLeaveRoom, async (_event, payload): Promise<void> => {
-    const { accountId, conversationId } = ChatLeaveRoomSchema.parse(payload);
+    const { accountId, conversationId } = parsePayload(ChatLeaveRoomSchema, payload);
     await service.leaveRoom(accountId, conversationId);
   });
 
   handleAsync(IpcChannels.chatSetRoomNotifyLevel, async (_event, payload): Promise<void> => {
-    const { accountId, conversationId, level } = ChatSetRoomNotifyLevelSchema.parse(payload);
+    const { accountId, conversationId, level } = parsePayload(ChatSetRoomNotifyLevelSchema, payload);
     await service.setRoomNotifyLevel(accountId, conversationId, level);
   });
 
   handleAsync(IpcChannels.chatSetMuted, async (_event, payload): Promise<void> => {
-    const { accountId, conversationId, muted } = ChatSetMutedSchema.parse(payload);
+    const { accountId, conversationId, muted } = parsePayload(ChatSetMutedSchema, payload);
     await service.setMuted(accountId, conversationId, muted);
   });
 
   handleAsync(IpcChannels.chatSetRoomTopic, async (_event, payload): Promise<void> => {
-    const { accountId, conversationId, topic } = ChatSetRoomTopicSchema.parse(payload);
+    const { accountId, conversationId, topic } = parsePayload(ChatSetRoomTopicSchema, payload);
     await service.setRoomTopic(accountId, conversationId, topic);
   });
 
   handleAsync(IpcChannels.chatInviteToRoom, async (_event, payload): Promise<void> => {
-    const { accountId, conversationId, invitee } = ChatInviteToRoomSchema.parse(payload);
+    const { accountId, conversationId, invitee } = parsePayload(ChatInviteToRoomSchema, payload);
     await service.inviteToRoom(accountId, conversationId, invitee);
   });
 
   handleAsync(IpcChannels.chatResolveMedia, async (_event, payload) => {
-    const { accountId, mediaRef } = ChatResolveMediaSchema.parse(payload);
+    const { accountId, mediaRef } = parsePayload(ChatResolveMediaSchema, payload);
     return service.resolveMedia(accountId, mediaRef);
   });
 
   handleAsync(IpcChannels.chatReact, async (_event, payload): Promise<void> => {
-    const { accountId, conversationId, messageId, emoji, on } = ChatReactSchema.parse(payload);
+    const { accountId, conversationId, messageId, emoji, on } = parsePayload(ChatReactSchema, payload);
     await service.react(accountId, conversationId, messageId, emoji, on);
   });
 
   handleAsync(IpcChannels.chatAddContact, async (_event, payload): Promise<void> => {
-    const { accountId, address } = ChatAddContactSchema.parse(payload);
+    const { accountId, address } = parsePayload(ChatAddContactSchema, payload);
     await service.addContact(accountId, address);
   });
 
   handleAsync(IpcChannels.chatRemoveContact, async (_event, payload): Promise<void> => {
-    const { accountId, address } = ChatRemoveContactSchema.parse(payload);
+    const { accountId, address } = parsePayload(ChatRemoveContactSchema, payload);
     await service.removeContact(accountId, address);
   });
 

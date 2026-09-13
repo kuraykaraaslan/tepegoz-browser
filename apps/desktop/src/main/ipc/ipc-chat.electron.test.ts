@@ -269,6 +269,22 @@ describe('validation gates the service', () => {
     await call(IpcChannels.chatMarkRead, { accountId: 'a', conversationId: 'c', protocolId: 'm1' });
     expect(svc.markRead).toHaveBeenCalledWith('a', 'c', 'm1');
   });
+
+  // AppError contract (ADR-0009): a malformed payload must map to a 400, never the generic 500
+  // `toBoundary` gives anything that isn't an `AppError` — a raw `Schema.parse()` throws a bare
+  // ZodError, which collapses to 500. Every handler here goes through `parsePayload` specifically so
+  // this holds; looping every registered handler (bar the one with no payload schema at all) means a
+  // future handler added with a raw `.parse()` fails this test immediately instead of silently
+  // regressing to an opaque "Internal error" for every one of its callers.
+  it('every chat:* handler maps a malformed payload to a 400, never a bare/500 error', async () => {
+    for (const [channel, fn] of h.handlers) {
+      if (channel === IpcChannels.chatListAccounts) continue; // no payload schema — never rejects
+      await expect(
+        Promise.resolve().then(() => fn(ev, { garbage: true })),
+        channel,
+      ).rejects.toThrow(/^\[400\]/);
+    }
+  });
 });
 
 describe('untrusted sender', () => {

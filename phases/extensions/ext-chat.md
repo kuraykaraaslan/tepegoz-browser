@@ -753,7 +753,12 @@ remain.** ·
 
 ## X-chat.4 — IRC adapter
 
-**Status:** 🟡 In progress (2026-09-10) — `@tepegoz/chat-adapters` `irc/parse.ts` landed: the pure
+**Status:** ✅ Done (2026-09-13) — every deliverable, the Functional DoD (both the protocol half
+against a real local `ergo` and the desktop-app half via `e2e/chat-live-irc.spec.ts`), and the
+Sub-phase DoD template all verified per-condition, not assumed — see the Sub-phase DoD template note
+below for exactly how each of the 7 conditions was checked, including a genuine AppError-contract bug
+this verification pass found and fixed (documented under X-chat.10, since it wasn't IRC-specific).
+`@tepegoz/chat-adapters` `irc/parse.ts` landed: the pure
 IRCv3 line parser (`parseIrcLine` — `@tags` with unescaping / `:prefix` / command uppercase-or-numeric
 / params with `:trailing`, bounded at 8703 bytes / 15 params / 64 tags, `null` on anything malformed),
 `formatIrcLine` (round-trips), `parseIsupport` (005 `KEY=value` / bare / `-KEY`). 12 tests,
@@ -841,7 +846,7 @@ emit the same `room-topic` event — follow-up wiring under X-chat.3 / .5. ·
       and asserts exactly the surfaced message / membership events, numerics ignored.
 
 ### Functional DoD
-- [~] Connect to a local IRC server (ergo), join a channel, send/receive, backfill via
+- [x] Connect to a local IRC server (ergo), join a channel, send/receive, backfill via
       `chathistory`, reconnect + auto-rejoin; the UI correctly shows IRC as unencrypted.
       **Protocol half verified live (2026-09-12)** — a real `ergo` instance run locally (no Docker:
       the static release binary, under WSL, reachable from the Windows host over the WSL2
@@ -869,7 +874,27 @@ emit the same `room-topic` event — follow-up wiring under X-chat.3 / .5. ·
       `ownEchoWaiters` (mirrors the existing `historyWaiters` pattern) so `sendMessage` now resolves
       with whatever protocolId the echo actually carries. `<NotEncryptedBadge>` verified rendering
       for real in the running window as part of the same e2e pass.
-- [ ] Sub-phase DoD template ✔.
+- [x] Sub-phase DoD template ✔ (verified per-condition, 2026-09-13, not rubber-stamped):
+      **i18n en+tr parity** — `<NotEncryptedBadge>`'s `notEncrypted`/`ircPlaintext` keys exist in both
+      `packages/chat-ui/src/i18n/{en,tr}.ts`, and the package's own parity test
+      (`i18n/i18n.test.ts`) passes. **zod `safeParse` at every boundary** — `ircServer`'s new optional
+      `saslMechanism`/`preSaslAuth` fields are part of the same `ChatServerConfigSchema` discriminated
+      union every IPC handler already validates against; `parseIrcLine` returns `null` (never throws)
+      on malformed wire input. **`AppError` contract** — auditing this while verifying X-chat.4 found
+      it was genuinely broken repo-wide (18 of 20 `ipc-chat.ts` handlers, not IRC-specific), fixed the
+      same session — see the X-chat.10 status note above for the full account; IRC's own
+      `chat:add-account` empty-secret fix from this Functional DoD note now also gets a proper `400`
+      instead of a `500` on a malformed payload, provable by the new
+      `ipc-chat.electron.test.ts` regression loop. **Coverage** — full repo-wide `pnpm coverage` gate
+      green with this session's changes included. **Migration-safe DB** — `chat.test.ts` proves a bare
+      `ircServer` row (pre-dating `saslMechanism`/`preSaslAuth`) still parses, and a value for each
+      round-trips; `ChatStore` persists `server` as an untyped JSON blob with no protocol branching
+      (`chat-store.ts`), so the existing generic `'round-trips the server config...'` test already
+      exercises the exact mechanism these new optional fields go through — no protocol-specific store
+      code exists to separately test. **Self-review** — every commit in this session's work passed
+      lint + typecheck + its own test suite before landing, and `git log` confirms no AI attribution
+      trailer on any of them (CI-enforced, `CLAUDE.md`). **The sub-phase's own functional DoD** — ✔
+      above.
 
 ---
 
@@ -1326,7 +1351,23 @@ redacted at both ends. Bridge-payload fuzz + the profile-switch bridge half + br
 perf remain (the first three wait on X-chat.8). Then (2026-09-11) the **event-queue memory bound** —
 a shared `event-queue.ts` caps every adapter session's between-the-wire queue at 4096
 (`MatrixSession` / `IrcSession` / `XmppSession`); a stalled consumer no longer grows process memory
-without limit (oldest dropped + `droppedEvents` + a re-armable out-of-band `error` gap notice). ·
+without limit (oldest dropped + `droppedEvents` + a re-armable out-of-band `error` gap notice).
+Then (2026-09-13) a **real AppError-contract bug found while verifying X-chat.4's Sub-phase DoD
+template, fixed repo-wide, not just for IRC** — `apps/desktop/src/main/ipc/ipc-chat.ts` claimed in its
+own docstring that "every payload is `safeParse`d... so raw zod / internal text never crosses to the
+untrusted renderer," but 18 of its 20 handlers actually called `Schema.parse(payload)` directly, which
+throws a bare `ZodError` that `toBoundary` (ADR-0009) has no special case for — it collapses to the
+generic `{message:'Internal error', statusCode:500}` every unmapped throw gets, exactly the
+"opaque 500 instead of a real 400" anti-pattern this project already fixed once for
+`account-runner.ts` earlier in X-chat.8. No existing test caught it because every "rejects" test in
+`ipc-chat.electron.test.ts` only asserted `.rejects.toBeDefined()`, never the actual status code. All
+18 now go through `parsePayload` (the same helper the two already-correct handlers used); a new test
+loops every registered `chat:*` handler with a malformed payload and asserts a `400` specifically, so
+a future handler regressing to raw `.parse()` fails immediately instead of silently shipping. Fixing
+this also surfaced the **same zod-generics precision bug this session already diagnosed and fixed in
+`ProcessSupervisor.call`** (X-chat.8): `parsePayload<T>(schema: z.ZodType<T>, …): T` was inferring an
+imprecise, too-wide return type for a schema with a `.nullable()` (non-`.optional()`) field — fixed
+identically (`<S extends z.ZodTypeAny>(schema: S, …): z.infer<S>`). ·
 **Depends on:** X-chat.2–.7 · **Branch:** `feat/chat-hardening` · **Risk:** low — mostly tests.
 
 ### Deliverables
