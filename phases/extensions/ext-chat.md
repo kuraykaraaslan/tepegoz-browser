@@ -1052,7 +1052,23 @@ DoD-template checklist.
       fetch-failed quirk, not yet root-caused" instead of re-deriving both from scratch. **Still
       open:** spaces, media, edits, sync-drop recovery — the e2e now exercises connect + room
       message + join + reaction + token recovery.
-- [ ] Sub-phase DoD template ✔.
+- [ ] Sub-phase DoD template ✔ — **6 of 7 conditions verified 2026-09-14, box stays unchecked
+      because it's an all-or-nothing item and condition 7 (the sub-phase's own Functional DoD,
+      directly above) is still genuinely `[~]`, not a rubber-stamp gap like X-chat.3/X-chat.4's
+      were.** **i18n en+tr parity** — Matrix's account-form strings (`homeserverUrl`,
+      `homeserverUrlHint`, `homeserverUrlRequired`, `homeserverUrlInvalid`) exist in both
+      `chat-ui/src/i18n/{en,tr}.ts`. **zod `safeParse`** — `chat.test.ts` asserts the Matrix
+      variant's `https://` requirement both ways (a `http://` homeserver rejected, `https://`
+      accepted), same TLS-required trust claim already tested for XMPP/IRC; every IPC handler
+      validates through the same `ChatServerConfigSchema` this session's `ipc-chat.ts` fix now
+      correctly maps to `400` on failure. **`AppError` contract** — same fix. **Coverage** — full
+      `pnpm coverage` gate green. **Migration-safe DB** — same reasoning as X-chat.4's verification:
+      `ChatStore` persists `server` as an untyped JSON blob with no protocol branching, so the
+      generic round-trip test already exercises the exact mechanism the Matrix variant's fields go
+      through; the schema-level test above covers the type-safety half. **Self-review** — `git log`
+      confirms no AI attribution trailer on any commit this session (CI-enforced). Only condition 7
+      is what's actually blocking this checkbox, and it needs real remaining work (spaces, media,
+      edits, sync-drop), not more verification.
 
 ---
 
