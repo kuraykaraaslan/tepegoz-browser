@@ -205,6 +205,7 @@ export default defineConfig({
       },
       include: [
         'apps/desktop/src/**',
+        'packages/adapter-subprocess/src/**',
         'packages/agent-eval/src/**',
         'packages/agent-runtime/src/**',
         'packages/auth-prompt-ui/src/**',
