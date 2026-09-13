@@ -1014,8 +1014,19 @@ DoD-template checklist.
       involved. **Any real Matrix account with pre-existing room history could never get past its
       own initial sync.** Both fixed; the adapter-level manual test never caught either because its
       fake in-memory store has no foreign key to violate — only the real SQLite-backed app does.
-      **Still open:** spaces, media, reactions, edits, sync-drop recovery, token invalidation — the
-      e2e so far only exercises connect + room message + join.
+      **Reactions was already stale** — the e2e's own title ("...and reacts to it") already
+      self-reacted via `m.reaction`; the note above just hadn't been updated. **Token invalidation
+      closed live 2026-09-13** — extended the same e2e to force a REAL `M_UNKNOWN_TOKEN`, not a
+      fixture: log in fresh as alice (a session whose token the test holds) and call the standard
+      self-service `POST /logout/all`, which invalidates every access token for the user — including
+      whatever token the running app is actually holding in its vault, which the test never sees.
+      `MatrixAdapter.syncLoop`'s re-login path deliberately raises no `error`/state-change event for
+      this errcode (a clean, invisible recovery, not a visible reconnect) — so the real proof is
+      behavioral: send a message before invalidation, force it, then send another after and confirm
+      it still arrives. Passed clean on 3 repeat runs, no bug found this time (a useful negative
+      result, same as the initial connect/message pass). **Still open:** spaces, media, edits,
+      sync-drop recovery — the e2e now exercises connect + room message + join + reaction + token
+      recovery.
 - [ ] Sub-phase DoD template ✔.
 
 ---

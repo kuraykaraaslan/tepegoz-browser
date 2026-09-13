@@ -99,7 +99,29 @@ async function createPublicRoom(): Promise<string> {
   return room.room_id;
 }
 
-test('adds a live Matrix account, joins a room, sends a message, and reacts to it', async ({}, testInfo) => {
+/** Force a real `M_UNKNOWN_TOKEN` the way an expired/revoked session actually would: log in fresh as
+ *  alice (a session we hold the token for) and call the standard, self-service `/logout/all` — which
+ *  invalidates every access token issued to the user, including whatever token the running app is
+ *  actually holding (which this test never sees — it lives in the app's own vault). */
+async function invalidateAliceSessions(): Promise<void> {
+  const base = 'https://127.0.0.1:8448';
+  const loginRes = await fetch(`${base}/_matrix/client/v3/login`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({
+      type: 'm.login.password',
+      identifier: { type: 'm.id.user', user: 'alice' },
+      password: 'alicepw123',
+    }),
+  });
+  const login = (await loginRes.json()) as { access_token: string };
+  await fetch(`${base}/_matrix/client/v3/logout/all`, {
+    method: 'POST',
+    headers: { authorization: `Bearer ${login.access_token}` },
+  });
+}
+
+test('adds a live Matrix account, joins a room, sends/reacts, and recovers from a forced token invalidation', async ({}, testInfo) => {
   testInfo.setTimeout(90_000);
   // The self-signed test cert isn't in Node's default trust store — scoped to this one process, and
   // only for the fixture-setup fetch above (the launched Electron app trusts it via
@@ -167,6 +189,26 @@ test('adds a live Matrix account, joins a room, sends a message, and reacts to i
     await window.getByRole('button', { name: 'Add reaction' }).click();
     await window.getByRole('menuitem', { name: '👍' }).click();
     await expect(window.getByRole('button', { name: '👍 1' })).toBeVisible({ timeout: 10_000 });
+
+    // Force a real M_UNKNOWN_TOKEN — not a fixture, the app's actual running session's token — and
+    // prove `MatrixAdapter.syncLoop`'s re-login path (packages/chat-adapters/src/matrix/adapter.ts)
+    // recovers seamlessly: it deliberately never surfaces an `error`/state change for this specific
+    // errcode (a clean re-login, not a visible reconnect), so the real proof is that the account
+    // keeps working, not a state-transition assertion.
+    process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+    try {
+      await invalidateAliceSessions();
+    } finally {
+      delete process.env.NODE_TLS_REJECT_UNAUTHORIZED;
+    }
+
+    // The background sync loop only discovers the invalidated token on its NEXT request — give it a
+    // moment before proving the account is still fully functional.
+    await window.waitForTimeout(2000);
+    const afterInvalidation = `still works after token invalidation ${String(Date.now())}`;
+    await composer.fill(afterInvalidation);
+    await composer.press('Enter');
+    await expect(window.getByText(afterInvalidation)).toBeVisible({ timeout: 20_000 });
   } finally {
     await app.close();
     rmSync(profileDir, { recursive: true, force: true });
