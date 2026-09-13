@@ -14,7 +14,7 @@ import { ChatStore, EventJournal } from '@tepegoz/persistence';
 import { randomUUID } from 'node:crypto';
 import { createChatDialer } from './egress-dialer';
 import { seedChatAccountsFromEnv } from './chat-seed.electron';
-import { createChatEvalAdapter } from './chat-eval-adapter';
+import { createChatEvalAdapter, createChatEvalTransport } from './chat-eval-adapter';
 import { buildChatEvalSeed, parseChatEvalFixture } from './chat-eval-fixture';
 import ChatSecrets from './chat-secrets.electron';
 import { createChatCapabilityHost } from './chat-capability-host';
@@ -161,8 +161,9 @@ function seedChatEvalFixtureIntoDb(fixture: NonNullable<ReturnType<typeof parseC
 }
 
 /** Build a `ChatService` bound to the real process singletons (deps overridable for tests). Under
- *  `TEPEGOZ_EVAL_CHAT_FIXTURE`, every account connects through the harmless no-op adapter
- *  (`chat-eval-adapter.ts`) instead of a real protocol adapter — no socket ever opens. */
+ *  `TEPEGOZ_EVAL_CHAT_FIXTURE`, every account connects through the harmless no-op adapter AND the
+ *  hermetic eval transport (both `chat-eval-adapter.ts`) instead of a real protocol adapter and the
+ *  real `NodeChatTransport` — no socket ever opens, including for `chat_get_media`. */
 export function buildChatService(over: Partial<ChatServiceDeps> = {}): ChatService {
   const evalFixture = loadChatEvalFixtureFromEnv();
   return new ChatService({
@@ -181,7 +182,13 @@ export function buildChatService(over: Partial<ChatServiceDeps> = {}): ChatServi
     audit: chatAudit,
     isEnabled: chatExtensionEnabled,
     ...(evalFixture !== null
-      ? { makeAdapter: (): ChatAdapter => createChatEvalAdapter(evalFixture.protocol) }
+      ? {
+          makeAdapter: (): ChatAdapter => createChatEvalAdapter(evalFixture.protocol),
+          // Swaps out the real NodeChatTransport too — resolveMedia() is the one place
+          // ChatAccountRunner uses `transport` directly (not through the no-op adapter), and it must
+          // never reach the real network during a trial. See chat-eval-adapter.ts's docstring.
+          transport: createChatEvalTransport(),
+        }
       : {}),
     ...over,
   });
