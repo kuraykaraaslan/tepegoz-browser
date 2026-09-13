@@ -543,6 +543,35 @@ describe('XmppAdapter — live traffic', () => {
     expect((await it.next()).value).toMatchObject({ joined: false, memberCount: 0 });
   });
 
+  it('creating a room (status 201 on our own join presence) auto-accepts the default config to unlock it', async () => {
+    // XEP-0045 §10.1.3: a newly-created room is LOCKED until its creator accepts a configuration —
+    // a second occupant's own join is bounced (item-not-found/not-allowed) until that happens.
+    // Found live (2026-09-13, X-chat.3's "get pinged" Functional DoD verification): every room this
+    // adapter ever created stayed permanently locked to a single occupant because nothing sent the
+    // accept. `statusCodes`/the 201 code were already parsed (`muc.ts`) and simply never consumed.
+    const { server, adapter, session } = await connected();
+    await adapter.joinRoom(session, 'general@conf.example.com');
+    server.send(
+      `<presence from="general@conf.example.com/ada"><x xmlns="http://jabber.org/protocol/muc#user">` +
+        `<item affiliation="owner" role="moderator"/><status code="110"/><status code="201"/></x></presence>`,
+    );
+    // `nextIqId`'s counter is shared across every iq this session ever sends (`connect()`'s own
+    // bind request already used seq 1) — assert the shape, not a specific sequence number.
+    expect(server.lastWritten()).toMatch(
+      /^<iq type="set" to="general@conf\.example\.com" id="muc-instant-\d+"><query xmlns="http:\/\/jabber\.org\/protocol\/muc#owner"><x xmlns="jabber:x:data" type="submit"\/><\/query><\/iq>$/,
+    );
+  });
+
+  it('a self-join presence WITHOUT status 201 (an existing room) never sends the instant-room accept', async () => {
+    const { server, adapter, session } = await connected();
+    await adapter.joinRoom(session, 'general@conf.example.com');
+    server.send(
+      `<presence from="general@conf.example.com/ada"><x xmlns="http://jabber.org/protocol/muc#user">` +
+        `<item affiliation="member" role="participant"/><status code="110"/></x></presence>`,
+    );
+    expect(server.lastWritten()).not.toContain('muc#owner');
+  });
+
   it('a groupchat <subject> from a joined room becomes a room-topic event', async () => {
     const { server, adapter, session } = await connected();
     await adapter.joinRoom(session, 'general@conf.example.com');

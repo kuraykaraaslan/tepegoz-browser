@@ -1,5 +1,5 @@
 import { resolve, join } from 'node:path';
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { test, expect, _electron as electron, type ElectronApplication, type Page } from '@playwright/test';
 
 /**
@@ -169,5 +169,6 @@ test('adds a live Matrix account, joins a room, sends a message, and reacts to i
     await expect(window.getByRole('button', { name: '👍 1' })).toBeVisible({ timeout: 10_000 });
   } finally {
     await app.close();
+    rmSync(profileDir, { recursive: true, force: true });
   }
 });

@@ -709,8 +709,28 @@ plain `type="chat"` to a room JID is not relayed. No fixture-based unit test had
 Playwright e2e against a real Prosody did (see X-chat.10's e2e note) — the composer accepted and
 cleared the input, the message just never arrived anywhere. Fixed + a regression test asserting the
 stanza's `type` attribute for a room send, which no existing test checked.
-**X-chat.3 is now code-complete — only the runtime DoD (live server) + the sub-phase DoD template
-remain.** ·
+Then (2026-09-13) the **Functional DoD's remaining lines closed live, and a real, previously-unknown
+bug found and fixed doing it** — extended `e2e/chat-live-xmpp.spec.ts` with a second, real XMPP
+participant (`bob`, a lightweight raw `XmppAdapter` connection, no second Electron app) to cover
+"get pinged" and "notification levels behave" (X-chat.3's other two Functional DoD lines had no
+coverage at all — the original test only ever had one occupant, alice, reacting to her own message).
+**Bob's join was rejected outright** (`item-not-found`) the first time this ran — isolated with a
+tiny two-client diagnostic script bypassing the whole Electron app, which showed alice's raw adapter
+never even seeing bob's presence. Root cause: XEP-0045 §10.1.3 — a room a client creates on first
+join is **locked** pending the creator accepting a configuration form ("instant room"); nothing in
+`XmppAdapter` ever sent that accept, so **every MUC room this app ever created stayed permanently
+locked to a single occupant** — a real product bug no prior test caught, because no prior test ever
+had a second real participant try to join a room this app created. `muc.ts`'s `parseMucPresence`
+already parsed the raw status codes (`201` = room-created) with a doc comment naming exactly this —
+the primitive was there, nothing consumed it. Fixed: `handleRoomPresence` now sends the default-config
+accept IQ the instant our own join presence carries status 201, unlocking the room immediately (2 new
+fixture tests: creates → accepts; joins an existing room → does not). Re-verified live end-to-end
+through the real app: muted the room, bob's plain message correctly raised no notification, a message
+containing alice's nick still notified anyway (the "even muted, even 'none'" override) and appeared
+in the timeline, then a real two-click room leave. All three XMPP-family live specs plus IRC and
+Matrix re-run clean after the fix (`pnpm exec playwright test e2e/chat-live-*.spec.ts`, 5/5).
+**X-chat.3 is now code-complete, and its Functional DoD is verified live — only the sub-phase DoD
+template remains.** ·
 **Depends on:** X-chat.2 · **Branch:** `main` · **Risk:** low-medium.
 
 ### Deliverables
@@ -746,7 +766,8 @@ remain.** ·
       + `NotificationHost.push({ source: 'chat' })`.
 
 ### Functional DoD
-- [ ] Join a public MUC, send/receive, get pinged, leave; notification levels behave.
+- [x] Join a public MUC, send/receive, get pinged, leave; notification levels behave. Verified live
+      2026-09-13 against a real Prosody with a real second participant — see the status note above.
 - [ ] Sub-phase DoD template ✔.
 
 ---

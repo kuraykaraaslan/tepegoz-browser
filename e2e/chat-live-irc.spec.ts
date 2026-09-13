@@ -1,5 +1,5 @@
 import { resolve, join } from 'node:path';
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { test, expect, _electron as electron, type ElectronApplication, type Page } from '@playwright/test';
 
 /**
@@ -91,5 +91,6 @@ test('adds a live IRC account, joins a channel, and sees a sent message render',
     await expect(window.getByText(body)).toBeVisible({ timeout: 20_000 });
   } finally {
     await app.close();
+    rmSync(profileDir, { recursive: true, force: true });
   }
 });
