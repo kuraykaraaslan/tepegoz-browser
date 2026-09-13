@@ -1134,13 +1134,18 @@ bridge account cannot affect another), the account secret passed via env using t
 see the Result re-validation deliverable below). 8 tests, no real child process spawned. Known,
 flagged gap: `resolveMedia` is not implemented — the real `ChatAdapter.resolveMedia` is synchronous
 and a subprocess needs an RPC round trip, which is a different seam this slice does not attempt.
-**Still entirely unbuilt:** the `ChatService` integration (nothing yet constructs a
-`SubprocessChatAdapter` for a `protocol: 'bridge'` account — `ChatService.makeAdapter()` still throws
-`AppError(...,501)` there), filesystem/egress confinement (the `cwd`/`env` the `ChatService`
-integration must supply — the supervisor and the adapter both only forward what they're given), and
-the trivial echo-bridge Functional DoD below. · **Depends on:** X-chat.1 · **Branch:** `feat/chat`
-(worktree) → `feat/chat-bridge-framework` eventually · **Risk:** high — this is a new trust surface;
-the isolation has to be real.
+**Third code slice landed 2026-09-13:** `ChatService.makeAdapter()` now builds a `SubprocessChatAdapter`
+for a `protocol: 'bridge'` account via three new injected deps (`resolveBridge`/`spawnBridge`/
+`bridgeStateDirFor`) — from `spinUp()` on, a bridge account is just another `ChatAccountRunner`, no
+special-casing downstream. Production wiring (`chat-service.electron.ts`) deliberately does not supply
+`resolveBridge` yet — no bridge manifest registry exists (X-chat.9's job) — so a real `bridge` account
+still surfaces as `error`; only the mechanism is real and tested now, not a reachable bridge.
+**Still entirely unbuilt:** filesystem/egress confinement (the `cwd`/`env` a real `resolveBridge` +
+`bridgeStateDirFor` would need to actually enforce — right now they only forward whatever a caller
+gives them, with no verification that a state dir is actually confined or an egress host is actually
+bound), and the trivial echo-bridge Functional DoD below. · **Depends on:** X-chat.1 · **Branch:**
+`feat/chat` (worktree) → `feat/chat-bridge-framework` eventually · **Risk:** high — this is a new trust
+surface; the isolation has to be real.
 
 ### Deliverables
 - [x] **Subprocess adapter contract** — the `ChatAdapter` methods exposed over a typed RPC to a
@@ -1169,8 +1174,15 @@ the isolation has to be real.
       class docstring) — that would just be the identical check running twice for no benefit. RPC
       **call responses** (not events) are separately `safeParse`d per-method in `ProcessSupervisor.call()`
       against the schema each `SubprocessChatAdapter` method passes in._
-- [ ] **Supervisor** in `ChatService` — treats bridge accounts like native ones for the UI + agent,
-      routes through the child for I/O.
+- [x] **Supervisor** in `ChatService` — treats bridge accounts like native ones for the UI + agent,
+      routes through the child for I/O. `ChatService.makeAdapter()` now builds a `SubprocessChatAdapter`
+      for a `protocol: 'bridge'` account via injected `resolveBridge`/`spawnBridge`/`bridgeStateDirFor`
+      deps — a bridge account goes through `spinUp()`/`ChatAccountRunner` exactly like an xmpp/irc/matrix
+      one from there on, no special-casing downstream. _Honest caveat: `chat-service.electron.ts` (the
+      real production wiring) does not yet supply `resolveBridge` — no bridge manifest registry exists
+      (that's X-chat.9), so a `bridge` account in the real app still surfaces as `error` with "no bridge
+      registered", same outward behavior as before this slice. What changed is that the mechanism is
+      now real and unit-tested (`chat-service.test.ts`), not that any bridge is reachable yet._
 - [ ] **Packaging** — a bridge is a signed package ([Phase 3](../product/phase-3-backend-cloud-extensions.md)
       supply-chain gate), never bundled with the app. _Phase 3 itself is Not started (~4-6 months) —
       this deliverable cannot close before it does._

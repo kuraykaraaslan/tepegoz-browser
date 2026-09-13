@@ -121,6 +121,9 @@ importers:
       '@tailwindcss/vite':
         specifier: ^4.1.16
         version: 4.3.2(vite@7.3.6(@types/node@24.13.3)(jiti@2.7.0)(lightningcss@1.32.0))
+      '@tepegoz/adapter-subprocess':
+        specifier: workspace:*
+        version: link:../../packages/adapter-subprocess
       '@tepegoz/agent-runtime':
         specifier: workspace:*
         version: link:../../packages/agent-runtime
