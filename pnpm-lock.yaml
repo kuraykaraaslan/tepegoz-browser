@@ -1097,12 +1097,18 @@ importers:
 
   packages/chat-adapters:
     dependencies:
+      '@tepegoz/adapter-subprocess':
+        specifier: workspace:*
+        version: link:../adapter-subprocess
       '@tepegoz/chat-core':
         specifier: workspace:*
         version: link:../chat-core
       '@tepegoz/shared-types':
         specifier: workspace:*
         version: link:../shared-types
+      zod:
+        specifier: 3.25.76
+        version: 3.25.76
     devDependencies:
       '@types/node':
         specifier: ^22.10.2

@@ -216,3 +216,5 @@ export {
   type ScramHash,
   type ScramFinalResult,
 } from './xmpp/sasl';
+
+export { SubprocessChatAdapter, type SubprocessChatAdapterConfig } from './bridge/subprocess-adapter';

@@ -106,7 +106,10 @@ These are not restated per-document beyond a pointer; they are the price of bein
       adapter interface rather than MCP tool-call semantics. **First code slice landed 2026-09-13:**
       `@tepegoz/adapter-subprocess` — the generic spawn/health-check/restart-with-backoff supervisor
       + the typed newline-JSON RPC envelope, plus the `manifest.adapterSubprocess` declaration itself
-      (`@tepegoz/extension-sdk`). **Still owed:** the actual `@tepegoz/ext-chat` X-chat.8 bridge
-      framework — a `ChatAdapter`-over-subprocess consumer, the `ChatService` integration, state-dir
-      / egress confinement, `ChatEvent` re-validation, and a first bridge — this checklist item is
-      the design prerequisite plus its shared mechanics, not the framework itself.
+      (`@tepegoz/extension-sdk`). **Second code slice landed 2026-09-13:** `SubprocessChatAdapter`
+      (`packages/chat-adapters/src/bridge/subprocess-adapter.ts`) — the concrete `ChatAdapter`-over-
+      subprocess consumer, mapping every adapter method onto the generic supervisor's `call()`.
+      **Still owed:** the `@tepegoz/ext-chat` X-chat.8 `ChatService` integration (nothing yet
+      constructs a `SubprocessChatAdapter` for a real account), state-dir / egress confinement (the
+      `cwd`/`env` that integration must supply), and a first bridge — this checklist item is the
+      design prerequisite plus its shared mechanics, not the framework itself.

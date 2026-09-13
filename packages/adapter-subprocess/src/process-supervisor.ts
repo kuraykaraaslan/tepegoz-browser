@@ -136,16 +136,26 @@ export class ProcessSupervisor {
     this.setState('stopped');
   }
 
-  /** Invoke one method on the child, validated against `resultSchema`. Rejects on a child-reported
-   *  error, a response failing `resultSchema`, the child not currently running, or
-   *  {@link ProcessSupervisorConfig.callTimeoutMs}. */
-  call<T>(method: string, params: unknown, resultSchema: z.ZodType<T>): Promise<T> {
+  /**
+   * Invoke one method on the child, validated against `resultSchema`. Rejects on a child-reported
+   * error, a response failing `resultSchema`, the child not currently running, or
+   * {@link ProcessSupervisorConfig.callTimeoutMs}.
+   *
+   * Generic over the SCHEMA (`S extends z.ZodTypeAny`), not directly over its output (`z.ZodType<T>`)
+   * — inferring `T` by unifying the caller's concrete schema against the loose `z.ZodType<T>`
+   * supertype loses a `.default()` field's non-optional OUTPUT shape for a nested object/array schema
+   * (it resolves to the field's more permissive INPUT shape instead), which then fails to satisfy a
+   * caller expecting the real `@tepegoz/shared-types` output type (e.g. `ChatContact`). Taking `S`
+   * itself and deriving `z.infer<S>` keeps the schema concrete through the whole call, so the output
+   * type comes out exactly as `ChatContactSchema` (etc.) already define it.
+   */
+  call<S extends z.ZodTypeAny>(method: string, params: unknown, resultSchema: S): Promise<z.infer<S>> {
     if (this.child === null || this.state !== 'running') {
       return Promise.reject(new Error(`adapter subprocess is not running (state: ${this.state})`));
     }
     const id = `c${String(++callSeq)}`;
     const child = this.child;
-    return new Promise<T>((resolve, reject) => {
+    return new Promise<z.infer<S>>((resolve, reject) => {
       const timer = this.deps.setTimer(() => {
         this.pending.delete(id);
         reject(new Error(`adapter subprocess call "${method}" timed out`));
@@ -153,7 +163,9 @@ export class ProcessSupervisor {
       this.pending.set(id, {
         resolve: (value) => {
           const parsed = resultSchema.safeParse(value);
-          if (parsed.success) resolve(parsed.data);
+          // `resultSchema` is generic (`S extends z.ZodTypeAny`), which makes `parsed.data` come out
+          // as `any` rather than `z.infer<S>` — a known zod+generics gap, not an unsound cast.
+          if (parsed.success) resolve(parsed.data as z.infer<S>);
           else reject(new Error(`adapter subprocess call "${method}" returned an invalid result`));
         },
         reject,

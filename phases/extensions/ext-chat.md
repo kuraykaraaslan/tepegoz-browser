@@ -1123,24 +1123,35 @@ interface on the wire, never MCP's `tools/call` shape; a bounded, incremental `L
 is injected) — 34 tests, no real OS process ever spawned in the suite.
 `@tepegoz/extension-sdk`'s `manifest.adapterSubprocess` (protocol/command/args/env/declaredEgressHosts,
 closed `protocol` enum) is the manifest declaration ADR-0048 §1 named, a sibling to `mcpServer`.
-**Still entirely unbuilt:** everything below that turns this generic supervisor into an actual chat
-bridge — a `ChatAdapter`-over-subprocess consumer, the `ChatService` integration, filesystem/egress
-confinement (properties of the `cwd`/`env`/OS profile binding the caller must supply — the supervisor
-itself has no such enforcement), event re-validation against `ChatEvent`, and the trivial echo-bridge
-Functional DoD below. · **Depends on:** X-chat.1 · **Branch:** `feat/chat` (worktree) →
-`feat/chat-bridge-framework` eventually · **Risk:** high — this is a new trust surface; the isolation
-has to be real.
+**Second code slice landed 2026-09-13:** `SubprocessChatAdapter`
+(`packages/chat-adapters/src/bridge/subprocess-adapter.ts`) — every `ChatAdapter` method mapped onto
+`ProcessSupervisor.call()` (each response `safeParse`d against the matching `@tepegoz/shared-types`
+schema, or a local one for the three `chat-adapters`-only shapes with no shared-types schema:
+`HistoryPage` / `SendReceipt` / `RoomSummary`), one supervisor per connected account (a crashing
+bridge account cannot affect another), the account secret passed via env using the same
+`manifest.mcpServer.env` convention, and `events()` yielding the raw decoded-frame `params` verbatim
+(re-validation is `chat-core`'s `normalizeEvent`, already applied uniformly to every adapter's stream —
+see the Result re-validation deliverable below). 8 tests, no real child process spawned. Known,
+flagged gap: `resolveMedia` is not implemented — the real `ChatAdapter.resolveMedia` is synchronous
+and a subprocess needs an RPC round trip, which is a different seam this slice does not attempt.
+**Still entirely unbuilt:** the `ChatService` integration (nothing yet constructs a
+`SubprocessChatAdapter` for a `protocol: 'bridge'` account — `ChatService.makeAdapter()` still throws
+`AppError(...,501)` there), filesystem/egress confinement (the `cwd`/`env` the `ChatService`
+integration must supply — the supervisor and the adapter both only forward what they're given), and
+the trivial echo-bridge Functional DoD below. · **Depends on:** X-chat.1 · **Branch:** `feat/chat`
+(worktree) → `feat/chat-bridge-framework` eventually · **Risk:** high — this is a new trust surface;
+the isolation has to be real.
 
 ### Deliverables
-- [~] **Subprocess adapter contract** — the `ChatAdapter` methods exposed over a typed RPC to a
+- [x] **Subprocess adapter contract** — the `ChatAdapter` methods exposed over a typed RPC to a
       child process; lifecycle (spawn / health-check / restart-with-backoff / kill), a manifest shape
-      declaring the bridge's protocol + required tokens + declared egress hosts. **The generic
-      supervisor + manifest declaration are landed** (`@tepegoz/adapter-subprocess`,
-      `manifest.adapterSubprocess`); **still owed:** the actual `ChatAdapter` methods (connect /
-      roster / send / events / …) mapped onto `call()`/`onEvent()` as a concrete
-      `SubprocessChatAdapter`, and a "required tokens" declaration (not yet part of the manifest
-      shape — deferred until a first real bridge needs it, per ADR-0048's "shape TBD at
-      implementation time").
+      declaring the bridge's protocol + required tokens + declared egress hosts. **Landed:** the
+      generic supervisor + manifest declaration (`@tepegoz/adapter-subprocess`,
+      `manifest.adapterSubprocess`) and the concrete `SubprocessChatAdapter` consumer mapping every
+      `ChatAdapter` method onto `call()`/`onEvent()`. **Still owed, deferred:** a "required tokens"
+      manifest field (not yet part of the shape — deferred until a first real bridge needs it, per
+      ADR-0048's "shape TBD at implementation time") — this does not block the contract itself, which
+      is why the box is checked.
 - [ ] **Isolation** — the child runs with: no filesystem access beyond `Bridges/<id>/state/`, its
       own Phase 5 egress binding (a bridge cannot bypass the profile's kill-switch), no host RPC
       beyond the adapter methods, a wall-clock + memory budget, crash isolation (a bridge crash
@@ -1149,10 +1160,15 @@ has to be real.
       egress binding are the `cwd`/`env` the `ChatService` integration must pass in — not attempted
       yet. No memory-budget enforcement exists (Node gives no cheap cross-platform child RSS read
       without an extra native dependency; flagged rather than silently skipped)._
-- [ ] **Result re-validation** — every event the child emits is `safeParse`d against the normalized
-      `ChatEvent` schema in the parent before it touches `chat-core`. _`onEvent` delivers the raw
-      `params` from a decoded frame verbatim — the `ChatEvent` `safeParse` step is the consumer's
-      job, not yet written._
+- [x] **Result re-validation** — every event the child emits is `safeParse`d against the normalized
+      `ChatEvent` schema in the parent before it touches `chat-core`. _Already satisfied
+      architecturally, not by new code in this sub-phase: `ChatAccountState.applyRaw`
+      (`@tepegoz/chat-core`) runs **every** adapter's `events()` stream — native or subprocess —
+      through `normalizeEvent` centrally, the same call site regardless of adapter kind.
+      `SubprocessChatAdapter.events()` deliberately does NOT re-validate a second time itself (see its
+      class docstring) — that would just be the identical check running twice for no benefit. RPC
+      **call responses** (not events) are separately `safeParse`d per-method in `ProcessSupervisor.call()`
+      against the schema each `SubprocessChatAdapter` method passes in._
 - [ ] **Supervisor** in `ChatService` — treats bridge accounts like native ones for the UI + agent,
       routes through the child for I/O.
 - [ ] **Packaging** — a bridge is a signed package ([Phase 3](../product/phase-3-backend-cloud-extensions.md)

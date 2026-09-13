@@ -16,8 +16,10 @@
     "lint": "eslint ."
   },
   "dependencies": {
+    "@tepegoz/adapter-subprocess": "workspace:*",
     "@tepegoz/chat-core": "workspace:*",
-    "@tepegoz/shared-types": "workspace:*"
+    "@tepegoz/shared-types": "workspace:*",
+    "zod": "3.25.76"
   },
   "devDependencies": {
     "@types/node": "^22.10.2",
