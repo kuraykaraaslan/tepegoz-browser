@@ -62,13 +62,39 @@ describe('RosterPanel', () => {
   });
 
   it('adds a contact and clears the field', () => {
-    const onAddContact = vi.fn<(a: string) => void>();
-    wrap(<RosterPanel contacts={[]} onOpenContact={vi.fn()} onAddContact={onAddContact} />);
+    const onAddContact = vi.fn<(accountId: string, address: string) => void>();
+    wrap(
+      <RosterPanel
+        contacts={[]}
+        accounts={[{ id: 'work', label: 'Work' }]}
+        onOpenContact={vi.fn()}
+        onAddContact={onAddContact}
+      />,
+    );
     const input = screen.getByLabelText('Add contact');
     fireEvent.change(input, { target: { value: '  carol@x.example  ' } });
     fireEvent.submit(input.closest('form') as HTMLFormElement);
-    expect(onAddContact).toHaveBeenCalledWith('carol@x.example');
+    expect(onAddContact).toHaveBeenCalledWith('work', 'carol@x.example');
     expect(input).toHaveProperty('value', '');
+  });
+
+  it('shows an account picker only when there is more than one account, and adds to the picked one', () => {
+    const onAddContact = vi.fn<(accountId: string, address: string) => void>();
+    wrap(
+      <RosterPanel
+        contacts={[]}
+        accounts={[
+          { id: 'work', label: 'Work' },
+          { id: 'home', label: 'Home' },
+        ]}
+        onOpenContact={vi.fn()}
+        onAddContact={onAddContact}
+      />,
+    );
+    fireEvent.change(screen.getByLabelText('Add to account'), { target: { value: 'home' } });
+    fireEvent.change(screen.getByLabelText('Add contact'), { target: { value: 'dave@x.example' } });
+    fireEvent.submit(screen.getByLabelText('Add contact').closest('form') as HTMLFormElement);
+    expect(onAddContact).toHaveBeenCalledWith('home', 'dave@x.example');
   });
 
   it('removes a contact through the per-row control', () => {
@@ -93,5 +119,25 @@ describe('RosterPanel', () => {
     );
     const row = screen.getByText('Ada').closest('button') as HTMLElement;
     expect(within(row).getByText('Awaiting response')).toBeDefined();
+  });
+
+  it("badges each contact with its own account's protocol — the unified, cross-account roster", () => {
+    wrap(
+      <RosterPanel
+        contacts={[
+          contact({ id: 'a', name: 'Ada', accountId: 'work' }),
+          contact({ id: 'b', name: 'Bob', accountId: 'home' }),
+        ]}
+        accounts={[
+          { id: 'work', label: 'Work', protocol: 'xmpp' },
+          { id: 'home', label: 'Home', protocol: 'irc' },
+        ]}
+        onOpenContact={vi.fn()}
+      />,
+    );
+    const ada = screen.getByText('Ada').closest('button') as HTMLElement;
+    const bob = screen.getByText('Bob').closest('button') as HTMLElement;
+    expect(within(ada).getByText('XMPP', { exact: false })).toBeDefined();
+    expect(within(bob).getByText('IRC', { exact: false })).toBeDefined();
   });
 });

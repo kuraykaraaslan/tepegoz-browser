@@ -125,6 +125,7 @@ export const tr: ChatUiStrings = {
     noMatch: 'Aramanızla eşleşen kişi yok.',
     add: 'Kişi ekle',
     addPlaceholder: 'kullanici@ornek.org',
+    addAccount: 'Şu hesaba ekle',
     remove: 'Kaldır',
     pending: 'Yanıt bekleniyor',
   },

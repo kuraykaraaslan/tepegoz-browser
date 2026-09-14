@@ -38,11 +38,12 @@ export interface UseChatState {
   setRoomTopic: ((conversationId: string, topic: string) => Promise<void>) | null;
   /** Invite a contact to a room — `null` when the port does not support it. */
   inviteToRoom: ((conversationId: string, invitee: string) => Promise<void>) | null;
-  /** Add a contact to the roster — `null` when the port does not support it (or the protocol has
-   *  no roster/subscription concept at all). */
-  addContact: ((address: string) => Promise<void>) | null;
-  /** Remove a contact from the roster — `null` for the same reason as {@link addContact}. */
-  removeContact: ((address: string) => Promise<void>) | null;
+  /** Add a contact to one account's roster — `null` when the port does not support it (or the
+   *  protocol has no roster/subscription concept at all). The Contacts tab is unified across every
+   *  account, so the caller (not an implicit "active account") names which one. */
+  addContact: ((accountId: string, address: string) => Promise<void>) | null;
+  /** Remove a contact from one account's roster — `null` for the same reason as {@link addContact}. */
+  removeContact: ((accountId: string, address: string) => Promise<void>) | null;
   /** Leave a joined room — `null` when the port does not support it. */
   leaveRoom: ((conversationId: string) => Promise<void>) | null;
   /** Add / remove one of the local user's emoji reactions on a message — `null` when the port does
@@ -124,18 +125,22 @@ export function useChatState(port: ChatClientPort): UseChatState {
     // array identity on every refresh() even when its contents are unchanged.
   }, [port, accountIdsKey]);
 
-  // Whenever the active account changes, (re)seed its roster (conversations are unified above).
+  // The Contacts tab is unified the same way the Chats tab is: every configured account's roster in
+  // one list, not just the active one — `getChatRoster` (unlike `listChatConversations`) has no
+  // "every account" form, so this fetches each account's roster in parallel and concatenates them;
+  // contact ids are already namespaced per account (`${accountId}:${address}`), so no collision risk.
   useEffect(() => {
-    if (activeAccountId === null) return;
+    if (accountIdsKey === '') return;
     let cancelled = false;
+    const ids = accountIdsKey.split(',');
     void (async () => {
-      const roster = await port.getChatRoster(activeAccountId);
-      if (!cancelled) setClient((prev) => seedRoster(prev, roster));
+      const rosters = await Promise.all(ids.map((id) => port.getChatRoster(id)));
+      if (!cancelled) setClient((prev) => seedRoster(prev, rosters.flat()));
     })();
     return () => {
       cancelled = true;
     };
-  }, [port, activeAccountId]);
+  }, [port, accountIdsKey]);
 
   // Subscribe to the main→renderer push for the lifetime of the hook.
   useEffect(() => {
@@ -301,24 +306,22 @@ export function useChatState(port: ChatClientPort): UseChatState {
   const { addChatContact } = port;
   const addContact = useMemo(() => {
     if (addChatContact === undefined) return null;
-    return async (address: string): Promise<void> => {
-      if (activeAccountId === null) return;
+    return async (accountId: string, address: string): Promise<void> => {
       // Write-only, same as inviteToRoom — the roster-change push (the server's roster-push, then
       // again once the subscription is approved) is what actually updates `client.roster`.
-      await addChatContact(activeAccountId, address);
+      await addChatContact(accountId, address);
     };
-  }, [addChatContact, activeAccountId]);
+  }, [addChatContact]);
 
   const { removeChatContact } = port;
   const removeContact = useMemo(() => {
     if (removeChatContact === undefined) return null;
-    return async (address: string): Promise<void> => {
-      if (activeAccountId === null) return;
+    return async (accountId: string, address: string): Promise<void> => {
       // Write-only, same as addContact — the server's roster-push (subscription now "remove") is
       // what actually updates `client.roster`.
-      await removeChatContact(activeAccountId, address);
+      await removeChatContact(accountId, address);
     };
-  }, [removeChatContact, activeAccountId]);
+  }, [removeChatContact]);
 
   const { leaveChatRoom } = port;
   const leaveRoom = useMemo(() => {

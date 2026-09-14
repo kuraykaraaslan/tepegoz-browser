@@ -175,6 +175,9 @@ export const en = {
     noMatch: 'No contacts match your search.',
     add: 'Add contact',
     addPlaceholder: 'user@example.org',
+    /** Accessible label for the account picker in the add-contact form — shown only when there is
+     *  more than one configured account, since the Contacts tab is unified across all of them. */
+    addAccount: 'Add to account',
     remove: 'Remove',
     /** Marker on a contact who can see the user's presence but is not yet mutual. */
     pending: 'Awaiting response',

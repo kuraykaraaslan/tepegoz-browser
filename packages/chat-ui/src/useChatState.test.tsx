@@ -129,6 +129,31 @@ describe('useChatState', () => {
     expect(result.current.activeAccountId).toBe('work');
   });
 
+  it('unifies the roster across every configured account, fetched in parallel', async () => {
+    const contact = (accountId: string, address: string): ChatContact => ({
+      id: `${accountId}:${address}`,
+      accountId,
+      address,
+      name: '',
+      groups: [],
+      presence: 'offline',
+      statusText: '',
+      subscription: 'both',
+    });
+    const { port } = makePort({
+      getChatRoster: (accountId: string) =>
+        Promise.resolve(
+          accountId === 'home' ? [contact('home', 'alice@x.example')] : [contact('work', 'bob@x.example')],
+        ),
+    });
+    const { result } = renderHook(() => useChatState(port));
+    await waitFor(() => expect(Object.keys(result.current.client.roster).length).toBe(2));
+    expect(Object.values(result.current.client.roster).map((c) => c.address).sort()).toEqual([
+      'alice@x.example',
+      'bob@x.example',
+    ]);
+  });
+
   it('selecting a conversation loads history once and marks it read', async () => {
     const { port, markChatRead } = makePort({
       listChatConversations: () => Promise.resolve([conv({ accountId: 'home' })]),
@@ -363,7 +388,7 @@ describe('useChatState', () => {
     expect(inviteToChatRoom).toHaveBeenCalledWith('home', 'room@conf', 'carol@example.org');
   });
 
-  it('addContact is null without port support; otherwise calls the port for the active account', async () => {
+  it('addContact is null without port support; otherwise calls the port for the named account', async () => {
     const plain = makePort();
     const { result: noSupport } = renderHook(() => useChatState(plain.port));
     await waitFor(() => expect(noSupport.current.loading).toBe(false));
@@ -378,12 +403,12 @@ describe('useChatState', () => {
     await waitFor(() => expect(result.current.conversations.length).toBe(1));
 
     await act(async () => {
-      await result.current.addContact?.('bob@example.org');
+      await result.current.addContact?.('home', 'bob@example.org');
     });
     expect(addChatContact).toHaveBeenCalledWith('home', 'bob@example.org');
   });
 
-  it('removeContact is null without port support; otherwise calls the port for the active account', async () => {
+  it('removeContact is null without port support; otherwise calls the port for the named account', async () => {
     const plain = makePort();
     const { result: noSupport } = renderHook(() => useChatState(plain.port));
     await waitFor(() => expect(noSupport.current.loading).toBe(false));
@@ -398,7 +423,7 @@ describe('useChatState', () => {
     await waitFor(() => expect(result.current.conversations.length).toBe(1));
 
     await act(async () => {
-      await result.current.removeContact?.('bob@example.org');
+      await result.current.removeContact?.('home', 'bob@example.org');
     });
     expect(removeChatContact).toHaveBeenCalledWith('home', 'bob@example.org');
   });

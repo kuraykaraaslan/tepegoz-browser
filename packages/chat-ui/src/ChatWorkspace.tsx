@@ -109,10 +109,9 @@ export function ChatWorkspace({
     protocol: a.protocol,
   }));
 
-  const rosterList = useMemo(
-    () => Object.values(chat.client.roster).filter((c) => c.accountId === chat.activeAccountId),
-    [chat.client.roster, chat.activeAccountId],
-  );
+  // The Contacts tab is unified across every account, same as the Chats tab — no per-account
+  // filtering; which account a contact belongs to shows via <RosterPanel>'s protocol badge.
+  const rosterList = useMemo(() => Object.values(chat.client.roster), [chat.client.roster]);
   const contactByAddress = useMemo(() => {
     const map = new Map<string, ChatContact>();
     for (const c of rosterList) map.set(c.address, c);
@@ -274,16 +273,24 @@ export function ChatWorkspace({
           {tab === 'contacts' && (
             <RosterPanel
               contacts={rosterList}
+              accounts={accountRefs}
               onOpenContact={(contact) => {
-                const existing = chat.conversations.find((c) => c.address === contact.address);
+                const existing = chat.conversations.find(
+                  (c) => c.accountId === contact.accountId && c.address === contact.address,
+                );
                 if (existing !== undefined) {
                   setTab('chats');
                   chat.selectConversation(existing.id);
                 }
               }}
-              {...(chat.addContact !== null ? { onAddContact: chat.addContact } : {})}
+              {...(chat.addContact !== null
+                ? {
+                    onAddContact: (accountId: string, address: string) =>
+                      chat.addContact?.(accountId, address),
+                  }
+                : {})}
               {...(chat.removeContact !== null
-                ? { onRemoveContact: (contact) => chat.removeContact?.(contact.address) }
+                ? { onRemoveContact: (contact) => chat.removeContact?.(contact.accountId, contact.address) }
                 : {})}
             />
           )}
