@@ -71,11 +71,13 @@ export interface UseChatState {
   /** Leave edit mode without submitting (Composer's ✕ / Escape). */
   cancelEditing: () => void;
   refresh: () => Promise<void>;
-  /** MUC — present only when the port supports rooms. */
+  /** MUC — present only when the port supports rooms. Both take an explicit `accountId` rather than
+   *  implying `activeAccountId` — `<NewChatDialog>`'s Rooms tab lets the user discover/join under
+   *  any configured account, not just whichever conversation happens to be open. */
   rooms:
     | {
-        discover: (service: string) => Promise<RoomListing[]>;
-        join: (roomJid: string) => Promise<void>;
+        discover: (accountId: string, service: string) => Promise<RoomListing[]>;
+        join: (accountId: string, roomJid: string) => Promise<void>;
       }
     | null;
 }
@@ -404,26 +406,23 @@ export function useChatState(port: ChatClientPort): UseChatState {
   const rooms = useMemo(() => {
     if (discoverChatRooms === undefined || joinChatRoom === undefined) return null;
     return {
-      discover: (service: string): Promise<RoomListing[]> =>
-        activeAccountId === null
-          ? Promise.resolve([])
-          : discoverChatRooms(activeAccountId, service),
-      join: async (roomJid: string): Promise<void> => {
-        if (activeAccountId === null) return;
+      discover: (accountId: string, service: string): Promise<RoomListing[]> =>
+        discoverChatRooms(accountId, service),
+      join: async (accountId: string, roomJid: string): Promise<void> => {
         // The adapter's own idea of the room's id (bare-JID-normalized) is the source of truth —
         // it is what every later push event keys its patches against, so falling back to the raw
         // input here would silently orphan the conversation the moment the two diverge.
-        const conversationId = (await joinChatRoom(activeAccountId, roomJid)) ?? roomJid;
+        const conversationId = (await joinChatRoom(accountId, roomJid)) ?? roomJid;
         // `applyChatChange`'s 'conversation' case only patches a row that already exists (see
         // chat-store.ts) — a freshly joined room has no row yet, so an explicit re-seed is the only
         // way the panel learns about it before selecting it. Fetch the full set (see `leaveRoom`
         // above) since seedConversations replaces the whole map.
         const conversations = await port.listChatConversations();
         setClient((prev) => seedConversations(prev, conversations));
-        selectConversation(conversationId);
+        selectConversation(conversationId, accountId);
       },
     };
-  }, [discoverChatRooms, joinChatRoom, activeAccountId, port, selectConversation]);
+  }, [discoverChatRooms, joinChatRoom, port, selectConversation]);
 
   return {
     accounts,

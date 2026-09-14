@@ -157,6 +157,34 @@ export const en = {
     notEncrypted: 'Not encrypted',
     /** Tooltip / detail for {@link notEncrypted} on IRC, which has no encryption at all. */
     ircPlaintext: 'IRC has no end-to-end encryption — messages are readable by the server.',
+    /** Accessible name / tooltip for the button that opens {@link newChat}. */
+    newChat: 'New chat',
+  },
+  newChat: {
+    title: 'New chat',
+    close: 'Close',
+    tabContacts: 'Contacts',
+    tabRooms: 'Rooms',
+    tabAddress: 'By address',
+    searchContacts: 'Search contacts',
+    noContacts: 'No contacts yet.',
+    /** Heading over already-joined rooms, across every account — the quick "ready-made groups" list. */
+    yourRooms: 'Your rooms',
+    searchRooms: 'Search your rooms',
+    noRooms: "You haven't joined any rooms yet.",
+    /** Heading over the XEP-0030 directory browser embedded in the Rooms tab. */
+    discoverRooms: 'Discover public rooms',
+    /** Shown instead of {@link discoverRooms} when no configured account can browse a directory. */
+    discoverUnavailable: 'No account here can browse a room directory — join one by its address instead.',
+    /** Label for the account picker that selects which account a discovery search runs against. */
+    discoverAccount: 'Account',
+    /** Label + placeholder for the generic "start a chat with this address" field — deliberately
+     *  address-shaped rather than phone-number-shaped: a future phone lookup slots into the same
+     *  field rather than replacing it. */
+    addressAccount: 'Account',
+    addressLabel: 'Address',
+    addressPlaceholder: 'user@example.org',
+    start: 'Start chat',
   },
   accountsManager: {
     title: 'Accounts',

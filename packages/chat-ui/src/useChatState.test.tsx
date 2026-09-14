@@ -310,12 +310,12 @@ describe('useChatState', () => {
     await waitFor(() => expect(result.current.rooms).not.toBeNull());
 
     await act(async () => {
-      await result.current.rooms?.discover('conf.example');
+      await result.current.rooms?.discover('home', 'conf.example');
     });
     expect(discoverChatRooms).toHaveBeenCalledWith('home', 'conf.example');
 
     await act(async () => {
-      await result.current.rooms?.join('room@conf');
+      await result.current.rooms?.join('home', 'room@conf');
     });
     expect(joinChatRoom).toHaveBeenCalledWith('home', 'room@conf');
     await waitFor(() => expect(result.current.selectedConversationId).toBe('room@conf'));

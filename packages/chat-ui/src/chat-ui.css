@@ -283,6 +283,12 @@
   font-weight: 750;
   letter-spacing: 0.01em;
 }
+.chat-workspace__left-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
 .chat-workspace__icon-btn {
   display: inline-grid;
   place-items: center;
@@ -1598,4 +1604,175 @@ button.chat-msg__quote {
 }
 .chat-conv[aria-current='true'] .chat-protocol-badge {
   box-shadow: 0 0 0 2px var(--cu-primary-subtle);
+}
+
+/* New Chat dialog — a modal overlay, not another left-column tab (that's the point: it works across
+ * every account, not whichever one the open conversation happens to belong to). */
+.chat-new-chat__backdrop {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: rgba(0, 0, 0, 0.35);
+  z-index: 20;
+}
+.chat-new-chat {
+  display: flex;
+  flex-direction: column;
+  width: min(420px, calc(100vw - 32px));
+  max-height: min(600px, calc(100vh - 64px));
+  border-radius: 12px;
+  background: var(--cu-surface-raised);
+  border: 1px solid var(--cu-border);
+  box-shadow: var(--cu-shadow-lg, 0 12px 32px rgba(0, 0, 0, 0.25));
+  overflow: hidden;
+}
+.chat-new-chat__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--cu-border);
+}
+.chat-new-chat__head h2 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+}
+.chat-new-chat__close {
+  border: 0;
+  background: transparent;
+  color: var(--cu-text-secondary);
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 2px 6px;
+}
+.chat-new-chat__close:hover {
+  color: var(--cu-text-primary);
+}
+.chat-new-chat__tabs {
+  display: flex;
+  gap: 4px;
+  padding: 8px 10px 0;
+  border-bottom: 1px solid var(--cu-border);
+}
+.chat-new-chat__tabs button {
+  border: 0;
+  background: transparent;
+  padding: 8px 10px;
+  font: inherit;
+  font-weight: 600;
+  color: var(--cu-text-secondary);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+}
+.chat-new-chat__tabs button[aria-selected='true'] {
+  color: var(--cu-text-primary);
+  border-bottom-color: var(--cu-primary);
+}
+.chat-new-chat__panel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 14px;
+  overflow-y: auto;
+}
+.chat-new-chat__panel h3 {
+  margin: 6px 0 0;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--cu-text-secondary);
+}
+.chat-new-chat__panel input,
+.chat-new-chat__panel select {
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--cu-border);
+  background: var(--cu-surface-base);
+  color: var(--cu-text-primary);
+  font: inherit;
+}
+.chat-new-chat__empty {
+  margin: 4px 0;
+  color: var(--cu-text-secondary);
+  font-size: 12px;
+}
+.chat-new-chat__list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.chat-new-chat__row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 6px 8px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.chat-new-chat__row:hover {
+  background: var(--cu-surface-hover, var(--cu-accent-wash));
+}
+.chat-new-chat__avatar {
+  position: relative;
+  display: inline-flex;
+  flex-shrink: 0;
+}
+.chat-new-chat__avatar .chat-protocol-badge {
+  position: absolute;
+  top: -3px;
+  right: -3px;
+}
+.chat-new-chat__row-main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.chat-new-chat__name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.chat-new-chat__account-caption {
+  font-size: 11px;
+  color: var(--cu-text-secondary);
+}
+.chat-new-chat__address {
+  gap: 10px;
+}
+.chat-new-chat__address label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--cu-text-secondary);
+}
+.chat-new-chat__address button {
+  align-self: flex-start;
+  padding: 6px 14px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--cu-primary);
+  color: var(--cu-primary-fg);
+  font: inherit;
+  font-weight: 650;
+  cursor: pointer;
+}
+.chat-new-chat__address button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.chat-new-chat__panel .chat-room-browser {
+  padding: 0;
+  border: 0;
 }

@@ -1,3 +1,4 @@
+import { foldForSearch } from '@tepegoz/i18n';
 import type { ChatConversation } from '@tepegoz/shared-types';
 
 /**
@@ -29,6 +30,19 @@ export function sortConversations<T extends Pick<ChatConversation, 'updatedAt' |
   conversations: readonly T[],
 ): T[] {
   return [...conversations].sort((a, b) => b.updatedAt - a.updatedAt || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+}
+
+/** Fold-aware filter over a conversation's title/address — used by `<NewChatDialog>`'s "your rooms"
+ *  quick list, same matching rule as `filterRoster`/`filterRoomListings`. */
+export function filterConversations<T extends Pick<ChatConversation, 'name' | 'address'>>(
+  conversations: readonly T[],
+  query: string,
+): T[] {
+  const needle = foldForSearch(query.trim());
+  if (needle === '') return [...conversations];
+  return conversations.filter(
+    (c) => foldForSearch(c.name).includes(needle) || foldForSearch(c.address).includes(needle),
+  );
 }
 
 export function totalUnread(conversations: readonly Pick<ChatConversation, 'unread'>[]): number {

@@ -698,10 +698,23 @@ server round-trip succeeds. `<RosterPanel>` gained a per-row Block/Unblock butto
 contact's own account is XMPP (`canBlock`, same "derive from the static protocol fact" pattern as
 `reactionsSupported`/`notEncrypted`), plus a "Blocked" marker on an already-blocked row.
 
-**Still open, tracked but not started:** a "New Chat" popup (contacts + existing groups + a generic
-address field) replacing the "Find a room" tab; emoji-shortcode (`:smile:`) rendering; markdown-lite
-rendering for bridge-sourced messages; a WhatsApp-style hover/right-click reaction trigger; and richer
-context menus (messages, room-list rows, contacts).
+Then the **"Find a room" tab was replaced by a "New Chat" popup** (2026-09-14), triggered by an icon
+button next to the gear (`<NewChatDialog>`): Contacts (the same unified roster, click to open/start a
+DM), Rooms (already-joined rooms across every account as a quick list, plus the old directory-browse +
+join-by-address folded in underneath — now scoped to whichever account the user picks in the popup,
+not implicitly whichever conversation happens to be open), and By address (a generic "start a DM with
+this address" field — deliberately address-shaped rather than phone-number-shaped, so a future phone
+lookup slots into the same handler rather than replacing it; the number-lookup piece itself stays
+deferred). The name-collision case ("the same room name across two accounts") is handled by ALWAYS
+captioning a row with its owning account's label, rather than only when a collision is actually
+detected — simpler, and a name never silently reads as "duplicate" or "which one is this." This also
+generalized `useChatState`'s `rooms.discover`/`rooms.join` to take an explicit `accountId` instead of
+implying `activeAccountId` — the old coupling meant discovery silently ran against whichever
+conversation happened to be open, not an account the user actually chose.
+
+**Still open, tracked but not started:** emoji-shortcode (`:smile:`) rendering; markdown-lite rendering
+for bridge-sourced messages; a WhatsApp-style hover/right-click reaction trigger; and richer context
+menus (messages, room-list rows, contacts).
 
 **Remaining:** the runtime Functional DoD (media round-trip needs a live account). · **Depends on:**
 X-chat.1 · **Branch:** `main` · **Risk:** low.

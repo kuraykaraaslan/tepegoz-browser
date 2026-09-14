@@ -413,11 +413,14 @@ describe('ChatWorkspace', () => {
     expect(screen.getByText('their line').closest('.chat-msg')?.getAttribute('data-own')).toBe('false');
   });
 
-  it('shows a Rooms tab only when the port supports MUC, and joins from it', async () => {
+  it("the New Chat dialog's Rooms tab discovers only when the port supports MUC, and joins from it", async () => {
     const plain = makePort();
     wrap(<ChatWorkspace port={plain.port} />);
     await screen.findByRole('button', { name: /Bob/ });
-    expect(screen.queryByRole('tab', { name: 'Find a room' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'New chat' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Rooms' }));
+    // The plain port supports no rooms at all — `chat.rooms` is null, so no discovery UI at all.
+    expect(screen.getByText(/no account here can browse/i)).toBeDefined();
     cleanup();
 
     let joined = false;
@@ -446,34 +449,36 @@ describe('ChatWorkspace', () => {
         ),
     });
     wrap(<ChatWorkspace port={port} />);
-    fireEvent.click(await screen.findByRole('tab', { name: 'Find a room' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'New chat' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Rooms' }));
     fireEvent.change(screen.getByLabelText('Room service'), { target: { value: 'conf.example' } });
     fireEvent.click(screen.getByRole('button', { name: 'Browse' }));
     fireEvent.click(await screen.findByText('General'));
     await waitFor(() => expect(joinChatRoom).toHaveBeenCalledWith('work', 'general@conf.example'));
-    // Joining must actually open the room, not just switch to the chats tab (the reported bug: the
+    // Joining must actually open the room, not just close the dialog (the original reported bug: the
     // panel flipped tabs but the conversation never appeared because its row was never re-seeded).
     await waitFor(() => expect(screen.getByRole('heading', { name: 'General' })).toBeDefined());
   });
 
-  it('a failed join stays on the Rooms tab with a visible error, instead of flipping to an empty Chats pane', async () => {
+  it('a failed join keeps the New Chat dialog open with a visible error, instead of closing onto an empty Chats pane', async () => {
     const joinChatRoom = vi.fn(() => Promise.reject(new Error('not connected')));
     const { port } = makePort({
       discoverChatRooms: () => Promise.resolve([]),
       joinChatRoom,
     });
     wrap(<ChatWorkspace port={port} />);
-    fireEvent.click(await screen.findByRole('tab', { name: 'Find a room' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'New chat' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Rooms' }));
 
     const input = screen.getByLabelText('Join by address');
     fireEvent.change(input, { target: { value: '#test' } });
     fireEvent.click(screen.getByRole('button', { name: 'Join' }));
 
     await screen.findByRole('alert');
-    // Still on the room browser — this is the reported bug: joining used to switch to the Chats
-    // tab unconditionally, so a failed join (e.g. the account not connected yet) landed on an empty
+    // Still open — this is the reported bug: joining used to switch to the Chats tab
+    // unconditionally, so a failed join (e.g. the account not connected yet) landed on an empty
     // pane with no room and no visible reason why.
-    expect(screen.getByRole('tab', { name: 'Find a room', selected: true })).toBeDefined();
+    expect(screen.getByRole('dialog', { name: 'New chat' })).toBeDefined();
   });
 
   it('an IRC account hides room browsing (no directory) but can still join a channel by address', async () => {
@@ -487,13 +492,14 @@ describe('ChatWorkspace', () => {
           states: { work: 'online' },
         }),
       // IRC has joinRoom but no discoverRooms — the port still exposes both callbacks (a generic
-      // desktop bridge, not an adapter-specific one), so the tab shows; only the protocol tells the
-      // UI discovery is unsupported.
+      // desktop bridge, not an adapter-specific one), so the Rooms tab's discovery section shows;
+      // only the protocol tells the UI discovery itself is unsupported.
       discoverChatRooms: vi.fn(),
       joinChatRoom,
     });
     wrap(<ChatWorkspace port={port} />);
-    fireEvent.click(await screen.findByRole('tab', { name: 'Find a room' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'New chat' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Rooms' }));
 
     expect(screen.queryByRole('button', { name: 'Browse' })).toBeNull();
     expect(screen.getByText(/no room directory/i)).toBeDefined();

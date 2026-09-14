@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import type { ChatConversation } from '@tepegoz/shared-types';
-import { conversationTitle, sortConversations, totalMentions, totalUnread } from './conversation-list';
+import {
+  conversationTitle,
+  filterConversations,
+  sortConversations,
+  totalMentions,
+  totalUnread,
+} from './conversation-list';
 
 function conv(over: Partial<ChatConversation> = {}): ChatConversation {
   return {
@@ -46,6 +52,18 @@ describe('sortConversations', () => {
     const list = [conv({ id: 'a', updatedAt: 1 }), conv({ id: 'b', updatedAt: 2 })];
     sortConversations(list);
     expect(list.map((c) => c.id)).toEqual(['a', 'b']);
+  });
+});
+
+describe('filterConversations', () => {
+  it('matches on name or address, case/fold-insensitive', () => {
+    const list = [
+      conv({ id: 'a', name: 'General', address: 'general@conf.example' }),
+      conv({ id: 'b', name: '', address: 'bob@x.example' }),
+    ];
+    expect(filterConversations(list, 'gen').map((c) => c.id)).toEqual(['a']);
+    expect(filterConversations(list, 'BOB').map((c) => c.id)).toEqual(['b']);
+    expect(filterConversations(list, '').map((c) => c.id)).toEqual(['a', 'b']);
   });
 });
 

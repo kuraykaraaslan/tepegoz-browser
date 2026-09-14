@@ -12,8 +12,8 @@ import { ConversationList } from './ConversationList';
 import { MessageTimeline } from './MessageTimeline';
 import { isMutedNow } from './mute';
 import { MuteMenu } from './MuteMenu';
+import { NewChatDialog } from './NewChatDialog';
 import { NotEncryptedBadge } from './NotEncryptedBadge';
-import { RoomBrowser } from './RoomBrowser';
 import { RoomHeader } from './RoomHeader';
 import { RoomMemberList } from './RoomMemberList';
 import { RosterPanel } from './RosterPanel';
@@ -39,7 +39,7 @@ export interface ChatWorkspaceProps {
   onOpenLink?: ((href: string) => void) | undefined;
 }
 
-type LeftTab = 'chats' | 'contacts' | 'rooms';
+type LeftTab = 'chats' | 'contacts';
 
 /**
  * Is this message the local user's own? A DM has exactly two parties, so anything not from the
@@ -72,6 +72,22 @@ function GearIcon() {
   );
 }
 
+/** A speech bubble with a "+" — the "start something new" affordance next to the gear icon. */
+function NewChatIcon() {
+  return (
+    <svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true" focusable="false">
+      <path
+        d="M2.5 5.5A2 2 0 0 1 4.5 3.5h8a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2H8l-3.2 2.6a.5.5 0 0 1-.8-.4V12.5h-.5a2 2 0 0 1-2-2v-5Z"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.3"
+        strokeLinejoin="round"
+      />
+      <path d="M8.5 5.7v4M6.5 7.7h4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 /**
  * The whole messenger surface composed over {@link useChatState}: an account switcher, a
  * chats / contacts left column, and the open conversation (timeline + composer). Presentational glue
@@ -91,6 +107,7 @@ export function ChatWorkspace({
   const [membersOpen, setMembersOpen] = useState(false);
   const [showArchived, setShowArchived] = useState(false);
   const [managingAccounts, setManagingAccounts] = useState(false);
+  const [newChatOpen, setNewChatOpen] = useState(false);
 
   // Prefer an explicit `resolveMedia` prop; otherwise adapt the port's `resolveChatMedia` for the
   // active account. The host still returns a LOCAL `data:` URL — `<MessageMedia>` re-checks.
@@ -116,6 +133,33 @@ export function ChatWorkspace({
   // The Contacts tab is unified across every account, same as the Chats tab — no per-account
   // filtering; which account a contact belongs to shows via <RosterPanel>'s protocol badge.
   const rosterList = useMemo(() => Object.values(chat.client.roster), [chat.client.roster]);
+  const joinedRooms = useMemo(
+    () => chat.conversations.filter((c) => c.kind === 'room' && !c.archived),
+    [chat.conversations],
+  );
+
+  // Shared by <RosterPanel>'s row click and <NewChatDialog>'s Contacts tab: a DM's conversation id is
+  // its peer's bare address (see `blankConversation`) — a contact never messaged before has no row
+  // yet, so this starts one rather than silently doing nothing.
+  const openContact = (contact: ChatContact): void => {
+    const existing = chat.conversations.find(
+      (c) => c.accountId === contact.accountId && c.address === contact.address,
+    );
+    setTab('chats');
+    chat.selectConversation(existing?.id ?? contact.address, contact.accountId);
+  };
+  const openRoom = (conversation: ChatConversation): void => {
+    setTab('chats');
+    chat.selectConversation(conversation.id, conversation.accountId);
+  };
+  // The generic "start by address" field — same existing-row lookup as `openContact`, just without a
+  // roster entry to key off of. Deliberately not a room join (that stays in the Rooms tab): this is
+  // for starting a DM with an address the user already knows, phone-lookup's future landing spot.
+  const startByAddress = (accountId: string, address: string): void => {
+    const existing = chat.conversations.find((c) => c.accountId === accountId && c.address === address);
+    setTab('chats');
+    chat.selectConversation(existing?.id ?? address, accountId);
+  };
 
   // Archived conversations stay fully functional (still receive messages, still selectable once
   // reached) — they are just off the default list, same idea as an OS's archived-mail folder. Toggle
@@ -161,18 +205,13 @@ export function ChatWorkspace({
   // reasoning as `notEncrypted` above, not a live caps round-trip.
   const reactionsSupported = selectedProtocol === 'xmpp' || selectedProtocol === 'matrix';
 
-  // The room browser's "Find a room" tab always operates on the active account (not the open
-  // conversation) — only XMPP has a directory to browse (XEP-0030); IRC has no room-listing command
-  // and Matrix's room directory is deferred (see ext-chat.md X-chat.5), so both fall back to
-  // join-by-address only, worded for their own address shape rather than an XMPP JID.
-  const activeProtocol = chat.accounts.find((a) => a.id === chat.activeAccountId)?.protocol;
-  const canBrowseRooms = activeProtocol === 'xmpp';
-  const roomAddressPlaceholder =
-    activeProtocol === 'irc'
-      ? s.roomBrowser.joinByAddressPlaceholderIrc
-      : activeProtocol === 'matrix'
-        ? s.roomBrowser.joinByAddressPlaceholderMatrix
-        : undefined;
+  // Only XMPP has a directory to browse (XEP-0030) — IRC has no room-listing command and Matrix's
+  // room directory is deferred (see ext-chat.md X-chat.5). `<NewChatDialog>`'s Rooms tab still lets
+  // either join by address, just not browse a directory first.
+  const browsableAccountIds = useMemo(
+    () => new Set(chat.accounts.filter((a) => a.protocol === 'xmpp').map((a) => a.id)),
+    [chat.accounts],
+  );
 
   const noAccounts = !chat.loading && chat.accounts.length === 0;
 
@@ -232,15 +271,26 @@ export function ChatWorkspace({
         <aside className="chat-workspace__left">
           <div className="chat-workspace__left-head">
             <span className="chat-workspace__left-title">{s.workspace.title}</span>
-            <button
-              type="button"
-              className="chat-workspace__icon-btn"
-              aria-label={s.workspace.manageAccounts}
-              title={s.workspace.manageAccounts}
-              onClick={() => setManagingAccounts(true)}
-            >
-              <GearIcon />
-            </button>
+            <span className="chat-workspace__left-actions">
+              <button
+                type="button"
+                className="chat-workspace__icon-btn"
+                aria-label={s.workspace.newChat}
+                title={s.workspace.newChat}
+                onClick={() => setNewChatOpen(true)}
+              >
+                <NewChatIcon />
+              </button>
+              <button
+                type="button"
+                className="chat-workspace__icon-btn"
+                aria-label={s.workspace.manageAccounts}
+                title={s.workspace.manageAccounts}
+                onClick={() => setManagingAccounts(true)}
+              >
+                <GearIcon />
+              </button>
+            </span>
           </div>
           {noAccounts && (
             <p className="chat-workspace__no-accounts">
@@ -269,16 +319,6 @@ export function ChatWorkspace({
             >
               {s.workspace.contactsTab}
             </button>
-            {chat.rooms !== null && (
-              <button
-                type="button"
-                role="tab"
-                aria-selected={tab === 'rooms'}
-                onClick={() => setTab('rooms')}
-              >
-                {s.roomBrowser.title}
-              </button>
-            )}
           </div>
 
           {tab === 'chats' && (
@@ -309,16 +349,7 @@ export function ChatWorkspace({
             <RosterPanel
               contacts={rosterList}
               accounts={accountRefs}
-              onOpenContact={(contact) => {
-                const existing = chat.conversations.find(
-                  (c) => c.accountId === contact.accountId && c.address === contact.address,
-                );
-                // A DM's conversation id is its peer's bare address (see `blankConversation`) — a
-                // contact never messaged before has no row yet, so this starts one rather than
-                // silently doing nothing (the previous behavior for that case).
-                setTab('chats');
-                chat.selectConversation(existing?.id ?? contact.address, contact.accountId);
-              }}
+              onOpenContact={openContact}
               {...(chat.addContact !== null
                 ? {
                     onAddContact: (accountId: string, address: string) =>
@@ -336,23 +367,26 @@ export function ChatWorkspace({
                 : {})}
             />
           )}
-          {tab === 'rooms' && chat.rooms !== null && (
-            <RoomBrowser
-              discoverRooms={chat.rooms.discover}
-              onJoin={(jid) =>
-                // Only leave the room-browser tab once the join actually succeeds — switching
-                // unconditionally (the previous behaviour) meant a failed join (account not yet
-                // connected, bad address, refused by the server) silently landed on an empty chats
-                // pane with no room and no visible error.
-                chat.rooms?.join(jid).then(() => setTab('chats'))
-              }
-              canBrowse={canBrowseRooms}
-              {...(roomAddressPlaceholder !== undefined
-                ? { addressPlaceholder: roomAddressPlaceholder }
-                : {})}
-            />
-          )}
         </aside>
+
+        {newChatOpen && (
+          <NewChatDialog
+            contacts={rosterList}
+            accounts={accountRefs}
+            joinedRooms={joinedRooms}
+            onOpenContact={openContact}
+            onOpenRoom={openRoom}
+            onStartByAddress={startByAddress}
+            onClose={() => setNewChatOpen(false)}
+            browsableAccountIds={browsableAccountIds}
+            {...(chat.rooms !== null
+              ? {
+                  discoverRooms: chat.rooms.discover,
+                  onJoinRoom: chat.rooms.join,
+                }
+              : {})}
+          />
+        )}
 
         <section className="chat-workspace__main">
           {selected === undefined ? (
