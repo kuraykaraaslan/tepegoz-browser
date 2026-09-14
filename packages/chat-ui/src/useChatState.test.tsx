@@ -129,6 +129,27 @@ describe('useChatState', () => {
     expect(result.current.activeAccountId).toBe('work');
   });
 
+  it('selectConversation\'s hintAccountId resolves a brand-new (not-yet-existing) conversation to the RIGHT account, not activeAccountId', async () => {
+    const { port } = makePort({
+      listChatConversations: () =>
+        Promise.resolve([
+          conv({ id: 'home-1', accountId: 'home', updatedAt: 100 }),
+          conv({ id: 'work-1', accountId: 'work', updatedAt: 200 }),
+        ]),
+    });
+    const { result } = renderHook(() => useChatState(port));
+    await waitFor(() => expect(result.current.conversations.length).toBe(2));
+    expect(result.current.activeAccountId).toBe('home'); // the default, order-sorted first account
+
+    // 'brand-new@x.example' has no existing row — without the hint this would silently resolve to
+    // the (wrong) activeAccountId ('home') instead of the account the caller actually knows it for.
+    act(() => {
+      result.current.selectConversation('brand-new@x.example', 'work');
+    });
+    expect(result.current.activeAccountId).toBe('work');
+    expect(result.current.selectedConversationId).toBe('brand-new@x.example');
+  });
+
   it('unifies the roster across every configured account, fetched in parallel', async () => {
     const contact = (accountId: string, address: string): ChatContact => ({
       id: `${accountId}:${address}`,

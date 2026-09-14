@@ -26,7 +26,10 @@ export interface UseChatState {
   /** Conversations across every configured account, most-recent first. */
   conversations: readonly ChatConversation[];
   selectedConversationId: string | null;
-  selectConversation: (conversationId: string | null) => void;
+  /** `hintAccountId`: which account a not-yet-existing conversation belongs to — only used as a
+   *  fallback when the id names no known row yet (starting a DM with a room member or a contact
+   *  never messaged before). Ignored once the conversation has a real row. */
+  selectConversation: (conversationId: string | null, hintAccountId?: string) => void;
   /** True until the first accounts + conversations load resolves. */
   loading: boolean;
   send: (text: string, opts?: { replyToId?: string | null }) => Promise<void>;
@@ -158,7 +161,7 @@ export function useChatState(port: ChatClientPort): UseChatState {
   }, [port]);
 
   const selectConversation = useCallback(
-    (conversationId: string | null): void => {
+    (conversationId: string | null, hintAccountId?: string): void => {
       setSelectedConversationId(conversationId);
       // An edit target from the previous conversation must not survive the switch — it would
       // otherwise submit against a `selectedConversationId` the Composer's banner no longer matches.
@@ -166,10 +169,13 @@ export function useChatState(port: ChatClientPort): UseChatState {
       if (conversationId === null) return;
       // The unified Chats tab can select a conversation belonging to any configured account, not
       // just the one the account switcher currently shows — resolve the owning account from the
-      // conversation itself (falling back to `activeAccountId` for a brand-new row not seeded yet,
-      // e.g. one just joined) and follow the switcher to it so the composer / roster / room tabs
-      // stay pointed at the right account.
-      const accountId = client.conversations[conversationId]?.accountId ?? activeAccountId;
+      // conversation itself; `hintAccountId` (given by a caller starting a brand-new DM by address —
+      // a room-member click, or opening a contact never messaged before — who already knows which
+      // account it belongs to) wins over the `activeAccountId` fallback, which would otherwise
+      // silently point a new conversation at the WRONG account when it differs from the one the
+      // contact/room actually belongs to.
+      const accountId =
+        client.conversations[conversationId]?.accountId ?? hintAccountId ?? activeAccountId;
       if (accountId === null) return;
       if (accountId !== activeAccountId) setActiveAccountId(accountId);
       if (client.messages[conversationId] !== undefined) return;

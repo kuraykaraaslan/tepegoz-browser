@@ -654,11 +654,34 @@ Then (2026-09-14, same session) **the Contacts tab, timed mute, and archive** la
   `archived`, with a "Show archived (N)" / "Back to Chats" toggle switching between the two views
   rather than showing both spliced together.
 
+Then **clicking a room member to start a DM, and hiding the sender name in favor of an avatar
+tooltip**, landed together with a real fix the first one exposed:
+- `<RoomMemberList>`'s `onSelectMember` had existed (and been tested) since it was built, but
+  `<ChatWorkspace>` never passed it — another instance of this session's recurring "built but
+  unwired" shape. Wired it to open (or start) a DM with the clicked occupant: the real JID when the
+  room is non-anonymous (XMPP), otherwise the occupant's room-view "nick" itself, which for Matrix
+  already IS the bare mxid and for IRC already IS what a PM/query targets. Clicking yourself is a
+  no-op (compared against `room.selfNick`).
+- Doing this surfaced a real, previously-inert gap: selecting a DM with no existing conversation row
+  (this new action, and — it turns out — the ALREADY-EXISTING "open a contact from the roster" action)
+  landed on a dead "Pick a conversation." pane, because `<ChatWorkspace>`'s `selected` derivation only
+  ever looked up an existing row and had no fallback. Exported `chat-store.ts`'s already-existing
+  `stubConversation` helper (until now private, used only for an unknown live-push) and used it as
+  that fallback, so a conversation the user has genuinely never messaged before still renders a real,
+  usable composer — the row itself is created for real the moment the first message lands, same as
+  it always was. `selectConversation` gained an optional `hintAccountId` parameter for this: a
+  brand-new conversation's owning account can't be looked up from a row that doesn't exist yet, and
+  falling back to `activeAccountId` would silently start the chat under the WRONG account whenever it
+  differs from the one the caller actually knows the contact/occupant belongs to.
+- The sender name no longer sits on its own visible line above a room message — it rides the avatar
+  as a native hover tooltip (`title`) instead, with the name kept in the accessibility tree via a
+  visually-hidden span (the existing `chat-presence__sr-only` utility) rather than only a mouse-only
+  affordance.
+
 **Still open, tracked but not started:** a "New Chat" popup (contacts + existing groups + a generic
-address field) replacing the "Find a room" tab; clicking a room member to start a DM; a DM header
-layout pass (too cramped); blocking a contact where the protocol supports it; emoji-shortcode
-(`:smile:`) rendering; markdown-lite rendering for bridge-sourced messages; hiding the sender name in
-favor of an avatar tooltip; a WhatsApp-style hover/right-click reaction trigger; and richer context
+address field) replacing the "Find a room" tab; a DM header layout pass (too cramped); blocking a
+contact where the protocol supports it; emoji-shortcode (`:smile:`) rendering; markdown-lite rendering
+for bridge-sourced messages; a WhatsApp-style hover/right-click reaction trigger; and richer context
 menus (messages, room-list rows, contacts).
 
 **Remaining:** the runtime Functional DoD (media round-trip needs a live account). · **Depends on:**

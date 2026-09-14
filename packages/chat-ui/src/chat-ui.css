@@ -714,14 +714,8 @@
   color: var(--cu-text-secondary);
   font-size: 12px;
 }
-/* its own line above the bubble content — never sharing a row with the avatar or the timestamp,
- * which is what forced the timestamp out of view for a long (JID-length) sender name. */
-.chat-msg__sender {
-  display: block;
-  margin-bottom: 2px;
-  font-weight: 700;
-  font-size: 12.5px;
-  color: var(--cu-primary-on-surface);
+.chat-msg__avatar-tip {
+  display: inline-flex;
 }
 .chat-msg__body {
   white-space: pre-wrap;

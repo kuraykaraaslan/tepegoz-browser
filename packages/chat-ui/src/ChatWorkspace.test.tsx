@@ -265,12 +265,17 @@ describe('ChatWorkspace', () => {
     await waitFor(() => expect(removeChatContact).toHaveBeenCalledWith('work', 'bob@x.example'));
   });
 
-  it('opening a contact with no existing conversation does not crash', async () => {
+  it('opening a contact never messaged before starts a real DM, not a dead end', async () => {
     const { port } = makePort({ listChatConversations: () => Promise.resolve([]) });
     wrap(<ChatWorkspace port={port} />);
     fireEvent.click(await screen.findByRole('tab', { name: 'Contacts' }));
     fireEvent.click(await screen.findByText('Bob'));
-    expect(screen.getByText('Pick a conversation.')).toBeDefined();
+    // No prior conversation row exists yet — a stub renders (named by address, the real name arrives
+    // once the first message creates a genuine row) so the composer is actually usable, rather than
+    // silently landing back on "Pick a conversation." (the previous, dead-end behavior).
+    expect(screen.queryByText('Pick a conversation.')).toBeNull();
+    expect(screen.getByRole('heading', { name: 'bob@x.example' })).toBeDefined();
+    expect(screen.getByPlaceholderText('Write a message…')).toBeDefined();
   });
 
   it('renders a room header + toggles the member list for a room conversation', async () => {
@@ -308,6 +313,68 @@ describe('ChatWorkspace', () => {
     expect(screen.queryByText('Bea')).toBeNull();
     fireEvent.click(toggle);
     expect(screen.getByText('Bea')).toBeDefined();
+  });
+
+  it('clicking a room member starts a DM with them (nick as the address, when no real JID)', async () => {
+    const { port, emit } = makePort({
+      listChatConversations: () =>
+        Promise.resolve([conv({ id: 'room@conf', kind: 'room', address: 'room@conf', name: 'Room' })]),
+    });
+    wrap(<ChatWorkspace port={port} />);
+    fireEvent.click(await screen.findByRole('button', { name: /Room/ }));
+    await screen.findByText('hi there');
+    act(() => {
+      emit({
+        kind: 'change',
+        accountId: 'work',
+        change: {
+          kind: 'room',
+          conversationId: 'room@conf',
+          room: {
+            joined: true,
+            selfNick: 'me',
+            subject: '',
+            occupants: {
+              Bea: { nick: 'Bea', realJid: null, affiliation: 'member', role: 'participant', presence: 'online', statusText: '' },
+            },
+          },
+        },
+      } as never);
+    });
+    fireEvent.click(screen.getByRole('button', { name: '1 Members' }));
+    fireEvent.click(screen.getByText('Bea'));
+    await waitFor(() => expect(screen.getByRole('heading', { name: 'Bea' })).toBeDefined());
+  });
+
+  it('clicking yourself in the room member list does nothing', async () => {
+    const { port, emit } = makePort({
+      listChatConversations: () =>
+        Promise.resolve([conv({ id: 'room@conf', kind: 'room', address: 'room@conf', name: 'Room' })]),
+    });
+    wrap(<ChatWorkspace port={port} />);
+    fireEvent.click(await screen.findByRole('button', { name: /Room/ }));
+    await screen.findByText('hi there');
+    act(() => {
+      emit({
+        kind: 'change',
+        accountId: 'work',
+        change: {
+          kind: 'room',
+          conversationId: 'room@conf',
+          room: {
+            joined: true,
+            selfNick: 'me',
+            subject: '',
+            occupants: {
+              me: { nick: 'me', realJid: null, affiliation: 'member', role: 'participant', presence: 'online', statusText: '' },
+            },
+          },
+        },
+      } as never);
+    });
+    fireEvent.click(screen.getByRole('button', { name: '1 Members' }));
+    fireEvent.click(screen.getByText('me'));
+    expect(screen.getByRole('heading', { name: 'Room' })).toBeDefined();
   });
 
   it('recognises the local user\'s own room messages by occupant nick, not by address equality', async () => {

@@ -50,7 +50,7 @@ describe('MessageTimeline', () => {
     expect(screen.getByText('hello world')).toBeDefined();
   });
 
-  it('shows the sender header only on the first message of a group', () => {
+  it('carries the sender name only on the first avatar of a group, as a hover tooltip + accessible text — never its own visible line', () => {
     wrap(
       <MessageTimeline
         messages={[
@@ -60,7 +60,12 @@ describe('MessageTimeline', () => {
         now={T0}
       />,
     );
+    // Still findable (an sr-only span, not a visible name row) — and only on the group-starting
+    // message, same "not every row" rule the old visible header followed.
     expect(screen.getAllByText('Alice')).toHaveLength(1);
+    const tip = document.querySelector('.chat-msg__avatar-tip');
+    expect(tip?.getAttribute('title')).toBe('Alice');
+    expect(document.querySelector('.chat-msg__sender')).toBeNull();
   });
 
   it('renders the "new messages" divider and scrolls to it on open (Telegram-style)', () => {

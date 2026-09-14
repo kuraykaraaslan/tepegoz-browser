@@ -5,6 +5,7 @@ import type { RoomNotifyLevel, RoomView } from '@tepegoz/chat-core';
 import type { ChatContact, ChatConversation, ChatMessage } from '@tepegoz/shared-types';
 import { chatUiDict } from './i18n';
 import { AccountsManager } from './AccountsManager';
+import { stubConversation } from './chat-store';
 import { Avatar } from './Avatar';
 import { Composer } from './Composer';
 import { ConversationList } from './ConversationList';
@@ -133,10 +134,16 @@ export function ChatWorkspace({
     return map;
   }, [rosterList]);
 
+  // A DM the user has never messaged before has no row yet — stub one rather than showing a dead
+  // "pick a conversation" pane for a selection that DID succeed (the room-member and roster
+  // "start a chat" actions rely on this: they select a not-yet-existing DM by its address).
   const selected: ChatConversation | undefined =
     chat.selectedConversationId === null
       ? undefined
-      : chat.client.conversations[chat.selectedConversationId];
+      : (chat.client.conversations[chat.selectedConversationId] ??
+        (chat.activeAccountId !== null
+          ? stubConversation(chat.selectedConversationId, chat.activeAccountId)
+          : undefined));
   const messages: readonly ChatMessage[] = selected
     ? chat.client.messages[selected.id] ?? []
     : [];
@@ -306,10 +313,11 @@ export function ChatWorkspace({
                 const existing = chat.conversations.find(
                   (c) => c.accountId === contact.accountId && c.address === contact.address,
                 );
-                if (existing !== undefined) {
-                  setTab('chats');
-                  chat.selectConversation(existing.id);
-                }
+                // A DM's conversation id is its peer's bare address (see `blankConversation`) — a
+                // contact never messaged before has no row yet, so this starts one rather than
+                // silently doing nothing (the previous behavior for that case).
+                setTab('chats');
+                chat.selectConversation(existing?.id ?? contact.address, contact.accountId);
               }}
               {...(chat.addContact !== null
                 ? {
@@ -452,7 +460,23 @@ export function ChatWorkspace({
                     : {})}
                 />
                 {selected.kind === 'room' && membersOpen && selectedRoom !== undefined && (
-                  <RoomMemberList room={selectedRoom} />
+                  <RoomMemberList
+                    room={selectedRoom}
+                    onSelectMember={(nick) => {
+                      // A real JID (XMPP non-anonymous MUC) is the addressable identity; otherwise
+                      // the nick itself already IS one (Matrix's occupant "nick" is the bare mxid,
+                      // and an IRC nick is what a PM/query actually targets).
+                      if (nick === selectedRoom.selfNick) return; // no DM with yourself
+                      const address = selectedRoom.occupants[nick]?.realJid ?? nick;
+                      const existing = chat.conversations.find(
+                        (c) => c.kind === 'dm' && c.accountId === selected.accountId && c.address === address,
+                      );
+                      // A DM's conversation id is its peer's bare address (see `blankConversation`) —
+                      // `selectConversation` handles a brand-new one gracefully.
+                      chat.selectConversation(existing?.id ?? address, selected.accountId);
+                      setTab('chats');
+                    }}
+                  />
                 )}
               </div>
               <Composer

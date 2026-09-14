@@ -202,15 +202,18 @@ export function applyChatChange(state: ChatClientState, change: ChatStateChange)
   }
 }
 
-/** Nudge a conversation's `updatedAt` (and its stub, if we have no row) so the list reorders. */
-/** A conversation row good enough to render and open, for a live push that named a conversation
- *  this client has never seen before (most commonly: the first-ever message from a contact with no
- *  prior history) — the real row (name, topic, member count, …) arrives on the next full
- *  `listChatConversations` seed (account switch, reload); until then this is strictly better than
- *  the message silently vanishing from the UI, which is what happened before this existed. Mirrors
- *  `apps/desktop/src/main/chat/account-runner.ts`'s `blankConversation` fallback for the same gap
- *  on the store side. */
-function stubConversation(conversationId: string, accountId: string): ChatConversation {
+/**
+ * A conversation row good enough to render and open, for an id this client has never seen a real row
+ * for yet — either a live push naming a conversation it doesn't know (most commonly: the first-ever
+ * message from a contact with no prior history), or the UI opening a DM the user has never messaged
+ * before (see `<ChatWorkspace>`'s `selected` fallback). The real row (name, topic, member count, …)
+ * arrives on the next full `listChatConversations` seed (account switch, reload) or the first message
+ * folding it into a genuine row; until then this is strictly better than the conversation silently
+ * failing to open, which is what happened before this existed. Mirrors
+ * `apps/desktop/src/main/chat/account-runner.ts`'s `blankConversation` fallback for the same gap on
+ * the store side.
+ */
+export function stubConversation(conversationId: string, accountId: string): ChatConversation {
   return {
     id: conversationId,
     accountId,
@@ -232,6 +235,7 @@ function stubConversation(conversationId: string, accountId: string): ChatConver
   };
 }
 
+/** Nudge a conversation's `updatedAt` (and its stub, if we have no row) so the list reorders. */
 function bumpConversation(
   state: ChatClientState,
   conversationId: string,
