@@ -100,6 +100,36 @@ export const ChatSetMutedSchema = z.object({
   muted: z.boolean(),
 });
 
+/** `chat:mute-for` — a TIMED mute (`durationMs`) or forever (`null`), independent of `chat:set-muted`'s
+ *  binary toggle — the two share the same underlying `muted`/`mutedUntil` fields (see
+ *  `ChatAccountRunner.muteFor`), this is just the "for how long" entry point. Capped at 30 days —
+ *  the UI only ever offers 1h/3h/8h/forever, this is a defensive bound, not a real limit. */
+export const ChatMuteForSchema = z.object({
+  accountId: z.string().min(1).max(64),
+  conversationId: z.string().min(1).max(128),
+  durationMs: z
+    .number()
+    .int()
+    .positive()
+    .max(30 * 24 * 3600_000)
+    .nullable(),
+});
+
+/** `chat:set-archived` — a purely local presentation flag, no protocol wire concept. */
+export const ChatSetArchivedSchema = z.object({
+  accountId: z.string().min(1).max(64),
+  conversationId: z.string().min(1).max(128),
+  archived: z.boolean(),
+});
+
+/** `chat:block-contact` — block / unblock an address at the server (XEP-0191, …). 501s on a
+ *  protocol with no server-side blocking concept. */
+export const ChatBlockContactSchema = z.object({
+  accountId: z.string().min(1).max(64),
+  address: z.string().min(1).max(512),
+  blocked: z.boolean(),
+});
+
 /** `chat:set-room-topic` — change a room's topic / subject (empty string clears it). */
 export const ChatSetRoomTopicSchema = z.object({
   accountId: z.string().min(1).max(64),
@@ -139,4 +169,14 @@ export const ChatReactSchema = z.object({
   messageId: z.string().min(1).max(128),
   emoji: z.string().min(1).max(64),
   on: z.boolean(),
+});
+
+/** `chat:edit-message` — replace an already-sent message's body (XEP-0308 / Matrix `m.replace`;
+ *  501s on a protocol with no edit capability, IRC has none). Reuses `OutgoingMessageSchema`'s own
+ *  body bound so the length limit can never drift between send and edit. */
+export const ChatEditMessageSchema = z.object({
+  accountId: z.string().min(1).max(64),
+  conversationId: z.string().min(1).max(128),
+  messageId: z.string().min(1).max(128),
+  body: OutgoingMessageSchema.shape.body,
 });

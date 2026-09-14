@@ -21,6 +21,20 @@ export function formatClockTime(ts: number, locale?: string): string {
   return new Date(ts).toLocaleTimeString(locale, { hour: 'numeric', minute: '2-digit' });
 }
 
+/** The conversation list's row timestamp: a bare clock time for something that arrived today (the
+ *  common case), a short date otherwise — the year only when it differs from `now`'s. Distinct from
+ *  {@link daySeparatorLabel}, which always spells out the month for a timeline separator; a list row
+ *  needs to stay a few characters wide next to the preview text. */
+export function conversationListTime(ts: number, now: number, locale?: string): string {
+  if (isSameDay(ts, now)) return formatClockTime(ts, locale);
+  const includeYear = new Date(ts).getFullYear() !== new Date(now).getFullYear();
+  return new Date(ts).toLocaleDateString(locale, {
+    day: 'numeric',
+    month: 'short',
+    ...(includeYear ? { year: 'numeric' } : {}),
+  });
+}
+
 export interface DayGroup<M> {
   /** Local-midnight timestamp — the separator key. */
   readonly day: number;

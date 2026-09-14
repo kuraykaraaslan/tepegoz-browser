@@ -278,6 +278,9 @@ export const IpcChannels = {
   chatSetRoomNotifyLevel: 'chat:set-room-notify-level',
   /** Renderer→main: mute / unmute one conversation (DM or room). */
   chatSetMuted: 'chat:set-muted',
+  chatMuteFor: 'chat:mute-for',
+  chatSetArchived: 'chat:set-archived',
+  chatBlockContact: 'chat:block-contact',
   /** Renderer→main: change a room's topic / subject. */
   chatSetRoomTopic: 'chat:set-room-topic',
   /** Renderer→main: invite a contact to a room. */
@@ -286,6 +289,7 @@ export const IpcChannels = {
   chatResolveMedia: 'chat:resolve-media',
   /** Renderer→main: add / remove one of the local user's emoji reactions on a message. */
   chatReact: 'chat:react',
+  chatEditMessage: 'chat:edit-message',
   /** Renderer→main: add a contact to the roster and request their presence. */
   chatAddContact: 'chat:add-contact',
   /** Renderer→main: remove a contact from the roster and cancel any subscription. */

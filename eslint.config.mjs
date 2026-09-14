@@ -16,6 +16,9 @@ export default tseslint.config(
       'e2e/**',
       '**/*.config.*',
       '**/*.cjs',
+      // Plain-JS bridge/adapter binaries a third-party bridge would ship as its own file, not part of
+      // any package's TS project — see apps/desktop/src/main/chat/echo-bridge/echo-bridge.mjs.
+      '**/*.mjs',
       // Vendored KUIreact fork — drift-tracked in packages/ui/_FORK.md, not restyled to our rules.
       'packages/ui/src/modules/**',
       'packages/ui/src/libs/**',

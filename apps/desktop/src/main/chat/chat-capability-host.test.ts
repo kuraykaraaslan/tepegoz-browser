@@ -14,8 +14,11 @@ const conv = (over: Partial<ChatConversation> = {}): ChatConversation => ({
   mentions: 0,
   lastReadId: null,
   muted: false,
+  mutedUntil: null,
   notifyLevel: 'all',
   isKnownContact: true,
+  archived: false,
+  lastMessage: null,
   updatedAt: 1,
   ...over,
 });

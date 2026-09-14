@@ -5,12 +5,15 @@ import type { RoomNotifyLevel, RoomView } from '@tepegoz/chat-core';
 import type { ChatContact, ChatConversation, ChatMessage } from '@tepegoz/shared-types';
 import { chatUiDict } from './i18n';
 import { AccountsManager } from './AccountsManager';
+import { stubConversation } from './chat-store';
 import { Avatar } from './Avatar';
 import { Composer } from './Composer';
 import { ConversationList } from './ConversationList';
 import { MessageTimeline } from './MessageTimeline';
+import { isMutedNow } from './mute';
+import { MuteMenu } from './MuteMenu';
+import { NewChatDialog } from './NewChatDialog';
 import { NotEncryptedBadge } from './NotEncryptedBadge';
-import { RoomBrowser } from './RoomBrowser';
 import { RoomHeader } from './RoomHeader';
 import { RoomMemberList } from './RoomMemberList';
 import { RosterPanel } from './RosterPanel';
@@ -31,9 +34,12 @@ export interface ChatWorkspaceProps {
   /** Resolve an attachment's `mediaRef` to a LOCAL resource; absent ⇒ attachments are not shown. */
   resolveMedia?: ResolveMedia | undefined;
   onOpenMedia?: ((mediaRef: string) => void) | undefined;
+  /** Open a link the user clicked (typically a new tab, host's choice) — absent ⇒ links render as
+   *  inert text, same as `<MessageTimeline>`'s own default. */
+  onOpenLink?: ((href: string) => void) | undefined;
 }
 
-type LeftTab = 'chats' | 'contacts' | 'rooms';
+type LeftTab = 'chats' | 'contacts';
 
 /**
  * Is this message the local user's own? A DM has exactly two parties, so anything not from the
@@ -66,6 +72,22 @@ function GearIcon() {
   );
 }
 
+/** A speech bubble with a "+" — the "start something new" affordance next to the gear icon. */
+function NewChatIcon() {
+  return (
+    <svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true" focusable="false">
+      <path
+        d="M2.5 5.5A2 2 0 0 1 4.5 3.5h8a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2H8l-3.2 2.6a.5.5 0 0 1-.8-.4V12.5h-.5a2 2 0 0 1-2-2v-5Z"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.3"
+        strokeLinejoin="round"
+      />
+      <path d="M8.5 5.7v4M6.5 7.7h4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 /**
  * The whole messenger surface composed over {@link useChatState}: an account switcher, a
  * chats / contacts left column, and the open conversation (timeline + composer). Presentational glue
@@ -77,12 +99,15 @@ export function ChatWorkspace({
   onEditAccount,
   resolveMedia,
   onOpenMedia,
+  onOpenLink,
 }: Readonly<ChatWorkspaceProps>) {
   const s = useT(chatUiDict);
   const chat = useChatState(port);
   const [tab, setTab] = useState<LeftTab>('chats');
   const [membersOpen, setMembersOpen] = useState(false);
+  const [showArchived, setShowArchived] = useState(false);
   const [managingAccounts, setManagingAccounts] = useState(false);
+  const [newChatOpen, setNewChatOpen] = useState(false);
 
   // Prefer an explicit `resolveMedia` prop; otherwise adapt the port's `resolveChatMedia` for the
   // active account. The host still returns a LOCAL `data:` URL — `<MessageMedia>` re-checks.
@@ -105,9 +130,47 @@ export function ChatWorkspace({
     protocol: a.protocol,
   }));
 
-  const rosterList = useMemo(
-    () => Object.values(chat.client.roster).filter((c) => c.accountId === chat.activeAccountId),
-    [chat.client.roster, chat.activeAccountId],
+  // The Contacts tab is unified across every account, same as the Chats tab — no per-account
+  // filtering; which account a contact belongs to shows via <RosterPanel>'s protocol badge.
+  const rosterList = useMemo(() => Object.values(chat.client.roster), [chat.client.roster]);
+  const joinedRooms = useMemo(
+    () => chat.conversations.filter((c) => c.kind === 'room' && !c.archived),
+    [chat.conversations],
+  );
+
+  // Shared by <RosterPanel>'s row click and <NewChatDialog>'s Contacts tab: a DM's conversation id is
+  // its peer's bare address (see `blankConversation`) — a contact never messaged before has no row
+  // yet, so this starts one rather than silently doing nothing.
+  const openContact = (contact: ChatContact): void => {
+    const existing = chat.conversations.find(
+      (c) => c.accountId === contact.accountId && c.address === contact.address,
+    );
+    setTab('chats');
+    chat.selectConversation(existing?.id ?? contact.address, contact.accountId);
+  };
+  const openRoom = (conversation: ChatConversation): void => {
+    setTab('chats');
+    chat.selectConversation(conversation.id, conversation.accountId);
+  };
+  // The generic "start by address" field — same existing-row lookup as `openContact`, just without a
+  // roster entry to key off of. Deliberately not a room join (that stays in the Rooms tab): this is
+  // for starting a DM with an address the user already knows, phone-lookup's future landing spot.
+  const startByAddress = (accountId: string, address: string): void => {
+    const existing = chat.conversations.find((c) => c.accountId === accountId && c.address === address);
+    setTab('chats');
+    chat.selectConversation(existing?.id ?? address, accountId);
+  };
+
+  // Archived conversations stay fully functional (still receive messages, still selectable once
+  // reached) — they are just off the default list, same idea as an OS's archived-mail folder. Toggle
+  // between the two views rather than showing both at once, so an archive is actually "out of the way".
+  const archivedCount = useMemo(
+    () => chat.conversations.filter((c) => c.archived).length,
+    [chat.conversations],
+  );
+  const visibleConversations = useMemo(
+    () => chat.conversations.filter((c) => c.archived === showArchived),
+    [chat.conversations, showArchived],
   );
   const contactByAddress = useMemo(() => {
     const map = new Map<string, ChatContact>();
@@ -115,10 +178,16 @@ export function ChatWorkspace({
     return map;
   }, [rosterList]);
 
+  // A DM the user has never messaged before has no row yet — stub one rather than showing a dead
+  // "pick a conversation" pane for a selection that DID succeed (the room-member and roster
+  // "start a chat" actions rely on this: they select a not-yet-existing DM by its address).
   const selected: ChatConversation | undefined =
     chat.selectedConversationId === null
       ? undefined
-      : chat.client.conversations[chat.selectedConversationId];
+      : (chat.client.conversations[chat.selectedConversationId] ??
+        (chat.activeAccountId !== null
+          ? stubConversation(chat.selectedConversationId, chat.activeAccountId)
+          : undefined));
   const messages: readonly ChatMessage[] = selected
     ? chat.client.messages[selected.id] ?? []
     : [];
@@ -131,19 +200,18 @@ export function ChatWorkspace({
     ? chat.accounts.find((a) => a.id === selected.accountId)?.protocol
     : undefined;
   const notEncrypted = selectedProtocol === 'irc';
+  // IRC has no reaction mechanism at all (no XEP-0444 / `m.reaction` equivalent) and a bridge's
+  // capability is still unimplemented (X-chat.8/.9) — same "derive from the static protocol fact"
+  // reasoning as `notEncrypted` above, not a live caps round-trip.
+  const reactionsSupported = selectedProtocol === 'xmpp' || selectedProtocol === 'matrix';
 
-  // The room browser's "Find a room" tab always operates on the active account (not the open
-  // conversation) — only XMPP has a directory to browse (XEP-0030); IRC has no room-listing command
-  // and Matrix's room directory is deferred (see ext-chat.md X-chat.5), so both fall back to
-  // join-by-address only, worded for their own address shape rather than an XMPP JID.
-  const activeProtocol = chat.accounts.find((a) => a.id === chat.activeAccountId)?.protocol;
-  const canBrowseRooms = activeProtocol === 'xmpp';
-  const roomAddressPlaceholder =
-    activeProtocol === 'irc'
-      ? s.roomBrowser.joinByAddressPlaceholderIrc
-      : activeProtocol === 'matrix'
-        ? s.roomBrowser.joinByAddressPlaceholderMatrix
-        : undefined;
+  // Only XMPP has a directory to browse (XEP-0030) — IRC has no room-listing command and Matrix's
+  // room directory is deferred (see ext-chat.md X-chat.5). `<NewChatDialog>`'s Rooms tab still lets
+  // either join by address, just not browse a directory first.
+  const browsableAccountIds = useMemo(
+    () => new Set(chat.accounts.filter((a) => a.protocol === 'xmpp').map((a) => a.id)),
+    [chat.accounts],
+  );
 
   const noAccounts = !chat.loading && chat.accounts.length === 0;
 
@@ -194,36 +262,35 @@ export function ChatWorkspace({
 
   return (
     <div className="chat-workspace">
-      {chat.accounts.length > 1 && (
-        <div className="chat-workspace__accounts" role="tablist" aria-label={s.workspace.accountSwitcher}>
-          {chat.accounts.map((account) => (
-            <button
-              key={account.id}
-              type="button"
-              role="tab"
-              aria-selected={account.id === chat.activeAccountId}
-              data-conn={chat.connectionStates[account.id] ?? 'idle'}
-              onClick={() => chat.setActiveAccount(account.id)}
-            >
-              {account.label}
-            </button>
-          ))}
-        </div>
-      )}
+      {/* No account-switcher tabs — the Chats/Contacts lists are already unified across every
+       *  account (grouping/switching would just duplicate what the avatar's protocol badge already
+       *  shows); `activeAccountId` still exists internally, driven by whichever conversation is
+       *  selected. */}
 
       <div className="chat-workspace__body">
         <aside className="chat-workspace__left">
           <div className="chat-workspace__left-head">
             <span className="chat-workspace__left-title">{s.workspace.title}</span>
-            <button
-              type="button"
-              className="chat-workspace__icon-btn"
-              aria-label={s.workspace.manageAccounts}
-              title={s.workspace.manageAccounts}
-              onClick={() => setManagingAccounts(true)}
-            >
-              <GearIcon />
-            </button>
+            <span className="chat-workspace__left-actions">
+              <button
+                type="button"
+                className="chat-workspace__icon-btn"
+                aria-label={s.workspace.newChat}
+                title={s.workspace.newChat}
+                onClick={() => setNewChatOpen(true)}
+              >
+                <NewChatIcon />
+              </button>
+              <button
+                type="button"
+                className="chat-workspace__icon-btn"
+                aria-label={s.workspace.manageAccounts}
+                title={s.workspace.manageAccounts}
+                onClick={() => setManagingAccounts(true)}
+              >
+                <GearIcon />
+              </button>
+            </span>
           </div>
           {noAccounts && (
             <p className="chat-workspace__no-accounts">
@@ -252,62 +319,74 @@ export function ChatWorkspace({
             >
               {s.workspace.contactsTab}
             </button>
-            {chat.rooms !== null && (
-              <button
-                type="button"
-                role="tab"
-                aria-selected={tab === 'rooms'}
-                onClick={() => setTab('rooms')}
-              >
-                {s.roomBrowser.title}
-              </button>
-            )}
           </div>
 
           {tab === 'chats' && (
-            <ConversationList
-              conversations={chat.conversations}
-              accounts={accountRefs}
-              selectedId={chat.selectedConversationId}
-              onSelect={chat.selectConversation}
-              presenceOf={(c) =>
-                c.kind === 'dm' ? contactByAddress.get(c.address)?.presence ?? null : null
-              }
-            />
+            <>
+              {(showArchived || archivedCount > 0) && (
+                <button
+                  type="button"
+                  className="chat-workspace__archived-toggle"
+                  onClick={() => setShowArchived((v) => !v)}
+                >
+                  {showArchived
+                    ? s.workspace.backToChats
+                    : `${s.workspace.showArchived} (${String(archivedCount)})`}
+                </button>
+              )}
+              <ConversationList
+                conversations={visibleConversations}
+                accounts={accountRefs}
+                selectedId={chat.selectedConversationId}
+                onSelect={chat.selectConversation}
+                presenceOf={(c) =>
+                  c.kind === 'dm' ? contactByAddress.get(c.address)?.presence ?? null : null
+                }
+              />
+            </>
           )}
           {tab === 'contacts' && (
             <RosterPanel
               contacts={rosterList}
-              onOpenContact={(contact) => {
-                const existing = chat.conversations.find((c) => c.address === contact.address);
-                if (existing !== undefined) {
-                  setTab('chats');
-                  chat.selectConversation(existing.id);
-                }
-              }}
-              {...(chat.addContact !== null ? { onAddContact: chat.addContact } : {})}
-              {...(chat.removeContact !== null
-                ? { onRemoveContact: (contact) => chat.removeContact?.(contact.address) }
+              accounts={accountRefs}
+              onOpenContact={openContact}
+              {...(chat.addContact !== null
+                ? {
+                    onAddContact: (accountId: string, address: string) =>
+                      chat.addContact?.(accountId, address),
+                  }
                 : {})}
-            />
-          )}
-          {tab === 'rooms' && chat.rooms !== null && (
-            <RoomBrowser
-              discoverRooms={chat.rooms.discover}
-              onJoin={(jid) =>
-                // Only leave the room-browser tab once the join actually succeeds — switching
-                // unconditionally (the previous behaviour) meant a failed join (account not yet
-                // connected, bad address, refused by the server) silently landed on an empty chats
-                // pane with no room and no visible error.
-                chat.rooms?.join(jid).then(() => setTab('chats'))
-              }
-              canBrowse={canBrowseRooms}
-              {...(roomAddressPlaceholder !== undefined
-                ? { addressPlaceholder: roomAddressPlaceholder }
+              {...(chat.removeContact !== null
+                ? { onRemoveContact: (contact) => chat.removeContact?.(contact.accountId, contact.address) }
+                : {})}
+              {...(chat.blockContact !== null
+                ? {
+                    onToggleBlock: (contact: ChatContact) =>
+                      chat.blockContact?.(contact.accountId, contact.address, !contact.blocked),
+                  }
                 : {})}
             />
           )}
         </aside>
+
+        {newChatOpen && (
+          <NewChatDialog
+            contacts={rosterList}
+            accounts={accountRefs}
+            joinedRooms={joinedRooms}
+            onOpenContact={openContact}
+            onOpenRoom={openRoom}
+            onStartByAddress={startByAddress}
+            onClose={() => setNewChatOpen(false)}
+            browsableAccountIds={browsableAccountIds}
+            {...(chat.rooms !== null
+              ? {
+                  discoverRooms: chat.rooms.discover,
+                  onJoinRoom: chat.rooms.join,
+                }
+              : {})}
+          />
+        )}
 
         <section className="chat-workspace__main">
           {selected === undefined ? (
@@ -330,7 +409,7 @@ export function ChatWorkspace({
                   onToggleMembers={() => setMembersOpen((v) => !v)}
                   notifyLevel={selected.notifyLevel}
                   notEncrypted={notEncrypted}
-                  muted={selected.muted}
+                  mutedNow={isMutedNow(selected, Date.now())}
                   {...(chat.setRoomNotifyLevel !== null
                     ? {
                         onSetNotifyLevel: (level: RoomNotifyLevel) => {
@@ -338,8 +417,19 @@ export function ChatWorkspace({
                         },
                       }
                     : {})}
-                  {...(chat.setMuted !== null
-                    ? { onToggleMuted: () => void chat.setMuted?.(selected.id, !selected.muted) }
+                  {...(chat.muteFor !== null && chat.setMuted !== null
+                    ? {
+                        onMuteFor: (durationMs: number | null) =>
+                          void chat.muteFor?.(selected.id, durationMs),
+                        onUnmute: () => void chat.setMuted?.(selected.id, false),
+                      }
+                    : {})}
+                  archived={selected.archived}
+                  {...(chat.setArchived !== null
+                    ? {
+                        onToggleArchived: () =>
+                          void chat.setArchived?.(selected.id, !selected.archived),
+                      }
                     : {})}
                   {...(chat.setRoomTopic !== null
                     ? { onSetTopic: (topic: string) => void chat.setRoomTopic?.(selected.id, topic) }
@@ -356,21 +446,34 @@ export function ChatWorkspace({
                   <span className="chat-workspace__conv-head-avatar">
                     <Avatar name={conversationTitle(selected)} seed={selected.id} />
                   </span>
-                  <h2>{conversationTitle(selected)}</h2>
-                  {notEncrypted && <NotEncryptedBadge />}
-                  {typing.length > 0 && (
-                    <span className="chat-workspace__typing">{s.workspace.typing}</span>
-                  )}
-                  {chat.setMuted !== null && (
-                    <button
-                      type="button"
-                      className="chat-workspace__mute"
-                      aria-pressed={selected.muted}
-                      onClick={() => void chat.setMuted?.(selected.id, !selected.muted)}
-                    >
-                      {selected.muted ? s.workspace.unmute : s.workspace.mute}
-                    </button>
-                  )}
+                  {/* The identity group shrinks and truncates as one unit — a long JID-length name
+                   *  must never squeeze the mute/archive controls out of reach on the right. */}
+                  <span className="chat-workspace__conv-head-id">
+                    <h2 title={conversationTitle(selected)}>{conversationTitle(selected)}</h2>
+                    {notEncrypted && <NotEncryptedBadge />}
+                    {typing.length > 0 && (
+                      <span className="chat-workspace__typing">{s.workspace.typing}</span>
+                    )}
+                  </span>
+                  <span className="chat-workspace__conv-head-actions">
+                    {chat.muteFor !== null && chat.setMuted !== null && (
+                      <MuteMenu
+                        mutedNow={isMutedNow(selected, Date.now())}
+                        onMuteFor={(durationMs) => void chat.muteFor?.(selected.id, durationMs)}
+                        onUnmute={() => void chat.setMuted?.(selected.id, false)}
+                      />
+                    )}
+                    {chat.setArchived !== null && (
+                      <button
+                        type="button"
+                        className="chat-workspace__archive"
+                        aria-pressed={selected.archived}
+                        onClick={() => void chat.setArchived?.(selected.id, !selected.archived)}
+                      >
+                        {selected.archived ? s.workspace.unarchive : s.workspace.archive}
+                      </button>
+                    )}
+                  </span>
                 </header>
               )}
               {selected.kind === 'room' && roomTypingLabel(typing, s.workspace) !== null && (
@@ -386,20 +489,50 @@ export function ChatWorkspace({
                   isOwn={(m) => messageIsOwn(m, selected, selectedRoom)}
                   resolveMedia={effectiveResolveMedia}
                   onOpenMedia={onOpenMedia}
-                  {...(chat.react !== null
+                  {...(onOpenLink !== undefined ? { onOpenLink } : {})}
+                  {...(chat.react !== null && reactionsSupported
                     ? {
                         onReact: (protocolId: string, emoji: string, on: boolean) => {
                           void chat.react?.(selected.id, protocolId, emoji, on);
                         },
                       }
                     : {})}
+                  {...(chat.editMessage !== null
+                    ? {
+                        onEdit: (protocolId: string, body: string) => {
+                          chat.startEditing(protocolId, body);
+                        },
+                      }
+                    : {})}
                 />
                 {selected.kind === 'room' && membersOpen && selectedRoom !== undefined && (
-                  <RoomMemberList room={selectedRoom} />
+                  <RoomMemberList
+                    room={selectedRoom}
+                    onSelectMember={(nick) => {
+                      // A real JID (XMPP non-anonymous MUC) is the addressable identity; otherwise
+                      // the nick itself already IS one (Matrix's occupant "nick" is the bare mxid,
+                      // and an IRC nick is what a PM/query actually targets).
+                      if (nick === selectedRoom.selfNick) return; // no DM with yourself
+                      const address = selectedRoom.occupants[nick]?.realJid ?? nick;
+                      const existing = chat.conversations.find(
+                        (c) => c.kind === 'dm' && c.accountId === selected.accountId && c.address === address,
+                      );
+                      // A DM's conversation id is its peer's bare address (see `blankConversation`) —
+                      // `selectConversation` handles a brand-new one gracefully.
+                      chat.selectConversation(existing?.id ?? address, selected.accountId);
+                      setTab('chats');
+                    }}
+                  />
                 )}
               </div>
               <Composer
-                onSubmit={(draft) => chat.send(draft.text, { replyToId: draft.replyToId })}
+                onSubmit={(draft) =>
+                  draft.editMessageId !== null
+                    ? chat.editMessage?.(draft.editMessageId, draft.text)
+                    : chat.send(draft.text, { replyToId: draft.replyToId })
+                }
+                editing={chat.editingMessage}
+                onCancelContext={chat.cancelEditing}
               />
             </>
           )}

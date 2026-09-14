@@ -50,7 +50,7 @@ describe('MessageTimeline', () => {
     expect(screen.getByText('hello world')).toBeDefined();
   });
 
-  it('shows the sender header only on the first message of a group', () => {
+  it('carries the sender name only on the first avatar of a group, as a hover tooltip + accessible text — never its own visible line', () => {
     wrap(
       <MessageTimeline
         messages={[
@@ -60,7 +60,12 @@ describe('MessageTimeline', () => {
         now={T0}
       />,
     );
+    // Still findable (an sr-only span, not a visible name row) — and only on the group-starting
+    // message, same "not every row" rule the old visible header followed.
     expect(screen.getAllByText('Alice')).toHaveLength(1);
+    const tip = document.querySelector('.chat-msg__avatar-tip');
+    expect(tip?.getAttribute('title')).toBe('Alice');
+    expect(document.querySelector('.chat-msg__sender')).toBeNull();
   });
 
   it('renders the "new messages" divider and scrolls to it on open (Telegram-style)', () => {
@@ -213,6 +218,135 @@ describe('MessageTimeline', () => {
     fireEvent.click(screen.getByRole('menuitem', { name: '❤️' }));
     expect(onReact).toHaveBeenCalledWith('srv-1', '❤️', true);
     expect(screen.queryByRole('menu')).toBeNull();
+  });
+
+  it('a pointerdown outside the open picker closes it; inside it does not', () => {
+    const onReact = vi.fn();
+    wrap(<MessageTimeline messages={[msg({ protocolId: 'srv-1' })]} now={T0} onReact={onReact} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Add reaction' }));
+    expect(screen.getByRole('menu')).toBeDefined();
+
+    fireEvent.pointerDown(screen.getByRole('menu'));
+    expect(screen.getByRole('menu')).toBeDefined(); // still open — that pointerdown was inside it
+
+    fireEvent.pointerDown(document.body);
+    expect(screen.queryByRole('menu')).toBeNull();
+  });
+
+  /** Simulates a scrolled-up reader: a tall list, a short viewport, scrolled well away from the
+   *  bottom. jsdom has no real layout, so scrollHeight/clientHeight are getters that need
+   *  overriding — a plain assignment is silently ignored. */
+  function simulateScrolledUp(el: HTMLElement): void {
+    Object.defineProperty(el, 'scrollHeight', { value: 2000, configurable: true });
+    Object.defineProperty(el, 'clientHeight', { value: 400, configurable: true });
+    el.scrollTop = 200; // far short of scrollHeight - clientHeight (1600)
+    fireEvent.scroll(el);
+  }
+
+  it('a new message of your own always follows to the bottom, even mid-history-scroll', () => {
+    const { rerender } = wrap(
+      <MessageTimeline messages={[msg({ id: 'a', protocolId: 'p1' })]} now={T0} isOwn={() => false} />,
+    );
+    const list = document.querySelector('.chat-timeline') as HTMLElement;
+    simulateScrolledUp(list);
+
+    rerender(
+      <I18nProvider locale="en">
+        <MessageTimeline
+          messages={[msg({ id: 'a', protocolId: 'p1' }), msg({ id: 'b', protocolId: 'p2', body: 'sent' })]}
+          now={T0}
+          isOwn={(m) => m.protocolId === 'p2'}
+        />
+      </I18nProvider>,
+    );
+    expect(list.scrollTop).toBe(list.scrollHeight);
+  });
+
+  it('someone else\'s new message does not yank a scrolled-up reader back to the bottom', () => {
+    const { rerender } = wrap(
+      <MessageTimeline messages={[msg({ id: 'a', protocolId: 'p1' })]} now={T0} isOwn={() => false} />,
+    );
+    const list = document.querySelector('.chat-timeline') as HTMLElement;
+    simulateScrolledUp(list);
+
+    rerender(
+      <I18nProvider locale="en">
+        <MessageTimeline
+          messages={[
+            msg({ id: 'a', protocolId: 'p1' }),
+            msg({ id: 'b', protocolId: 'p2', body: 'from someone else' }),
+          ]}
+          now={T0}
+          isOwn={() => false}
+        />
+      </I18nProvider>,
+    );
+    expect(list.scrollTop).toBe(200);
+  });
+
+  it('someone else\'s new message DOES follow to the bottom when the reader was already there', () => {
+    const { rerender } = wrap(
+      <MessageTimeline messages={[msg({ id: 'a', protocolId: 'p1' })]} now={T0} isOwn={() => false} />,
+    );
+    const list = document.querySelector('.chat-timeline') as HTMLElement;
+    // Near the bottom: scrollHeight - scrollTop - clientHeight < 80.
+    Object.defineProperty(list, 'scrollHeight', { value: 500, configurable: true });
+    Object.defineProperty(list, 'clientHeight', { value: 460, configurable: true });
+    list.scrollTop = 40;
+    fireEvent.scroll(list);
+
+    rerender(
+      <I18nProvider locale="en">
+        <MessageTimeline
+          messages={[
+            msg({ id: 'a', protocolId: 'p1' }),
+            msg({ id: 'b', protocolId: 'p2', body: 'from someone else' }),
+          ]}
+          now={T0}
+          isOwn={() => false}
+        />
+      </I18nProvider>,
+    );
+    expect(list.scrollTop).toBe(list.scrollHeight);
+  });
+
+  it('no Edit trigger without onEdit, without isOwn, or on someone else\'s message', () => {
+    const onEdit = vi.fn();
+    wrap(<MessageTimeline messages={[msg({ protocolId: 'srv-1' })]} now={T0} isOwn={() => true} />);
+    expect(screen.queryByRole('button', { name: 'Edit message' })).toBeNull();
+    cleanup();
+    wrap(<MessageTimeline messages={[msg({ protocolId: 'srv-1' })]} now={T0} onEdit={onEdit} />);
+    expect(screen.queryByRole('button', { name: 'Edit message' })).toBeNull();
+  });
+
+  it('clicking Edit on an own message calls onEdit with its protocolId + current body', () => {
+    const onEdit = vi.fn();
+    wrap(
+      <MessageTimeline
+        messages={[msg({ protocolId: 'srv-1', body: 'oops typo' })]}
+        now={T0}
+        isOwn={() => true}
+        onEdit={onEdit}
+      />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Edit message' }));
+    expect(onEdit).toHaveBeenCalledWith('srv-1', 'oops typo');
+  });
+
+  it('no Edit trigger on a redacted or still-pending own message', () => {
+    const onEdit = vi.fn();
+    wrap(
+      <MessageTimeline
+        messages={[
+          msg({ id: 'a', protocolId: 'srv-1', redacted: true }),
+          msg({ id: 'b', protocolId: 'srv-2', deliveryState: 'pending' }),
+        ]}
+        now={T0}
+        isOwn={() => true}
+        onEdit={onEdit}
+      />,
+    );
+    expect(screen.queryByRole('button', { name: 'Edit message' })).toBeNull();
   });
 
   it('every message keeps its own timestamp even when the sender header is collapsed', () => {

@@ -43,6 +43,7 @@ class FakeStore implements ChatRunnerStore {
   redactMessage(): void {}
   upsertConversation(): void {}
   upsertContact(): void {}
+  setContactBlocked(): void {}
   getConversation(): ChatConversation | null {
     return null;
   }
@@ -50,6 +51,9 @@ class FakeStore implements ChatRunnerStore {
     return [];
   }
   listRoomIds(): [] {
+    return [];
+  }
+  listReadMarkers(): [] {
     return [];
   }
 }
@@ -357,6 +361,58 @@ describe('ChatService — default adapter selection', () => {
     expect(emit).toHaveBeenCalledWith(
       expect.objectContaining({ accountId: 'br-acc', state: 'error' }),
     );
+  });
+
+  it('builds a SubprocessChatAdapter for a bridge account once resolveBridge finds a match', async () => {
+    const secrets = fakeSecrets({ 'chat:br-acc': 's' });
+    const brAccount: ChatAccount = {
+      ...account('br-acc'),
+      server: { protocol: 'bridge', bridgeId: 'echo', config: {} },
+    };
+    const writes: string[] = [];
+    let exitHandler: ((code: number | null, signal: NodeJS.Signals | null) => void) | undefined;
+    const fakeChild = {
+      stdin: { write: (chunk: string) => writes.push(chunk) },
+      stdout: {
+        on: (event: 'data', cb: (chunk: string) => void) => {
+          if (event !== 'data') return;
+          // Reply to the adapter's readiness "connect" RPC on the next microtask, so the request has
+          // already been written to `writes` before the fake child "answers" it.
+          queueMicrotask(() => {
+            const req = JSON.parse(writes[0]!) as { id: string };
+            cb(`${JSON.stringify({ id: req.id, result: {} })}\n`);
+          });
+        },
+      },
+      stderr: { on: () => undefined },
+      on: (event: 'exit' | 'error', cb: never) => {
+        if (event === 'exit') exitHandler = cb;
+      },
+      kill: () => exitHandler?.(null, 'SIGTERM'),
+    };
+    const spawnBridge = vi.fn(() => fakeChild as never);
+    const service = new ChatService({
+      loadAccounts: () => [brAccount],
+      secrets,
+      persistAccount: () => undefined,
+      deleteAccount: () => undefined,
+      makeRunnerStore: () => new FakeStore(),
+      transport: {} as never,
+      mayEgress: () => true,
+      now: () => 1,
+      setTimer: (fn, ms) => setTimeout(fn, ms),
+      clearTimer: (h) => clearTimeout(h as ReturnType<typeof setTimeout>),
+      emit: vi.fn(),
+      isEnabled: () => true,
+      resolveBridge: (bridgeId) => (bridgeId === 'echo' ? { command: 'node', args: ['echo-bridge.js'] } : null),
+      spawnBridge,
+      bridgeStateDirFor: (accountId) => `/state/${accountId}`,
+    });
+    await service.start();
+    await tick();
+    expect(spawnBridge).toHaveBeenCalledWith('node', ['echo-bridge.js'], expect.any(Object), '/state/br-acc');
+    expect(service.accountStates()).toHaveProperty('br-acc');
+    expect(service.accountStates()['br-acc']).not.toBe('error');
   });
 
   it('builds a real MatrixAdapter for a matrix account', async () => {

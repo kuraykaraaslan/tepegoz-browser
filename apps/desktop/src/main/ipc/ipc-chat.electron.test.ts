@@ -48,10 +48,14 @@ const svc = {
   leaveRoom: vi.fn(() => Promise.resolve()),
   setRoomNotifyLevel: vi.fn(() => Promise.resolve()),
   setMuted: vi.fn(() => Promise.resolve()),
+  muteFor: vi.fn(() => Promise.resolve()),
+  setArchived: vi.fn(() => Promise.resolve()),
+  blockContact: vi.fn(() => Promise.resolve()),
   setRoomTopic: vi.fn(() => Promise.resolve()),
   inviteToRoom: vi.fn(() => Promise.resolve()),
   resolveMedia: vi.fn(() => Promise.resolve({ dataUrl: 'data:image/png;base64,AAAA' })),
   react: vi.fn(() => Promise.resolve()),
+  editMessage: vi.fn(() => Promise.resolve()),
 };
 
 const ev = { senderFrame: { url: TRUSTED }, sender: {} };
@@ -84,7 +88,7 @@ beforeEach(() => {
 });
 
 it('registers every chat channel', () => {
-  expect(h.handlers.size).toBe(22);
+  expect(h.handlers.size).toBe(26);
 });
 
 it('chat:react validates + delegates', async () => {
@@ -98,6 +102,63 @@ it('chat:react validates + delegates', async () => {
   expect(svc.react).toHaveBeenCalledWith('work', 'general@conf.example', 'm1', '👍', true);
   await expect(
     call(IpcChannels.chatReact, { accountId: 'work', conversationId: 'c', messageId: 'm1', emoji: '👍' }),
+  ).rejects.toBeDefined();
+});
+
+it('chat:mute-for validates + delegates; caps the duration', async () => {
+  await call(IpcChannels.chatMuteFor, {
+    accountId: 'work',
+    conversationId: 'general@conf.example',
+    durationMs: 3_600_000,
+  });
+  expect(svc.muteFor).toHaveBeenCalledWith('work', 'general@conf.example', 3_600_000);
+
+  await call(IpcChannels.chatMuteFor, {
+    accountId: 'work',
+    conversationId: 'general@conf.example',
+    durationMs: null,
+  });
+  expect(svc.muteFor).toHaveBeenCalledWith('work', 'general@conf.example', null);
+
+  await expect(
+    call(IpcChannels.chatMuteFor, {
+      accountId: 'work',
+      conversationId: 'c',
+      durationMs: 31 * 24 * 3600_000,
+    }),
+  ).rejects.toBeDefined();
+});
+
+it('chat:set-archived validates + delegates', async () => {
+  await call(IpcChannels.chatSetArchived, {
+    accountId: 'work',
+    conversationId: 'general@conf.example',
+    archived: true,
+  });
+  expect(svc.setArchived).toHaveBeenCalledWith('work', 'general@conf.example', true);
+  await expect(
+    call(IpcChannels.chatSetArchived, { accountId: 'work', conversationId: 'c' }),
+  ).rejects.toBeDefined();
+});
+
+it('chat:block-contact validates + delegates', async () => {
+  await call(IpcChannels.chatBlockContact, { accountId: 'work', address: 'bob@example.com', blocked: true });
+  expect(svc.blockContact).toHaveBeenCalledWith('work', 'bob@example.com', true);
+  await expect(
+    call(IpcChannels.chatBlockContact, { accountId: 'work', address: '' }),
+  ).rejects.toBeDefined();
+});
+
+it('chat:edit-message validates + delegates', async () => {
+  await call(IpcChannels.chatEditMessage, {
+    accountId: 'work',
+    conversationId: 'general@conf.example',
+    messageId: 'm1',
+    body: 'fixed typo',
+  });
+  expect(svc.editMessage).toHaveBeenCalledWith('work', 'general@conf.example', 'm1', 'fixed typo');
+  await expect(
+    call(IpcChannels.chatEditMessage, { accountId: 'work', conversationId: 'c', messageId: 'm1' }),
   ).rejects.toBeDefined();
 });
 
@@ -268,6 +329,22 @@ describe('validation gates the service', () => {
     ).rejects.toBeDefined();
     await call(IpcChannels.chatMarkRead, { accountId: 'a', conversationId: 'c', protocolId: 'm1' });
     expect(svc.markRead).toHaveBeenCalledWith('a', 'c', 'm1');
+  });
+
+  // AppError contract (ADR-0009): a malformed payload must map to a 400, never the generic 500
+  // `toBoundary` gives anything that isn't an `AppError` — a raw `Schema.parse()` throws a bare
+  // ZodError, which collapses to 500. Every handler here goes through `parsePayload` specifically so
+  // this holds; looping every registered handler (bar the one with no payload schema at all) means a
+  // future handler added with a raw `.parse()` fails this test immediately instead of silently
+  // regressing to an opaque "Internal error" for every one of its callers.
+  it('every chat:* handler maps a malformed payload to a 400, never a bare/500 error', async () => {
+    for (const [channel, fn] of h.handlers) {
+      if (channel === IpcChannels.chatListAccounts) continue; // no payload schema — never rejects
+      await expect(
+        Promise.resolve().then(() => fn(ev, { garbage: true })),
+        channel,
+      ).rejects.toThrow(/^\[400\]/);
+    }
   });
 });
 

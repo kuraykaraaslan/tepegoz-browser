@@ -53,6 +53,18 @@ export function patchConversation(
   };
 }
 
+/** Merge fields into one roster contact (optimistic local edits — block/unblock). Keyed by contact
+ *  id (`${accountId}:${address}`), not address alone — the roster is unified across accounts. */
+export function patchContact(
+  state: ChatClientState,
+  contactId: string,
+  patch: Partial<ChatContact>,
+): ChatClientState {
+  const existing = state.roster[contactId];
+  if (existing === undefined) return state;
+  return { ...state, roster: { ...state.roster, [contactId]: { ...existing, ...patch } } };
+}
+
 /**
  * Optimistically flip the local user's reaction on one loaded message — the server echo (a folded
  * `reaction` change, or a fresh history read) is the source of truth and will settle over this.
@@ -202,15 +214,18 @@ export function applyChatChange(state: ChatClientState, change: ChatStateChange)
   }
 }
 
-/** Nudge a conversation's `updatedAt` (and its stub, if we have no row) so the list reorders. */
-/** A conversation row good enough to render and open, for a live push that named a conversation
- *  this client has never seen before (most commonly: the first-ever message from a contact with no
- *  prior history) — the real row (name, topic, member count, …) arrives on the next full
- *  `listChatConversations` seed (account switch, reload); until then this is strictly better than
- *  the message silently vanishing from the UI, which is what happened before this existed. Mirrors
- *  `apps/desktop/src/main/chat/account-runner.ts`'s `blankConversation` fallback for the same gap
- *  on the store side. */
-function stubConversation(conversationId: string, accountId: string): ChatConversation {
+/**
+ * A conversation row good enough to render and open, for an id this client has never seen a real row
+ * for yet — either a live push naming a conversation it doesn't know (most commonly: the first-ever
+ * message from a contact with no prior history), or the UI opening a DM the user has never messaged
+ * before (see `<ChatWorkspace>`'s `selected` fallback). The real row (name, topic, member count, …)
+ * arrives on the next full `listChatConversations` seed (account switch, reload) or the first message
+ * folding it into a genuine row; until then this is strictly better than the conversation silently
+ * failing to open, which is what happened before this existed. Mirrors
+ * `apps/desktop/src/main/chat/account-runner.ts`'s `blankConversation` fallback for the same gap on
+ * the store side.
+ */
+export function stubConversation(conversationId: string, accountId: string): ChatConversation {
   return {
     id: conversationId,
     accountId,
@@ -223,12 +238,16 @@ function stubConversation(conversationId: string, accountId: string): ChatConver
     mentions: 0,
     lastReadId: null,
     muted: false,
+    mutedUntil: null,
     notifyLevel: 'all',
     isKnownContact: false,
+    archived: false,
+    lastMessage: null,
     updatedAt: 0,
   };
 }
 
+/** Nudge a conversation's `updatedAt` (and its stub, if we have no row) so the list reorders. */
 function bumpConversation(
   state: ChatClientState,
   conversationId: string,
@@ -239,7 +258,21 @@ function bumpConversation(
   if (at <= existing.updatedAt) return state;
   return {
     ...state,
-    conversations: { ...state.conversations, [conversationId]: { ...existing, updatedAt: at } },
+    conversations: {
+      ...state.conversations,
+      [conversationId]: {
+        ...existing,
+        updatedAt: at,
+        lastMessage: {
+          protocolId: message.protocolId,
+          body: message.body,
+          senderAddress: message.senderAddress,
+          kind: message.kind,
+          redacted: message.redacted,
+          originTs: message.originTs,
+        },
+      },
+    },
   };
 }
 

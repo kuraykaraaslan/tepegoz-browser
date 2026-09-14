@@ -20,8 +20,11 @@ function conv(over: Partial<ChatConversation> = {}): ChatConversation {
     mentions: 0,
     lastReadId: null,
     muted: false,
+    mutedUntil: null,
     notifyLevel: 'all',
     isKnownContact: true,
+    archived: false,
+    lastMessage: null,
     updatedAt: 100,
     ...over,
   };
@@ -124,6 +127,53 @@ describe('useChatState', () => {
       result.current.selectConversation('work-1');
     });
     expect(result.current.activeAccountId).toBe('work');
+  });
+
+  it('selectConversation\'s hintAccountId resolves a brand-new (not-yet-existing) conversation to the RIGHT account, not activeAccountId', async () => {
+    const { port } = makePort({
+      listChatConversations: () =>
+        Promise.resolve([
+          conv({ id: 'home-1', accountId: 'home', updatedAt: 100 }),
+          conv({ id: 'work-1', accountId: 'work', updatedAt: 200 }),
+        ]),
+    });
+    const { result } = renderHook(() => useChatState(port));
+    await waitFor(() => expect(result.current.conversations.length).toBe(2));
+    expect(result.current.activeAccountId).toBe('home'); // the default, order-sorted first account
+
+    // 'brand-new@x.example' has no existing row — without the hint this would silently resolve to
+    // the (wrong) activeAccountId ('home') instead of the account the caller actually knows it for.
+    act(() => {
+      result.current.selectConversation('brand-new@x.example', 'work');
+    });
+    expect(result.current.activeAccountId).toBe('work');
+    expect(result.current.selectedConversationId).toBe('brand-new@x.example');
+  });
+
+  it('unifies the roster across every configured account, fetched in parallel', async () => {
+    const contact = (accountId: string, address: string): ChatContact => ({
+      id: `${accountId}:${address}`,
+      accountId,
+      address,
+      name: '',
+      groups: [],
+      presence: 'offline',
+      statusText: '',
+      subscription: 'both',
+      blocked: false,
+    });
+    const { port } = makePort({
+      getChatRoster: (accountId: string) =>
+        Promise.resolve(
+          accountId === 'home' ? [contact('home', 'alice@x.example')] : [contact('work', 'bob@x.example')],
+        ),
+    });
+    const { result } = renderHook(() => useChatState(port));
+    await waitFor(() => expect(Object.keys(result.current.client.roster).length).toBe(2));
+    expect(Object.values(result.current.client.roster).map((c) => c.address).sort()).toEqual([
+      'alice@x.example',
+      'bob@x.example',
+    ]);
   });
 
   it('selecting a conversation loads history once and marks it read', async () => {
@@ -260,12 +310,12 @@ describe('useChatState', () => {
     await waitFor(() => expect(result.current.rooms).not.toBeNull());
 
     await act(async () => {
-      await result.current.rooms?.discover('conf.example');
+      await result.current.rooms?.discover('home', 'conf.example');
     });
     expect(discoverChatRooms).toHaveBeenCalledWith('home', 'conf.example');
 
     await act(async () => {
-      await result.current.rooms?.join('room@conf');
+      await result.current.rooms?.join('home', 'room@conf');
     });
     expect(joinChatRoom).toHaveBeenCalledWith('home', 'room@conf');
     await waitFor(() => expect(result.current.selectedConversationId).toBe('room@conf'));
@@ -360,7 +410,7 @@ describe('useChatState', () => {
     expect(inviteToChatRoom).toHaveBeenCalledWith('home', 'room@conf', 'carol@example.org');
   });
 
-  it('addContact is null without port support; otherwise calls the port for the active account', async () => {
+  it('addContact is null without port support; otherwise calls the port for the named account', async () => {
     const plain = makePort();
     const { result: noSupport } = renderHook(() => useChatState(plain.port));
     await waitFor(() => expect(noSupport.current.loading).toBe(false));
@@ -375,12 +425,12 @@ describe('useChatState', () => {
     await waitFor(() => expect(result.current.conversations.length).toBe(1));
 
     await act(async () => {
-      await result.current.addContact?.('bob@example.org');
+      await result.current.addContact?.('home', 'bob@example.org');
     });
     expect(addChatContact).toHaveBeenCalledWith('home', 'bob@example.org');
   });
 
-  it('removeContact is null without port support; otherwise calls the port for the active account', async () => {
+  it('removeContact is null without port support; otherwise calls the port for the named account', async () => {
     const plain = makePort();
     const { result: noSupport } = renderHook(() => useChatState(plain.port));
     await waitFor(() => expect(noSupport.current.loading).toBe(false));
@@ -395,9 +445,45 @@ describe('useChatState', () => {
     await waitFor(() => expect(result.current.conversations.length).toBe(1));
 
     await act(async () => {
-      await result.current.removeContact?.('bob@example.org');
+      await result.current.removeContact?.('home', 'bob@example.org');
     });
     expect(removeChatContact).toHaveBeenCalledWith('home', 'bob@example.org');
+  });
+
+  it('blockContact is null without port support; otherwise calls the port and optimistically patches the roster', async () => {
+    const plain = makePort();
+    const { result: noSupport } = renderHook(() => useChatState(plain.port));
+    await waitFor(() => expect(noSupport.current.loading).toBe(false));
+    expect(noSupport.current.blockContact).toBeNull();
+
+    const blockChatContact = vi.fn(() => Promise.resolve());
+    const { port } = makePort({
+      blockChatContact,
+      listChatConversations: () => Promise.resolve([conv({ accountId: 'home' })]),
+      getChatRoster: () =>
+        Promise.resolve([
+          {
+            id: 'home:bob@example.org',
+            accountId: 'home',
+            address: 'bob@example.org',
+            name: 'Bob',
+            groups: [],
+            presence: 'offline',
+            statusText: '',
+            subscription: 'both',
+            blocked: false,
+          } satisfies ChatContact,
+        ]),
+    });
+    const { result } = renderHook(() => useChatState(port));
+    await waitFor(() => expect(result.current.conversations.length).toBe(1));
+    await waitFor(() => expect(result.current.client.roster['home:bob@example.org']).toBeDefined());
+
+    await act(async () => {
+      await result.current.blockContact?.('home', 'bob@example.org', true);
+    });
+    expect(blockChatContact).toHaveBeenCalledWith('home', 'bob@example.org', true);
+    expect(result.current.client.roster['home:bob@example.org']?.blocked).toBe(true);
   });
 
   it('leaveRoom is null without port support; otherwise calls the port and deselects the room', async () => {
@@ -422,6 +508,58 @@ describe('useChatState', () => {
     });
     expect(leaveChatRoom).toHaveBeenCalledWith('home', 'room@conf');
     expect(result.current.selectedConversationId).toBeNull();
+  });
+
+  it('editMessage is null without port support; otherwise calls the port for the selected conversation (no optimistic patch)', async () => {
+    const plain = makePort();
+    const { result: noSupport } = renderHook(() => useChatState(plain.port));
+    await waitFor(() => expect(noSupport.current.loading).toBe(false));
+    expect(noSupport.current.editMessage).toBeNull();
+
+    const editChatMessage = vi.fn(() => Promise.resolve());
+    const { port } = makePort({
+      editChatMessage,
+      listChatConversations: () => Promise.resolve([conv({ accountId: 'home' })]),
+    });
+    const { result } = renderHook(() => useChatState(port));
+    await waitFor(() => expect(result.current.conversations.length).toBe(1));
+    act(() => {
+      result.current.selectConversation('c1');
+    });
+    await waitFor(() => expect(result.current.activeAccountId).toBe('home'));
+
+    await act(async () => {
+      await result.current.editMessage?.('p1', 'fixed typo');
+    });
+    expect(editChatMessage).toHaveBeenCalledWith('home', 'c1', 'p1', 'fixed typo');
+  });
+
+  it('startEditing / cancelEditing track the Composer edit target; switching conversation clears it', async () => {
+    const { port } = makePort({
+      listChatConversations: () => Promise.resolve([conv({ accountId: 'home' }), conv({ id: 'c2', accountId: 'home' })]),
+    });
+    const { result } = renderHook(() => useChatState(port));
+    await waitFor(() => expect(result.current.conversations.length).toBe(2));
+    expect(result.current.editingMessage).toBeNull();
+
+    act(() => {
+      result.current.startEditing('p1', 'hi');
+    });
+    expect(result.current.editingMessage).toEqual({ messageId: 'p1', body: 'hi' });
+
+    act(() => {
+      result.current.cancelEditing();
+    });
+    expect(result.current.editingMessage).toBeNull();
+
+    act(() => {
+      result.current.startEditing('p1', 'hi');
+    });
+    // A conversation switch must not leave a stale edit target pointed at the old conversation.
+    act(() => {
+      result.current.selectConversation('c2');
+    });
+    expect(result.current.editingMessage).toBeNull();
   });
 
   it('switching accounts clears the selection', async () => {

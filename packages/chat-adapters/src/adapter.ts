@@ -92,6 +92,12 @@ export interface ChatAdapter {
   /** Remove a contact from the roster and cancel any presence subscription with them. Optional for
    *  the same reason as {@link addContact}. */
   removeContact?(session: ChatSession, address: string): Promise<void>;
+  /** Block / unblock an address at the server (XEP-0191, Matrix's ignored-user list, …) — the
+   *  blocked party's messages and presence stop reaching this account entirely, at the server, not
+   *  just hidden client-side. Optional: a protocol with no server-side blocking concept (IRC has
+   *  none — only per-channel operator bans) omits both. */
+  blockContact?(session: ChatSession, address: string): Promise<void>;
+  unblockContact?(session: ChatSession, address: string): Promise<void>;
   setPresence(session: ChatSession, presence: ChatPresence, statusText?: string): Promise<void>;
 
   listConversations(session: ChatSession): Promise<ChatConversation[]>;

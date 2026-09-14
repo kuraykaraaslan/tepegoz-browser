@@ -16,6 +16,8 @@ export type ChatHostApi = ChatClientPort & {
   getChatAccount: (accountId: string) => Promise<Omit<ChatAccount, 'secretRef'> | null>;
   /** `secret: null` keeps the vault's existing credential — see `AccountSetupForm`'s edit mode. */
   updateChatAccount: (account: ChatAccount, secret: string | null) => Promise<void>;
+  /** Opens a foreground browser tab — how a clicked message link actually leaves the chat panel. */
+  createTab: (url?: string) => void;
 };
 
 export interface ChatSurfaceProps {
@@ -57,6 +59,7 @@ function ChatSurface({ api }: Readonly<{ api: ChatHostApi }>) {
           if (account !== null) setMode({ kind: 'edit', account });
         });
       }}
+      onOpenLink={(href) => api.createTab(href)}
     />
   );
 }

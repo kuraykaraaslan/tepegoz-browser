@@ -121,6 +121,9 @@ importers:
       '@tailwindcss/vite':
         specifier: ^4.1.16
         version: 4.3.2(vite@7.3.6(@types/node@26.5.0)(jiti@2.7.0)(lightningcss@1.32.0))
+      '@tepegoz/adapter-subprocess':
+        specifier: workspace:*
+        version: link:../../packages/adapter-subprocess
       '@tepegoz/agent-runtime':
         specifier: workspace:*
         version: link:../../packages/agent-runtime
@@ -480,7 +483,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^3.2.6
-        version: 3.2.7(@types/debug@4.1.13)(@types/node@24.13.3)(jiti@2.7.0)(jsdom@25.0.1)(lightningcss@1.32.0)
+        version: 3.2.7(@types/debug@4.1.13)(@types/node@26.5.0)(jiti@2.7.0)(jsdom@25.0.1)(lightningcss@1.32.0)
 
   extensions/ext-macros:
     dependencies:
@@ -677,6 +680,22 @@ importers:
       vitest:
         specifier: ^3.2.6
         version: 3.2.7(@types/debug@4.1.13)(@types/node@26.5.0)(jiti@2.7.0)(jsdom@25.0.1)(lightningcss@1.32.0)
+
+  packages/adapter-subprocess:
+    dependencies:
+      zod:
+        specifier: 3.25.76
+        version: 3.25.76
+    devDependencies:
+      '@types/node':
+        specifier: ^22.10.2
+        version: 22.20.0
+      typescript:
+        specifier: ^5.7.2
+        version: 5.9.3
+      vitest:
+        specifier: ^3.2.6
+        version: 3.2.7(@types/debug@4.1.13)(@types/node@22.20.0)(jiti@2.7.0)(jsdom@25.0.1)(lightningcss@1.32.0)
 
   packages/agent-eval:
     dependencies:
@@ -1081,12 +1100,18 @@ importers:
 
   packages/chat-adapters:
     dependencies:
+      '@tepegoz/adapter-subprocess':
+        specifier: workspace:*
+        version: link:../adapter-subprocess
       '@tepegoz/chat-core':
         specifier: workspace:*
         version: link:../chat-core
       '@tepegoz/shared-types':
         specifier: workspace:*
         version: link:../shared-types
+      zod:
+        specifier: 3.25.76
+        version: 3.25.76
     devDependencies:
       '@types/node':
         specifier: ^22.10.2
@@ -1180,7 +1205,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^3.2.6
-        version: 3.2.7(@types/debug@4.1.13)(@types/node@24.13.3)(jiti@2.7.0)(jsdom@25.0.1)(lightningcss@1.32.0)
+        version: 3.2.7(@types/debug@4.1.13)(@types/node@26.5.0)(jiti@2.7.0)(jsdom@25.0.1)(lightningcss@1.32.0)
 
   packages/clipboard:
     dependencies:

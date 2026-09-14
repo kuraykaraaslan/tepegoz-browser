@@ -205,6 +205,7 @@ export default defineConfig({
       },
       include: [
         'apps/desktop/src/**',
+        'packages/adapter-subprocess/src/**',
         'packages/agent-eval/src/**',
         'packages/agent-runtime/src/**',
         'packages/auth-prompt-ui/src/**',
@@ -282,7 +283,12 @@ export default defineConfig({
       // number about the wrong thing. Stated plainly because it moves one: `packages/agent-eval`
       // reads 76.78% → 83.08% statements on the same tests. Nothing else in the repo matches the
       // glob, and the code the spec DRIVES (`harness-run.ts`, `harness-report.ts`) stays measured.
-      exclude: ['**/*.test.{ts,tsx}', '**/*.eval.ts', '**/index.ts'],
+      // `*.mjs` joins the same "excluded, not rescued" ground as `*.eval.ts` above, for the mirror
+      // reason: a bridge binary like `apps/desktop/src/main/chat/echo-bridge/echo-bridge.mjs` runs in
+      // its OWN spawned `node` process, never loaded through this vitest run's own module graph —
+      // v8's per-process coverage collector cannot see across that boundary, so it would always read
+      // 0% regardless of how thoroughly `echo-bridge.electron.test.ts` exercises it over the RPC wire.
+      exclude: ['**/*.test.{ts,tsx}', '**/*.eval.ts', '**/index.ts', '**/*.mjs'],
     },
   },
 });

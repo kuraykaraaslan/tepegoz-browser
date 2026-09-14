@@ -3,6 +3,7 @@ import { normalizeEvent } from '@tepegoz/chat-core';
 import { XMPP_CAPS } from '../caps';
 import { XmlStreamParser, type XmlElement } from './xml-stream';
 import {
+  buildBlock,
   buildChatState,
   buildMessage,
   buildPresence,
@@ -12,6 +13,7 @@ import {
   buildRosterAdd,
   buildRosterRemove,
   buildSubscribeRequest,
+  buildUnblock,
   parseReactionsStanza,
   stanzaToEvent,
   type StanzaContext,
@@ -313,6 +315,15 @@ describe('outgoing builders', () => {
   it('buildRosterRemove sets subscription="remove" on the item', () => {
     expect(buildRosterRemove('r1', 'bob@x.com')).toBe(
       '<iq type="set" id="r1"><query xmlns="jabber:iq:roster"><item jid="bob@x.com" subscription="remove"/></query></iq>',
+    );
+  });
+
+  it('buildBlock / buildUnblock (XEP-0191)', () => {
+    expect(buildBlock('b1', 'bob@x.com')).toBe(
+      '<iq type="set" id="b1"><block xmlns="urn:xmpp:blocking"><item jid="bob@x.com"/></block></iq>',
+    );
+    expect(buildUnblock('u1', 'bob@x.com')).toBe(
+      '<iq type="set" id="u1"><unblock xmlns="urn:xmpp:blocking"><item jid="bob@x.com"/></unblock></iq>',
     );
   });
 });

@@ -26,7 +26,7 @@ import { PROVIDER_MODEL_CATALOG, providerRegions } from '@tepegoz/model-gateway'
 import { AppError } from '@tepegoz/libs';
 import { AI_PROVIDERS, type AIProvider } from '@tepegoz/shared-types';
 import McpService from '../mcp/supervisor.electron';
-import ChatMessenger from '../chat/chat-service.electron';
+import BackgroundConnectionService from '../extensions/background-connection.electron';
 import ExtensionCapabilityService from '../extensions/capability-supervisor.electron';
 import FileOperationsHost from '../file-operations/file-operations-host';
 import {
@@ -110,7 +110,7 @@ function syncDefaultProviderFromKeys(): void {
 function reconcileAfterBulkPreferenceChange(): void {
   void McpService.reconcile();
   ExtensionCapabilityService.reconcile();
-  void ChatMessenger.reconcile();
+  void BackgroundConnectionService.reconcile();
   adblockHost.init();
   typoHost.init();
   translateHost.init();
@@ -165,11 +165,11 @@ export function registerAppIpc(): void {
     if (validated.mcpServers !== undefined || validated.extensions !== undefined) {
       void McpService.reconcile();
     }
-    // Extension enablement also gates in-process agent capabilities (ADR-0021) and the messenger's
-    // background connections (`com.tepegoz.chat`).
+    // Extension enablement also gates in-process agent capabilities (ADR-0021) and every registered
+    // extension's background connections (currently just `com.tepegoz.chat`).
     if (validated.extensions !== undefined) {
       ExtensionCapabilityService.reconcile();
-      void ChatMessenger.reconcile();
+      void BackgroundConnectionService.reconcile();
     }
     // File-access whitelist or master switch changed — re-sync the live FileAccessPolicy.
     if (validated.fileAccessGrants !== undefined || validated.fileOperationsEnabled !== undefined) {

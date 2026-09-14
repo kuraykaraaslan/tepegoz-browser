@@ -67,20 +67,68 @@ describe('RoomHeader', () => {
     expect(onSetNotifyLevel).toHaveBeenCalledWith('none');
   });
 
-  it('shows the mute toggle only with a handler and reflects the muted state', () => {
+  it('shows the mute menu only with both handlers, offering a duration picker when unmuted', () => {
     const { rerender } = wrap(<RoomHeader name="r" membersOpen onToggleMembers={vi.fn()} />);
     expect(screen.queryByRole('button', { name: /Mute|Unmute/ })).toBeNull();
 
-    const onToggleMuted = vi.fn();
+    const onMuteFor = vi.fn();
+    const onUnmute = vi.fn();
     rerender(
       <I18nProvider locale="en">
-        <RoomHeader name="r" membersOpen onToggleMembers={vi.fn()} muted onToggleMuted={onToggleMuted} />
+        <RoomHeader
+          name="r"
+          membersOpen
+          onToggleMembers={vi.fn()}
+          onMuteFor={onMuteFor}
+          onUnmute={onUnmute}
+        />
       </I18nProvider>,
     );
-    const btn = screen.getByRole('button', { name: 'Unmute' });
+    const trigger = screen.getByRole('button', { name: 'Mute' });
+    expect(trigger.getAttribute('aria-pressed')).toBe('false');
+    fireEvent.click(trigger);
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Mute for 3 hours' }));
+    expect(onMuteFor).toHaveBeenCalledWith(3 * 3_600_000);
+  });
+
+  it('offers only Unmute when the room is already muted', () => {
+    wrap(
+      <RoomHeader
+        name="r"
+        membersOpen
+        onToggleMembers={vi.fn()}
+        mutedNow
+        onMuteFor={vi.fn()}
+        onUnmute={vi.fn()}
+      />,
+    );
+    const trigger = screen.getByRole('button', { name: 'Unmute' });
+    expect(trigger.getAttribute('aria-pressed')).toBe('true');
+    fireEvent.click(trigger);
+    expect(screen.getByRole('menuitem', { name: 'Unmute' })).toBeDefined();
+    expect(screen.queryByRole('menuitem', { name: /Mute for/ })).toBeNull();
+  });
+
+  it('shows the archive toggle only with a handler and reflects the archived state', () => {
+    const { rerender } = wrap(<RoomHeader name="r" membersOpen onToggleMembers={vi.fn()} />);
+    expect(screen.queryByRole('button', { name: /Archive|Unarchive/ })).toBeNull();
+
+    const onToggleArchived = vi.fn();
+    rerender(
+      <I18nProvider locale="en">
+        <RoomHeader
+          name="r"
+          membersOpen
+          onToggleMembers={vi.fn()}
+          archived
+          onToggleArchived={onToggleArchived}
+        />
+      </I18nProvider>,
+    );
+    const btn = screen.getByRole('button', { name: 'Unarchive' });
     expect(btn.getAttribute('aria-pressed')).toBe('true');
     fireEvent.click(btn);
-    expect(onToggleMuted).toHaveBeenCalled();
+    expect(onToggleArchived).toHaveBeenCalled();
   });
 
   it('shows the "not encrypted" marker only when the room protocol has no E2EE', () => {

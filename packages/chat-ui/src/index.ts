@@ -38,6 +38,8 @@ export {
 } from './mention-autocomplete';
 export { RoomMemberList, type RoomMemberListProps } from './RoomMemberList';
 export { RoomHeader, type RoomHeaderProps } from './RoomHeader';
+export { MuteMenu, type MuteMenuProps } from './MuteMenu';
+export { isMutedNow } from './mute';
 export { NotEncryptedBadge } from './NotEncryptedBadge';
 export { roomTypingLabel, typingName, type TypingStrings } from './typing';
 export {
@@ -47,6 +49,7 @@ export {
   type RoomListing,
 } from './room-browser';
 export { RoomBrowser, type RoomBrowserProps } from './RoomBrowser';
+export { NewChatDialog, type NewChatDialogProps } from './NewChatDialog';
 export {
   isSendKey,
   draftToBody,
@@ -106,12 +109,11 @@ export { ProtocolBadge, type ProtocolBadgeProps, type ChatProtocolKind } from '.
 export { Avatar, avatarHue, avatarInitials, type AvatarProps, type AvatarSize } from './Avatar';
 export {
   conversationTitle,
+  filterConversations,
   sortConversations,
   totalUnread,
   totalMentions,
-  groupConversationsByAccount,
   type ChatAccountRef,
-  type AccountGroup,
 } from './conversation-list';
 export { ConversationList, type ConversationListProps } from './ConversationList';
 export { AccountsManager, type AccountsManagerProps } from './AccountsManager';

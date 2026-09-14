@@ -102,6 +102,8 @@ export const en = {
     quoteAttachment: 'Attachment',
     /** Accessible label for the "+" button that opens the quick-reaction picker. */
     addReaction: 'Add reaction',
+    /** Accessible label for the per-message "edit this message" trigger (own messages only). */
+    edit: 'Edit message',
   },
   delivery: {
     pending: 'Sending…',
@@ -127,8 +129,6 @@ export const en = {
     addAccount: 'Add account',
     /** Shown in the message pane when nothing is selected. */
     noSelection: 'Pick a conversation.',
-    /** Accessible label for the account switcher. */
-    accountSwitcher: 'Account',
     typing: 'typing…',
     /** Room typing line, one typist: "{name} " + this. */
     typingOne: 'is typing…',
@@ -140,10 +140,51 @@ export const en = {
     mute: 'Mute',
     /** Toggle action: stop silencing this conversation. */
     unmute: 'Unmute',
+    /** Mute-duration menu options. */
+    muteFor1h: 'Mute for 1 hour',
+    muteFor3h: 'Mute for 3 hours',
+    muteFor8h: 'Mute for 8 hours',
+    muteForever: 'Mute forever',
+    /** Toggle action: move this conversation off the default list. */
+    archive: 'Archive',
+    /** Toggle action: bring this conversation back onto the default list. */
+    unarchive: 'Unarchive',
+    /** Above the conversation list, when at least one conversation is archived: "Show archived (3)". */
+    showArchived: 'Show archived',
+    /** Shown instead of {@link showArchived} while viewing the archived list. */
+    backToChats: 'Back to Chats',
     /** Persistent marker on a conversation whose protocol carries no end-to-end encryption. */
     notEncrypted: 'Not encrypted',
     /** Tooltip / detail for {@link notEncrypted} on IRC, which has no encryption at all. */
     ircPlaintext: 'IRC has no end-to-end encryption — messages are readable by the server.',
+    /** Accessible name / tooltip for the button that opens {@link newChat}. */
+    newChat: 'New chat',
+  },
+  newChat: {
+    title: 'New chat',
+    close: 'Close',
+    tabContacts: 'Contacts',
+    tabRooms: 'Rooms',
+    tabAddress: 'By address',
+    searchContacts: 'Search contacts',
+    noContacts: 'No contacts yet.',
+    /** Heading over already-joined rooms, across every account — the quick "ready-made groups" list. */
+    yourRooms: 'Your rooms',
+    searchRooms: 'Search your rooms',
+    noRooms: "You haven't joined any rooms yet.",
+    /** Heading over the XEP-0030 directory browser embedded in the Rooms tab. */
+    discoverRooms: 'Discover public rooms',
+    /** Shown instead of {@link discoverRooms} when no configured account can browse a directory. */
+    discoverUnavailable: 'No account here can browse a room directory — join one by its address instead.',
+    /** Label for the account picker that selects which account a discovery search runs against. */
+    discoverAccount: 'Account',
+    /** Label + placeholder for the generic "start a chat with this address" field — deliberately
+     *  address-shaped rather than phone-number-shaped: a future phone lookup slots into the same
+     *  field rather than replacing it. */
+    addressAccount: 'Account',
+    addressLabel: 'Address',
+    addressPlaceholder: 'user@example.org',
+    start: 'Start chat',
   },
   accountsManager: {
     title: 'Accounts',
@@ -175,9 +216,16 @@ export const en = {
     noMatch: 'No contacts match your search.',
     add: 'Add contact',
     addPlaceholder: 'user@example.org',
+    /** Accessible label for the account picker in the add-contact form — shown only when there is
+     *  more than one configured account, since the Contacts tab is unified across all of them. */
+    addAccount: 'Add to account',
     remove: 'Remove',
     /** Marker on a contact who can see the user's presence but is not yet mutual. */
     pending: 'Awaiting response',
+    block: 'Block',
+    unblock: 'Unblock',
+    /** Marker on a row for a contact the user has blocked. */
+    blocked: 'Blocked',
   },
   setup: {
     title: 'Add an account',

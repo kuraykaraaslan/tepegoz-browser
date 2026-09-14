@@ -283,6 +283,12 @@
   font-weight: 750;
   letter-spacing: 0.01em;
 }
+.chat-workspace__left-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
 .chat-workspace__icon-btn {
   display: inline-grid;
   place-items: center;
@@ -378,16 +384,33 @@
   box-shadow: var(--cu-shadow-sm);
   z-index: 1;
 }
-.chat-workspace__conv-head h2 {
-  margin: 0;
-  font-size: 15px;
-  font-weight: 700;
-}
 .chat-workspace__conv-head-avatar {
   flex: none;
   display: inline-flex;
 }
-.chat-workspace__conv-head .chat-workspace__mute {
+/* Shrinks as one unit so a long JID-length name truncates instead of squeezing the actions off the
+ * right edge — the exact "cramped" layout reported against a long address here. */
+.chat-workspace__conv-head-id {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+.chat-workspace__conv-head-id h2 {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+}
+.chat-workspace__conv-head-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: none;
   margin-inline-start: auto;
 }
 .chat-workspace__typing {
@@ -433,24 +456,6 @@
 }
 .chat-conv-list__empty {
   padding: 16px;
-  color: var(--cu-text-secondary);
-}
-.chat-conv-list__group {
-  border-inline-start: 3px solid transparent;
-  margin: 4px 0;
-}
-.chat-conv-list__group ul {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-.chat-conv-list__account {
-  margin: 0;
-  padding: 6px 8px 2px;
-  font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
   color: var(--cu-text-secondary);
 }
 .chat-conv {
@@ -500,14 +505,45 @@
 .chat-conv__avatar[data-kind='room'] .chat-avatar {
   border-radius: 30%;
 }
+/* Title + preview stack vertically; time + badges ride the right edge of their own row — the
+ * standard two-line chat-list row. */
+.chat-conv__main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.chat-conv__row-top,
+.chat-conv__row-bottom {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
 .chat-conv__title {
   flex: 1;
+  min-width: 0;
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
   font-weight: 550;
 }
+.chat-conv__time {
+  flex: none;
+  font-size: 11px;
+  color: var(--cu-text-secondary);
+}
+.chat-conv__preview {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: 12.5px;
+  color: var(--cu-text-secondary);
+}
 .chat-conv__muted {
+  flex: none;
   width: 12px;
   height: 12px;
   border-radius: 50%;
@@ -515,6 +551,7 @@
   opacity: 0.5;
 }
 .chat-conv__badge {
+  flex: none;
   min-width: 20px;
   padding: 1px 6px;
   border-radius: 999px;
@@ -699,14 +736,8 @@
   color: var(--cu-text-secondary);
   font-size: 12px;
 }
-/* its own line above the bubble content — never sharing a row with the avatar or the timestamp,
- * which is what forced the timestamp out of view for a long (JID-length) sender name. */
-.chat-msg__sender {
-  display: block;
-  margin-bottom: 2px;
-  font-weight: 700;
-  font-size: 12.5px;
-  color: var(--cu-primary-on-surface);
+.chat-msg__avatar-tip {
+  display: inline-flex;
 }
 .chat-msg__body {
   white-space: pre-wrap;
@@ -837,6 +868,57 @@ button.chat-msg__quote {
   cursor: pointer;
 }
 .chat-msg__react-picker button:hover {
+  background: var(--cu-primary-subtle);
+}
+
+/* ── mute-duration menu (DM header + <RoomHeader>) ───────────────────────────── */
+.chat-mute-menu {
+  position: relative;
+  display: inline-flex;
+}
+.chat-mute-menu__trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+.chat-mute-menu__trigger:hover {
+  background: var(--cu-primary-subtle);
+}
+.chat-mute-menu__trigger[aria-pressed='true'] {
+  color: var(--cu-primary);
+}
+.chat-mute-menu__list {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  min-width: 160px;
+  padding: 4px;
+  border: 1px solid var(--cu-border);
+  border-radius: 10px;
+  background: var(--cu-surface-base);
+  box-shadow: var(--cu-shadow-pop);
+}
+.chat-mute-menu__list button {
+  padding: 6px 8px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+.chat-mute-menu__list button:hover {
   background: var(--cu-primary-subtle);
 }
 
@@ -1059,12 +1141,21 @@ button.chat-msg__quote {
   color: var(--cu-text-secondary);
 }
 .chat-roster__remove,
+.chat-roster__block,
 .chat-room-browser__room .chat-room-browser__flag {
   border: 0;
   background: transparent;
   color: var(--cu-text-secondary);
   cursor: pointer;
   font: inherit;
+}
+.chat-roster__blocked {
+  padding: 0 6px;
+  border-radius: 8px;
+  background: var(--cu-danger-bg, #fde2e2);
+  border: 1px solid var(--cu-danger, #c0392b);
+  font-size: 10px;
+  color: var(--cu-danger, #c0392b);
 }
 .chat-roster__add,
 .chat-room-browser__service,
@@ -1226,7 +1317,7 @@ button.chat-msg__quote {
   color: var(--cu-text-primary);
   border-color: var(--cu-border-strong);
 }
-.chat-workspace__mute {
+.chat-workspace__archive {
   padding: 3px 8px;
   border: 1px solid var(--cu-border);
   border-radius: 6px;
@@ -1235,6 +1326,21 @@ button.chat-msg__quote {
   font: inherit;
   font-size: 12px;
   cursor: pointer;
+}
+.chat-workspace__archived-toggle {
+  margin: 4px 8px;
+  padding: 4px 6px;
+  border: 0;
+  background: transparent;
+  color: var(--cu-primary);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  text-align: start;
+  cursor: pointer;
+}
+.chat-workspace__archived-toggle:hover {
+  text-decoration: underline;
 }
 .chat-room-header__invite-input {
   width: min(240px, 42vw);
@@ -1247,7 +1353,7 @@ button.chat-msg__quote {
   font-size: 12px;
 }
 .chat-room-header__icon-btn[aria-pressed='true'],
-.chat-workspace__mute[aria-pressed='true'] {
+.chat-workspace__archive[aria-pressed='true'] {
   background: var(--cu-primary-subtle);
   border-color: var(--cu-primary);
   color: var(--cu-primary-on-surface);
@@ -1498,4 +1604,175 @@ button.chat-msg__quote {
 }
 .chat-conv[aria-current='true'] .chat-protocol-badge {
   box-shadow: 0 0 0 2px var(--cu-primary-subtle);
+}
+
+/* New Chat dialog — a modal overlay, not another left-column tab (that's the point: it works across
+ * every account, not whichever one the open conversation happens to belong to). */
+.chat-new-chat__backdrop {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: rgba(0, 0, 0, 0.35);
+  z-index: 20;
+}
+.chat-new-chat {
+  display: flex;
+  flex-direction: column;
+  width: min(420px, calc(100vw - 32px));
+  max-height: min(600px, calc(100vh - 64px));
+  border-radius: 12px;
+  background: var(--cu-surface-raised);
+  border: 1px solid var(--cu-border);
+  box-shadow: var(--cu-shadow-lg, 0 12px 32px rgba(0, 0, 0, 0.25));
+  overflow: hidden;
+}
+.chat-new-chat__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--cu-border);
+}
+.chat-new-chat__head h2 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+}
+.chat-new-chat__close {
+  border: 0;
+  background: transparent;
+  color: var(--cu-text-secondary);
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 2px 6px;
+}
+.chat-new-chat__close:hover {
+  color: var(--cu-text-primary);
+}
+.chat-new-chat__tabs {
+  display: flex;
+  gap: 4px;
+  padding: 8px 10px 0;
+  border-bottom: 1px solid var(--cu-border);
+}
+.chat-new-chat__tabs button {
+  border: 0;
+  background: transparent;
+  padding: 8px 10px;
+  font: inherit;
+  font-weight: 600;
+  color: var(--cu-text-secondary);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+}
+.chat-new-chat__tabs button[aria-selected='true'] {
+  color: var(--cu-text-primary);
+  border-bottom-color: var(--cu-primary);
+}
+.chat-new-chat__panel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 14px;
+  overflow-y: auto;
+}
+.chat-new-chat__panel h3 {
+  margin: 6px 0 0;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--cu-text-secondary);
+}
+.chat-new-chat__panel input,
+.chat-new-chat__panel select {
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--cu-border);
+  background: var(--cu-surface-base);
+  color: var(--cu-text-primary);
+  font: inherit;
+}
+.chat-new-chat__empty {
+  margin: 4px 0;
+  color: var(--cu-text-secondary);
+  font-size: 12px;
+}
+.chat-new-chat__list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.chat-new-chat__row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 6px 8px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.chat-new-chat__row:hover {
+  background: var(--cu-surface-hover, var(--cu-accent-wash));
+}
+.chat-new-chat__avatar {
+  position: relative;
+  display: inline-flex;
+  flex-shrink: 0;
+}
+.chat-new-chat__avatar .chat-protocol-badge {
+  position: absolute;
+  top: -3px;
+  right: -3px;
+}
+.chat-new-chat__row-main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.chat-new-chat__name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.chat-new-chat__account-caption {
+  font-size: 11px;
+  color: var(--cu-text-secondary);
+}
+.chat-new-chat__address {
+  gap: 10px;
+}
+.chat-new-chat__address label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--cu-text-secondary);
+}
+.chat-new-chat__address button {
+  align-self: flex-start;
+  padding: 6px 14px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--cu-primary);
+  color: var(--cu-primary-fg);
+  font: inherit;
+  font-weight: 650;
+  cursor: pointer;
+}
+.chat-new-chat__address button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.chat-new-chat__panel .chat-room-browser {
+  padding: 0;
+  border: 0;
 }

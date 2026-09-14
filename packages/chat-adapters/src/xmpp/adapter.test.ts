@@ -220,6 +220,32 @@ describe('XmppAdapter — live traffic', () => {
     expect(sent).not.toContain('type="chat"');
   });
 
+  it('editMessage writes a tracked correction (XEP-0308) with a fresh stanza id', async () => {
+    const { server, adapter, session } = await connected();
+    await adapter.editMessage(session, 'bob@example.com', 'm1', {
+      body: 'fixed typo',
+      replyToId: null,
+      mediaPath: null,
+    });
+    const sent = server.lastWritten();
+    expect(sent).toMatch(/^<message to="bob@example.com" id="t-/);
+    expect(sent).toContain('<body>fixed typo</body>');
+    expect(sent).toContain('<replace id="m1" xmlns="urn:xmpp:message-correct:0"/>');
+    expect(sent).toContain('type="chat"');
+    expect(session.sm.unackedCount).toBe(1);
+  });
+
+  it('editMessage in a joined room uses type="groupchat"', async () => {
+    const { server, adapter, session } = await connected();
+    await adapter.joinRoom(session, 'general@conf.example.com');
+    await adapter.editMessage(session, 'general@conf.example.com', 'm1', {
+      body: 'fixed',
+      replyToId: null,
+      mediaPath: null,
+    });
+    expect(server.lastWritten()).toContain('type="groupchat"');
+  });
+
   it('setPresence and markRead write the right stanzas', async () => {
     const { server, adapter, session } = await connected();
     await adapter.setPresence(session, 'dnd', 'busy');
@@ -317,6 +343,25 @@ describe('XmppAdapter — live traffic', () => {
     expect(server.written.some((l) => l.includes('type="subscribe"') || l.includes('type="unsubscribe"'))).toBe(
       false,
     );
+  });
+
+  it('blockContact / unblockContact send XEP-0191 iqs, with no roster-interest requirement', async () => {
+    const { server, adapter, session } = await connected();
+    const p = adapter.blockContact?.(session, 'bob@example.com');
+    const id = /id="(block-\d+)"/.exec(server.lastWritten())?.[1] ?? '';
+    expect(server.lastWritten()).toBe(
+      `<iq type="set" id="${id}"><block xmlns="urn:xmpp:blocking"><item jid="bob@example.com"/></block></iq>`,
+    );
+    server.send(`<iq type="result" id="${id}"/>`);
+    await p;
+
+    const p2 = adapter.unblockContact?.(session, 'bob@example.com');
+    const id2 = /id="(unblock-\d+)"/.exec(server.lastWritten())?.[1] ?? '';
+    expect(server.lastWritten()).toBe(
+      `<iq type="set" id="${id2}"><unblock xmlns="urn:xmpp:blocking"><item jid="bob@example.com"/></unblock></iq>`,
+    );
+    server.send(`<iq type="result" id="${id2}"/>`);
+    await p2;
   });
 
   it('addContact skips the roster get on a second call once this session is already interested', async () => {
@@ -541,6 +586,35 @@ describe('XmppAdapter — live traffic', () => {
         `<x xmlns="http://jabber.org/protocol/muc#user"><item/></x></presence>`,
     );
     expect((await it.next()).value).toMatchObject({ joined: false, memberCount: 0 });
+  });
+
+  it('creating a room (status 201 on our own join presence) auto-accepts the default config to unlock it', async () => {
+    // XEP-0045 §10.1.3: a newly-created room is LOCKED until its creator accepts a configuration —
+    // a second occupant's own join is bounced (item-not-found/not-allowed) until that happens.
+    // Found live (2026-09-13, X-chat.3's "get pinged" Functional DoD verification): every room this
+    // adapter ever created stayed permanently locked to a single occupant because nothing sent the
+    // accept. `statusCodes`/the 201 code were already parsed (`muc.ts`) and simply never consumed.
+    const { server, adapter, session } = await connected();
+    await adapter.joinRoom(session, 'general@conf.example.com');
+    server.send(
+      `<presence from="general@conf.example.com/ada"><x xmlns="http://jabber.org/protocol/muc#user">` +
+        `<item affiliation="owner" role="moderator"/><status code="110"/><status code="201"/></x></presence>`,
+    );
+    // `nextIqId`'s counter is shared across every iq this session ever sends (`connect()`'s own
+    // bind request already used seq 1) — assert the shape, not a specific sequence number.
+    expect(server.lastWritten()).toMatch(
+      /^<iq type="set" to="general@conf\.example\.com" id="muc-instant-\d+"><query xmlns="http:\/\/jabber\.org\/protocol\/muc#owner"><x xmlns="jabber:x:data" type="submit"\/><\/query><\/iq>$/,
+    );
+  });
+
+  it('a self-join presence WITHOUT status 201 (an existing room) never sends the instant-room accept', async () => {
+    const { server, adapter, session } = await connected();
+    await adapter.joinRoom(session, 'general@conf.example.com');
+    server.send(
+      `<presence from="general@conf.example.com/ada"><x xmlns="http://jabber.org/protocol/muc#user">` +
+        `<item affiliation="member" role="participant"/><status code="110"/></x></presence>`,
+    );
+    expect(server.lastWritten()).not.toContain('muc#owner');
   });
 
   it('a groupchat <subject> from a joined room becomes a room-topic event', async () => {

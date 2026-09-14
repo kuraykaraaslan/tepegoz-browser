@@ -17,9 +17,17 @@ import { mainStrings } from '../lib/i18n-main';
  * "Internal error" and log it as a main-process fault. A bad payload is a 400, and the renderer only
  * ever learns the generic localized string (the zod issue path stays in the main-process log).
  */
-export function parsePayload<T>(schema: z.ZodType<T>, payload: unknown): T {
+/**
+ * Generic over the SCHEMA (`S extends z.ZodTypeAny`), not directly over its output (`z.ZodType<T>`)
+ * — inferring `T` by unifying the caller's concrete schema against the loose `z.ZodType<T>`
+ * supertype loses precision for a schema with a `.nullable()` (but not `.optional()`) field, widening
+ * it to include `undefined` in the inferred return type even though a real parse never produces one.
+ * Taking `S` itself and deriving `z.infer<S>` keeps the schema concrete, so the return type matches
+ * exactly what the schema actually declares (same fix as `ProcessSupervisor.call`, same root cause).
+ */
+export function parsePayload<S extends z.ZodTypeAny>(schema: S, payload: unknown): z.infer<S> {
   const parsed = schema.safeParse(payload);
-  if (parsed.success) return parsed.data;
+  if (parsed.success) return parsed.data as z.infer<S>;
   Logger.warn('Rejected IPC payload: schema mismatch', {
     issues: parsed.error.issues.map((i) => i.path.join('.')).join(','),
   });

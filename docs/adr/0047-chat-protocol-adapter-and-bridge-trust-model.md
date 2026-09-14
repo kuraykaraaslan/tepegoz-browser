@@ -79,6 +79,11 @@ response cannot make the UI offer a feature the wire cannot carry.
 
 ### 4. Bridge subprocess isolation
 
+Generalized by [ADR-0048](0048-adapter-subprocess-contract.md) into a reusable, protocol-agnostic
+contract; the filesystem/egress mechanism named here as a requirement is given an actual, no-elevation
+enforcement design by [ADR-0049](0049-bridge-subprocess-os-sandboxing.md) — read those two alongside
+this section, not as replacing it.
+
 A bridge child process gets:
 
 - **No filesystem access** beyond its own `Bridges/<id>/state/` directory.

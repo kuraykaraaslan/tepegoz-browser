@@ -1,3 +1,4 @@
+import { foldForSearch } from '@tepegoz/i18n';
 import type { ChatConversation } from '@tepegoz/shared-types';
 
 /**
@@ -31,46 +32,23 @@ export function sortConversations<T extends Pick<ChatConversation, 'updatedAt' |
   return [...conversations].sort((a, b) => b.updatedAt - a.updatedAt || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
 }
 
+/** Fold-aware filter over a conversation's title/address — used by `<NewChatDialog>`'s "your rooms"
+ *  quick list, same matching rule as `filterRoster`/`filterRoomListings`. */
+export function filterConversations<T extends Pick<ChatConversation, 'name' | 'address'>>(
+  conversations: readonly T[],
+  query: string,
+): T[] {
+  const needle = foldForSearch(query.trim());
+  if (needle === '') return [...conversations];
+  return conversations.filter(
+    (c) => foldForSearch(c.name).includes(needle) || foldForSearch(c.address).includes(needle),
+  );
+}
+
 export function totalUnread(conversations: readonly Pick<ChatConversation, 'unread'>[]): number {
   return conversations.reduce((sum, c) => sum + c.unread, 0);
 }
 
 export function totalMentions(conversations: readonly Pick<ChatConversation, 'mentions'>[]): number {
   return conversations.reduce((sum, c) => sum + c.mentions, 0);
-}
-
-export interface AccountGroup<T> {
-  /** `null` for conversations whose `accountId` is not in the supplied account list. */
-  readonly account: ChatAccountRef | null;
-  readonly conversations: readonly T[];
-}
-
-/**
- * Bucket conversations under their account, preserving the given account order; a trailing `null`
- * group collects any conversation whose account is unknown. Empty groups are dropped. Within each
- * group the conversations keep the order they were passed in (sort first if you want recency).
- */
-export function groupConversationsByAccount<T extends Pick<ChatConversation, 'accountId'>>(
-  conversations: readonly T[],
-  accounts: readonly ChatAccountRef[],
-): AccountGroup<T>[] {
-  const byId = new Map<string, T[]>();
-  const unknown: T[] = [];
-  for (const conv of conversations) {
-    if (accounts.some((a) => a.id === conv.accountId)) {
-      const bucket = byId.get(conv.accountId) ?? [];
-      bucket.push(conv);
-      byId.set(conv.accountId, bucket);
-    } else {
-      unknown.push(conv);
-    }
-  }
-
-  const groups: AccountGroup<T>[] = [];
-  for (const account of accounts) {
-    const conversations = byId.get(account.id);
-    if (conversations !== undefined && conversations.length > 0) groups.push({ account, conversations });
-  }
-  if (unknown.length > 0) groups.push({ account: null, conversations: unknown });
-  return groups;
 }

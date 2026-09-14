@@ -179,11 +179,17 @@ export async function maybeRunEval(): Promise<void> {
   const prompt = process.env.TEPEGOZ_EVAL_PROMPT;
   const fixtureUrl = process.env.TEPEGOZ_EVAL_FIXTURE_URL;
   const outPath = process.env.TEPEGOZ_EVAL_OUT;
-  if (prompt === undefined || fixtureUrl === undefined || outPath === undefined) {
+  // X-chat.6 slice 3: a `chatFixture` scenario (`@tepegoz/agent-eval`'s harness-run.ts) is not a page
+  // — `chat-service.electron.ts` seeds the ChatStore from this same path before the app's deferred
+  // init finishes, so by the time this hook runs the agent's chat_* tools already see real seeded
+  // data. There is no page to navigate to or read back, so this run skips both.
+  const isChatFixture = process.env.TEPEGOZ_EVAL_CHAT_FIXTURE !== undefined;
+  if (prompt === undefined || outPath === undefined || (!isChatFixture && fixtureUrl === undefined)) {
     Logger.error('[eval] TEPEGOZ_EVAL=1 but a required env var is missing', {
       prompt: prompt ?? '',
       fixtureUrl: fixtureUrl ?? '',
       outPath: outPath ?? '',
+      isChatFixture,
     });
     app.quit();
     return;
@@ -192,8 +198,9 @@ export async function maybeRunEval(): Promise<void> {
   try {
     const provider = providerForRun();
 
-    // Start the agent on the target page through the REAL navigation path.
-    await navigateWhenReady(fixtureUrl);
+    // Start the agent on the target page through the REAL navigation path — chat scenarios have no
+    // page, so there is nothing to navigate to; the agent starts directly on the chat_* tools.
+    if (!isChatFixture && fixtureUrl !== undefined) await navigateWhenReady(fixtureUrl);
 
     const handoff = mainStrings().agent.handoff;
     const tabSpawn = mainStrings().agent.tabSpawn;
@@ -228,7 +235,9 @@ export async function maybeRunEval(): Promise<void> {
       provider,
     });
 
-    const page = await browserHost.readPage();
+    // A chat scenario never opened a tab — there is no page to read back, and asking would throw
+    // "No active page" over what is otherwise a clean run.
+    const page = isChatFixture ? { url: '', text: '' } : await browserHost.readPage();
     writeFileSync(
       outPath,
       JSON.stringify(

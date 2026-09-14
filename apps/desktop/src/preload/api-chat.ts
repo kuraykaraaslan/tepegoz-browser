@@ -40,10 +40,14 @@ export const chatApi: Pick<
   | 'leaveChatRoom'
   | 'setChatRoomNotifyLevel'
   | 'setChatMuted'
+  | 'muteChatFor'
+  | 'setChatArchived'
+  | 'blockChatContact'
   | 'setChatRoomTopic'
   | 'inviteToChatRoom'
   | 'resolveChatMedia'
   | 'reactToChatMessage'
+  | 'editChatMessage'
   | 'onChatState'
 > = {
   listChatAccounts: () => invoke<ChatAccountsSnapshot>(IpcChannels.chatListAccounts),
@@ -89,6 +93,12 @@ export const chatApi: Pick<
     invoke<void>(IpcChannels.chatSetRoomNotifyLevel, { accountId, conversationId, level }),
   setChatMuted: (accountId: string, conversationId: string, muted: boolean) =>
     invoke<void>(IpcChannels.chatSetMuted, { accountId, conversationId, muted }),
+  muteChatFor: (accountId: string, conversationId: string, durationMs: number | null) =>
+    invoke<void>(IpcChannels.chatMuteFor, { accountId, conversationId, durationMs }),
+  setChatArchived: (accountId: string, conversationId: string, archived: boolean) =>
+    invoke<void>(IpcChannels.chatSetArchived, { accountId, conversationId, archived }),
+  blockChatContact: (accountId: string, address: string, blocked: boolean) =>
+    invoke<void>(IpcChannels.chatBlockContact, { accountId, address, blocked }),
   setChatRoomTopic: (accountId: string, conversationId: string, topic: string) =>
     invoke<void>(IpcChannels.chatSetRoomTopic, { accountId, conversationId, topic }),
   inviteToChatRoom: (accountId: string, conversationId: string, invitee: string) =>
@@ -102,6 +112,8 @@ export const chatApi: Pick<
     emoji: string,
     on: boolean,
   ) => invoke<void>(IpcChannels.chatReact, { accountId, conversationId, messageId, emoji, on }),
+  editChatMessage: (accountId: string, conversationId: string, messageId: string, body: string) =>
+    invoke<void>(IpcChannels.chatEditMessage, { accountId, conversationId, messageId, body }),
   onChatState: (callback: (event: ChatStateEvent) => void) => {
     const listener = (_event: unknown, payload: ChatStateEvent): void => {
       callback(payload);

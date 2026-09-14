@@ -190,6 +190,19 @@ module.exports = {
       to: { path: ['^apps/', 'node_modules/electron'] },
     },
     {
+      name: 'adapter-subprocess-no-app-no-electron',
+      severity: 'error',
+      comment:
+        '@tepegoz/adapter-subprocess is the shared out-of-process protocol-adapter/bridge supervisor ' +
+        '(ADR-0048): spawn/health-check/restart-with-backoff/kill a child process + a typed ' +
+        'newline-JSON RPC envelope over its stdio, generic across whatever adapter interface the ' +
+        'consuming extension declares (chat today; mail is the expected second consumer). Node ' +
+        'builtins (child_process) are allowed; Electron and the app are not — the desktop ChatService ' +
+        '(or its mail equivalent) instantiates it with the real `spawn`. See docs/package-map.md.',
+      from: { path: '^packages/adapter-subprocess/' },
+      to: { path: ['^apps/', 'node_modules/electron'] },
+    },
+    {
       name: 'chat-ui-is-a-leaf',
       severity: 'error',
       comment:

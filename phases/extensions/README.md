@@ -77,14 +77,23 @@ These are not restated per-document beyond a pointer; they are the price of bein
       (keep a socket open while the surface is closed), `notifications`, `contacts`. Landed with
       X-chat.1 (`packages/extension-sdk/src/manifest.ts`); `extensions/ext-chat`'s manifest declares
       all four.
-- [ ] **A `background-connection` supervisor** in `@tepegoz/extension-host` — today an extension's
+- [x] **A `background-connection` supervisor** in `@tepegoz/extension-host` — today an extension's
       runtime is tied to a renderer surface being open. A mail/chat account must stay connected (or on
       a defined reconnect/backoff schedule) with every surface closed, and must drop cleanly on
-      disable, on profile switch, and on a kill-switch egress block. **Still open** — X-chat.1 built
-      this as bespoke chat-only wiring (`ChatMessenger.init/stop/reconcile/notifyEgressChange` called
-      directly from the desktop bootstrap), not a generic mechanism in `@tepegoz/extension-host` keyed
-      off the `background-connection` permission; a second consumer (`ext-mail`) would duplicate it
-      rather than reuse it. Promoting it to a real shared supervisor is still owed.
+      disable, on profile switch, and on a kill-switch egress block. **Landed 2026-09-13 (`feat/chat`):**
+      `BackgroundConnectionSupervisor` (`packages/extension-host/src/background-connection-supervisor.ts`)
+      — a `provide(extensionId, init/stop/reconcile/notifyEgressChange)` registry that fans each of the
+      four lifecycle calls out to every registered provider, isolating one provider's failure from the
+      rest (a broken mail account must never stop chat's `init`/`stop`/etc., or vice versa). Deliberately
+      thin: it does not itself gate on the extension's enabled state — each provider already does that
+      internally, the same way `ChatService.start()` always has — so this is a pure promotion of the
+      existing bespoke wiring, not a behaviour change. `background-connection.electron.ts` is the
+      main-process singleton (mirrors `capability-supervisor.electron.ts`); `main/index.ts`'s startup +
+      `before-quit`, `ipc-content-app.ts`'s two prefs-reconcile paths, and `ipc-network.ts`'s
+      `broadcastNetworkState` now call `BackgroundConnectionService.init/stop/reconcile/
+      notifyEgressChange()` instead of `ChatMessenger.*` directly — `com.tepegoz.chat` is registered as
+      the first (and so far only) provider. A future `ext-mail` gets all four lifecycle hooks by calling
+      `provide()` once, instead of duplicating these four call sites.
 - [x] **Adapter-as-subprocess contract** — generalise `manifest.mcpServer` (stdio) into the shape a
       third-party mail/chat adapter or a protocol *bridge* would use: no host access, its own egress
       binding, every result normalised and re-validated before the core sees it, every tool still
@@ -94,6 +103,13 @@ These are not restated per-document beyond a pointer; they are the price of bein
       isolation guarantees generalized from [ADR-0047](../../docs/adr/0047-chat-protocol-adapter-and-bridge-trust-model.md)
       §4 (own state dir, own egress binding, no host RPC beyond the extension's own adapter
       interface, crash isolation, signed package, never bundled), typed RPC over the extension's own
-      adapter interface rather than MCP tool-call semantics. **Still owed:** the actual
-      `@tepegoz/ext-chat` X-chat.8 bridge framework that implements this contract — this checklist
-      item is the design prerequisite, not the framework itself.
+      adapter interface rather than MCP tool-call semantics. **First code slice landed 2026-09-13:**
+      `@tepegoz/adapter-subprocess` — the generic spawn/health-check/restart-with-backoff supervisor
+      + the typed newline-JSON RPC envelope, plus the `manifest.adapterSubprocess` declaration itself
+      (`@tepegoz/extension-sdk`). **Second code slice landed 2026-09-13:** `SubprocessChatAdapter`
+      (`packages/chat-adapters/src/bridge/subprocess-adapter.ts`) — the concrete `ChatAdapter`-over-
+      subprocess consumer, mapping every adapter method onto the generic supervisor's `call()`.
+      **Still owed:** the `@tepegoz/ext-chat` X-chat.8 `ChatService` integration (nothing yet
+      constructs a `SubprocessChatAdapter` for a real account), state-dir / egress confinement (the
+      `cwd`/`env` that integration must supply), and a first bridge — this checklist item is the
+      design prerequisite plus its shared mechanics, not the framework itself.

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { ChatConversation } from '@tepegoz/shared-types';
 import {
   conversationTitle,
-  groupConversationsByAccount,
+  filterConversations,
   sortConversations,
   totalMentions,
   totalUnread,
@@ -21,8 +21,11 @@ function conv(over: Partial<ChatConversation> = {}): ChatConversation {
     mentions: 0,
     lastReadId: null,
     muted: false,
+    mutedUntil: null,
     notifyLevel: 'all',
     isKnownContact: true,
+    archived: false,
+    lastMessage: null,
     updatedAt: 1000,
     ...over,
   };
@@ -52,37 +55,22 @@ describe('sortConversations', () => {
   });
 });
 
+describe('filterConversations', () => {
+  it('matches on name or address, case/fold-insensitive', () => {
+    const list = [
+      conv({ id: 'a', name: 'General', address: 'general@conf.example' }),
+      conv({ id: 'b', name: '', address: 'bob@x.example' }),
+    ];
+    expect(filterConversations(list, 'gen').map((c) => c.id)).toEqual(['a']);
+    expect(filterConversations(list, 'BOB').map((c) => c.id)).toEqual(['b']);
+    expect(filterConversations(list, '').map((c) => c.id)).toEqual(['a', 'b']);
+  });
+});
+
 describe('totalUnread / totalMentions', () => {
   it('sum across the list', () => {
     const list = [conv({ unread: 3, mentions: 1 }), conv({ unread: 2, mentions: 0 })];
     expect(totalUnread(list)).toBe(5);
     expect(totalMentions(list)).toBe(1);
-  });
-});
-
-describe('groupConversationsByAccount', () => {
-  const accounts = [
-    { id: 'work', label: 'Work' },
-    { id: 'home', label: 'Home' },
-  ];
-
-  it('buckets under accounts in the given order, dropping empty groups', () => {
-    const list = [
-      conv({ id: 'w1', accountId: 'work' }),
-      conv({ id: 'h1', accountId: 'home' }),
-      conv({ id: 'w2', accountId: 'work' }),
-    ];
-    const groups = groupConversationsByAccount(list, accounts);
-    expect(groups.map((g) => [g.account?.id, g.conversations.map((c) => c.id)])).toEqual([
-      ['work', ['w1', 'w2']],
-      ['home', ['h1']],
-    ]);
-  });
-
-  it('collects conversations of an unknown account into a trailing null group', () => {
-    const list = [conv({ id: 'w1', accountId: 'work' }), conv({ id: 'x1', accountId: 'ghost' })];
-    const groups = groupConversationsByAccount(list, accounts);
-    expect(groups.at(-1)?.account).toBeNull();
-    expect(groups.at(-1)?.conversations.map((c) => c.id)).toEqual(['x1']);
   });
 });

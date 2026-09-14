@@ -1,6 +1,7 @@
 import type { ChatAccount, ChatContact, ChatMessage } from '@tepegoz/shared-types';
 import type { ChatAdapter, ChatTransport, RoomSummary } from '@tepegoz/chat-adapters';
-import { IrcAdapter, MatrixAdapter, XmppAdapter } from '@tepegoz/chat-adapters';
+import { BRIDGE_DEFAULT_CAPS, IrcAdapter, MatrixAdapter, SubprocessChatAdapter, XmppAdapter } from '@tepegoz/chat-adapters';
+import type { SpawnFn } from '@tepegoz/adapter-subprocess';
 import type { ChatConnState } from '@tepegoz/chat-core';
 import { AppError } from '@tepegoz/libs';
 import {
@@ -25,6 +26,14 @@ export interface ChatSecretStore {
   delete: (ref: string) => Promise<void>;
 }
 
+/** What a registered bridge needs to spawn — the (still design-only past this) manifest field ADR-0048
+ *  and X-chat.9 own; nothing produces this yet outside tests. */
+export interface BridgeSpawnSpec {
+  command: string;
+  args?: readonly string[];
+  env?: Record<string, string>;
+}
+
 export interface ChatServiceDeps {
   /** The persisted, non-tombstoned accounts (from `ChatStore.listAccounts`). */
   loadAccounts: () => ChatAccount[];
@@ -37,6 +46,14 @@ export interface ChatServiceDeps {
   makeRunnerStore: () => ChatRunnerStore;
   /** Override the adapter for a protocol (tests); defaults to `XmppAdapter` for `xmpp`. */
   makeAdapter?: (account: ChatAccount) => ChatAdapter;
+  /** Resolve a `bridge` account's `bridgeId` to the command that runs it (X-chat.9's manifest
+   *  registry, once one exists). `undefined` / a `null` return means "no bridge registered for this
+   *  id" — the account surfaces as `error`, same as any other protocol with no adapter yet. */
+  resolveBridge?: (bridgeId: string) => BridgeSpawnSpec | null;
+  /** Real `node:child_process.spawn`, injected — only exercised once `resolveBridge` finds a match. */
+  spawnBridge?: SpawnFn;
+  /** The account's confined state directory (ADR-0048 §2.1), passed to the child as `cwd`. */
+  bridgeStateDirFor?: (accountId: string) => string;
   transport: ChatTransport;
   mayEgress: () => boolean;
   now: () => number;
@@ -109,7 +126,30 @@ export class ChatService {
     if (account.server.protocol === 'xmpp') return new XmppAdapter();
     if (account.server.protocol === 'irc') return new IrcAdapter();
     if (account.server.protocol === 'matrix') return new MatrixAdapter();
-    throw new AppError(`Chat: no adapter for protocol "${account.server.protocol}" yet`, 501);
+    if (account.server.protocol === 'bridge') return this.makeBridgeAdapter(account.server.bridgeId);
+    // Exhaustiveness guard: every `ChatServerConfig` variant is handled above, so `account.server` is
+    // `never` here — a future 5th protocol variant fails this assignment at compile time instead of
+    // silently falling through to a vague runtime error.
+    const unhandled: never = account.server;
+    throw new AppError(`Chat: no adapter for protocol "${JSON.stringify(unhandled)}" yet`, 501);
+  }
+
+  private makeBridgeAdapter(bridgeId: string): ChatAdapter {
+    const spec = this.deps.resolveBridge?.(bridgeId) ?? null;
+    if (spec === null || this.deps.spawnBridge === undefined || this.deps.bridgeStateDirFor === undefined) {
+      throw new AppError(`Chat: no bridge registered for "${bridgeId}"`, 501);
+    }
+    return new SubprocessChatAdapter({
+      spawn: this.deps.spawnBridge,
+      setTimer: this.deps.setTimer,
+      clearTimer: this.deps.clearTimer,
+      id: `bridge:${bridgeId}`,
+      capabilities: BRIDGE_DEFAULT_CAPS,
+      command: spec.command,
+      ...(spec.args !== undefined ? { args: spec.args } : {}),
+      ...(spec.env !== undefined ? { env: spec.env } : {}),
+      stateDirFor: this.deps.bridgeStateDirFor,
+    });
   }
 
   /** Add an account: store its secret, persist the row, and (if live) connect it. */
@@ -242,6 +282,18 @@ export class ChatService {
     return this.require(accountId).setMuted(conversationId, muted);
   }
 
+  async muteFor(accountId: string, conversationId: string, durationMs: number | null): Promise<void> {
+    return this.require(accountId).muteFor(conversationId, durationMs);
+  }
+
+  async setArchived(accountId: string, conversationId: string, archived: boolean): Promise<void> {
+    return this.require(accountId).setArchived(conversationId, archived);
+  }
+
+  async blockContact(accountId: string, address: string, blocked: boolean): Promise<void> {
+    return this.require(accountId).blockContact(address, blocked);
+  }
+
   async setRoomTopic(accountId: string, conversationId: string, topic: string): Promise<void> {
     return this.require(accountId).setRoomTopic(conversationId, topic);
   }
@@ -266,6 +318,15 @@ export class ChatService {
     on: boolean,
   ): Promise<void> {
     return this.require(accountId).react(conversationId, messageId, emoji, on);
+  }
+
+  async editMessage(
+    accountId: string,
+    conversationId: string,
+    messageId: string,
+    body: string,
+  ): Promise<void> {
+    return this.require(accountId).editMessage(conversationId, messageId, body);
   }
 
   async resolveMedia(

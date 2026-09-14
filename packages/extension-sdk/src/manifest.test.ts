@@ -123,4 +123,59 @@ describe('extension manifest schema', () => {
       ).toBe(true);
     });
   });
+
+  describe('adapterSubprocess declaration (ADR-0048)', () => {
+    it('is optional, a sibling to mcpServer (both may be present), and applies defaults', () => {
+      expect(validateManifest(VALID).success).toBe(true); // absent is fine
+      const m = defineExtension({
+        ...VALID,
+        mcpServer: { transport: 'stdio', command: 'my-mcp-server' },
+        adapterSubprocess: { protocol: 'chat', command: 'my-bridge' },
+      });
+      expect(m.mcpServer?.command).toBe('my-mcp-server');
+      expect(m.adapterSubprocess?.protocol).toBe('chat');
+      expect(m.adapterSubprocess?.command).toBe('my-bridge');
+      expect(m.adapterSubprocess?.args).toEqual([]); // default
+      expect(m.adapterSubprocess?.env).toEqual({}); // default
+      expect(m.adapterSubprocess?.declaredEgressHosts).toEqual([]); // default
+    });
+
+    it('keeps provided args/env/declaredEgressHosts', () => {
+      const m = defineExtension({
+        ...VALID,
+        adapterSubprocess: {
+          protocol: 'chat',
+          command: 'my-bridge',
+          args: ['--config', '/tmp/x'],
+          env: { TOKEN: 'x' },
+          declaredEgressHosts: ['api.telegram.org'],
+        },
+      });
+      expect(m.adapterSubprocess?.args).toEqual(['--config', '/tmp/x']);
+      expect(m.adapterSubprocess?.env).toEqual({ TOKEN: 'x' });
+      expect(m.adapterSubprocess?.declaredEgressHosts).toEqual(['api.telegram.org']);
+    });
+
+    it('requires both protocol and command', () => {
+      expect(
+        validateManifest({ ...VALID, adapterSubprocess: { command: 'my-bridge' } }).success,
+      ).toBe(false); // no protocol
+      expect(
+        validateManifest({ ...VALID, adapterSubprocess: { protocol: 'chat' } }).success,
+      ).toBe(false); // no command
+      expect(
+        validateManifest({ ...VALID, adapterSubprocess: { protocol: 'chat', command: '' } })
+          .success,
+      ).toBe(false); // empty command
+    });
+
+    it('rejects an unknown protocol (no free-form strings)', () => {
+      expect(
+        validateManifest({
+          ...VALID,
+          adapterSubprocess: { protocol: 'mail', command: 'my-bridge' },
+        }).success,
+      ).toBe(false);
+    });
+  });
 });

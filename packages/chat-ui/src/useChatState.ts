@@ -4,6 +4,7 @@ import type { ChatConversation } from '@tepegoz/shared-types';
 import {
   applyChatChange,
   emptyChatClientState,
+  patchContact,
   patchConversation,
   seedConversations,
   seedHistory,
@@ -26,7 +27,10 @@ export interface UseChatState {
   /** Conversations across every configured account, most-recent first. */
   conversations: readonly ChatConversation[];
   selectedConversationId: string | null;
-  selectConversation: (conversationId: string | null) => void;
+  /** `hintAccountId`: which account a not-yet-existing conversation belongs to — only used as a
+   *  fallback when the id names no known row yet (starting a DM with a room member or a contact
+   *  never messaged before). Ignored once the conversation has a real row. */
+  selectConversation: (conversationId: string | null, hintAccountId?: string) => void;
   /** True until the first accounts + conversations load resolves. */
   loading: boolean;
   send: (text: string, opts?: { replyToId?: string | null }) => Promise<void>;
@@ -34,15 +38,23 @@ export interface UseChatState {
   setRoomNotifyLevel: ((conversationId: string, level: RoomNotifyLevel) => Promise<void>) | null;
   /** Mute / unmute a conversation — `null` when the port does not support it. */
   setMuted: ((conversationId: string, muted: boolean) => Promise<void>) | null;
+  /** A TIMED mute (`durationMs`) or forever (`null`) — `null` when the port does not support it. */
+  muteFor: ((conversationId: string, durationMs: number | null) => Promise<void>) | null;
+  /** Archive / unarchive a conversation — `null` when the port does not support it. */
+  setArchived: ((conversationId: string, archived: boolean) => Promise<void>) | null;
+  /** Block / unblock an address at the server — `null` when the port does not support it. The
+   *  roster is unified across accounts, so the caller names which one. */
+  blockContact: ((accountId: string, address: string, blocked: boolean) => Promise<void>) | null;
   /** Change a room's topic — `null` when the port does not support it. */
   setRoomTopic: ((conversationId: string, topic: string) => Promise<void>) | null;
   /** Invite a contact to a room — `null` when the port does not support it. */
   inviteToRoom: ((conversationId: string, invitee: string) => Promise<void>) | null;
-  /** Add a contact to the roster — `null` when the port does not support it (or the protocol has
-   *  no roster/subscription concept at all). */
-  addContact: ((address: string) => Promise<void>) | null;
-  /** Remove a contact from the roster — `null` for the same reason as {@link addContact}. */
-  removeContact: ((address: string) => Promise<void>) | null;
+  /** Add a contact to one account's roster — `null` when the port does not support it (or the
+   *  protocol has no roster/subscription concept at all). The Contacts tab is unified across every
+   *  account, so the caller (not an implicit "active account") names which one. */
+  addContact: ((accountId: string, address: string) => Promise<void>) | null;
+  /** Remove a contact from one account's roster — `null` for the same reason as {@link addContact}. */
+  removeContact: ((accountId: string, address: string) => Promise<void>) | null;
   /** Leave a joined room — `null` when the port does not support it. */
   leaveRoom: ((conversationId: string) => Promise<void>) | null;
   /** Add / remove one of the local user's emoji reactions on a message — `null` when the port does
@@ -50,12 +62,22 @@ export interface UseChatState {
   react:
     | ((conversationId: string, protocolId: string, emoji: string, on: boolean) => Promise<void>)
     | null;
+  /** Replace an already-sent message's body — `null` when the port does not support it. */
+  editMessage: ((protocolId: string, body: string) => Promise<void>) | null;
+  /** The message the Composer is currently seeded to edit, if any. */
+  editingMessage: { messageId: string; body: string } | null;
+  /** Enter edit mode for one of the local user's own messages. */
+  startEditing: (messageId: string, body: string) => void;
+  /** Leave edit mode without submitting (Composer's ✕ / Escape). */
+  cancelEditing: () => void;
   refresh: () => Promise<void>;
-  /** MUC — present only when the port supports rooms. */
+  /** MUC — present only when the port supports rooms. Both take an explicit `accountId` rather than
+   *  implying `activeAccountId` — `<NewChatDialog>`'s Rooms tab lets the user discover/join under
+   *  any configured account, not just whichever conversation happens to be open. */
   rooms:
     | {
-        discover: (service: string) => Promise<RoomListing[]>;
-        join: (roomJid: string) => Promise<void>;
+        discover: (accountId: string, service: string) => Promise<RoomListing[]>;
+        join: (accountId: string, roomJid: string) => Promise<void>;
       }
     | null;
 }
@@ -74,6 +96,9 @@ export function useChatState(port: ChatClientPort): UseChatState {
   const [client, setClient] = useState<ChatClientState>(emptyChatClientState);
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [editingMessage, setEditingMessage] = useState<{ messageId: string; body: string } | null>(
+    null,
+  );
 
   const refresh = useCallback(async (): Promise<void> => {
     const snapshot = await port.listChatAccounts();
@@ -113,18 +138,22 @@ export function useChatState(port: ChatClientPort): UseChatState {
     // array identity on every refresh() even when its contents are unchanged.
   }, [port, accountIdsKey]);
 
-  // Whenever the active account changes, (re)seed its roster (conversations are unified above).
+  // The Contacts tab is unified the same way the Chats tab is: every configured account's roster in
+  // one list, not just the active one — `getChatRoster` (unlike `listChatConversations`) has no
+  // "every account" form, so this fetches each account's roster in parallel and concatenates them;
+  // contact ids are already namespaced per account (`${accountId}:${address}`), so no collision risk.
   useEffect(() => {
-    if (activeAccountId === null) return;
+    if (accountIdsKey === '') return;
     let cancelled = false;
+    const ids = accountIdsKey.split(',');
     void (async () => {
-      const roster = await port.getChatRoster(activeAccountId);
-      if (!cancelled) setClient((prev) => seedRoster(prev, roster));
+      const rosters = await Promise.all(ids.map((id) => port.getChatRoster(id)));
+      if (!cancelled) setClient((prev) => seedRoster(prev, rosters.flat()));
     })();
     return () => {
       cancelled = true;
     };
-  }, [port, activeAccountId]);
+  }, [port, accountIdsKey]);
 
   // Subscribe to the main→renderer push for the lifetime of the hook.
   useEffect(() => {
@@ -138,15 +167,21 @@ export function useChatState(port: ChatClientPort): UseChatState {
   }, [port]);
 
   const selectConversation = useCallback(
-    (conversationId: string | null): void => {
+    (conversationId: string | null, hintAccountId?: string): void => {
       setSelectedConversationId(conversationId);
+      // An edit target from the previous conversation must not survive the switch — it would
+      // otherwise submit against a `selectedConversationId` the Composer's banner no longer matches.
+      setEditingMessage(null);
       if (conversationId === null) return;
       // The unified Chats tab can select a conversation belonging to any configured account, not
       // just the one the account switcher currently shows — resolve the owning account from the
-      // conversation itself (falling back to `activeAccountId` for a brand-new row not seeded yet,
-      // e.g. one just joined) and follow the switcher to it so the composer / roster / room tabs
-      // stay pointed at the right account.
-      const accountId = client.conversations[conversationId]?.accountId ?? activeAccountId;
+      // conversation itself; `hintAccountId` (given by a caller starting a brand-new DM by address —
+      // a room-member click, or opening a contact never messaged before — who already knows which
+      // account it belongs to) wins over the `activeAccountId` fallback, which would otherwise
+      // silently point a new conversation at the WRONG account when it differs from the one the
+      // contact/room actually belongs to.
+      const accountId =
+        client.conversations[conversationId]?.accountId ?? hintAccountId ?? activeAccountId;
       if (accountId === null) return;
       if (accountId !== activeAccountId) setActiveAccountId(accountId);
       if (client.messages[conversationId] !== undefined) return;
@@ -223,10 +258,51 @@ export function useChatState(port: ChatClientPort): UseChatState {
     if (setChatMuted === undefined) return null;
     return async (conversationId: string, muted: boolean): Promise<void> => {
       if (activeAccountId === null) return;
-      setClient((prev) => patchConversation(prev, conversationId, { muted }));
+      // Always clears a lingering timed mute too, mirroring the runner: the two share one "is this
+      // muted" bit, so a stale mutedUntil from a previous timed mute must not resurface later.
+      setClient((prev) => patchConversation(prev, conversationId, { muted, mutedUntil: null }));
       await setChatMuted(activeAccountId, conversationId, muted);
     };
   }, [setChatMuted, activeAccountId]);
+
+  const { muteChatFor } = port;
+  const muteFor = useMemo(() => {
+    if (muteChatFor === undefined) return null;
+    return async (conversationId: string, durationMs: number | null): Promise<void> => {
+      if (activeAccountId === null) return;
+      setClient((prev) =>
+        patchConversation(
+          prev,
+          conversationId,
+          durationMs === null
+            ? { muted: true, mutedUntil: null }
+            : { muted: false, mutedUntil: Date.now() + durationMs },
+        ),
+      );
+      await muteChatFor(activeAccountId, conversationId, durationMs);
+    };
+  }, [muteChatFor, activeAccountId]);
+
+  const { setChatArchived } = port;
+  const setArchived = useMemo(() => {
+    if (setChatArchived === undefined) return null;
+    return async (conversationId: string, archived: boolean): Promise<void> => {
+      if (activeAccountId === null) return;
+      setClient((prev) => patchConversation(prev, conversationId, { archived }));
+      await setChatArchived(activeAccountId, conversationId, archived);
+    };
+  }, [setChatArchived, activeAccountId]);
+
+  const { blockChatContact } = port;
+  const blockContact = useMemo(() => {
+    if (blockChatContact === undefined) return null;
+    return async (accountId: string, address: string, blocked: boolean): Promise<void> => {
+      // The roster is unified across accounts, so the caller (not `activeAccountId`) names which
+      // one this contact belongs to — same reasoning as `addContact`/`removeContact`.
+      setClient((prev) => patchContact(prev, `${accountId}:${address}`, { blocked }));
+      await blockChatContact(accountId, address, blocked);
+    };
+  }, [blockChatContact]);
 
   const { setChatRoomTopic } = port;
   const setRoomTopic = useMemo(() => {
@@ -255,6 +331,25 @@ export function useChatState(port: ChatClientPort): UseChatState {
     };
   }, [reactToChatMessage, activeAccountId]);
 
+  const { editChatMessage } = port;
+  const editMessage = useMemo(() => {
+    if (editChatMessage === undefined) return null;
+    return async (protocolId: string, body: string): Promise<void> => {
+      if (activeAccountId === null || selectedConversationId === null) return;
+      // No optimistic patch — like `react()`'s sibling in `account-runner.ts`, the server echo
+      // (XEP-0308 / Matrix `m.replace`) is the source of truth for the edited body.
+      await editChatMessage(activeAccountId, selectedConversationId, protocolId, body);
+    };
+  }, [editChatMessage, activeAccountId, selectedConversationId]);
+
+  const startEditing = useCallback((messageId: string, body: string): void => {
+    setEditingMessage({ messageId, body });
+  }, []);
+
+  const cancelEditing = useCallback((): void => {
+    setEditingMessage(null);
+  }, []);
+
   const { inviteToChatRoom } = port;
   const inviteToRoom = useMemo(() => {
     if (inviteToChatRoom === undefined) return null;
@@ -268,24 +363,22 @@ export function useChatState(port: ChatClientPort): UseChatState {
   const { addChatContact } = port;
   const addContact = useMemo(() => {
     if (addChatContact === undefined) return null;
-    return async (address: string): Promise<void> => {
-      if (activeAccountId === null) return;
+    return async (accountId: string, address: string): Promise<void> => {
       // Write-only, same as inviteToRoom — the roster-change push (the server's roster-push, then
       // again once the subscription is approved) is what actually updates `client.roster`.
-      await addChatContact(activeAccountId, address);
+      await addChatContact(accountId, address);
     };
-  }, [addChatContact, activeAccountId]);
+  }, [addChatContact]);
 
   const { removeChatContact } = port;
   const removeContact = useMemo(() => {
     if (removeChatContact === undefined) return null;
-    return async (address: string): Promise<void> => {
-      if (activeAccountId === null) return;
+    return async (accountId: string, address: string): Promise<void> => {
       // Write-only, same as addContact — the server's roster-push (subscription now "remove") is
       // what actually updates `client.roster`.
-      await removeChatContact(activeAccountId, address);
+      await removeChatContact(accountId, address);
     };
-  }, [removeChatContact, activeAccountId]);
+  }, [removeChatContact]);
 
   const { leaveChatRoom } = port;
   const leaveRoom = useMemo(() => {
@@ -313,26 +406,23 @@ export function useChatState(port: ChatClientPort): UseChatState {
   const rooms = useMemo(() => {
     if (discoverChatRooms === undefined || joinChatRoom === undefined) return null;
     return {
-      discover: (service: string): Promise<RoomListing[]> =>
-        activeAccountId === null
-          ? Promise.resolve([])
-          : discoverChatRooms(activeAccountId, service),
-      join: async (roomJid: string): Promise<void> => {
-        if (activeAccountId === null) return;
+      discover: (accountId: string, service: string): Promise<RoomListing[]> =>
+        discoverChatRooms(accountId, service),
+      join: async (accountId: string, roomJid: string): Promise<void> => {
         // The adapter's own idea of the room's id (bare-JID-normalized) is the source of truth —
         // it is what every later push event keys its patches against, so falling back to the raw
         // input here would silently orphan the conversation the moment the two diverge.
-        const conversationId = (await joinChatRoom(activeAccountId, roomJid)) ?? roomJid;
+        const conversationId = (await joinChatRoom(accountId, roomJid)) ?? roomJid;
         // `applyChatChange`'s 'conversation' case only patches a row that already exists (see
         // chat-store.ts) — a freshly joined room has no row yet, so an explicit re-seed is the only
         // way the panel learns about it before selecting it. Fetch the full set (see `leaveRoom`
         // above) since seedConversations replaces the whole map.
         const conversations = await port.listChatConversations();
         setClient((prev) => seedConversations(prev, conversations));
-        selectConversation(conversationId);
+        selectConversation(conversationId, accountId);
       },
     };
-  }, [discoverChatRooms, joinChatRoom, activeAccountId, port, selectConversation]);
+  }, [discoverChatRooms, joinChatRoom, port, selectConversation]);
 
   return {
     accounts,
@@ -348,12 +438,19 @@ export function useChatState(port: ChatClientPort): UseChatState {
     send,
     setRoomNotifyLevel,
     setMuted,
+    muteFor,
+    setArchived,
+    blockContact,
     setRoomTopic,
     inviteToRoom,
     addContact,
     removeContact,
     leaveRoom,
     react,
+    editMessage,
+    editingMessage,
+    startEditing,
+    cancelEditing,
     refresh,
     rooms,
   };

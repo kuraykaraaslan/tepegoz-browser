@@ -42,8 +42,11 @@ const conversation = (id: string): ChatConversation => ({
   mentions: 0,
   lastReadId: null,
   muted: false,
+  mutedUntil: null,
   notifyLevel: 'all',
   isKnownContact: true,
+  archived: false,
+  lastMessage: null,
   updatedAt: 1,
 });
 
@@ -129,10 +132,41 @@ describe('chat-store-adapter — makeRunnerStore', () => {
       presence: 'online',
       statusText: '',
       subscription: 'both',
+      blocked: false,
     };
     store.upsertContact(contact);
     expect(listContacts(db, 'work')).toHaveLength(1);
     expect(store.getConversation('bob@x.com')?.address).toBe('bob@x.com');
     expect(store.getConversation('nope')).toBeNull();
+  });
+
+  it('setContactBlocked is a targeted update, scoped to (accountId, address)', () => {
+    const store = makeRunnerStore(db);
+    store.upsertContact({
+      id: 'work:bob@x.com',
+      accountId: 'work',
+      address: 'bob@x.com',
+      name: 'Bob',
+      groups: [],
+      presence: 'online',
+      statusText: '',
+      subscription: 'both',
+      blocked: false,
+    });
+    store.setContactBlocked('work', 'bob@x.com', true);
+    expect(listContacts(db, 'work')[0]?.blocked).toBe(true);
+  });
+
+  it('listReadMarkers reports every conversation\'s persisted lastReadId, scoped to the account', () => {
+    const store = makeRunnerStore(db);
+    store.upsertConversation({ ...conversation('bob@x.com'), lastReadId: 'm2' });
+    store.upsertConversation({ ...conversation('carol@x.com'), lastReadId: null });
+    expect(store.listReadMarkers('work')).toEqual(
+      expect.arrayContaining([
+        { id: 'bob@x.com', lastReadId: 'm2' },
+        { id: 'carol@x.com', lastReadId: null },
+      ]),
+    );
+    expect(store.listReadMarkers('ghost')).toEqual([]);
   });
 });

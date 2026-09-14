@@ -84,6 +84,38 @@ export const McpServerDeclSchema = z
   });
 export type McpServerDecl = z.infer<typeof McpServerDeclSchema>;
 
+/**
+ * The consuming extension's own adapter interface this subprocess speaks over the RPC pipe — the
+ * host uses it to pick the right typed envelope validator (ADR-0048 §3: "the message shape is the
+ * consuming extension's own adapter interface, not MCP's `tools/call`"). One value per extension
+ * roadmap that adopts the contract, not per adapter instance — closed set, extend as a second
+ * consumer (mail) lands, matching {@link ExtensionPermissionSchema}'s convention.
+ */
+export const AdapterSubprocessProtocolSchema = z.enum(['chat']);
+export type AdapterSubprocessProtocol = z.infer<typeof AdapterSubprocessProtocolSchema>;
+
+/**
+ * An out-of-process protocol adapter / bridge an extension provides (ADR-0048) — the generalization
+ * of ADR-0047 §4's chat-bridge isolation guarantees to any extension. A sibling to `mcpServer`, not
+ * the same field: the transport mechanics are ADR-0018-shaped (a supervised stdio child, exact-pinned
+ * deps, reconnect-with-backoff), but the wire payload is `protocol`'s own adapter interface
+ * (`ChatAdapter`'s connect/roster/send/events/… for `"chat"`), zod-validated in both directions —
+ * never MCP's `tools/list` / `tools/call` semantics. Only `stdio` exists today; a manifest naming a
+ * transport is deferred until a second transport is actually needed (unlike `mcpServer`, which
+ * already reserves `http_sse`).
+ */
+export const AdapterSubprocessDeclSchema = z.object({
+  protocol: AdapterSubprocessProtocolSchema,
+  command: z.string().min(1).max(1024),
+  args: z.array(z.string().max(1024)).max(64).default([]),
+  env: z.record(z.string().max(4096)).default({}),
+  /** Hostnames this subprocess is declared to reach — documentation + a future egress-binding
+   *  cross-check, not itself an enforcement mechanism (the OS-level profile binding is what actually
+   *  blocks a kill-switched profile's socket, exactly as it does for a native in-process adapter). */
+  declaredEgressHosts: z.array(z.string().min(1).max(255)).max(32).default([]),
+});
+export type AdapterSubprocessDecl = z.infer<typeof AdapterSubprocessDeclSchema>;
+
 export const ExtensionManifestSchema = z
   .object({
     /** Stable machine id, reverse-DNS (e.g. "com.tepegoz.agent"). */
@@ -112,6 +144,9 @@ export const ExtensionManifestSchema = z
     permissions: z.array(ExtensionPermissionSchema).default([]),
     /** Optional MCP server this extension provides; its tools reach the agent via the ToolGateway PEP. */
     mcpServer: McpServerDeclSchema.optional(),
+    /** Optional out-of-process protocol adapter/bridge this extension provides (ADR-0048) — a
+     *  sibling to `mcpServer`, not the same field. An extension can declare either, both, or neither. */
+    adapterSubprocess: AdapterSubprocessDeclSchema.optional(),
   })
   .transform((m) => ({
     ...m,

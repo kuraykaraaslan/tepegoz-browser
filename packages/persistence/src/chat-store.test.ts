@@ -39,8 +39,11 @@ const conversation = (id: string, accountId: string, address: string): ChatConve
   mentions: 0,
   lastReadId: null,
   muted: false,
+  mutedUntil: null,
   notifyLevel: 'all',
   isKnownContact: true,
+  archived: false,
+  lastMessage: null,
   updatedAt: 1000,
 });
 
@@ -104,6 +107,7 @@ describe('ChatStore — contacts & conversations', () => {
       presence: 'online',
       statusText: 'here',
       subscription: 'both',
+      blocked: false,
     };
     ChatStore.upsertContact(db, c);
     ChatStore.upsertContact(db, { ...c, id: 'c1b', name: 'Bobby' });
@@ -111,6 +115,30 @@ describe('ChatStore — contacts & conversations', () => {
     expect(list).toHaveLength(1);
     expect(list[0]?.name).toBe('Bobby');
     expect(list[0]?.groups).toEqual(['work']);
+  });
+
+  it('setContactBlocked is a targeted update — a later roster-push upsertContact never un-blocks it', () => {
+    const c: ChatContact = {
+      id: 'c1',
+      accountId: 'acc',
+      address: 'bob@example.com',
+      name: 'Bob',
+      groups: [],
+      presence: 'online',
+      statusText: '',
+      subscription: 'both',
+      blocked: false,
+    };
+    ChatStore.upsertContact(db, c);
+    ChatStore.setContactBlocked(db, 'acc', 'bob@example.com', true);
+    expect(ChatStore.listContacts(db, 'acc')[0]?.blocked).toBe(true);
+
+    // A normal roster-push (presence changed, say) upserts again — block state must survive it.
+    ChatStore.upsertContact(db, { ...c, presence: 'away' });
+    expect(ChatStore.listContacts(db, 'acc')[0]).toMatchObject({ presence: 'away', blocked: true });
+
+    ChatStore.setContactBlocked(db, 'acc', 'bob@example.com', false);
+    expect(ChatStore.listContacts(db, 'acc')[0]?.blocked).toBe(false);
   });
 
   it('cascades conversations + messages on account delete', () => {
@@ -133,6 +161,7 @@ describe('ChatStore — contacts & conversations', () => {
       presence: 'offline',
       statusText: '',
       subscription: 'none',
+      blocked: false,
     };
     ChatStore.upsertContact(db, c);
     ChatStore.deleteContact(db, 'acc', 'x@example.com');
@@ -165,6 +194,36 @@ describe('ChatStore — contacts & conversations', () => {
       notifyLevel: 'none',
     });
     expect(ChatStore.getConversation(db, 'cv1')?.notifyLevel).toBe('none');
+  });
+
+  it('round-trips a timed mute, archived, and a last-message snapshot independently of the forever mute', () => {
+    ChatStore.upsertConversation(db, conversation('cv0', 'acc', 'bob@example.com'));
+    expect(ChatStore.getConversation(db, 'cv0')).toMatchObject({
+      muted: false,
+      mutedUntil: null,
+      archived: false,
+      lastMessage: null,
+    });
+
+    const lastMessage = {
+      protocolId: 'p1',
+      body: 'hi',
+      senderAddress: 'bob@example.com',
+      kind: 'text' as const,
+      redacted: false,
+      originTs: 5000,
+    };
+    ChatStore.upsertConversation(db, {
+      ...conversation('cv0', 'acc', 'bob@example.com'),
+      mutedUntil: 123456,
+      archived: true,
+      lastMessage,
+    });
+    const got = ChatStore.getConversation(db, 'cv0');
+    expect(got?.muted).toBe(false);
+    expect(got?.mutedUntil).toBe(123456);
+    expect(got?.archived).toBe(true);
+    expect(got?.lastMessage).toEqual(lastMessage);
   });
 
   it('tolerates a corrupt server_json / groups_json row (falls back, never throws)', () => {

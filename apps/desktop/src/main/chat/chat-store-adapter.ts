@@ -17,12 +17,16 @@ export function makeRunnerStore(db: Db): ChatRunnerStore {
       ChatStore.redactMessage(db, conversationId, protocolId),
     upsertConversation: (conversation) => ChatStore.upsertConversation(db, conversation),
     upsertContact: (contact) => ChatStore.upsertContact(db, contact),
+    setContactBlocked: (accountId, address, blocked) =>
+      ChatStore.setContactBlocked(db, accountId, address, blocked),
     getConversation: (id) => ChatStore.getConversation(db, id),
     listMessages: (conversationId) => ChatStore.listMessages(db, conversationId),
     listRoomIds: (accountId) =>
       ChatStore.listConversations(db, accountId)
         .filter((c) => c.kind === 'room')
         .map((c) => c.id),
+    listReadMarkers: (accountId) =>
+      ChatStore.listConversations(db, accountId).map((c) => ({ id: c.id, lastReadId: c.lastReadId })),
   };
 }
 

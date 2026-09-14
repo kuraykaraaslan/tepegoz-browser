@@ -1,9 +1,12 @@
+import { readFileSync } from 'node:fs';
 import { app, BrowserWindow } from 'electron';
 import { IpcChannels, isExtensionEnabled } from '@tepegoz/desktop-ipc';
 import { currentEgressRoute } from '@tepegoz/http';
 import { NodeChatTransport } from '@tepegoz/chat-transport-node';
+import type { ChatAdapter } from '@tepegoz/chat-adapters';
 import type { ChatAccount } from '@tepegoz/shared-types';
 import type { Db } from '@tepegoz/persistence';
+import { Logger } from '@tepegoz/libs';
 import PreferenceStore from '@tepegoz/preferences';
 import { getDb } from '../db/database.electron';
 import NotificationHost from '../notifications/notification-host';
@@ -11,6 +14,8 @@ import { ChatStore, EventJournal } from '@tepegoz/persistence';
 import { randomUUID } from 'node:crypto';
 import { createChatDialer } from './egress-dialer';
 import { seedChatAccountsFromEnv } from './chat-seed.electron';
+import { createChatEvalAdapter, createChatEvalTransport } from './chat-eval-adapter';
+import { buildChatEvalSeed, parseChatEvalFixture } from './chat-eval-fixture';
 import ChatSecrets from './chat-secrets.electron';
 import { createChatCapabilityHost } from './chat-capability-host';
 import FileOperationsHost from '../file-operations/file-operations-host';
@@ -113,8 +118,54 @@ function requireDb(): Db {
 
 let service: ChatService | null = null;
 
-/** Build a `ChatService` bound to the real process singletons (deps overridable for tests). */
+/**
+ * X-chat.6 slice 3 — the app-side half of the `chatFixture` agent-eval wiring. `@tepegoz/agent-eval`
+ * (a test-only package, never a runtime dependency of this app) sets `TEPEGOZ_EVAL_CHAT_FIXTURE` to a
+ * seed file's path for exactly one trial; every normal launch leaves it unset. Absent in production.
+ */
+function chatEvalFixturePath(): string | null {
+  const path = process.env.TEPEGOZ_EVAL_CHAT_FIXTURE;
+  return path !== undefined && path.length > 0 ? path : null;
+}
+
+/** Read + validate the fixture named by {@link chatEvalFixturePath} — logged and `null`, never
+ *  thrown, so an unreadable path or a schema-invalid file fails the trial cleanly (no account, no
+ *  runner) instead of crashing the app. */
+function loadChatEvalFixtureFromEnv(): ReturnType<typeof parseChatEvalFixture> {
+  const path = chatEvalFixturePath();
+  if (path === null) return null;
+  let raw: string;
+  try {
+    raw = readFileSync(path, 'utf8');
+  } catch (err) {
+    Logger.error('[chat-eval] could not read TEPEGOZ_EVAL_CHAT_FIXTURE', { path, err: String(err) });
+    return null;
+  }
+  const fixture = parseChatEvalFixture(raw);
+  if (fixture === null) Logger.error('[chat-eval] fixture failed schema validation', { path });
+  return fixture;
+}
+
+/** Write a fixture's account/roster/conversations/messages straight into the profile DB — before
+ *  `service.start()` reads `loadAccounts()`, so the seeded account is there from the account's very
+ *  first `spinUp`. Conversations are written before messages (their foreign key needs the row to
+ *  already exist — the same ordering bug X-chat.5's Matrix sync fix was about). */
+function seedChatEvalFixtureIntoDb(fixture: NonNullable<ReturnType<typeof parseChatEvalFixture>>): void {
+  if (getDb() === null) return;
+  const db = requireDb();
+  const seed = buildChatEvalSeed(fixture, Date.now());
+  ChatStore.upsertAccount(db, seed.account);
+  for (const contact of seed.contacts) ChatStore.upsertContact(db, contact);
+  for (const conversation of seed.conversations) ChatStore.upsertConversation(db, conversation);
+  for (const message of seed.messages) ChatStore.upsertMessage(db, message);
+}
+
+/** Build a `ChatService` bound to the real process singletons (deps overridable for tests). Under
+ *  `TEPEGOZ_EVAL_CHAT_FIXTURE`, every account connects through the harmless no-op adapter AND the
+ *  hermetic eval transport (both `chat-eval-adapter.ts`) instead of a real protocol adapter and the
+ *  real `NodeChatTransport` — no socket ever opens, including for `chat_get_media`. */
 export function buildChatService(over: Partial<ChatServiceDeps> = {}): ChatService {
+  const evalFixture = loadChatEvalFixtureFromEnv();
   return new ChatService({
     loadAccounts: () => (getDb() === null ? [] : listAccounts(requireDb())),
     secrets: ChatSecrets,
@@ -130,6 +181,15 @@ export function buildChatService(over: Partial<ChatServiceDeps> = {}): ChatServi
     notify: chatNotify,
     audit: chatAudit,
     isEnabled: chatExtensionEnabled,
+    ...(evalFixture !== null
+      ? {
+          makeAdapter: (): ChatAdapter => createChatEvalAdapter(evalFixture.protocol),
+          // Swaps out the real NodeChatTransport too — resolveMedia() is the one place
+          // ChatAccountRunner uses `transport` directly (not through the no-op adapter), and it must
+          // never reach the real network during a trial. See chat-eval-adapter.ts's docstring.
+          transport: createChatEvalTransport(),
+        }
+      : {}),
     ...over,
   });
 }
@@ -138,6 +198,19 @@ export function buildChatService(over: Partial<ChatServiceDeps> = {}): ChatServi
 export async function init(): Promise<void> {
   if (service !== null) return;
   service = buildChatService();
+  const evalFixture = loadChatEvalFixtureFromEnv();
+  if (evalFixture !== null) {
+    seedChatEvalFixtureIntoDb(evalFixture);
+    try {
+      // A fixed placeholder — never a real credential — just enough for spinUp()'s
+      // `secrets.get(secretRef) !== null` check to let a runner exist for the seeded account.
+      await ChatSecrets.set(`chat:${evalFixture.accountId}`, 'eval-fixture-no-real-credential');
+    } catch (err) {
+      Logger.error('[chat-eval] could not store the fixture credential — the account gets no runner', {
+        err: String(err),
+      });
+    }
+  }
   await seedChatAccountsFromEnv(
     {
       listAccounts: () => (getDb() === null ? [] : listAccounts(requireDb())),
@@ -200,6 +273,12 @@ export const chatIpcService: ChatIpcService = {
     requireService().setRoomNotifyLevel(accountId, conversationId, level),
   setMuted: (accountId, conversationId, muted) =>
     requireService().setMuted(accountId, conversationId, muted),
+  muteFor: (accountId, conversationId, durationMs) =>
+    requireService().muteFor(accountId, conversationId, durationMs),
+  setArchived: (accountId, conversationId, archived) =>
+    requireService().setArchived(accountId, conversationId, archived),
+  blockContact: (accountId, address, blocked) =>
+    requireService().blockContact(accountId, address, blocked),
   setRoomTopic: (accountId, conversationId, topic) =>
     requireService().setRoomTopic(accountId, conversationId, topic),
   inviteToRoom: (accountId, conversationId, invitee) =>
@@ -207,6 +286,8 @@ export const chatIpcService: ChatIpcService = {
   resolveMedia: (accountId, mediaRef) => requireService().resolveMedia(accountId, mediaRef),
   react: (accountId, conversationId, messageId, emoji, on) =>
     requireService().react(accountId, conversationId, messageId, emoji, on),
+  editMessage: (accountId, conversationId, messageId, body) =>
+    requireService().editMessage(accountId, conversationId, messageId, body),
 };
 
 /** Test seam. */

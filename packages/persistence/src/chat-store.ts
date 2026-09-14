@@ -75,6 +75,7 @@ interface ChatContactRow {
   presence: ChatContact['presence'];
   status_text: string;
   subscription: ChatContact['subscription'];
+  blocked: number;
 }
 
 function rowToContact(row: ChatContactRow): ChatContact {
@@ -87,6 +88,7 @@ function rowToContact(row: ChatContactRow): ChatContact {
     presence: row.presence,
     statusText: row.status_text,
     subscription: row.subscription,
+    blocked: row.blocked === 1,
   };
 }
 
@@ -104,8 +106,11 @@ interface ChatConversationRow {
   mentions: number;
   last_read_id: string | null;
   muted: number;
+  muted_until: number | null;
   notify_level: ChatConversation['notifyLevel'];
   is_known_contact: number;
+  archived: number;
+  last_message_json: string | null;
   updated_at: number;
 }
 
@@ -122,8 +127,14 @@ function rowToConversation(row: ChatConversationRow): ChatConversation {
     mentions: row.mentions,
     lastReadId: row.last_read_id,
     muted: row.muted === 1,
+    mutedUntil: row.muted_until,
     notifyLevel: row.notify_level,
     isKnownContact: row.is_known_contact === 1,
+    archived: row.archived === 1,
+    lastMessage:
+      row.last_message_json === null
+        ? null
+        : parseJson<ChatConversation['lastMessage']>(row.last_message_json, null),
     updatedAt: row.updated_at,
   };
 }
@@ -267,6 +278,15 @@ export class ChatStore {
     });
   }
 
+  /** A targeted update, deliberately separate from {@link upsertContact}: a normal roster-push
+   *  upsert must never touch `blocked` (nothing about it carries block state), so folding it into the
+   *  same write would silently un-block a contact the moment their presence/roster row next changes. */
+  static setContactBlocked(db: Db, accountId: string, address: string, blocked: boolean): void {
+    db.prepare(
+      'UPDATE chat_contacts SET blocked = ? WHERE account_id = ? AND address = ?',
+    ).run(blocked ? 1 : 0, accountId, address);
+  }
+
   static deleteContact(db: Db, accountId: string, address: string): void {
     db.prepare('DELETE FROM chat_contacts WHERE account_id = ? AND address = ?').run(
       accountId,
@@ -301,10 +321,12 @@ export class ChatStore {
     db.prepare(
       `INSERT INTO chat_conversations (
         id, account_id, kind, address, name, topic, member_count, unread, mentions,
-        last_read_id, muted, notify_level, is_known_contact, updated_at
+        last_read_id, muted, muted_until, notify_level, is_known_contact, archived,
+        last_message_json, updated_at
       ) VALUES (
         @id, @accountId, @kind, @address, @name, @topic, @memberCount, @unread, @mentions,
-        @lastReadId, @muted, @notifyLevel, @isKnownContact, @updatedAt
+        @lastReadId, @muted, @mutedUntil, @notifyLevel, @isKnownContact, @archived,
+        @lastMessageJson, @updatedAt
       )
       ON CONFLICT(account_id, address) DO UPDATE SET
         kind = excluded.kind,
@@ -315,8 +337,11 @@ export class ChatStore {
         mentions = excluded.mentions,
         last_read_id = excluded.last_read_id,
         muted = excluded.muted,
+        muted_until = excluded.muted_until,
         notify_level = excluded.notify_level,
         is_known_contact = excluded.is_known_contact,
+        archived = excluded.archived,
+        last_message_json = excluded.last_message_json,
         updated_at = excluded.updated_at`,
     ).run({
       id: conv.id,
@@ -330,8 +355,11 @@ export class ChatStore {
       mentions: conv.mentions,
       lastReadId: conv.lastReadId,
       muted: conv.muted ? 1 : 0,
+      mutedUntil: conv.mutedUntil,
       notifyLevel: conv.notifyLevel,
       isKnownContact: conv.isKnownContact ? 1 : 0,
+      archived: conv.archived ? 1 : 0,
+      lastMessageJson: conv.lastMessage === null ? null : JSON.stringify(conv.lastMessage),
       updatedAt: conv.updatedAt,
     });
   }

@@ -20,6 +20,7 @@ function contact(over: Partial<ChatContact> = {}): ChatContact {
     presence: 'online',
     statusText: '',
     subscription: 'both',
+    blocked: false,
     ...over,
   };
 }
@@ -62,13 +63,39 @@ describe('RosterPanel', () => {
   });
 
   it('adds a contact and clears the field', () => {
-    const onAddContact = vi.fn<(a: string) => void>();
-    wrap(<RosterPanel contacts={[]} onOpenContact={vi.fn()} onAddContact={onAddContact} />);
+    const onAddContact = vi.fn<(accountId: string, address: string) => void>();
+    wrap(
+      <RosterPanel
+        contacts={[]}
+        accounts={[{ id: 'work', label: 'Work' }]}
+        onOpenContact={vi.fn()}
+        onAddContact={onAddContact}
+      />,
+    );
     const input = screen.getByLabelText('Add contact');
     fireEvent.change(input, { target: { value: '  carol@x.example  ' } });
     fireEvent.submit(input.closest('form') as HTMLFormElement);
-    expect(onAddContact).toHaveBeenCalledWith('carol@x.example');
+    expect(onAddContact).toHaveBeenCalledWith('work', 'carol@x.example');
     expect(input).toHaveProperty('value', '');
+  });
+
+  it('shows an account picker only when there is more than one account, and adds to the picked one', () => {
+    const onAddContact = vi.fn<(accountId: string, address: string) => void>();
+    wrap(
+      <RosterPanel
+        contacts={[]}
+        accounts={[
+          { id: 'work', label: 'Work' },
+          { id: 'home', label: 'Home' },
+        ]}
+        onOpenContact={vi.fn()}
+        onAddContact={onAddContact}
+      />,
+    );
+    fireEvent.change(screen.getByLabelText('Add to account'), { target: { value: 'home' } });
+    fireEvent.change(screen.getByLabelText('Add contact'), { target: { value: 'dave@x.example' } });
+    fireEvent.submit(screen.getByLabelText('Add contact').closest('form') as HTMLFormElement);
+    expect(onAddContact).toHaveBeenCalledWith('home', 'dave@x.example');
   });
 
   it('removes a contact through the per-row control', () => {
@@ -93,5 +120,62 @@ describe('RosterPanel', () => {
     );
     const row = screen.getByText('Ada').closest('button') as HTMLElement;
     expect(within(row).getByText('Awaiting response')).toBeDefined();
+  });
+
+  it("badges each contact with its own account's protocol — the unified, cross-account roster", () => {
+    wrap(
+      <RosterPanel
+        contacts={[
+          contact({ id: 'a', name: 'Ada', accountId: 'work' }),
+          contact({ id: 'b', name: 'Bob', accountId: 'home' }),
+        ]}
+        accounts={[
+          { id: 'work', label: 'Work', protocol: 'xmpp' },
+          { id: 'home', label: 'Home', protocol: 'irc' },
+        ]}
+        onOpenContact={vi.fn()}
+      />,
+    );
+    const ada = screen.getByText('Ada').closest('button') as HTMLElement;
+    const bob = screen.getByText('Bob').closest('button') as HTMLElement;
+    expect(within(ada).getByText('XMPP', { exact: false })).toBeDefined();
+    expect(within(bob).getByText('IRC', { exact: false })).toBeDefined();
+  });
+
+  it('blocks a contact through the per-row control, only when its own account is XMPP', () => {
+    const onToggleBlock = vi.fn<(c: ChatContact) => void>();
+    wrap(
+      <RosterPanel
+        contacts={[
+          contact({ id: 'a', name: 'Ada', accountId: 'work' }),
+          contact({ id: 'b', name: 'Bob', accountId: 'home' }),
+        ]}
+        accounts={[
+          { id: 'work', label: 'Work', protocol: 'xmpp' },
+          { id: 'home', label: 'Home', protocol: 'irc' },
+        ]}
+        onOpenContact={vi.fn()}
+        onToggleBlock={onToggleBlock}
+      />,
+    );
+    expect(screen.getByRole('button', { name: 'Block Ada' })).toBeDefined();
+    expect(screen.queryByRole('button', { name: 'Block Bob' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Unblock Bob' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Block Ada' }));
+    expect(onToggleBlock).toHaveBeenCalledWith(expect.objectContaining({ id: 'a' }));
+  });
+
+  it('shows Unblock and a Blocked marker for an already-blocked contact', () => {
+    wrap(
+      <RosterPanel
+        contacts={[contact({ id: 'a', name: 'Ada', accountId: 'work', blocked: true })]}
+        accounts={[{ id: 'work', label: 'Work', protocol: 'xmpp' }]}
+        onOpenContact={vi.fn()}
+        onToggleBlock={vi.fn()}
+      />,
+    );
+    expect(screen.getByRole('button', { name: 'Unblock Ada' })).toBeDefined();
+    const row = screen.getByText('Ada').closest('button') as HTMLElement;
+    expect(within(row).getByText('Blocked')).toBeDefined();
   });
 });

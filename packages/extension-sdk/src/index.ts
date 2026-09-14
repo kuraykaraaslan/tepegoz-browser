@@ -3,11 +3,15 @@ export {
   ExtensionSurfaceKindSchema,
   ExtensionManifestSchema,
   McpServerDeclSchema,
+  AdapterSubprocessDeclSchema,
+  AdapterSubprocessProtocolSchema,
   defineExtension,
   validateManifest,
   type ExtensionSurfaceKind,
   type ExtensionManifest,
   type McpServerDecl,
+  type AdapterSubprocessDecl,
+  type AdapterSubprocessProtocol,
 } from './manifest';
 
 export {

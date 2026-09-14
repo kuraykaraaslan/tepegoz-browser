@@ -18,6 +18,7 @@ function contact(over: Partial<ChatContact> = {}): ChatContact {
     presence: 'offline',
     statusText: '',
     subscription: 'both',
+    blocked: false,
     ...over,
   };
 }

@@ -24,8 +24,11 @@ function conv(over: Partial<ChatConversation> = {}): ChatConversation {
     mentions: 0,
     lastReadId: null,
     muted: false,
+    mutedUntil: null,
     notifyLevel: 'all',
     isKnownContact: true,
+    archived: false,
+    lastMessage: null,
     updatedAt: 100,
     ...over,
   };
@@ -80,6 +83,7 @@ function makePort(over: Partial<ChatClientPort> = {}): {
           presence: 'online',
           statusText: '',
           subscription: 'both',
+          blocked: false,
         } satisfies ChatContact,
       ]),
     getChatHistory: () => Promise.resolve({ messages: [msg()], nextCursor: null }),
@@ -202,6 +206,19 @@ describe('ChatWorkspace', () => {
     expect(screen.getByRole('heading', { name: 'Bob' })).toBeDefined();
   });
 
+  it('wires a clicked message link through onOpenLink', async () => {
+    const onOpenLink = vi.fn();
+    const { port } = makePort({
+      getChatHistory: () =>
+        Promise.resolve({ messages: [msg({ body: 'see https://tepegoz.example/x' })], nextCursor: null }),
+    });
+    wrap(<ChatWorkspace port={port} onOpenLink={onOpenLink} />);
+    fireEvent.click(await screen.findByRole('button', { name: /Bob/ }));
+    const link = await screen.findByRole('link', { name: 'https://tepegoz.example/x' });
+    fireEvent.click(link);
+    expect(onOpenLink).toHaveBeenCalledWith('https://tepegoz.example/x');
+  });
+
   it('sends from the composer through the port', async () => {
     const { port, sendChatMessage } = makePort();
     wrap(<ChatWorkspace port={port} />);
@@ -249,29 +266,17 @@ describe('ChatWorkspace', () => {
     await waitFor(() => expect(removeChatContact).toHaveBeenCalledWith('work', 'bob@x.example'));
   });
 
-  it('renders an account switcher with more than one account and switches on click', async () => {
-    const { port } = makePort({
-      listChatAccounts: () =>
-        Promise.resolve({
-          accounts: [
-            { id: 'work', label: 'Work', displayName: '', protocol: 'xmpp', color: null, order: 0 },
-            { id: 'home', label: 'Home', displayName: '', protocol: 'xmpp', color: null, order: 1 },
-          ],
-          states: { work: 'online', home: 'error' },
-        }),
-    });
-    wrap(<ChatWorkspace port={port} />);
-    const homeTab = await screen.findByRole('tab', { name: 'Home' });
-    fireEvent.click(homeTab);
-    await waitFor(() => expect(homeTab.getAttribute('aria-selected')).toBe('true'));
-  });
-
-  it('opening a contact with no existing conversation does not crash', async () => {
+  it('opening a contact never messaged before starts a real DM, not a dead end', async () => {
     const { port } = makePort({ listChatConversations: () => Promise.resolve([]) });
     wrap(<ChatWorkspace port={port} />);
     fireEvent.click(await screen.findByRole('tab', { name: 'Contacts' }));
     fireEvent.click(await screen.findByText('Bob'));
-    expect(screen.getByText('Pick a conversation.')).toBeDefined();
+    // No prior conversation row exists yet — a stub renders (named by address, the real name arrives
+    // once the first message creates a genuine row) so the composer is actually usable, rather than
+    // silently landing back on "Pick a conversation." (the previous, dead-end behavior).
+    expect(screen.queryByText('Pick a conversation.')).toBeNull();
+    expect(screen.getByRole('heading', { name: 'bob@x.example' })).toBeDefined();
+    expect(screen.getByPlaceholderText('Write a message…')).toBeDefined();
   });
 
   it('renders a room header + toggles the member list for a room conversation', async () => {
@@ -311,6 +316,68 @@ describe('ChatWorkspace', () => {
     expect(screen.getByText('Bea')).toBeDefined();
   });
 
+  it('clicking a room member starts a DM with them (nick as the address, when no real JID)', async () => {
+    const { port, emit } = makePort({
+      listChatConversations: () =>
+        Promise.resolve([conv({ id: 'room@conf', kind: 'room', address: 'room@conf', name: 'Room' })]),
+    });
+    wrap(<ChatWorkspace port={port} />);
+    fireEvent.click(await screen.findByRole('button', { name: /Room/ }));
+    await screen.findByText('hi there');
+    act(() => {
+      emit({
+        kind: 'change',
+        accountId: 'work',
+        change: {
+          kind: 'room',
+          conversationId: 'room@conf',
+          room: {
+            joined: true,
+            selfNick: 'me',
+            subject: '',
+            occupants: {
+              Bea: { nick: 'Bea', realJid: null, affiliation: 'member', role: 'participant', presence: 'online', statusText: '' },
+            },
+          },
+        },
+      } as never);
+    });
+    fireEvent.click(screen.getByRole('button', { name: '1 Members' }));
+    fireEvent.click(screen.getByText('Bea'));
+    await waitFor(() => expect(screen.getByRole('heading', { name: 'Bea' })).toBeDefined());
+  });
+
+  it('clicking yourself in the room member list does nothing', async () => {
+    const { port, emit } = makePort({
+      listChatConversations: () =>
+        Promise.resolve([conv({ id: 'room@conf', kind: 'room', address: 'room@conf', name: 'Room' })]),
+    });
+    wrap(<ChatWorkspace port={port} />);
+    fireEvent.click(await screen.findByRole('button', { name: /Room/ }));
+    await screen.findByText('hi there');
+    act(() => {
+      emit({
+        kind: 'change',
+        accountId: 'work',
+        change: {
+          kind: 'room',
+          conversationId: 'room@conf',
+          room: {
+            joined: true,
+            selfNick: 'me',
+            subject: '',
+            occupants: {
+              me: { nick: 'me', realJid: null, affiliation: 'member', role: 'participant', presence: 'online', statusText: '' },
+            },
+          },
+        },
+      } as never);
+    });
+    fireEvent.click(screen.getByRole('button', { name: '1 Members' }));
+    fireEvent.click(screen.getByText('me'));
+    expect(screen.getByRole('heading', { name: 'Room' })).toBeDefined();
+  });
+
   it('recognises the local user\'s own room messages by occupant nick, not by address equality', async () => {
     const { port, emit } = makePort({
       listChatConversations: () =>
@@ -346,11 +413,14 @@ describe('ChatWorkspace', () => {
     expect(screen.getByText('their line').closest('.chat-msg')?.getAttribute('data-own')).toBe('false');
   });
 
-  it('shows a Rooms tab only when the port supports MUC, and joins from it', async () => {
+  it("the New Chat dialog's Rooms tab discovers only when the port supports MUC, and joins from it", async () => {
     const plain = makePort();
     wrap(<ChatWorkspace port={plain.port} />);
     await screen.findByRole('button', { name: /Bob/ });
-    expect(screen.queryByRole('tab', { name: 'Find a room' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'New chat' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Rooms' }));
+    // The plain port supports no rooms at all — `chat.rooms` is null, so no discovery UI at all.
+    expect(screen.getByText(/no account here can browse/i)).toBeDefined();
     cleanup();
 
     let joined = false;
@@ -379,34 +449,36 @@ describe('ChatWorkspace', () => {
         ),
     });
     wrap(<ChatWorkspace port={port} />);
-    fireEvent.click(await screen.findByRole('tab', { name: 'Find a room' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'New chat' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Rooms' }));
     fireEvent.change(screen.getByLabelText('Room service'), { target: { value: 'conf.example' } });
     fireEvent.click(screen.getByRole('button', { name: 'Browse' }));
     fireEvent.click(await screen.findByText('General'));
     await waitFor(() => expect(joinChatRoom).toHaveBeenCalledWith('work', 'general@conf.example'));
-    // Joining must actually open the room, not just switch to the chats tab (the reported bug: the
+    // Joining must actually open the room, not just close the dialog (the original reported bug: the
     // panel flipped tabs but the conversation never appeared because its row was never re-seeded).
     await waitFor(() => expect(screen.getByRole('heading', { name: 'General' })).toBeDefined());
   });
 
-  it('a failed join stays on the Rooms tab with a visible error, instead of flipping to an empty Chats pane', async () => {
+  it('a failed join keeps the New Chat dialog open with a visible error, instead of closing onto an empty Chats pane', async () => {
     const joinChatRoom = vi.fn(() => Promise.reject(new Error('not connected')));
     const { port } = makePort({
       discoverChatRooms: () => Promise.resolve([]),
       joinChatRoom,
     });
     wrap(<ChatWorkspace port={port} />);
-    fireEvent.click(await screen.findByRole('tab', { name: 'Find a room' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'New chat' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Rooms' }));
 
     const input = screen.getByLabelText('Join by address');
     fireEvent.change(input, { target: { value: '#test' } });
     fireEvent.click(screen.getByRole('button', { name: 'Join' }));
 
     await screen.findByRole('alert');
-    // Still on the room browser — this is the reported bug: joining used to switch to the Chats
-    // tab unconditionally, so a failed join (e.g. the account not connected yet) landed on an empty
+    // Still open — this is the reported bug: joining used to switch to the Chats tab
+    // unconditionally, so a failed join (e.g. the account not connected yet) landed on an empty
     // pane with no room and no visible reason why.
-    expect(screen.getByRole('tab', { name: 'Find a room', selected: true })).toBeDefined();
+    expect(screen.getByRole('dialog', { name: 'New chat' })).toBeDefined();
   });
 
   it('an IRC account hides room browsing (no directory) but can still join a channel by address', async () => {
@@ -420,13 +492,14 @@ describe('ChatWorkspace', () => {
           states: { work: 'online' },
         }),
       // IRC has joinRoom but no discoverRooms — the port still exposes both callbacks (a generic
-      // desktop bridge, not an adapter-specific one), so the tab shows; only the protocol tells the
-      // UI discovery is unsupported.
+      // desktop bridge, not an adapter-specific one), so the Rooms tab's discovery section shows;
+      // only the protocol tells the UI discovery itself is unsupported.
       discoverChatRooms: vi.fn(),
       joinChatRoom,
     });
     wrap(<ChatWorkspace port={port} />);
-    fireEvent.click(await screen.findByRole('tab', { name: 'Find a room' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'New chat' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Rooms' }));
 
     expect(screen.queryByRole('button', { name: 'Browse' })).toBeNull();
     expect(screen.getByText(/no room directory/i)).toBeDefined();
@@ -471,6 +544,31 @@ describe('ChatWorkspace', () => {
     expect(screen.queryByText('Not encrypted')).toBeNull();
   });
 
+  it('hides the reaction UI on an IRC conversation — the protocol has no reaction mechanism at all', async () => {
+    const { port } = makePort({
+      reactToChatMessage: vi.fn(() => Promise.resolve()),
+      listChatAccounts: () =>
+        Promise.resolve({
+          accounts: [
+            { id: 'work', label: 'Libera', displayName: '', protocol: 'irc', color: null, order: 0 },
+          ],
+          states: { work: 'online' },
+        }),
+    });
+    wrap(<ChatWorkspace port={port} />);
+    fireEvent.click(await screen.findByRole('button', { name: /Bob/ }));
+    await screen.findByText('hi there');
+    expect(screen.queryByRole('button', { name: 'Add reaction' })).toBeNull();
+  });
+
+  it('shows the reaction UI on an XMPP conversation when the port supports it', async () => {
+    const { port } = makePort({ reactToChatMessage: vi.fn(() => Promise.resolve()) });
+    wrap(<ChatWorkspace port={port} />);
+    fireEvent.click(await screen.findByRole('button', { name: /Bob/ }));
+    await screen.findByText('hi there');
+    expect(screen.getByRole('button', { name: 'Add reaction' })).toBeDefined();
+  });
+
   it('reflects a pushed typing change in the conversation header', async () => {
     const { port, emit } = makePort();
     wrap(<ChatWorkspace port={port} />);
@@ -486,14 +584,44 @@ describe('ChatWorkspace', () => {
     expect(screen.getByText('typing…')).toBeDefined();
   });
 
-  it('mutes a conversation from the DM header through the port', async () => {
+  it('mutes a conversation for a picked duration from the DM header through the port', async () => {
     const setChatMuted = vi.fn(() => Promise.resolve());
-    const { port } = makePort({ setChatMuted });
+    const muteChatFor = vi.fn(() => Promise.resolve());
+    const { port } = makePort({ setChatMuted, muteChatFor });
     wrap(<ChatWorkspace port={port} />);
     fireEvent.click(await screen.findByRole('button', { name: /Bob/ }));
     await screen.findByText('hi there');
     fireEvent.click(screen.getByRole('button', { name: 'Mute' }));
-    await waitFor(() => expect(setChatMuted).toHaveBeenCalledWith('work', 'c1', true));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Mute for 8 hours' }));
+    await waitFor(() => expect(muteChatFor).toHaveBeenCalledWith('work', 'c1', 8 * 3_600_000));
+  });
+
+  it('archives a conversation from the DM header, which then moves it off the default list', async () => {
+    const setChatArchived = vi.fn(() => Promise.resolve());
+    const { port } = makePort({ setChatArchived });
+    wrap(<ChatWorkspace port={port} />);
+    fireEvent.click(await screen.findByRole('button', { name: /Bob/ }));
+    await screen.findByText('hi there');
+    fireEvent.click(screen.getByRole('button', { name: 'Archive' }));
+    await waitFor(() => expect(setChatArchived).toHaveBeenCalledWith('work', 'c1', true));
+  });
+
+  it('hides archived conversations from the default list; "Show archived" reveals them', async () => {
+    const { port } = makePort({
+      listChatConversations: () =>
+        Promise.resolve([conv({ id: 'c1', name: 'Bob' }), conv({ id: 'c2', name: 'Ada', archived: true })]),
+    });
+    wrap(<ChatWorkspace port={port} />);
+    await screen.findByText('Bob');
+    expect(screen.queryByText('Ada')).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: /Show archived/ }));
+    expect(screen.queryByText('Bob')).toBeNull();
+    expect(screen.getByText('Ada')).toBeDefined();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Back to Chats' }));
+    expect(screen.getByText('Bob')).toBeDefined();
+    expect(screen.queryByText('Ada')).toBeNull();
   });
 
   it('names who is typing in a room', async () => {

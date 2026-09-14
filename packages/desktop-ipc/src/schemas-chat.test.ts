@@ -5,10 +5,14 @@ import {
   ChatAddContactSchema,
   ChatConversationArgSchema,
   ChatDiscoverRoomsSchema,
+  ChatEditMessageSchema,
   ChatGetHistorySchema,
   ChatJoinRoomSchema,
   ChatRemoveContactSchema,
   ChatSetRoomNotifyLevelSchema,
+  ChatBlockContactSchema,
+  ChatMuteForSchema,
+  ChatSetArchivedSchema,
   ChatSetMutedSchema,
   ChatSetRoomTopicSchema,
   ChatMarkReadSchema,
@@ -92,6 +96,35 @@ describe('ChatSetPresenceSchema', () => {
   });
 });
 
+describe('ChatEditMessageSchema', () => {
+  it('accepts an account, conversation, message id, and new body', () => {
+    const res = ChatEditMessageSchema.safeParse({
+      accountId: 'a',
+      conversationId: 'c',
+      messageId: 'm1',
+      body: 'fixed typo',
+    });
+    expect(res.success).toBe(true);
+  });
+
+  it('rejects a missing message id', () => {
+    expect(
+      ChatEditMessageSchema.safeParse({ accountId: 'a', conversationId: 'c', body: 'x' }).success,
+    ).toBe(false);
+  });
+
+  it('caps the body the same as ChatSendMessageSchema — one shared bound, not two', () => {
+    expect(
+      ChatEditMessageSchema.safeParse({
+        accountId: 'a',
+        conversationId: 'c',
+        messageId: 'm1',
+        body: 'x'.repeat(100_001),
+      }).success,
+    ).toBe(false);
+  });
+});
+
 describe('roster channels', () => {
   it('ChatAddContactSchema needs a non-empty account id and address', () => {
     expect(ChatAddContactSchema.safeParse({ accountId: 'a', address: 'bob@example.com' }).success).toBe(
@@ -156,6 +189,47 @@ describe('room channels', () => {
     ).toBe(true);
     expect(
       ChatSetMutedSchema.safeParse({ accountId: 'a', conversationId: 'c', muted: 'yes' }).success,
+    ).toBe(false);
+  });
+
+  it('ChatMuteForSchema accepts a positive duration or null (forever), rejects 0/negative/over-cap', () => {
+    expect(
+      ChatMuteForSchema.safeParse({ accountId: 'a', conversationId: 'c', durationMs: 3_600_000 })
+        .success,
+    ).toBe(true);
+    expect(
+      ChatMuteForSchema.safeParse({ accountId: 'a', conversationId: 'c', durationMs: null }).success,
+    ).toBe(true);
+    expect(
+      ChatMuteForSchema.safeParse({ accountId: 'a', conversationId: 'c', durationMs: 0 }).success,
+    ).toBe(false);
+    expect(
+      ChatMuteForSchema.safeParse({ accountId: 'a', conversationId: 'c', durationMs: -1 }).success,
+    ).toBe(false);
+    expect(
+      ChatMuteForSchema.safeParse({
+        accountId: 'a',
+        conversationId: 'c',
+        durationMs: 31 * 24 * 3600_000,
+      }).success,
+    ).toBe(false);
+  });
+
+  it('ChatBlockContactSchema requires a non-empty address and a boolean blocked flag', () => {
+    expect(
+      ChatBlockContactSchema.safeParse({ accountId: 'a', address: 'bob@x.com', blocked: true }).success,
+    ).toBe(true);
+    expect(
+      ChatBlockContactSchema.safeParse({ accountId: 'a', address: '', blocked: true }).success,
+    ).toBe(false);
+  });
+
+  it('ChatSetArchivedSchema requires a boolean archived flag', () => {
+    expect(
+      ChatSetArchivedSchema.safeParse({ accountId: 'a', conversationId: 'c', archived: true }).success,
+    ).toBe(true);
+    expect(
+      ChatSetArchivedSchema.safeParse({ accountId: 'a', conversationId: 'c', archived: 'yes' }).success,
     ).toBe(false);
   });
 
