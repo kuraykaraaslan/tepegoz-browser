@@ -685,11 +685,23 @@ group that shrinks and ellipsis-truncates the name as one unit (`min-width: 0` +
 ellipsis`, the full name still available via `title`), and an actions group (mute, archive) that never
 shrinks and stays pinned to the right edge.
 
+Then **contact blocking** (2026-09-14), XMPP-only — XEP-0191 (Simple Communications Blocking) is the
+only adapter with any server-side blocking concept at all (IRC has none, only per-channel operator
+bans; Matrix's ignored-user list is unimplemented): `buildBlock`/`buildUnblock` XEP-0191 stanzas in
+`xmpp/stanzas.ts`, `ChatAdapter.blockContact?`/`unblockContact?` (both optional — absent on IRC/Matrix),
+`ChatAccountRunner.blockContact` (501s with "this protocol has no server-side blocking concept" when
+the adapter lacks both methods), through to `chat:block-contact` IPC. `blocked` on `ChatContact` is a
+**write-through, not an upsert field** — same reasoning as `muted`/`mutedUntil`/`archived`: nothing
+about it arrives as a normal roster-push, so `ChatStore.upsertContact` never touches it; a separate
+`ChatStore.setContactBlocked` targeted UPDATE is the only writer, called right after the adapter's
+server round-trip succeeds. `<RosterPanel>` gained a per-row Block/Unblock button, shown only when the
+contact's own account is XMPP (`canBlock`, same "derive from the static protocol fact" pattern as
+`reactionsSupported`/`notEncrypted`), plus a "Blocked" marker on an already-blocked row.
+
 **Still open, tracked but not started:** a "New Chat" popup (contacts + existing groups + a generic
-address field) replacing the "Find a room" tab; blocking a contact where the protocol supports it;
-emoji-shortcode (`:smile:`) rendering; markdown-lite rendering for bridge-sourced messages; a
-WhatsApp-style hover/right-click reaction trigger; and richer context menus (messages, room-list rows,
-contacts).
+address field) replacing the "Find a room" tab; emoji-shortcode (`:smile:`) rendering; markdown-lite
+rendering for bridge-sourced messages; a WhatsApp-style hover/right-click reaction trigger; and richer
+context menus (messages, room-list rows, contacts).
 
 **Remaining:** the runtime Functional DoD (media round-trip needs a live account). · **Depends on:**
 X-chat.1 · **Branch:** `main` · **Risk:** low.

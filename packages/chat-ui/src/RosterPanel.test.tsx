@@ -20,6 +20,7 @@ function contact(over: Partial<ChatContact> = {}): ChatContact {
     presence: 'online',
     statusText: '',
     subscription: 'both',
+    blocked: false,
     ...over,
   };
 }
@@ -139,5 +140,42 @@ describe('RosterPanel', () => {
     const bob = screen.getByText('Bob').closest('button') as HTMLElement;
     expect(within(ada).getByText('XMPP', { exact: false })).toBeDefined();
     expect(within(bob).getByText('IRC', { exact: false })).toBeDefined();
+  });
+
+  it('blocks a contact through the per-row control, only when its own account is XMPP', () => {
+    const onToggleBlock = vi.fn<(c: ChatContact) => void>();
+    wrap(
+      <RosterPanel
+        contacts={[
+          contact({ id: 'a', name: 'Ada', accountId: 'work' }),
+          contact({ id: 'b', name: 'Bob', accountId: 'home' }),
+        ]}
+        accounts={[
+          { id: 'work', label: 'Work', protocol: 'xmpp' },
+          { id: 'home', label: 'Home', protocol: 'irc' },
+        ]}
+        onOpenContact={vi.fn()}
+        onToggleBlock={onToggleBlock}
+      />,
+    );
+    expect(screen.getByRole('button', { name: 'Block Ada' })).toBeDefined();
+    expect(screen.queryByRole('button', { name: 'Block Bob' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Unblock Bob' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Block Ada' }));
+    expect(onToggleBlock).toHaveBeenCalledWith(expect.objectContaining({ id: 'a' }));
+  });
+
+  it('shows Unblock and a Blocked marker for an already-blocked contact', () => {
+    wrap(
+      <RosterPanel
+        contacts={[contact({ id: 'a', name: 'Ada', accountId: 'work', blocked: true })]}
+        accounts={[{ id: 'work', label: 'Work', protocol: 'xmpp' }]}
+        onOpenContact={vi.fn()}
+        onToggleBlock={vi.fn()}
+      />,
+    );
+    expect(screen.getByRole('button', { name: 'Unblock Ada' })).toBeDefined();
+    const row = screen.getByText('Ada').closest('button') as HTMLElement;
+    expect(within(row).getByText('Blocked')).toBeDefined();
   });
 });

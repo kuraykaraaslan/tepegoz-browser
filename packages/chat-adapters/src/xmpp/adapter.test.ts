@@ -345,6 +345,25 @@ describe('XmppAdapter — live traffic', () => {
     );
   });
 
+  it('blockContact / unblockContact send XEP-0191 iqs, with no roster-interest requirement', async () => {
+    const { server, adapter, session } = await connected();
+    const p = adapter.blockContact?.(session, 'bob@example.com');
+    const id = /id="(block-\d+)"/.exec(server.lastWritten())?.[1] ?? '';
+    expect(server.lastWritten()).toBe(
+      `<iq type="set" id="${id}"><block xmlns="urn:xmpp:blocking"><item jid="bob@example.com"/></block></iq>`,
+    );
+    server.send(`<iq type="result" id="${id}"/>`);
+    await p;
+
+    const p2 = adapter.unblockContact?.(session, 'bob@example.com');
+    const id2 = /id="(unblock-\d+)"/.exec(server.lastWritten())?.[1] ?? '';
+    expect(server.lastWritten()).toBe(
+      `<iq type="set" id="${id2}"><unblock xmlns="urn:xmpp:blocking"><item jid="bob@example.com"/></unblock></iq>`,
+    );
+    server.send(`<iq type="result" id="${id2}"/>`);
+    await p2;
+  });
+
   it('addContact skips the roster get on a second call once this session is already interested', async () => {
     const { server, adapter, session } = await connected();
     const rosterP = adapter.roster(session);

@@ -816,6 +816,15 @@ const MIGRATIONS: Migration[] = [
       `);
     },
   },
+  {
+    version: 25,
+    up: (db) => {
+      // ext-chat: blocking a contact (XEP-0191, …). Write-through from a successful
+      // blockContact/unblockContact call — neither protocol's block state arrives as a normal
+      // roster-push, so there is no live event to fold it from.
+      db.exec("ALTER TABLE chat_contacts ADD COLUMN blocked INTEGER NOT NULL DEFAULT 0;");
+    },
+  },
 ];
 
 /**

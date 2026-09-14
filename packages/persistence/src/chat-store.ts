@@ -75,6 +75,7 @@ interface ChatContactRow {
   presence: ChatContact['presence'];
   status_text: string;
   subscription: ChatContact['subscription'];
+  blocked: number;
 }
 
 function rowToContact(row: ChatContactRow): ChatContact {
@@ -87,6 +88,7 @@ function rowToContact(row: ChatContactRow): ChatContact {
     presence: row.presence,
     statusText: row.status_text,
     subscription: row.subscription,
+    blocked: row.blocked === 1,
   };
 }
 
@@ -274,6 +276,15 @@ export class ChatStore {
       statusText: contact.statusText,
       subscription: contact.subscription,
     });
+  }
+
+  /** A targeted update, deliberately separate from {@link upsertContact}: a normal roster-push
+   *  upsert must never touch `blocked` (nothing about it carries block state), so folding it into the
+   *  same write would silently un-block a contact the moment their presence/roster row next changes. */
+  static setContactBlocked(db: Db, accountId: string, address: string, blocked: boolean): void {
+    db.prepare(
+      'UPDATE chat_contacts SET blocked = ? WHERE account_id = ? AND address = ?',
+    ).run(blocked ? 1 : 0, accountId, address);
   }
 
   static deleteContact(db: Db, accountId: string, address: string): void {

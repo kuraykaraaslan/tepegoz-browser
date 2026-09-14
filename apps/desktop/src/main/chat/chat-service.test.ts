@@ -43,6 +43,7 @@ class FakeStore implements ChatRunnerStore {
   redactMessage(): void {}
   upsertConversation(): void {}
   upsertContact(): void {}
+  setContactBlocked(): void {}
   getConversation(): ChatConversation | null {
     return null;
   }

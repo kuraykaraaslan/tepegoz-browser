@@ -136,6 +136,9 @@ export const tr: ChatUiStrings = {
     addAccount: 'Şu hesaba ekle',
     remove: 'Kaldır',
     pending: 'Yanıt bekleniyor',
+    block: 'Engelle',
+    unblock: 'Engeli kaldır',
+    blocked: 'Engellendi',
   },
   setup: {
     title: 'Hesap ekle',

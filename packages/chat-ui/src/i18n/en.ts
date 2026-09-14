@@ -194,6 +194,10 @@ export const en = {
     remove: 'Remove',
     /** Marker on a contact who can see the user's presence but is not yet mutual. */
     pending: 'Awaiting response',
+    block: 'Block',
+    unblock: 'Unblock',
+    /** Marker on a row for a contact the user has blocked. */
+    blocked: 'Blocked',
   },
   setup: {
     title: 'Add an account',

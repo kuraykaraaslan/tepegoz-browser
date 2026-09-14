@@ -10,6 +10,7 @@ import {
   ChatJoinRoomSchema,
   ChatRemoveContactSchema,
   ChatSetRoomNotifyLevelSchema,
+  ChatBlockContactSchema,
   ChatMuteForSchema,
   ChatSetArchivedSchema,
   ChatSetMutedSchema,
@@ -211,6 +212,15 @@ describe('room channels', () => {
         conversationId: 'c',
         durationMs: 31 * 24 * 3600_000,
       }).success,
+    ).toBe(false);
+  });
+
+  it('ChatBlockContactSchema requires a non-empty address and a boolean blocked flag', () => {
+    expect(
+      ChatBlockContactSchema.safeParse({ accountId: 'a', address: 'bob@x.com', blocked: true }).success,
+    ).toBe(true);
+    expect(
+      ChatBlockContactSchema.safeParse({ accountId: 'a', address: '', blocked: true }).success,
     ).toBe(false);
   });
 

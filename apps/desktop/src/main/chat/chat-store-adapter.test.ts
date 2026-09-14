@@ -132,11 +132,29 @@ describe('chat-store-adapter — makeRunnerStore', () => {
       presence: 'online',
       statusText: '',
       subscription: 'both',
+      blocked: false,
     };
     store.upsertContact(contact);
     expect(listContacts(db, 'work')).toHaveLength(1);
     expect(store.getConversation('bob@x.com')?.address).toBe('bob@x.com');
     expect(store.getConversation('nope')).toBeNull();
+  });
+
+  it('setContactBlocked is a targeted update, scoped to (accountId, address)', () => {
+    const store = makeRunnerStore(db);
+    store.upsertContact({
+      id: 'work:bob@x.com',
+      accountId: 'work',
+      address: 'bob@x.com',
+      name: 'Bob',
+      groups: [],
+      presence: 'online',
+      statusText: '',
+      subscription: 'both',
+      blocked: false,
+    });
+    store.setContactBlocked('work', 'bob@x.com', true);
+    expect(listContacts(db, 'work')[0]?.blocked).toBe(true);
   });
 
   it('listReadMarkers reports every conversation\'s persisted lastReadId, scoped to the account', () => {

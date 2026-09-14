@@ -277,6 +277,8 @@ export const chatIpcService: ChatIpcService = {
     requireService().muteFor(accountId, conversationId, durationMs),
   setArchived: (accountId, conversationId, archived) =>
     requireService().setArchived(accountId, conversationId, archived),
+  blockContact: (accountId, address, blocked) =>
+    requireService().blockContact(accountId, address, blocked),
   setRoomTopic: (accountId, conversationId, topic) =>
     requireService().setRoomTopic(accountId, conversationId, topic),
   inviteToRoom: (accountId, conversationId, invitee) =>

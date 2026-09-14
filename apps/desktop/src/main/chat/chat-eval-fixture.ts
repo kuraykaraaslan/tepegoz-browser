@@ -81,6 +81,7 @@ export function chatEvalContacts(fixture: ChatEvalFixture): ChatContact[] {
     presence: 'offline',
     statusText: '',
     subscription: 'both',
+    blocked: false,
   }));
 }
 

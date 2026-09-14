@@ -33,6 +33,9 @@ export interface ChatRunnerStore {
   redactMessage: (conversationId: string, protocolId: string) => void;
   upsertConversation: (conversation: ChatConversation) => void;
   upsertContact: (contact: ChatContact) => void;
+  /** A targeted update, deliberately separate from `upsertContact` — see
+   *  `ChatStore.setContactBlocked`'s own docstring for why. */
+  setContactBlocked: (accountId: string, address: string, blocked: boolean) => void;
   getConversation: (id: string) => ChatConversation | null;
   /** Newest-first-then-reversed page of everything already persisted for this conversation. */
   listMessages: (conversationId: string) => ChatMessage[];
@@ -586,6 +589,21 @@ export class ChatAccountRunner {
       throw new AppError('this protocol has no roster / contacts concept', 501);
     }
     await this.deps.adapter.removeContact(this.requireSession(), address);
+  }
+
+  /** Write-through: persists `blocked` right after a successful server round trip — neither
+   *  protocol's block state arrives as a normal roster-push the fold path already handles, so there
+   *  is no live event to derive it from instead. */
+  async blockContact(address: string, blocked: boolean): Promise<void> {
+    if (this.deps.adapter.blockContact === undefined || this.deps.adapter.unblockContact === undefined) {
+      throw new AppError('this protocol has no server-side blocking concept', 501);
+    }
+    if (blocked) {
+      await this.deps.adapter.blockContact(this.requireSession(), address);
+    } else {
+      await this.deps.adapter.unblockContact(this.requireSession(), address);
+    }
+    this.deps.store.setContactBlocked(this.accountId, address, blocked);
   }
 
   async react(conversationId: string, messageId: string, emoji: string, on: boolean): Promise<void> {

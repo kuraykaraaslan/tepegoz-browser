@@ -328,6 +328,12 @@ export function ChatWorkspace({
               {...(chat.removeContact !== null
                 ? { onRemoveContact: (contact) => chat.removeContact?.(contact.accountId, contact.address) }
                 : {})}
+              {...(chat.blockContact !== null
+                ? {
+                    onToggleBlock: (contact: ChatContact) =>
+                      chat.blockContact?.(contact.accountId, contact.address, !contact.blocked),
+                  }
+                : {})}
             />
           )}
           {tab === 'rooms' && chat.rooms !== null && (

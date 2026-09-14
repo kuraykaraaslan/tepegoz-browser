@@ -160,6 +160,7 @@ describe('useChatState', () => {
       presence: 'offline',
       statusText: '',
       subscription: 'both',
+      blocked: false,
     });
     const { port } = makePort({
       getChatRoster: (accountId: string) =>
@@ -447,6 +448,42 @@ describe('useChatState', () => {
       await result.current.removeContact?.('home', 'bob@example.org');
     });
     expect(removeChatContact).toHaveBeenCalledWith('home', 'bob@example.org');
+  });
+
+  it('blockContact is null without port support; otherwise calls the port and optimistically patches the roster', async () => {
+    const plain = makePort();
+    const { result: noSupport } = renderHook(() => useChatState(plain.port));
+    await waitFor(() => expect(noSupport.current.loading).toBe(false));
+    expect(noSupport.current.blockContact).toBeNull();
+
+    const blockChatContact = vi.fn(() => Promise.resolve());
+    const { port } = makePort({
+      blockChatContact,
+      listChatConversations: () => Promise.resolve([conv({ accountId: 'home' })]),
+      getChatRoster: () =>
+        Promise.resolve([
+          {
+            id: 'home:bob@example.org',
+            accountId: 'home',
+            address: 'bob@example.org',
+            name: 'Bob',
+            groups: [],
+            presence: 'offline',
+            statusText: '',
+            subscription: 'both',
+            blocked: false,
+          } satisfies ChatContact,
+        ]),
+    });
+    const { result } = renderHook(() => useChatState(port));
+    await waitFor(() => expect(result.current.conversations.length).toBe(1));
+    await waitFor(() => expect(result.current.client.roster['home:bob@example.org']).toBeDefined());
+
+    await act(async () => {
+      await result.current.blockContact?.('home', 'bob@example.org', true);
+    });
+    expect(blockChatContact).toHaveBeenCalledWith('home', 'bob@example.org', true);
+    expect(result.current.client.roster['home:bob@example.org']?.blocked).toBe(true);
   });
 
   it('leaveRoom is null without port support; otherwise calls the port and deselects the room', async () => {

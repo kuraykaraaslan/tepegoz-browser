@@ -176,6 +176,11 @@ export const ChatContactSchema = z.object({
   presence: ChatPresenceSchema.default('offline'),
   statusText: z.string().max(512).default(''),
   subscription: ChatSubscriptionSchema.default('none'),
+  /** Blocked at the server (XEP-0191, Matrix's ignored-user list, …) — their messages/presence stop
+   *  reaching this account entirely. Write-through: set locally right after a successful
+   *  `blockContact`/`unblockContact` call, since neither protocol's block state arrives as a normal
+   *  roster-push the rest of this model already folds. */
+  blocked: z.boolean().default(false),
 });
 export type ChatContact = z.infer<typeof ChatContactSchema>;
 

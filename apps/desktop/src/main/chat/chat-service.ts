@@ -290,6 +290,10 @@ export class ChatService {
     return this.require(accountId).setArchived(conversationId, archived);
   }
 
+  async blockContact(accountId: string, address: string, blocked: boolean): Promise<void> {
+    return this.require(accountId).blockContact(address, blocked);
+  }
+
   async setRoomTopic(accountId: string, conversationId: string, topic: string): Promise<void> {
     return this.require(accountId).setRoomTopic(conversationId, topic);
   }

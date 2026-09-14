@@ -118,6 +118,10 @@ class FakeStore implements ChatRunnerStore {
   upsertContact(c: ChatContact): void {
     this.contacts.push(c);
   }
+  setContactBlocked(accountId: string, address: string, blocked: boolean): void {
+    const c = this.contacts.find((x) => x.accountId === accountId && x.address === address);
+    if (c !== undefined) c.blocked = blocked;
+  }
   getConversation(id: string): ChatConversation | null {
     return this.conversations.get(id) ?? null;
   }
@@ -520,7 +524,7 @@ describe('ChatAccountRunner — actions', () => {
   it('roster persists every contact', async () => {
     const { runner, adapter, store } = await online();
     adapter.rosterContacts = [
-      { id: 'acc:c@x', accountId: 'acc', address: 'c@x', name: 'C', groups: [], presence: 'offline', statusText: '', subscription: 'both' },
+      { id: 'acc:c@x', accountId: 'acc', address: 'c@x', name: 'C', groups: [], presence: 'offline', statusText: '', subscription: 'both', blocked: false },
     ];
     expect(await runner.roster()).toHaveLength(1);
     expect(store.contacts).toHaveLength(1);
@@ -686,6 +690,35 @@ describe('ChatAccountRunner — actions', () => {
     expect(store.conversations.get('room@conf')).toMatchObject({ archived: true, muted: true });
     await runner.setArchived('room@conf', false);
     expect(store.conversations.get('room@conf')).toMatchObject({ archived: false, muted: true });
+  });
+
+  it('blockContact 501s without adapter support; otherwise delegates and persists blocked via setContactBlocked (not upsertContact)', async () => {
+    const { runner, adapter, store } = await online();
+    store.upsertContact({
+      id: 'acc:bob@example.com',
+      accountId: 'acc',
+      address: 'bob@example.com',
+      name: 'Bob',
+      groups: [],
+      presence: 'online',
+      statusText: '',
+      subscription: 'both',
+      blocked: false,
+    });
+    await expect(runner.blockContact('bob@example.com', true)).rejects.toThrow(/blocking/);
+
+    const blockContact = vi.fn(() => Promise.resolve());
+    const unblockContact = vi.fn(() => Promise.resolve());
+    (adapter as unknown as { blockContact: typeof blockContact }).blockContact = blockContact;
+    (adapter as unknown as { unblockContact: typeof unblockContact }).unblockContact = unblockContact;
+
+    await runner.blockContact('bob@example.com', true);
+    expect(blockContact).toHaveBeenCalledWith(expect.anything(), 'bob@example.com');
+    expect(store.contacts.find((c) => c.address === 'bob@example.com')?.blocked).toBe(true);
+
+    await runner.blockContact('bob@example.com', false);
+    expect(unblockContact).toHaveBeenCalledWith(expect.anything(), 'bob@example.com');
+    expect(store.contacts.find((c) => c.address === 'bob@example.com')?.blocked).toBe(false);
   });
 
   it('editMessage 501s without adapter support; otherwise delegates with a write-only OutgoingMessage', async () => {

@@ -50,6 +50,7 @@ const svc = {
   setMuted: vi.fn(() => Promise.resolve()),
   muteFor: vi.fn(() => Promise.resolve()),
   setArchived: vi.fn(() => Promise.resolve()),
+  blockContact: vi.fn(() => Promise.resolve()),
   setRoomTopic: vi.fn(() => Promise.resolve()),
   inviteToRoom: vi.fn(() => Promise.resolve()),
   resolveMedia: vi.fn(() => Promise.resolve({ dataUrl: 'data:image/png;base64,AAAA' })),
@@ -87,7 +88,7 @@ beforeEach(() => {
 });
 
 it('registers every chat channel', () => {
-  expect(h.handlers.size).toBe(25);
+  expect(h.handlers.size).toBe(26);
 });
 
 it('chat:react validates + delegates', async () => {
@@ -137,6 +138,14 @@ it('chat:set-archived validates + delegates', async () => {
   expect(svc.setArchived).toHaveBeenCalledWith('work', 'general@conf.example', true);
   await expect(
     call(IpcChannels.chatSetArchived, { accountId: 'work', conversationId: 'c' }),
+  ).rejects.toBeDefined();
+});
+
+it('chat:block-contact validates + delegates', async () => {
+  await call(IpcChannels.chatBlockContact, { accountId: 'work', address: 'bob@example.com', blocked: true });
+  expect(svc.blockContact).toHaveBeenCalledWith('work', 'bob@example.com', true);
+  await expect(
+    call(IpcChannels.chatBlockContact, { accountId: 'work', address: '' }),
   ).rejects.toBeDefined();
 });
 

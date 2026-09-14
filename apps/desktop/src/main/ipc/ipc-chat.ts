@@ -12,6 +12,7 @@ import {
   ChatGetHistorySchema,
   ChatJoinRoomSchema,
   ChatLeaveRoomSchema,
+  ChatBlockContactSchema,
   ChatMarkReadSchema,
   ChatMuteForSchema,
   ChatReactSchema,
@@ -100,6 +101,7 @@ export interface ChatIpcService {
   setMuted: (accountId: string, conversationId: string, muted: boolean) => Promise<void>;
   muteFor: (accountId: string, conversationId: string, durationMs: number | null) => Promise<void>;
   setArchived: (accountId: string, conversationId: string, archived: boolean) => Promise<void>;
+  blockContact: (accountId: string, address: string, blocked: boolean) => Promise<void>;
   setRoomTopic: (accountId: string, conversationId: string, topic: string) => Promise<void>;
   inviteToRoom: (accountId: string, conversationId: string, invitee: string) => Promise<void>;
   resolveMedia: (accountId: string, mediaRef: string) => Promise<{ dataUrl: string } | null>;
@@ -199,6 +201,11 @@ export function registerChatIpc(service: ChatIpcService): void {
   handleAsync(IpcChannels.chatSetArchived, async (_event, payload): Promise<void> => {
     const { accountId, conversationId, archived } = parsePayload(ChatSetArchivedSchema, payload);
     await service.setArchived(accountId, conversationId, archived);
+  });
+
+  handleAsync(IpcChannels.chatBlockContact, async (_event, payload): Promise<void> => {
+    const { accountId, address, blocked } = parsePayload(ChatBlockContactSchema, payload);
+    await service.blockContact(accountId, address, blocked);
   });
 
   handleAsync(IpcChannels.chatSetRoomTopic, async (_event, payload): Promise<void> => {

@@ -84,6 +84,7 @@ describe('buildChatEvalSeed', () => {
         presence: 'offline',
         statusText: '',
         subscription: 'both',
+        blocked: false,
       },
     ]);
   });

@@ -122,6 +122,14 @@ export const ChatSetArchivedSchema = z.object({
   archived: z.boolean(),
 });
 
+/** `chat:block-contact` — block / unblock an address at the server (XEP-0191, …). 501s on a
+ *  protocol with no server-side blocking concept. */
+export const ChatBlockContactSchema = z.object({
+  accountId: z.string().min(1).max(64),
+  address: z.string().min(1).max(512),
+  blocked: z.boolean(),
+});
+
 /** `chat:set-room-topic` — change a room's topic / subject (empty string clears it). */
 export const ChatSetRoomTopicSchema = z.object({
   accountId: z.string().min(1).max(64),

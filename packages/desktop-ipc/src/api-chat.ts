@@ -139,6 +139,9 @@ export interface ChatApi {
   /** Archive / unarchive one conversation — a purely local presentation flag, no protocol wire
    *  concept; it does not affect delivery or unread counting, just default list visibility. */
   setChatArchived(accountId: string, conversationId: string, archived: boolean): Promise<void>;
+  /** Block / unblock an address at the server (XEP-0191, …) — throws if the protocol has no
+   *  server-side blocking concept. */
+  blockChatContact(accountId: string, address: string, blocked: boolean): Promise<void>;
   /** Change a room's topic / subject (empty string clears it). The server echo updates local state. */
   setChatRoomTopic(accountId: string, conversationId: string, topic: string): Promise<void>;
   /** Invite a contact to a room. Write-only — any membership change arrives on `chat:state`. */

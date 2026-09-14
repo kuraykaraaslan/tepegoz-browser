@@ -83,6 +83,7 @@ function makePort(over: Partial<ChatClientPort> = {}): {
           presence: 'online',
           statusText: '',
           subscription: 'both',
+          blocked: false,
         } satisfies ChatContact,
       ]),
     getChatHistory: () => Promise.resolve({ messages: [msg()], nextCursor: null }),

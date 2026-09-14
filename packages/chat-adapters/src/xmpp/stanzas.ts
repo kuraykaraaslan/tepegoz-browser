@@ -19,6 +19,7 @@ export const NS = {
   roster: 'jabber:iq:roster',
   stanzaId: 'urn:xmpp:sid:0',
   reactions: 'urn:xmpp:reactions:0',
+  blocking: 'urn:xmpp:blocking',
 } as const;
 
 export interface StanzaContext {
@@ -214,6 +215,9 @@ export function rosterItemToContact(item: XmlElement, accountId: string): ChatCo
       : subscription === 'both' || subscription === 'to' || subscription === 'from'
         ? subscription
         : 'none',
+    // A roster push carries no block state (XEP-0191 is a separate list) — this is never actually
+    // persisted: `ChatStore.upsertContact` deliberately leaves the `blocked` column untouched.
+    blocked: false,
   };
 }
 
@@ -330,6 +334,24 @@ export function buildRosterRemove(iqId: string, jid: string): string {
   return (
     `<iq type="set" id="${encodeXmlText(iqId)}">` +
     `<query xmlns="${NS.roster}"><item${attrs({ jid, subscription: 'remove' })}/></query>` +
+    `</iq>`
+  );
+}
+
+/** XEP-0191: block `jid` at the server — its messages and presence stop reaching this account
+ *  entirely, independent of (and not reflected back through) the roster. */
+export function buildBlock(iqId: string, jid: string): string {
+  return (
+    `<iq type="set" id="${encodeXmlText(iqId)}">` +
+    `<block xmlns="${NS.blocking}"><item${attrs({ jid })}/></block>` +
+    `</iq>`
+  );
+}
+
+export function buildUnblock(iqId: string, jid: string): string {
+  return (
+    `<iq type="set" id="${encodeXmlText(iqId)}">` +
+    `<unblock xmlns="${NS.blocking}"><item${attrs({ jid })}/></unblock>` +
     `</iq>`
   );
 }

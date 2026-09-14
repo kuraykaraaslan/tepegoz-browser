@@ -280,6 +280,7 @@ export const IpcChannels = {
   chatSetMuted: 'chat:set-muted',
   chatMuteFor: 'chat:mute-for',
   chatSetArchived: 'chat:set-archived',
+  chatBlockContact: 'chat:block-contact',
   /** Renderer→main: change a room's topic / subject. */
   chatSetRoomTopic: 'chat:set-room-topic',
   /** Renderer→main: invite a contact to a room. */

@@ -1135,12 +1135,21 @@ button.chat-msg__quote {
   color: var(--cu-text-secondary);
 }
 .chat-roster__remove,
+.chat-roster__block,
 .chat-room-browser__room .chat-room-browser__flag {
   border: 0;
   background: transparent;
   color: var(--cu-text-secondary);
   cursor: pointer;
   font: inherit;
+}
+.chat-roster__blocked {
+  padding: 0 6px;
+  border-radius: 8px;
+  background: var(--cu-danger-bg, #fde2e2);
+  border: 1px solid var(--cu-danger, #c0392b);
+  font-size: 10px;
+  color: var(--cu-danger, #c0392b);
 }
 .chat-roster__add,
 .chat-room-browser__service,

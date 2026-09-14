@@ -4,6 +4,7 @@ import type { ChatConversation } from '@tepegoz/shared-types';
 import {
   applyChatChange,
   emptyChatClientState,
+  patchContact,
   patchConversation,
   seedConversations,
   seedHistory,
@@ -41,6 +42,9 @@ export interface UseChatState {
   muteFor: ((conversationId: string, durationMs: number | null) => Promise<void>) | null;
   /** Archive / unarchive a conversation — `null` when the port does not support it. */
   setArchived: ((conversationId: string, archived: boolean) => Promise<void>) | null;
+  /** Block / unblock an address at the server — `null` when the port does not support it. The
+   *  roster is unified across accounts, so the caller names which one. */
+  blockContact: ((accountId: string, address: string, blocked: boolean) => Promise<void>) | null;
   /** Change a room's topic — `null` when the port does not support it. */
   setRoomTopic: ((conversationId: string, topic: string) => Promise<void>) | null;
   /** Invite a contact to a room — `null` when the port does not support it. */
@@ -287,6 +291,17 @@ export function useChatState(port: ChatClientPort): UseChatState {
     };
   }, [setChatArchived, activeAccountId]);
 
+  const { blockChatContact } = port;
+  const blockContact = useMemo(() => {
+    if (blockChatContact === undefined) return null;
+    return async (accountId: string, address: string, blocked: boolean): Promise<void> => {
+      // The roster is unified across accounts, so the caller (not `activeAccountId`) names which
+      // one this contact belongs to — same reasoning as `addContact`/`removeContact`.
+      setClient((prev) => patchContact(prev, `${accountId}:${address}`, { blocked }));
+      await blockChatContact(accountId, address, blocked);
+    };
+  }, [blockChatContact]);
+
   const { setChatRoomTopic } = port;
   const setRoomTopic = useMemo(() => {
     if (setChatRoomTopic === undefined) return null;
@@ -426,6 +441,7 @@ export function useChatState(port: ChatClientPort): UseChatState {
     setMuted,
     muteFor,
     setArchived,
+    blockContact,
     setRoomTopic,
     inviteToRoom,
     addContact,

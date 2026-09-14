@@ -53,6 +53,18 @@ export function patchConversation(
   };
 }
 
+/** Merge fields into one roster contact (optimistic local edits — block/unblock). Keyed by contact
+ *  id (`${accountId}:${address}`), not address alone — the roster is unified across accounts. */
+export function patchContact(
+  state: ChatClientState,
+  contactId: string,
+  patch: Partial<ChatContact>,
+): ChatClientState {
+  const existing = state.roster[contactId];
+  if (existing === undefined) return state;
+  return { ...state, roster: { ...state.roster, [contactId]: { ...existing, ...patch } } };
+}
+
 /**
  * Optimistically flip the local user's reaction on one loaded message — the server echo (a folded
  * `reaction` change, or a fresh history read) is the source of truth and will settle over this.

@@ -94,6 +94,9 @@ export interface ChatClientPort {
   /** Archive / unarchive a conversation — optional; a purely local presentation flag with no
    *  protocol wire concept, hiding it from the default list without affecting delivery. */
   setChatArchived?: (accountId: string, conversationId: string, archived: boolean) => Promise<void>;
+  /** Block / unblock an address at the server — optional; the roster's block action needs it.
+   *  Throws if the protocol has no server-side blocking concept. */
+  blockChatContact?: (accountId: string, address: string, blocked: boolean) => Promise<void>;
   /** Change a room's topic — optional; the room-header topic editor needs it. */
   setChatRoomTopic?: (accountId: string, conversationId: string, topic: string) => Promise<void>;
   /** Invite a contact to a room — optional; the room-header invite field needs it. */
