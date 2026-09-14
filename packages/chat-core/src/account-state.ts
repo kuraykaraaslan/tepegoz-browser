@@ -69,6 +69,21 @@ export class ChatAccountState {
     return v;
   }
 
+  /**
+   * Seed a conversation's read marker from persisted storage — a no-op once this session has ANY
+   * view for it already (never overwrites live state). Without this, a fresh `ChatAccountState`
+   * (every cold app start, one per account) starts `lastReadId: null` for every conversation; a
+   * reconnect's history replay (MUC rejoin re-requesting recent stanzas, MAM/`/sync` catch-up) then
+   * re-delivers messages the user already read as fresh 'message' events, and `recount()` — finding
+   * no `lastReadId` to anchor on — counts every one of them unread again. Call this once per
+   * conversation before its first live event of the session, so that replay lands against the real
+   * read position instead of a blank one.
+   */
+  seedLastRead(conversationId: string, lastReadId: string | null): void {
+    if (this.views.has(conversationId)) return;
+    this.views.set(conversationId, { ...emptyConversation(), lastReadId });
+  }
+
   /** Feed one raw adapter event. Returns the resulting state changes (possibly empty). */
   applyRaw(raw: unknown): ChatStateChange[] {
     const { event, dropped } = normalizeEvent(raw, this.opts.caps);

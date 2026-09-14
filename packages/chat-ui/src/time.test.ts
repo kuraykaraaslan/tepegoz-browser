@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { daySeparatorLabel, groupByDay, isSameDay, startOfDay } from './time';
+import { conversationListTime, daySeparatorLabel, groupByDay, isSameDay, startOfDay } from './time';
 
 const WORDS = { today: 'Today', yesterday: 'Yesterday' };
 
@@ -48,5 +48,18 @@ describe('daySeparatorLabel', () => {
     expect(thisYear).toBe('January 4');
     const lastYear = daySeparatorLabel(startOfDay(new Date(2025, 11, 20).getTime()), NOON, WORDS, 'en-US');
     expect(lastYear).toBe('December 20, 2025');
+  });
+});
+
+describe('conversationListTime', () => {
+  it('is a bare clock time for something that arrived today', () => {
+    expect(conversationListTime(NOON, NOON, 'en-US')).toMatch(/^\d{1,2}:\d{2}\s?(AM|PM)$/);
+  });
+
+  it('falls back to a short date once it is a different day, adding the year only when it differs', () => {
+    const thisYear = conversationListTime(new Date(2026, 0, 4).getTime(), NOON, 'en-US');
+    expect(thisYear).toBe('Jan 4');
+    const lastYear = conversationListTime(new Date(2025, 11, 20).getTime(), NOON, 'en-US');
+    expect(lastYear).toBe('Dec 20, 2025');
   });
 });

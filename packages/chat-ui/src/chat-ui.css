@@ -435,24 +435,6 @@
   padding: 16px;
   color: var(--cu-text-secondary);
 }
-.chat-conv-list__group {
-  border-inline-start: 3px solid transparent;
-  margin: 4px 0;
-}
-.chat-conv-list__group ul {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-.chat-conv-list__account {
-  margin: 0;
-  padding: 6px 8px 2px;
-  font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--cu-text-secondary);
-}
 .chat-conv {
   display: flex;
   align-items: center;
@@ -500,14 +482,45 @@
 .chat-conv__avatar[data-kind='room'] .chat-avatar {
   border-radius: 30%;
 }
+/* Title + preview stack vertically; time + badges ride the right edge of their own row — the
+ * standard two-line chat-list row. */
+.chat-conv__main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.chat-conv__row-top,
+.chat-conv__row-bottom {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
 .chat-conv__title {
   flex: 1;
+  min-width: 0;
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
   font-weight: 550;
 }
+.chat-conv__time {
+  flex: none;
+  font-size: 11px;
+  color: var(--cu-text-secondary);
+}
+.chat-conv__preview {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: 12.5px;
+  color: var(--cu-text-secondary);
+}
 .chat-conv__muted {
+  flex: none;
   width: 12px;
   height: 12px;
   border-radius: 50%;
@@ -515,6 +528,7 @@
   opacity: 0.5;
 }
 .chat-conv__badge {
+  flex: none;
   min-width: 20px;
   padding: 1px 6px;
   border-radius: 999px;

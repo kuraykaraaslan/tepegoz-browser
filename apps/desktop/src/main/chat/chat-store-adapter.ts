@@ -23,6 +23,8 @@ export function makeRunnerStore(db: Db): ChatRunnerStore {
       ChatStore.listConversations(db, accountId)
         .filter((c) => c.kind === 'room')
         .map((c) => c.id),
+    listReadMarkers: (accountId) =>
+      ChatStore.listConversations(db, accountId).map((c) => ({ id: c.id, lastReadId: c.lastReadId })),
   };
 }
 

@@ -223,8 +223,11 @@ function stubConversation(conversationId: string, accountId: string): ChatConver
     mentions: 0,
     lastReadId: null,
     muted: false,
+    mutedUntil: null,
     notifyLevel: 'all',
     isKnownContact: false,
+    archived: false,
+    lastMessage: null,
     updatedAt: 0,
   };
 }
@@ -239,7 +242,21 @@ function bumpConversation(
   if (at <= existing.updatedAt) return state;
   return {
     ...state,
-    conversations: { ...state.conversations, [conversationId]: { ...existing, updatedAt: at } },
+    conversations: {
+      ...state.conversations,
+      [conversationId]: {
+        ...existing,
+        updatedAt: at,
+        lastMessage: {
+          protocolId: message.protocolId,
+          body: message.body,
+          senderAddress: message.senderAddress,
+          kind: message.kind,
+          redacted: message.redacted,
+          originTs: message.originTs,
+        },
+      },
+    },
   };
 }
 

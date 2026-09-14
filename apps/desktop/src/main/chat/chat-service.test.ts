@@ -52,6 +52,9 @@ class FakeStore implements ChatRunnerStore {
   listRoomIds(): [] {
     return [];
   }
+  listReadMarkers(): [] {
+    return [];
+  }
 }
 
 function fakeSecrets(initial: Record<string, string> = {}): ChatSecretStore & { store: Map<string, string> } {

@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useLocale, useT } from '@tepegoz/i18n/react';
 import type { ChatMessage } from '@tepegoz/shared-types';
 import { Avatar } from './Avatar';
@@ -142,6 +142,19 @@ function ReactionsBar({
   onReact: ((protocolId: string, emoji: string, on: boolean) => void) | undefined;
 }>) {
   const [pickerOpen, setPickerOpen] = useState(false);
+  const wrapRef = useRef<HTMLSpanElement>(null);
+
+  // A click anywhere outside the "+" button / open picker closes it — without this, it stayed open
+  // until the user picked an emoji or clicked "+" again, unlike every native picker/menu convention.
+  useEffect(() => {
+    if (!pickerOpen) return;
+    const onPointerDown = (e: PointerEvent): void => {
+      if (wrapRef.current?.contains(e.target as Node) === false) setPickerOpen(false);
+    };
+    document.addEventListener('pointerdown', onPointerDown);
+    return () => document.removeEventListener('pointerdown', onPointerDown);
+  }, [pickerOpen]);
+
   if (message.reactions.length === 0 && onReact === undefined) return null;
   return (
     <span className="chat-msg__reactions">
@@ -164,7 +177,7 @@ function ReactionsBar({
         ),
       )}
       {onReact !== undefined && (
-        <span className="chat-msg__react-add">
+        <span className="chat-msg__react-add" ref={wrapRef}>
           <button
             type="button"
             className="chat-msg__reaction chat-msg__reaction--add"
@@ -221,9 +234,13 @@ export function MessageTimeline({
   const listRef = useRef<HTMLOListElement>(null);
   // Position once per mount (the host keys this component by conversation id, so a conversation
   // switch remounts it) the first time messages actually arrive — history loads asynchronously, so
-  // the initial render is often still empty. Guarded past that point: a live message arriving later
-  // must never yank the reader's scroll position back down.
+  // the initial render is often still empty.
   const positioned = useRef(false);
+  // Whether the reader is close enough to the bottom that a new arrival should follow them there —
+  // someone scrolled up mid-history must never get yanked back down by an unrelated incoming
+  // message, but staying at the bottom (the common case) should keep tracking new messages live.
+  const nearBottomRef = useRef(true);
+  const lastSeenIdRef = useRef<string | null>(null);
   const items = buildTimeline(messages, {
     lastReadId,
     maxMessages,
@@ -231,19 +248,42 @@ export function MessageTimeline({
   });
   const byProtocolId = new Map(messages.map((m) => [m.protocolId, m]));
 
-  useLayoutEffect(() => {
-    if (positioned.current || messages.length === 0) return;
-    positioned.current = true;
+  useEffect(() => {
     const el = listRef.current;
     if (el === null) return;
-    // Telegram-style: land on the unread divider when there is one, otherwise the newest message.
-    const divider = el.querySelector('.chat-timeline__unread');
-    if (divider !== null && typeof divider.scrollIntoView === 'function') {
-      divider.scrollIntoView({ block: 'start' });
-    } else {
+    const onScroll = (): void => {
+      nearBottomRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
+    };
+    el.addEventListener('scroll', onScroll);
+    return () => el.removeEventListener('scroll', onScroll);
+  }, []);
+
+  useLayoutEffect(() => {
+    const el = listRef.current;
+    if (el === null || messages.length === 0) return;
+    const last = messages[messages.length - 1];
+
+    if (!positioned.current) {
+      positioned.current = true;
+      if (last !== undefined) lastSeenIdRef.current = last.protocolId;
+      // Telegram-style: land on the unread divider when there is one, otherwise the newest message.
+      const divider = el.querySelector('.chat-timeline__unread');
+      if (divider !== null && typeof divider.scrollIntoView === 'function') {
+        divider.scrollIntoView({ block: 'start' });
+      } else {
+        el.scrollTop = el.scrollHeight;
+      }
+      return;
+    }
+
+    // A later arrival — not the initial load. An edit/reaction/redaction never changes which
+    // message is last, so this only fires for a genuinely new one.
+    if (last === undefined || last.protocolId === lastSeenIdRef.current) return;
+    lastSeenIdRef.current = last.protocolId;
+    if ((isOwn?.(last) ?? false) || nearBottomRef.current) {
       el.scrollTop = el.scrollHeight;
     }
-  }, [messages.length]);
+  }, [messages.length, isOwn]);
 
   if (items.length === 0) {
     return (

@@ -31,6 +31,9 @@ export interface ChatWorkspaceProps {
   /** Resolve an attachment's `mediaRef` to a LOCAL resource; absent ⇒ attachments are not shown. */
   resolveMedia?: ResolveMedia | undefined;
   onOpenMedia?: ((mediaRef: string) => void) | undefined;
+  /** Open a link the user clicked (typically a new tab, host's choice) — absent ⇒ links render as
+   *  inert text, same as `<MessageTimeline>`'s own default. */
+  onOpenLink?: ((href: string) => void) | undefined;
 }
 
 type LeftTab = 'chats' | 'contacts' | 'rooms';
@@ -77,6 +80,7 @@ export function ChatWorkspace({
   onEditAccount,
   resolveMedia,
   onOpenMedia,
+  onOpenLink,
 }: Readonly<ChatWorkspaceProps>) {
   const s = useT(chatUiDict);
   const chat = useChatState(port);
@@ -131,6 +135,10 @@ export function ChatWorkspace({
     ? chat.accounts.find((a) => a.id === selected.accountId)?.protocol
     : undefined;
   const notEncrypted = selectedProtocol === 'irc';
+  // IRC has no reaction mechanism at all (no XEP-0444 / `m.reaction` equivalent) and a bridge's
+  // capability is still unimplemented (X-chat.8/.9) — same "derive from the static protocol fact"
+  // reasoning as `notEncrypted` above, not a live caps round-trip.
+  const reactionsSupported = selectedProtocol === 'xmpp' || selectedProtocol === 'matrix';
 
   // The room browser's "Find a room" tab always operates on the active account (not the open
   // conversation) — only XMPP has a directory to browse (XEP-0030); IRC has no room-listing command
@@ -194,22 +202,10 @@ export function ChatWorkspace({
 
   return (
     <div className="chat-workspace">
-      {chat.accounts.length > 1 && (
-        <div className="chat-workspace__accounts" role="tablist" aria-label={s.workspace.accountSwitcher}>
-          {chat.accounts.map((account) => (
-            <button
-              key={account.id}
-              type="button"
-              role="tab"
-              aria-selected={account.id === chat.activeAccountId}
-              data-conn={chat.connectionStates[account.id] ?? 'idle'}
-              onClick={() => chat.setActiveAccount(account.id)}
-            >
-              {account.label}
-            </button>
-          ))}
-        </div>
-      )}
+      {/* No account-switcher tabs — the Chats/Contacts lists are already unified across every
+       *  account (grouping/switching would just duplicate what the avatar's protocol badge already
+       *  shows); `activeAccountId` still exists internally, driven by whichever conversation is
+       *  selected. */}
 
       <div className="chat-workspace__body">
         <aside className="chat-workspace__left">
@@ -386,7 +382,8 @@ export function ChatWorkspace({
                   isOwn={(m) => messageIsOwn(m, selected, selectedRoom)}
                   resolveMedia={effectiveResolveMedia}
                   onOpenMedia={onOpenMedia}
-                  {...(chat.react !== null
+                  {...(onOpenLink !== undefined ? { onOpenLink } : {})}
+                  {...(chat.react !== null && reactionsSupported
                     ? {
                         onReact: (protocolId: string, emoji: string, on: boolean) => {
                           void chat.react?.(selected.id, protocolId, emoji, on);

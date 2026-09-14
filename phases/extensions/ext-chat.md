@@ -567,6 +567,80 @@ real UI (Edit button → seeded composer → resubmit → the timeline shows the
 (`chat_update_item`) is explicitly out of scope here: it needs its own HITL/danger-class design
 decision, the same way `chat_create_message` does, not a quick add alongside the human path.
 
+Then (2026-09-14) **a UI/correctness pass following direct user feedback on the running app**, closing
+one real regression bug per feedback item, not cosmetic fixes:
+- **Unified account-agnostic UI.** The per-account switcher tab strip above the Chats list is gone —
+  `<ConversationList>` no longer groups conversations under account headers (`groupConversationsByAccount`
+  and its `<h3>` sections deleted, both now unused code, not a hidden feature); every account's rows
+  interleave in one recency-sorted list, with the account/protocol identifiable ONLY from the existing
+  `<ProtocolBadge>` on the avatar. `activeAccountId` still exists internally, driven by whichever
+  conversation is selected (already the case before this change).
+- **Conversation list preview row** — the list now shows each conversation's last message (redacted →
+  "Message deleted", empty body → "Attachment", same vocabulary the timeline already uses) and its
+  time on the right (bare clock time today, a short date otherwise). Required a real schema change,
+  not just UI: `ChatConversation` gained `lastMessage` (a `{protocolId, body, senderAddress, kind,
+  redacted, originTs}` snapshot), persisted as `chat_conversations.last_message_json` (migration 24,
+  same convention as `reactions_json`). `ChatAccountRunner` keeps it current — advances on a new
+  message (never regresses it for an out-of-order MAM/backfill arrival), and refreshes it in place
+  when an edit or redaction lands on the message it's currently showing. The SAME migration added
+  `muted_until` (timed mute) and `archived` columns for two still-pending list items (mute duration,
+  archive) so the schema only had to change once.
+- **Fixed: links were never clickable.** `linkifySegments`/`<MessageBody>`'s `onOpenLink` support has
+  existed since the timeline was built and is fully tested at that layer — but `<ChatWorkspace>` never
+  accepted or forwarded an `onOpenLink` prop at all, so every link rendered as inert text in the actual
+  app regardless. Threaded a new `ChatWorkspaceProps.onOpenLink` down to `<MessageTimeline>`; the
+  extension host (`extensions/ext-chat/src/panel.tsx`) wires it to `api.createTab(href)` (a new,
+  minimal addition to `ChatHostApi`, backed by the existing tabs IPC `createTab`).
+- **Fixed a real data-loss bug: reactions "disappeared" on every app restart.** Root cause:
+  `ChatAccountRunner.history()`'s local/live merge let a fresh live re-fetch overwrite an
+  already-known local message outright (`for (const m of live.messages) merged.set(...)`). A live
+  history reconstruction can never carry reactions, edits, or redactions — those are separate wire
+  events a bare message re-fetch doesn't see — so every reconnect that re-synced a conversation's
+  history silently wiped them, both in what the UI showed AND in the DB (via the `seedHistory` →
+  `upsertMessage` write immediately after). Fixed by only letting `live` messages that are NEW to
+  local storage through the merge; anything local already has is left untouched. An existing test
+  (`'history merges local + live, live winning on a duplicate protocol id'`) had encoded the buggy
+  behavior as expected — rewritten to assert local wins, plus a new test for the "genuinely new
+  message" case the old test's name implied but never actually covered.
+- **Fixed a second, related data-loss bug: already-read messages came back unread after every
+  restart.** `ChatAccountState` (the pure in-memory fold) starts every conversation's view blank —
+  `lastReadId: null` — on every construction, i.e. every cold app start. A reconnect's history replay
+  (MUC rejoin re-requesting up to 30 recent stanzas, MAM/`/sync` catch-up) re-delivers messages the
+  user already read as fresh `'message'` events; `recount()`, finding no `lastReadId` to anchor on,
+  marked every one of them unread again. Added `ChatAccountState.seedLastRead(conversationId,
+  lastReadId)` (a no-op once a real live view exists — never clobbers in-session state) and call it
+  once per known conversation in `ChatAccountRunner`'s constructor, seeded from
+  `store.listReadMarkers(accountId)` (new `ChatRunnerStore` method). Verified at both layers: a
+  `chat-core` unit test proves `recount()` anchors on the seeded marker instead of an empty one, and a
+  runner-level test reproduces the exact restart-then-replay scenario end to end.
+- **Fixed: the reaction quick-picker never closed on an outside click** — only an emoji pick or a
+  second "+" click dismissed it. Added a `pointerdown` listener (armed only while the picker is open)
+  that closes it when the event target is outside the picker's own DOM subtree.
+- **Fixed: the timeline never followed new messages.** It positioned once on open (unread divider, or
+  the bottom) and never again — sending your own message, or anyone's arriving while you were already
+  at the bottom, left the view exactly where it was. Now tracks "near the bottom" via a scroll
+  listener and re-checks on every genuinely new tail message (an edit/reaction/redaction never
+  changes which message is last, so those correctly do not trigger a re-scroll): your own message
+  always follows to the bottom (composing implies participating, not passively reading); anyone
+  else's does too, but ONLY when the reader was already near the bottom — scrolled up mid-history
+  never gets yanked back down by an unrelated arrival, preserving the original "never yank" intent.
+- **Reactions are now gated on protocol support**, not shown unconditionally whenever the port
+  happens to implement `reactToChatMessage`. IRC has no reaction mechanism at all (no XEP-0444 / `m.reaction`
+  equivalent); a bridge account's capability is still unimplemented (X-chat.8/.9). Same
+  "derive from the static protocol fact, not a live caps round-trip" reasoning `notEncrypted` already
+  used for IRC's lack of e2ee — `reactionsSupported = protocol === 'xmpp' || protocol === 'matrix'`
+  gates whether `onReact` reaches `<MessageTimeline>` at all, so the whole reactions row (not just the
+  add-button) disappears for a protocol that could never produce a reaction event in the first place.
+
+**Still open, tracked but not started this pass:** unifying the Contacts/roster page the same way
+(flat, badge-only account identification); the mute-duration picker (1h/3h/8h/forever) and an Archive
+action, both UI on top of the `muted_until`/`archived` columns already added; a "New Chat" popup
+(contacts + existing groups + a generic address field) replacing the "Find a room" tab; clicking a room
+member to start a DM; a DM header layout pass (too cramped); blocking a contact where the protocol
+supports it; emoji-shortcode (`:smile:`) rendering; markdown-lite rendering for bridge-sourced messages;
+hiding the sender name in favor of an avatar tooltip; a WhatsApp-style hover/right-click reaction
+trigger; and richer context menus (messages, room-list rows, contacts).
+
 **Remaining:** the runtime Functional DoD (media round-trip needs a live account). · **Depends on:**
 X-chat.1 · **Branch:** `main` · **Risk:** low.
 

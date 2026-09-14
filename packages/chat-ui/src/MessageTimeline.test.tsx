@@ -215,6 +215,96 @@ describe('MessageTimeline', () => {
     expect(screen.queryByRole('menu')).toBeNull();
   });
 
+  it('a pointerdown outside the open picker closes it; inside it does not', () => {
+    const onReact = vi.fn();
+    wrap(<MessageTimeline messages={[msg({ protocolId: 'srv-1' })]} now={T0} onReact={onReact} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Add reaction' }));
+    expect(screen.getByRole('menu')).toBeDefined();
+
+    fireEvent.pointerDown(screen.getByRole('menu'));
+    expect(screen.getByRole('menu')).toBeDefined(); // still open — that pointerdown was inside it
+
+    fireEvent.pointerDown(document.body);
+    expect(screen.queryByRole('menu')).toBeNull();
+  });
+
+  /** Simulates a scrolled-up reader: a tall list, a short viewport, scrolled well away from the
+   *  bottom. jsdom has no real layout, so scrollHeight/clientHeight are getters that need
+   *  overriding — a plain assignment is silently ignored. */
+  function simulateScrolledUp(el: HTMLElement): void {
+    Object.defineProperty(el, 'scrollHeight', { value: 2000, configurable: true });
+    Object.defineProperty(el, 'clientHeight', { value: 400, configurable: true });
+    el.scrollTop = 200; // far short of scrollHeight - clientHeight (1600)
+    fireEvent.scroll(el);
+  }
+
+  it('a new message of your own always follows to the bottom, even mid-history-scroll', () => {
+    const { rerender } = wrap(
+      <MessageTimeline messages={[msg({ id: 'a', protocolId: 'p1' })]} now={T0} isOwn={() => false} />,
+    );
+    const list = document.querySelector('.chat-timeline') as HTMLElement;
+    simulateScrolledUp(list);
+
+    rerender(
+      <I18nProvider locale="en">
+        <MessageTimeline
+          messages={[msg({ id: 'a', protocolId: 'p1' }), msg({ id: 'b', protocolId: 'p2', body: 'sent' })]}
+          now={T0}
+          isOwn={(m) => m.protocolId === 'p2'}
+        />
+      </I18nProvider>,
+    );
+    expect(list.scrollTop).toBe(list.scrollHeight);
+  });
+
+  it('someone else\'s new message does not yank a scrolled-up reader back to the bottom', () => {
+    const { rerender } = wrap(
+      <MessageTimeline messages={[msg({ id: 'a', protocolId: 'p1' })]} now={T0} isOwn={() => false} />,
+    );
+    const list = document.querySelector('.chat-timeline') as HTMLElement;
+    simulateScrolledUp(list);
+
+    rerender(
+      <I18nProvider locale="en">
+        <MessageTimeline
+          messages={[
+            msg({ id: 'a', protocolId: 'p1' }),
+            msg({ id: 'b', protocolId: 'p2', body: 'from someone else' }),
+          ]}
+          now={T0}
+          isOwn={() => false}
+        />
+      </I18nProvider>,
+    );
+    expect(list.scrollTop).toBe(200);
+  });
+
+  it('someone else\'s new message DOES follow to the bottom when the reader was already there', () => {
+    const { rerender } = wrap(
+      <MessageTimeline messages={[msg({ id: 'a', protocolId: 'p1' })]} now={T0} isOwn={() => false} />,
+    );
+    const list = document.querySelector('.chat-timeline') as HTMLElement;
+    // Near the bottom: scrollHeight - scrollTop - clientHeight < 80.
+    Object.defineProperty(list, 'scrollHeight', { value: 500, configurable: true });
+    Object.defineProperty(list, 'clientHeight', { value: 460, configurable: true });
+    list.scrollTop = 40;
+    fireEvent.scroll(list);
+
+    rerender(
+      <I18nProvider locale="en">
+        <MessageTimeline
+          messages={[
+            msg({ id: 'a', protocolId: 'p1' }),
+            msg({ id: 'b', protocolId: 'p2', body: 'from someone else' }),
+          ]}
+          now={T0}
+          isOwn={() => false}
+        />
+      </I18nProvider>,
+    );
+    expect(list.scrollTop).toBe(list.scrollHeight);
+  });
+
   it('no Edit trigger without onEdit, without isOwn, or on someone else\'s message', () => {
     const onEdit = vi.fn();
     wrap(<MessageTimeline messages={[msg({ protocolId: 'srv-1' })]} now={T0} isOwn={() => true} />);

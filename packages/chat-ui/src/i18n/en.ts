@@ -129,8 +129,6 @@ export const en = {
     addAccount: 'Add account',
     /** Shown in the message pane when nothing is selected. */
     noSelection: 'Pick a conversation.',
-    /** Accessible label for the account switcher. */
-    accountSwitcher: 'Account',
     typing: 'typing…',
     /** Room typing line, one typist: "{name} " + this. */
     typingOne: 'is typing…',

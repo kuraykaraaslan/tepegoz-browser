@@ -163,6 +163,31 @@ describe('ChatAccountState — messages', () => {
   });
 });
 
+describe('ChatAccountState — seedLastRead', () => {
+  it('anchors recount() on the seeded marker instead of counting a replay as all-unread', () => {
+    const s = state();
+    // The user read up through 'm2' last session; a fresh ChatAccountState (every cold app start)
+    // starts blank, so without seeding this would recount from scratch and mark m1/m2 unread again
+    // the moment a reconnect's history replay (MUC rejoin, MAM/`/sync` catch-up) re-delivers them.
+    s.seedLastRead('bob@x.com', 'm2');
+    s.applyRaw({ type: 'message', message: msg({ protocolId: 'm1', originTs: 1 }) });
+    const changes = s.applyRaw({ type: 'message', message: msg({ protocolId: 'm2', originTs: 2 }) });
+    expect(s.conversationView('bob@x.com').unread).toBe(0);
+    // Only a genuinely NEW message (after the seeded marker) counts.
+    const after = s.applyRaw({ type: 'message', message: msg({ protocolId: 'm3', originTs: 3 }) });
+    expect(s.conversationView('bob@x.com').unread).toBe(1);
+    expect(kinds(changes).concat(kinds(after))).toEqual(['message', 'conversation', 'message', 'conversation']);
+  });
+
+  it('is a no-op once the conversation already has a live view — never clobbers real state', () => {
+    const s = state();
+    s.applyRaw({ type: 'message', message: msg({ protocolId: 'm1', originTs: 1 }) });
+    expect(s.conversationView('bob@x.com').unread).toBe(1);
+    s.seedLastRead('bob@x.com', 'm1'); // would zero unread if it applied — must be ignored
+    expect(s.conversationView('bob@x.com').unread).toBe(1);
+  });
+});
+
 describe('ChatAccountState — presence & roster', () => {
   it('adds a roster contact and folds presence into it', () => {
     const s = state();
@@ -357,8 +382,11 @@ describe('ChatAccountState — local send + history', () => {
       mentions: 0,
       lastReadId: null,
       muted: false,
+      mutedUntil: null,
       notifyLevel: 'all',
       isKnownContact: true,
+      archived: false,
+      lastMessage: null,
       updatedAt: 0,
     };
     const summaries = s.toConversationSummaries(new Map([['bob@x.com', base]]));

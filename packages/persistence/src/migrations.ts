@@ -798,6 +798,24 @@ const MIGRATIONS: Migration[] = [
       `);
     },
   },
+  {
+    version: 24,
+    up: (db) => {
+      // ext-chat: the conversation list's preview row (last message + a timed mute + archive), all
+      // added together since they touch the same `chat_conversations` row on the same ingest path.
+      // `last_message_json` mirrors `reactions_json`'s convention (a small nested object, not its own
+      // table — one row per conversation, no query need finer than "the whole snapshot").
+      // `muted_until`: NULL = not timed-muted; a past epoch ms reads as expired (== unmuted), same as
+      // `muted = 0` — no separate cleanup job needed, "is muted now" is computed at read time.
+      // `muted` (existing column) stays the FOREVER mute; the two are independent so switching from a
+      // timed mute to forever (or back) never needs to clear the other first.
+      db.exec(`
+        ALTER TABLE chat_conversations ADD COLUMN last_message_json TEXT;
+        ALTER TABLE chat_conversations ADD COLUMN muted_until INTEGER;
+        ALTER TABLE chat_conversations ADD COLUMN archived INTEGER NOT NULL DEFAULT 0;
+      `);
+    },
+  },
 ];
 
 /**

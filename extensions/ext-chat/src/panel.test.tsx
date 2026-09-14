@@ -23,6 +23,7 @@ function fakeApi(over: Partial<ChatHostApi> = {}): ChatHostApi {
     addChatAccount: vi.fn(() => Promise.resolve()),
     getChatAccount: vi.fn(() => Promise.resolve(null)),
     updateChatAccount: vi.fn(() => Promise.resolve()),
+    createTab: vi.fn(),
     ...over,
   };
 }

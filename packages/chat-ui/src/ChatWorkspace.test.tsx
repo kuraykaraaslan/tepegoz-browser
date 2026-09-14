@@ -24,8 +24,11 @@ function conv(over: Partial<ChatConversation> = {}): ChatConversation {
     mentions: 0,
     lastReadId: null,
     muted: false,
+    mutedUntil: null,
     notifyLevel: 'all',
     isKnownContact: true,
+    archived: false,
+    lastMessage: null,
     updatedAt: 100,
     ...over,
   };
@@ -202,6 +205,19 @@ describe('ChatWorkspace', () => {
     expect(screen.getByRole('heading', { name: 'Bob' })).toBeDefined();
   });
 
+  it('wires a clicked message link through onOpenLink', async () => {
+    const onOpenLink = vi.fn();
+    const { port } = makePort({
+      getChatHistory: () =>
+        Promise.resolve({ messages: [msg({ body: 'see https://tepegoz.example/x' })], nextCursor: null }),
+    });
+    wrap(<ChatWorkspace port={port} onOpenLink={onOpenLink} />);
+    fireEvent.click(await screen.findByRole('button', { name: /Bob/ }));
+    const link = await screen.findByRole('link', { name: 'https://tepegoz.example/x' });
+    fireEvent.click(link);
+    expect(onOpenLink).toHaveBeenCalledWith('https://tepegoz.example/x');
+  });
+
   it('sends from the composer through the port', async () => {
     const { port, sendChatMessage } = makePort();
     wrap(<ChatWorkspace port={port} />);
@@ -247,23 +263,6 @@ describe('ChatWorkspace', () => {
     fireEvent.click(await screen.findByRole('tab', { name: 'Contacts' }));
     fireEvent.click(await screen.findByRole('button', { name: 'Remove Bob' }));
     await waitFor(() => expect(removeChatContact).toHaveBeenCalledWith('work', 'bob@x.example'));
-  });
-
-  it('renders an account switcher with more than one account and switches on click', async () => {
-    const { port } = makePort({
-      listChatAccounts: () =>
-        Promise.resolve({
-          accounts: [
-            { id: 'work', label: 'Work', displayName: '', protocol: 'xmpp', color: null, order: 0 },
-            { id: 'home', label: 'Home', displayName: '', protocol: 'xmpp', color: null, order: 1 },
-          ],
-          states: { work: 'online', home: 'error' },
-        }),
-    });
-    wrap(<ChatWorkspace port={port} />);
-    const homeTab = await screen.findByRole('tab', { name: 'Home' });
-    fireEvent.click(homeTab);
-    await waitFor(() => expect(homeTab.getAttribute('aria-selected')).toBe('true'));
   });
 
   it('opening a contact with no existing conversation does not crash', async () => {
@@ -469,6 +468,31 @@ describe('ChatWorkspace', () => {
     fireEvent.click(await screen.findByRole('button', { name: /Bob/ }));
     await screen.findByText('hi there');
     expect(screen.queryByText('Not encrypted')).toBeNull();
+  });
+
+  it('hides the reaction UI on an IRC conversation — the protocol has no reaction mechanism at all', async () => {
+    const { port } = makePort({
+      reactToChatMessage: vi.fn(() => Promise.resolve()),
+      listChatAccounts: () =>
+        Promise.resolve({
+          accounts: [
+            { id: 'work', label: 'Libera', displayName: '', protocol: 'irc', color: null, order: 0 },
+          ],
+          states: { work: 'online' },
+        }),
+    });
+    wrap(<ChatWorkspace port={port} />);
+    fireEvent.click(await screen.findByRole('button', { name: /Bob/ }));
+    await screen.findByText('hi there');
+    expect(screen.queryByRole('button', { name: 'Add reaction' })).toBeNull();
+  });
+
+  it('shows the reaction UI on an XMPP conversation when the port supports it', async () => {
+    const { port } = makePort({ reactToChatMessage: vi.fn(() => Promise.resolve()) });
+    wrap(<ChatWorkspace port={port} />);
+    fireEvent.click(await screen.findByRole('button', { name: /Bob/ }));
+    await screen.findByText('hi there');
+    expect(screen.getByRole('button', { name: 'Add reaction' })).toBeDefined();
   });
 
   it('reflects a pushed typing change in the conversation header', async () => {

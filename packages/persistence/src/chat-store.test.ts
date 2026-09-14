@@ -39,8 +39,11 @@ const conversation = (id: string, accountId: string, address: string): ChatConve
   mentions: 0,
   lastReadId: null,
   muted: false,
+  mutedUntil: null,
   notifyLevel: 'all',
   isKnownContact: true,
+  archived: false,
+  lastMessage: null,
   updatedAt: 1000,
 });
 
@@ -165,6 +168,36 @@ describe('ChatStore — contacts & conversations', () => {
       notifyLevel: 'none',
     });
     expect(ChatStore.getConversation(db, 'cv1')?.notifyLevel).toBe('none');
+  });
+
+  it('round-trips a timed mute, archived, and a last-message snapshot independently of the forever mute', () => {
+    ChatStore.upsertConversation(db, conversation('cv0', 'acc', 'bob@example.com'));
+    expect(ChatStore.getConversation(db, 'cv0')).toMatchObject({
+      muted: false,
+      mutedUntil: null,
+      archived: false,
+      lastMessage: null,
+    });
+
+    const lastMessage = {
+      protocolId: 'p1',
+      body: 'hi',
+      senderAddress: 'bob@example.com',
+      kind: 'text' as const,
+      redacted: false,
+      originTs: 5000,
+    };
+    ChatStore.upsertConversation(db, {
+      ...conversation('cv0', 'acc', 'bob@example.com'),
+      mutedUntil: 123456,
+      archived: true,
+      lastMessage,
+    });
+    const got = ChatStore.getConversation(db, 'cv0');
+    expect(got?.muted).toBe(false);
+    expect(got?.mutedUntil).toBe(123456);
+    expect(got?.archived).toBe(true);
+    expect(got?.lastMessage).toEqual(lastMessage);
   });
 
   it('tolerates a corrupt server_json / groups_json row (falls back, never throws)', () => {

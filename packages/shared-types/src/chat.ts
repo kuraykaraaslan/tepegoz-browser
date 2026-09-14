@@ -187,6 +187,26 @@ export const CHAT_CONV_KINDS = ['dm', 'room'] as const;
 export const ChatConvKindSchema = z.enum(CHAT_CONV_KINDS);
 export type ChatConvKind = z.infer<typeof ChatConvKindSchema>;
 
+export const CHAT_MESSAGE_KINDS = ['text', 'media', 'system', 'call'] as const;
+export const ChatMessageKindSchema = z.enum(CHAT_MESSAGE_KINDS);
+export type ChatMessageKind = z.infer<typeof ChatMessageKindSchema>;
+
+/** Max stored/handled message body — chat is chattier and smaller than mail. */
+export const CHAT_MESSAGE_BODY_MAX = 100_000;
+
+/** A snapshot of the conversation's most recent message — enough for the conversation list's preview
+ *  row without joining `chat_messages` on every render. `protocolId` lets a later edit/redaction of
+ *  THIS specific message (not just any message) refresh the snapshot in place. */
+export const ChatConversationLastMessageSchema = z.object({
+  protocolId: z.string().min(1).max(512),
+  body: z.string().max(CHAT_MESSAGE_BODY_MAX),
+  senderAddress: z.string().min(1).max(512),
+  kind: ChatMessageKindSchema,
+  redacted: z.boolean().default(false),
+  originTs: z.number().int().nonnegative(),
+});
+export type ChatConversationLastMessage = z.infer<typeof ChatConversationLastMessageSchema>;
+
 export const ChatConversationSchema = z.object({
   id: z.string().min(1).max(128),
   accountId: ChatAccountIdSchema,
@@ -198,7 +218,12 @@ export const ChatConversationSchema = z.object({
   unread: z.number().int().nonnegative().default(0),
   mentions: z.number().int().nonnegative().default(0),
   lastReadId: z.string().max(128).nullable().default(null),
+  /** FOREVER mute — independent of {@link mutedUntil} (a TIMED mute); either one silences
+   *  notifications, so "is muted now" is `muted || (mutedUntil !== null && mutedUntil > now)`. */
   muted: z.boolean().default(false),
+  /** A timed mute's expiry (epoch ms) — `null` when no timed mute is active. A past value reads the
+   *  same as `null` (expired); no cleanup job needed. Independent of {@link muted}. */
+  mutedUntil: z.number().int().nonnegative().nullable().default(null),
   /** Room notification level — `all` every message, `mentions` only a nick/room ping, `none` silent.
    *  A direct nick mention still notifies at `mentions`; only `none` fully silences (see
    *  `@tepegoz/chat-core` `decideNotification`). Ignored for DMs, which use `muted`. */
@@ -206,13 +231,15 @@ export const ChatConversationSchema = z.object({
   /** The peer is a roster contact (DM) or the user explicitly opted this conversation in. Gates
    *  whether the agent may read it (`chat_get_history` withholds unknown-contact conversations). */
   isKnownContact: z.boolean().default(false),
+  /** Hidden from the default conversation list until unarchived; still reachable, still receives
+   *  messages, does not otherwise change behavior. */
+  archived: z.boolean().default(false),
+  /** For the conversation list's preview row — `null` for a brand-new conversation with no messages
+   *  yet (or one created before this field existed). */
+  lastMessage: ChatConversationLastMessageSchema.nullable().default(null),
   updatedAt: z.number().int().nonnegative(),
 });
 export type ChatConversation = z.infer<typeof ChatConversationSchema>;
-
-export const CHAT_MESSAGE_KINDS = ['text', 'media', 'system', 'call'] as const;
-export const ChatMessageKindSchema = z.enum(CHAT_MESSAGE_KINDS);
-export type ChatMessageKind = z.infer<typeof ChatMessageKindSchema>;
 
 export const CHAT_DELIVERY_STATES = ['pending', 'sent', 'delivered', 'read', 'failed'] as const;
 export const ChatDeliveryStateSchema = z.enum(CHAT_DELIVERY_STATES);
@@ -224,9 +251,6 @@ export const ChatReactionSchema = z.object({
   me: z.boolean(),
 });
 export type ChatReaction = z.infer<typeof ChatReactionSchema>;
-
-/** Max stored/handled message body — chat is chattier and smaller than mail. */
-export const CHAT_MESSAGE_BODY_MAX = 100_000;
 
 export const ChatMessageSchema = z.object({
   id: z.string().min(1).max(128),

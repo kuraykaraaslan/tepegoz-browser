@@ -109,9 +109,7 @@ export {
   sortConversations,
   totalUnread,
   totalMentions,
-  groupConversationsByAccount,
   type ChatAccountRef,
-  type AccountGroup,
 } from './conversation-list';
 export { ConversationList, type ConversationListProps } from './ConversationList';
 export { AccountsManager, type AccountsManagerProps } from './AccountsManager';

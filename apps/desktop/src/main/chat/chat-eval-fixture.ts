@@ -118,10 +118,13 @@ export function buildChatEvalSeed(fixture: ChatEvalFixture, now: number): ChatEv
       mentions: 0,
       lastReadId: null,
       muted: false,
+      mutedUntil: null,
       notifyLevel: 'all',
       // Seed-time known-contact / opt-in both mean "the agent may read this" — a fresh eval trial has
       // no notion of a standing "session" opt-in to seed separately from the row itself.
       isKnownContact: conv.knownContact || conv.optedIn,
+      archived: false,
+      lastMessage: null,
       updatedAt: tsValues.length > 0 ? Math.max(...tsValues) : now,
     });
 
