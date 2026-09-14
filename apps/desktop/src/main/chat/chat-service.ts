@@ -282,6 +282,14 @@ export class ChatService {
     return this.require(accountId).setMuted(conversationId, muted);
   }
 
+  async muteFor(accountId: string, conversationId: string, durationMs: number | null): Promise<void> {
+    return this.require(accountId).muteFor(conversationId, durationMs);
+  }
+
+  async setArchived(accountId: string, conversationId: string, archived: boolean): Promise<void> {
+    return this.require(accountId).setArchived(conversationId, archived);
+  }
+
   async setRoomTopic(accountId: string, conversationId: string, topic: string): Promise<void> {
     return this.require(accountId).setRoomTopic(conversationId, topic);
   }

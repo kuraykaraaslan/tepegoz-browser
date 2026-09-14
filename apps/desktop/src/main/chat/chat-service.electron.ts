@@ -273,6 +273,10 @@ export const chatIpcService: ChatIpcService = {
     requireService().setRoomNotifyLevel(accountId, conversationId, level),
   setMuted: (accountId, conversationId, muted) =>
     requireService().setMuted(accountId, conversationId, muted),
+  muteFor: (accountId, conversationId, durationMs) =>
+    requireService().muteFor(accountId, conversationId, durationMs),
+  setArchived: (accountId, conversationId, archived) =>
+    requireService().setArchived(accountId, conversationId, archived),
   setRoomTopic: (accountId, conversationId, topic) =>
     requireService().setRoomTopic(accountId, conversationId, topic),
   inviteToRoom: (accountId, conversationId, invitee) =>

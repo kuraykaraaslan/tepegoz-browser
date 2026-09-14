@@ -140,6 +140,19 @@ export const en = {
     mute: 'Mute',
     /** Toggle action: stop silencing this conversation. */
     unmute: 'Unmute',
+    /** Mute-duration menu options. */
+    muteFor1h: 'Mute for 1 hour',
+    muteFor3h: 'Mute for 3 hours',
+    muteFor8h: 'Mute for 8 hours',
+    muteForever: 'Mute forever',
+    /** Toggle action: move this conversation off the default list. */
+    archive: 'Archive',
+    /** Toggle action: bring this conversation back onto the default list. */
+    unarchive: 'Unarchive',
+    /** Above the conversation list, when at least one conversation is archived: "Show archived (3)". */
+    showArchived: 'Show archived',
+    /** Shown instead of {@link showArchived} while viewing the archived list. */
+    backToChats: 'Back to Chats',
     /** Persistent marker on a conversation whose protocol carries no end-to-end encryption. */
     notEncrypted: 'Not encrypted',
     /** Tooltip / detail for {@link notEncrypted} on IRC, which has no encryption at all. */

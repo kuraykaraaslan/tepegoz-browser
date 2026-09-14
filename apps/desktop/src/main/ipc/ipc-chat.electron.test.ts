@@ -48,6 +48,8 @@ const svc = {
   leaveRoom: vi.fn(() => Promise.resolve()),
   setRoomNotifyLevel: vi.fn(() => Promise.resolve()),
   setMuted: vi.fn(() => Promise.resolve()),
+  muteFor: vi.fn(() => Promise.resolve()),
+  setArchived: vi.fn(() => Promise.resolve()),
   setRoomTopic: vi.fn(() => Promise.resolve()),
   inviteToRoom: vi.fn(() => Promise.resolve()),
   resolveMedia: vi.fn(() => Promise.resolve({ dataUrl: 'data:image/png;base64,AAAA' })),
@@ -85,7 +87,7 @@ beforeEach(() => {
 });
 
 it('registers every chat channel', () => {
-  expect(h.handlers.size).toBe(23);
+  expect(h.handlers.size).toBe(25);
 });
 
 it('chat:react validates + delegates', async () => {
@@ -99,6 +101,42 @@ it('chat:react validates + delegates', async () => {
   expect(svc.react).toHaveBeenCalledWith('work', 'general@conf.example', 'm1', '👍', true);
   await expect(
     call(IpcChannels.chatReact, { accountId: 'work', conversationId: 'c', messageId: 'm1', emoji: '👍' }),
+  ).rejects.toBeDefined();
+});
+
+it('chat:mute-for validates + delegates; caps the duration', async () => {
+  await call(IpcChannels.chatMuteFor, {
+    accountId: 'work',
+    conversationId: 'general@conf.example',
+    durationMs: 3_600_000,
+  });
+  expect(svc.muteFor).toHaveBeenCalledWith('work', 'general@conf.example', 3_600_000);
+
+  await call(IpcChannels.chatMuteFor, {
+    accountId: 'work',
+    conversationId: 'general@conf.example',
+    durationMs: null,
+  });
+  expect(svc.muteFor).toHaveBeenCalledWith('work', 'general@conf.example', null);
+
+  await expect(
+    call(IpcChannels.chatMuteFor, {
+      accountId: 'work',
+      conversationId: 'c',
+      durationMs: 31 * 24 * 3600_000,
+    }),
+  ).rejects.toBeDefined();
+});
+
+it('chat:set-archived validates + delegates', async () => {
+  await call(IpcChannels.chatSetArchived, {
+    accountId: 'work',
+    conversationId: 'general@conf.example',
+    archived: true,
+  });
+  expect(svc.setArchived).toHaveBeenCalledWith('work', 'general@conf.example', true);
+  await expect(
+    call(IpcChannels.chatSetArchived, { accountId: 'work', conversationId: 'c' }),
   ).rejects.toBeDefined();
 });
 

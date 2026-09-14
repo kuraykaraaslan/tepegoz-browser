@@ -40,6 +40,8 @@ export const chatApi: Pick<
   | 'leaveChatRoom'
   | 'setChatRoomNotifyLevel'
   | 'setChatMuted'
+  | 'muteChatFor'
+  | 'setChatArchived'
   | 'setChatRoomTopic'
   | 'inviteToChatRoom'
   | 'resolveChatMedia'
@@ -90,6 +92,10 @@ export const chatApi: Pick<
     invoke<void>(IpcChannels.chatSetRoomNotifyLevel, { accountId, conversationId, level }),
   setChatMuted: (accountId: string, conversationId: string, muted: boolean) =>
     invoke<void>(IpcChannels.chatSetMuted, { accountId, conversationId, muted }),
+  muteChatFor: (accountId: string, conversationId: string, durationMs: number | null) =>
+    invoke<void>(IpcChannels.chatMuteFor, { accountId, conversationId, durationMs }),
+  setChatArchived: (accountId: string, conversationId: string, archived: boolean) =>
+    invoke<void>(IpcChannels.chatSetArchived, { accountId, conversationId, archived }),
   setChatRoomTopic: (accountId: string, conversationId: string, topic: string) =>
     invoke<void>(IpcChannels.chatSetRoomTopic, { accountId, conversationId, topic }),
   inviteToChatRoom: (accountId: string, conversationId: string, invitee: string) =>

@@ -3,6 +3,7 @@ import { useT } from '@tepegoz/i18n/react';
 import { occupantCount, type RoomNotifyLevel, type RoomView } from '@tepegoz/chat-core';
 import { Avatar } from './Avatar';
 import { chatUiDict } from './i18n';
+import { MuteMenu } from './MuteMenu';
 import { NotEncryptedBadge } from './NotEncryptedBadge';
 
 /**
@@ -22,24 +23,6 @@ function InviteIcon() {
         strokeLinecap="round"
       />
       <path d="M16 6v5M13.5 8.5h5" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-function MuteIcon({ muted }: Readonly<{ muted: boolean }>) {
-  return (
-    <svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true" focusable="false">
-      <path
-        d="M6 8v3a3.5 3.5 0 0 0 7 0V7.2M9.5 3.3A2.2 2.2 0 0 1 13 5.2v.3"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-      />
-      <path d="M6 16.2h7M9.5 13.3v2.9" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-      {muted && (
-        <path d="M3.5 3.5l13 13" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-      )}
     </svg>
   );
 }
@@ -89,6 +72,22 @@ function LeaveIcon() {
   );
 }
 
+function ArchiveIcon() {
+  return (
+    <svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true" focusable="false">
+      <rect x="3" y="4" width="14" height="3.2" rx="1" fill="none" stroke="currentColor" strokeWidth="1.5" />
+      <path
+        d="M4.3 7.5v7a1.2 1.2 0 0 0 1.2 1.2h9a1.2 1.2 0 0 0 1.2-1.2v-7"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinejoin="round"
+      />
+      <path d="M8.2 10.5h3.6" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 export interface RoomHeaderProps {
   /** The room's display name / address. */
   name: string;
@@ -103,9 +102,14 @@ export interface RoomHeaderProps {
   onSetNotifyLevel?: (level: RoomNotifyLevel) => void;
   /** The room's protocol offers no end-to-end encryption (IRC) — show the plaintext marker. */
   notEncrypted?: boolean;
-  /** Whether the room is muted; the toggle is shown only when `onToggleMuted` is also given. */
-  muted?: boolean;
-  onToggleMuted?: () => void;
+  /** Whether the room is muted right now (forever, or a still-active timed mute) — the mute menu is
+   *  shown only when `onMuteFor` / `onUnmute` are also given. */
+  mutedNow?: boolean;
+  onMuteFor?: (durationMs: number | null) => void;
+  onUnmute?: () => void;
+  /** Whether the room is archived — the toggle is shown only when `onToggleArchived` is also given. */
+  archived?: boolean;
+  onToggleArchived?: () => void;
   /** Commit a new topic; the "Edit topic" affordance is shown only when this is given. */
   onSetTopic?: (topic: string) => void;
   /** Invite a contact to the room; the "Invite" affordance is shown only when this is given. */
@@ -124,8 +128,11 @@ export function RoomHeader({
   notifyLevel = 'all',
   onSetNotifyLevel,
   notEncrypted = false,
-  muted = false,
-  onToggleMuted,
+  mutedNow = false,
+  onMuteFor,
+  onUnmute,
+  archived = false,
+  onToggleArchived,
   onSetTopic,
   onInvite,
   onLeave,
@@ -232,16 +239,19 @@ export function RoomHeader({
               <InviteIcon />
             </button>
           ))}
-        {onToggleMuted !== undefined && (
+        {onMuteFor !== undefined && onUnmute !== undefined && (
+          <MuteMenu mutedNow={mutedNow} onMuteFor={onMuteFor} onUnmute={onUnmute} />
+        )}
+        {onToggleArchived !== undefined && (
           <button
             type="button"
-            className="chat-room-header__icon-btn"
-            title={muted ? s.workspace.unmute : s.workspace.mute}
-            aria-label={muted ? s.workspace.unmute : s.workspace.mute}
-            aria-pressed={muted}
-            onClick={onToggleMuted}
+            className="chat-room-header__icon-btn chat-room-header__archive"
+            title={archived ? s.workspace.unarchive : s.workspace.archive}
+            aria-label={archived ? s.workspace.unarchive : s.workspace.archive}
+            aria-pressed={archived}
+            onClick={onToggleArchived}
           >
-            <MuteIcon muted={muted} />
+            <ArchiveIcon />
           </button>
         )}
         {onSetNotifyLevel !== undefined && (

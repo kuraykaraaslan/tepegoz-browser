@@ -100,6 +100,28 @@ export const ChatSetMutedSchema = z.object({
   muted: z.boolean(),
 });
 
+/** `chat:mute-for` — a TIMED mute (`durationMs`) or forever (`null`), independent of `chat:set-muted`'s
+ *  binary toggle — the two share the same underlying `muted`/`mutedUntil` fields (see
+ *  `ChatAccountRunner.muteFor`), this is just the "for how long" entry point. Capped at 30 days —
+ *  the UI only ever offers 1h/3h/8h/forever, this is a defensive bound, not a real limit. */
+export const ChatMuteForSchema = z.object({
+  accountId: z.string().min(1).max(64),
+  conversationId: z.string().min(1).max(128),
+  durationMs: z
+    .number()
+    .int()
+    .positive()
+    .max(30 * 24 * 3600_000)
+    .nullable(),
+});
+
+/** `chat:set-archived` — a purely local presentation flag, no protocol wire concept. */
+export const ChatSetArchivedSchema = z.object({
+  accountId: z.string().min(1).max(64),
+  conversationId: z.string().min(1).max(128),
+  archived: z.boolean(),
+});
+
 /** `chat:set-room-topic` — change a room's topic / subject (empty string clears it). */
 export const ChatSetRoomTopicSchema = z.object({
   accountId: z.string().min(1).max(64),

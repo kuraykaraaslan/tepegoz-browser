@@ -38,6 +38,8 @@ export {
 } from './mention-autocomplete';
 export { RoomMemberList, type RoomMemberListProps } from './RoomMemberList';
 export { RoomHeader, type RoomHeaderProps } from './RoomHeader';
+export { MuteMenu, type MuteMenuProps } from './MuteMenu';
+export { isMutedNow } from './mute';
 export { NotEncryptedBadge } from './NotEncryptedBadge';
 export { roomTypingLabel, typingName, type TypingStrings } from './typing';
 export {

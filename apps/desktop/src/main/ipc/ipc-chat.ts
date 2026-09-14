@@ -13,7 +13,9 @@ import {
   ChatJoinRoomSchema,
   ChatLeaveRoomSchema,
   ChatMarkReadSchema,
+  ChatMuteForSchema,
   ChatReactSchema,
+  ChatSetArchivedSchema,
   ChatResolveMediaSchema,
   ChatSendMessageSchema,
   ChatSetPresenceSchema,
@@ -96,6 +98,8 @@ export interface ChatIpcService {
     level: 'all' | 'mentions' | 'none',
   ) => Promise<void>;
   setMuted: (accountId: string, conversationId: string, muted: boolean) => Promise<void>;
+  muteFor: (accountId: string, conversationId: string, durationMs: number | null) => Promise<void>;
+  setArchived: (accountId: string, conversationId: string, archived: boolean) => Promise<void>;
   setRoomTopic: (accountId: string, conversationId: string, topic: string) => Promise<void>;
   inviteToRoom: (accountId: string, conversationId: string, invitee: string) => Promise<void>;
   resolveMedia: (accountId: string, mediaRef: string) => Promise<{ dataUrl: string } | null>;
@@ -185,6 +189,16 @@ export function registerChatIpc(service: ChatIpcService): void {
   handleAsync(IpcChannels.chatSetMuted, async (_event, payload): Promise<void> => {
     const { accountId, conversationId, muted } = parsePayload(ChatSetMutedSchema, payload);
     await service.setMuted(accountId, conversationId, muted);
+  });
+
+  handleAsync(IpcChannels.chatMuteFor, async (_event, payload): Promise<void> => {
+    const { accountId, conversationId, durationMs } = parsePayload(ChatMuteForSchema, payload);
+    await service.muteFor(accountId, conversationId, durationMs);
+  });
+
+  handleAsync(IpcChannels.chatSetArchived, async (_event, payload): Promise<void> => {
+    const { accountId, conversationId, archived } = parsePayload(ChatSetArchivedSchema, payload);
+    await service.setArchived(accountId, conversationId, archived);
   });
 
   handleAsync(IpcChannels.chatSetRoomTopic, async (_event, payload): Promise<void> => {

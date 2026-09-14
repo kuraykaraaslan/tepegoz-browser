@@ -278,6 +278,8 @@ export const IpcChannels = {
   chatSetRoomNotifyLevel: 'chat:set-room-notify-level',
   /** Renderer→main: mute / unmute one conversation (DM or room). */
   chatSetMuted: 'chat:set-muted',
+  chatMuteFor: 'chat:mute-for',
+  chatSetArchived: 'chat:set-archived',
   /** Renderer→main: change a room's topic / subject. */
   chatSetRoomTopic: 'chat:set-room-topic',
   /** Renderer→main: invite a contact to a room. */

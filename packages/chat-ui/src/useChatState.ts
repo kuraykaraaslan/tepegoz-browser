@@ -34,6 +34,10 @@ export interface UseChatState {
   setRoomNotifyLevel: ((conversationId: string, level: RoomNotifyLevel) => Promise<void>) | null;
   /** Mute / unmute a conversation — `null` when the port does not support it. */
   setMuted: ((conversationId: string, muted: boolean) => Promise<void>) | null;
+  /** A TIMED mute (`durationMs`) or forever (`null`) — `null` when the port does not support it. */
+  muteFor: ((conversationId: string, durationMs: number | null) => Promise<void>) | null;
+  /** Archive / unarchive a conversation — `null` when the port does not support it. */
+  setArchived: ((conversationId: string, archived: boolean) => Promise<void>) | null;
   /** Change a room's topic — `null` when the port does not support it. */
   setRoomTopic: ((conversationId: string, topic: string) => Promise<void>) | null;
   /** Invite a contact to a room — `null` when the port does not support it. */
@@ -242,10 +246,40 @@ export function useChatState(port: ChatClientPort): UseChatState {
     if (setChatMuted === undefined) return null;
     return async (conversationId: string, muted: boolean): Promise<void> => {
       if (activeAccountId === null) return;
-      setClient((prev) => patchConversation(prev, conversationId, { muted }));
+      // Always clears a lingering timed mute too, mirroring the runner: the two share one "is this
+      // muted" bit, so a stale mutedUntil from a previous timed mute must not resurface later.
+      setClient((prev) => patchConversation(prev, conversationId, { muted, mutedUntil: null }));
       await setChatMuted(activeAccountId, conversationId, muted);
     };
   }, [setChatMuted, activeAccountId]);
+
+  const { muteChatFor } = port;
+  const muteFor = useMemo(() => {
+    if (muteChatFor === undefined) return null;
+    return async (conversationId: string, durationMs: number | null): Promise<void> => {
+      if (activeAccountId === null) return;
+      setClient((prev) =>
+        patchConversation(
+          prev,
+          conversationId,
+          durationMs === null
+            ? { muted: true, mutedUntil: null }
+            : { muted: false, mutedUntil: Date.now() + durationMs },
+        ),
+      );
+      await muteChatFor(activeAccountId, conversationId, durationMs);
+    };
+  }, [muteChatFor, activeAccountId]);
+
+  const { setChatArchived } = port;
+  const setArchived = useMemo(() => {
+    if (setChatArchived === undefined) return null;
+    return async (conversationId: string, archived: boolean): Promise<void> => {
+      if (activeAccountId === null) return;
+      setClient((prev) => patchConversation(prev, conversationId, { archived }));
+      await setChatArchived(activeAccountId, conversationId, archived);
+    };
+  }, [setChatArchived, activeAccountId]);
 
   const { setChatRoomTopic } = port;
   const setRoomTopic = useMemo(() => {
@@ -384,6 +418,8 @@ export function useChatState(port: ChatClientPort): UseChatState {
     send,
     setRoomNotifyLevel,
     setMuted,
+    muteFor,
+    setArchived,
     setRoomTopic,
     inviteToRoom,
     addContact,

@@ -526,11 +526,39 @@ export class ChatAccountRunner {
     return Promise.resolve();
   }
 
+  /** The forever mute — always clears any TIMED mute too, so switching between the two never leaves
+   *  the other one's state stale (a leftover `mutedUntil` from a previous timed mute must not silently
+   *  reactivate once `muted` is later turned back off). */
   setMuted(conversationId: string, muted: boolean): Promise<void> {
     const existing =
       this.deps.store.getConversation(conversationId) ??
       blankConversation(this.accountId, conversationId);
-    this.deps.store.upsertConversation({ ...existing, muted });
+    this.deps.store.upsertConversation({ ...existing, muted, mutedUntil: null });
+    return Promise.resolve();
+  }
+
+  /** A timed mute — `durationMs: null` means forever (same effect as `setMuted(true)`, through the
+   *  same field, so there is only ever one "is this forever-muted" bit to check). */
+  muteFor(conversationId: string, durationMs: number | null): Promise<void> {
+    const existing =
+      this.deps.store.getConversation(conversationId) ??
+      blankConversation(this.accountId, conversationId);
+    this.deps.store.upsertConversation(
+      durationMs === null
+        ? { ...existing, muted: true, mutedUntil: null }
+        : { ...existing, muted: false, mutedUntil: this.deps.now() + durationMs },
+    );
+    return Promise.resolve();
+  }
+
+  /** Archiving is a purely local presentation flag — no protocol has a matching wire concept, and it
+   *  does not affect delivery, unread counting, or anything else: an archived conversation still
+   *  receives messages exactly as before, it just starts out of the default list. */
+  setArchived(conversationId: string, archived: boolean): Promise<void> {
+    const existing =
+      this.deps.store.getConversation(conversationId) ??
+      blankConversation(this.accountId, conversationId);
+    this.deps.store.upsertConversation({ ...existing, archived });
     return Promise.resolve();
   }
 

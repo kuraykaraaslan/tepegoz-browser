@@ -660,6 +660,34 @@ describe('ChatAccountRunner — actions', () => {
     await expect(runner.react('room@conf', 'm1', '👍', true)).rejects.toThrow(/reactions/);
   });
 
+  it('setMuted(false) clears a lingering timed mute too — the two share one "is muted" bit', async () => {
+    const { runner, store } = await online();
+    await runner.muteFor('room@conf', 3_600_000);
+    expect(store.conversations.get('room@conf')?.mutedUntil).toBe(1_000 + 3_600_000);
+    await runner.setMuted('room@conf', false);
+    expect(store.conversations.get('room@conf')).toMatchObject({ muted: false, mutedUntil: null });
+  });
+
+  it('muteFor sets an expiry for a duration, or the forever flag for null — never both at once', async () => {
+    const { runner, store } = await online();
+    await runner.muteFor('room@conf', 3_600_000);
+    expect(store.conversations.get('room@conf')).toMatchObject({
+      muted: false,
+      mutedUntil: 1_000 + 3_600_000,
+    });
+    await runner.muteFor('room@conf', null);
+    expect(store.conversations.get('room@conf')).toMatchObject({ muted: true, mutedUntil: null });
+  });
+
+  it('setArchived patches the stored conversation without touching anything else', async () => {
+    const { runner, store } = await online();
+    await runner.setMuted('room@conf', true);
+    await runner.setArchived('room@conf', true);
+    expect(store.conversations.get('room@conf')).toMatchObject({ archived: true, muted: true });
+    await runner.setArchived('room@conf', false);
+    expect(store.conversations.get('room@conf')).toMatchObject({ archived: false, muted: true });
+  });
+
   it('editMessage 501s without adapter support; otherwise delegates with a write-only OutgoingMessage', async () => {
     const { runner, adapter } = await online();
     await expect(runner.editMessage('room@conf', 'm1', 'fixed')).rejects.toThrow(/editing messages/);

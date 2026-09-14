@@ -9,6 +9,8 @@ import { Avatar } from './Avatar';
 import { Composer } from './Composer';
 import { ConversationList } from './ConversationList';
 import { MessageTimeline } from './MessageTimeline';
+import { isMutedNow } from './mute';
+import { MuteMenu } from './MuteMenu';
 import { NotEncryptedBadge } from './NotEncryptedBadge';
 import { RoomBrowser } from './RoomBrowser';
 import { RoomHeader } from './RoomHeader';
@@ -86,6 +88,7 @@ export function ChatWorkspace({
   const chat = useChatState(port);
   const [tab, setTab] = useState<LeftTab>('chats');
   const [membersOpen, setMembersOpen] = useState(false);
+  const [showArchived, setShowArchived] = useState(false);
   const [managingAccounts, setManagingAccounts] = useState(false);
 
   // Prefer an explicit `resolveMedia` prop; otherwise adapt the port's `resolveChatMedia` for the
@@ -112,6 +115,18 @@ export function ChatWorkspace({
   // The Contacts tab is unified across every account, same as the Chats tab — no per-account
   // filtering; which account a contact belongs to shows via <RosterPanel>'s protocol badge.
   const rosterList = useMemo(() => Object.values(chat.client.roster), [chat.client.roster]);
+
+  // Archived conversations stay fully functional (still receive messages, still selectable once
+  // reached) — they are just off the default list, same idea as an OS's archived-mail folder. Toggle
+  // between the two views rather than showing both at once, so an archive is actually "out of the way".
+  const archivedCount = useMemo(
+    () => chat.conversations.filter((c) => c.archived).length,
+    [chat.conversations],
+  );
+  const visibleConversations = useMemo(
+    () => chat.conversations.filter((c) => c.archived === showArchived),
+    [chat.conversations, showArchived],
+  );
   const contactByAddress = useMemo(() => {
     const map = new Map<string, ChatContact>();
     for (const c of rosterList) map.set(c.address, c);
@@ -260,15 +275,28 @@ export function ChatWorkspace({
           </div>
 
           {tab === 'chats' && (
-            <ConversationList
-              conversations={chat.conversations}
-              accounts={accountRefs}
-              selectedId={chat.selectedConversationId}
-              onSelect={chat.selectConversation}
-              presenceOf={(c) =>
-                c.kind === 'dm' ? contactByAddress.get(c.address)?.presence ?? null : null
-              }
-            />
+            <>
+              {(showArchived || archivedCount > 0) && (
+                <button
+                  type="button"
+                  className="chat-workspace__archived-toggle"
+                  onClick={() => setShowArchived((v) => !v)}
+                >
+                  {showArchived
+                    ? s.workspace.backToChats
+                    : `${s.workspace.showArchived} (${String(archivedCount)})`}
+                </button>
+              )}
+              <ConversationList
+                conversations={visibleConversations}
+                accounts={accountRefs}
+                selectedId={chat.selectedConversationId}
+                onSelect={chat.selectConversation}
+                presenceOf={(c) =>
+                  c.kind === 'dm' ? contactByAddress.get(c.address)?.presence ?? null : null
+                }
+              />
+            </>
           )}
           {tab === 'contacts' && (
             <RosterPanel
@@ -333,7 +361,7 @@ export function ChatWorkspace({
                   onToggleMembers={() => setMembersOpen((v) => !v)}
                   notifyLevel={selected.notifyLevel}
                   notEncrypted={notEncrypted}
-                  muted={selected.muted}
+                  mutedNow={isMutedNow(selected, Date.now())}
                   {...(chat.setRoomNotifyLevel !== null
                     ? {
                         onSetNotifyLevel: (level: RoomNotifyLevel) => {
@@ -341,8 +369,19 @@ export function ChatWorkspace({
                         },
                       }
                     : {})}
-                  {...(chat.setMuted !== null
-                    ? { onToggleMuted: () => void chat.setMuted?.(selected.id, !selected.muted) }
+                  {...(chat.muteFor !== null && chat.setMuted !== null
+                    ? {
+                        onMuteFor: (durationMs: number | null) =>
+                          void chat.muteFor?.(selected.id, durationMs),
+                        onUnmute: () => void chat.setMuted?.(selected.id, false),
+                      }
+                    : {})}
+                  archived={selected.archived}
+                  {...(chat.setArchived !== null
+                    ? {
+                        onToggleArchived: () =>
+                          void chat.setArchived?.(selected.id, !selected.archived),
+                      }
                     : {})}
                   {...(chat.setRoomTopic !== null
                     ? { onSetTopic: (topic: string) => void chat.setRoomTopic?.(selected.id, topic) }
@@ -364,14 +403,21 @@ export function ChatWorkspace({
                   {typing.length > 0 && (
                     <span className="chat-workspace__typing">{s.workspace.typing}</span>
                   )}
-                  {chat.setMuted !== null && (
+                  {chat.muteFor !== null && chat.setMuted !== null && (
+                    <MuteMenu
+                      mutedNow={isMutedNow(selected, Date.now())}
+                      onMuteFor={(durationMs) => void chat.muteFor?.(selected.id, durationMs)}
+                      onUnmute={() => void chat.setMuted?.(selected.id, false)}
+                    />
+                  )}
+                  {chat.setArchived !== null && (
                     <button
                       type="button"
-                      className="chat-workspace__mute"
-                      aria-pressed={selected.muted}
-                      onClick={() => void chat.setMuted?.(selected.id, !selected.muted)}
+                      className="chat-workspace__archive"
+                      aria-pressed={selected.archived}
+                      onClick={() => void chat.setArchived?.(selected.id, !selected.archived)}
                     >
-                      {selected.muted ? s.workspace.unmute : s.workspace.mute}
+                      {selected.archived ? s.workspace.unarchive : s.workspace.archive}
                     </button>
                   )}
                 </header>

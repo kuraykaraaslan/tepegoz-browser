@@ -10,6 +10,8 @@ import {
   ChatJoinRoomSchema,
   ChatRemoveContactSchema,
   ChatSetRoomNotifyLevelSchema,
+  ChatMuteForSchema,
+  ChatSetArchivedSchema,
   ChatSetMutedSchema,
   ChatSetRoomTopicSchema,
   ChatMarkReadSchema,
@@ -186,6 +188,38 @@ describe('room channels', () => {
     ).toBe(true);
     expect(
       ChatSetMutedSchema.safeParse({ accountId: 'a', conversationId: 'c', muted: 'yes' }).success,
+    ).toBe(false);
+  });
+
+  it('ChatMuteForSchema accepts a positive duration or null (forever), rejects 0/negative/over-cap', () => {
+    expect(
+      ChatMuteForSchema.safeParse({ accountId: 'a', conversationId: 'c', durationMs: 3_600_000 })
+        .success,
+    ).toBe(true);
+    expect(
+      ChatMuteForSchema.safeParse({ accountId: 'a', conversationId: 'c', durationMs: null }).success,
+    ).toBe(true);
+    expect(
+      ChatMuteForSchema.safeParse({ accountId: 'a', conversationId: 'c', durationMs: 0 }).success,
+    ).toBe(false);
+    expect(
+      ChatMuteForSchema.safeParse({ accountId: 'a', conversationId: 'c', durationMs: -1 }).success,
+    ).toBe(false);
+    expect(
+      ChatMuteForSchema.safeParse({
+        accountId: 'a',
+        conversationId: 'c',
+        durationMs: 31 * 24 * 3600_000,
+      }).success,
+    ).toBe(false);
+  });
+
+  it('ChatSetArchivedSchema requires a boolean archived flag', () => {
+    expect(
+      ChatSetArchivedSchema.safeParse({ accountId: 'a', conversationId: 'c', archived: true }).success,
+    ).toBe(true);
+    expect(
+      ChatSetArchivedSchema.safeParse({ accountId: 'a', conversationId: 'c', archived: 'yes' }).success,
     ).toBe(false);
   });
 

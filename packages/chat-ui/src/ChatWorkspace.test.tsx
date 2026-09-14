@@ -510,14 +510,44 @@ describe('ChatWorkspace', () => {
     expect(screen.getByText('typing…')).toBeDefined();
   });
 
-  it('mutes a conversation from the DM header through the port', async () => {
+  it('mutes a conversation for a picked duration from the DM header through the port', async () => {
     const setChatMuted = vi.fn(() => Promise.resolve());
-    const { port } = makePort({ setChatMuted });
+    const muteChatFor = vi.fn(() => Promise.resolve());
+    const { port } = makePort({ setChatMuted, muteChatFor });
     wrap(<ChatWorkspace port={port} />);
     fireEvent.click(await screen.findByRole('button', { name: /Bob/ }));
     await screen.findByText('hi there');
     fireEvent.click(screen.getByRole('button', { name: 'Mute' }));
-    await waitFor(() => expect(setChatMuted).toHaveBeenCalledWith('work', 'c1', true));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Mute for 8 hours' }));
+    await waitFor(() => expect(muteChatFor).toHaveBeenCalledWith('work', 'c1', 8 * 3_600_000));
+  });
+
+  it('archives a conversation from the DM header, which then moves it off the default list', async () => {
+    const setChatArchived = vi.fn(() => Promise.resolve());
+    const { port } = makePort({ setChatArchived });
+    wrap(<ChatWorkspace port={port} />);
+    fireEvent.click(await screen.findByRole('button', { name: /Bob/ }));
+    await screen.findByText('hi there');
+    fireEvent.click(screen.getByRole('button', { name: 'Archive' }));
+    await waitFor(() => expect(setChatArchived).toHaveBeenCalledWith('work', 'c1', true));
+  });
+
+  it('hides archived conversations from the default list; "Show archived" reveals them', async () => {
+    const { port } = makePort({
+      listChatConversations: () =>
+        Promise.resolve([conv({ id: 'c1', name: 'Bob' }), conv({ id: 'c2', name: 'Ada', archived: true })]),
+    });
+    wrap(<ChatWorkspace port={port} />);
+    await screen.findByText('Bob');
+    expect(screen.queryByText('Ada')).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: /Show archived/ }));
+    expect(screen.queryByText('Bob')).toBeNull();
+    expect(screen.getByText('Ada')).toBeDefined();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Back to Chats' }));
+    expect(screen.getByText('Bob')).toBeDefined();
+    expect(screen.queryByText('Ada')).toBeNull();
   });
 
   it('names who is typing in a room', async () => {

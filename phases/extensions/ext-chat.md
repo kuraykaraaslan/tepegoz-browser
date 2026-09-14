@@ -632,14 +632,34 @@ one real regression bug per feedback item, not cosmetic fixes:
   gates whether `onReact` reaches `<MessageTimeline>` at all, so the whole reactions row (not just the
   add-button) disappears for a protocol that could never produce a reaction event in the first place.
 
-**Still open, tracked but not started this pass:** unifying the Contacts/roster page the same way
-(flat, badge-only account identification); the mute-duration picker (1h/3h/8h/forever) and an Archive
-action, both UI on top of the `muted_until`/`archived` columns already added; a "New Chat" popup
-(contacts + existing groups + a generic address field) replacing the "Find a room" tab; clicking a room
-member to start a DM; a DM header layout pass (too cramped); blocking a contact where the protocol
-supports it; emoji-shortcode (`:smile:`) rendering; markdown-lite rendering for bridge-sourced messages;
-hiding the sender name in favor of an avatar tooltip; a WhatsApp-style hover/right-click reaction
-trigger; and richer context menus (messages, room-list rows, contacts).
+Then (2026-09-14, same session) **the Contacts tab, timed mute, and archive** landed:
+- **Contacts unified across every account**, same treatment as Chats: `getChatRoster` has no "every
+  account" form the way `listChatConversations` does, so `useChatState` now fetches each configured
+  account's roster in parallel (`Promise.all`) and concatenates them — contact ids are already
+  namespaced per account, no collision risk. `addContact`/`removeContact` take an explicit `accountId`
+  now instead of an implicit "active account" (that stops meaning anything once the list spans every
+  account); `<RosterPanel>` gained a protocol badge per row and an account picker in the add-contact
+  form, shown only when there is more than one account.
+- **Mute got a duration.** `chat:mute-for` (new IPC channel, capped at 30 days as a defensive bound —
+  the UI only ever offers 1h/3h/8h/forever) sets `mutedUntil` (a timed mute) or `muted` (forever,
+  through `chat:set-muted`) — the two share one "is this muted right now" computation
+  (`isMutedNow`, `packages/chat-ui/src/mute.ts`: the forever flag, OR an unexpired `mutedUntil`, with
+  no separate cleanup step — a past `mutedUntil` just reads as not-muted). Either write path clears
+  the OTHER field, so switching between a timed and a forever mute never leaves a stale one active
+  behind it. `<MuteMenu>` (shared by the DM header and `<RoomHeader>`) is the picker; clicking it opens
+  a duration list when unmuted, a bare "Unmute" when already muted, and closes on an outside click.
+- **Archive** (`chat:set-archived`) is a purely local presentation flag with no protocol wire concept —
+  an archived conversation keeps receiving messages exactly as before, it is just off the default
+  list. `<ChatWorkspace>` filters the (still-unified, still recency-sorted) conversation list on
+  `archived`, with a "Show archived (N)" / "Back to Chats" toggle switching between the two views
+  rather than showing both spliced together.
+
+**Still open, tracked but not started:** a "New Chat" popup (contacts + existing groups + a generic
+address field) replacing the "Find a room" tab; clicking a room member to start a DM; a DM header
+layout pass (too cramped); blocking a contact where the protocol supports it; emoji-shortcode
+(`:smile:`) rendering; markdown-lite rendering for bridge-sourced messages; hiding the sender name in
+favor of an avatar tooltip; a WhatsApp-style hover/right-click reaction trigger; and richer context
+menus (messages, room-list rows, contacts).
 
 **Remaining:** the runtime Functional DoD (media round-trip needs a live account). · **Depends on:**
 X-chat.1 · **Branch:** `main` · **Risk:** low.

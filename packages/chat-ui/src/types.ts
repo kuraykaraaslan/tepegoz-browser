@@ -84,6 +84,16 @@ export interface ChatClientPort {
   ) => Promise<void>;
   /** Mute / unmute a conversation — optional; the header mute toggle needs it. */
   setChatMuted?: (accountId: string, conversationId: string, muted: boolean) => Promise<void>;
+  /** A TIMED mute (`durationMs`) or forever (`null`) — optional; the mute-duration menu needs it.
+   *  Shares the same underlying state as {@link setChatMuted}. */
+  muteChatFor?: (
+    accountId: string,
+    conversationId: string,
+    durationMs: number | null,
+  ) => Promise<void>;
+  /** Archive / unarchive a conversation — optional; a purely local presentation flag with no
+   *  protocol wire concept, hiding it from the default list without affecting delivery. */
+  setChatArchived?: (accountId: string, conversationId: string, archived: boolean) => Promise<void>;
   /** Change a room's topic — optional; the room-header topic editor needs it. */
   setChatRoomTopic?: (accountId: string, conversationId: string, topic: string) => Promise<void>;
   /** Invite a contact to a room — optional; the room-header invite field needs it. */
