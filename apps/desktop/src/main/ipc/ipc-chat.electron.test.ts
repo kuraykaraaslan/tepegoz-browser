@@ -52,6 +52,7 @@ const svc = {
   inviteToRoom: vi.fn(() => Promise.resolve()),
   resolveMedia: vi.fn(() => Promise.resolve({ dataUrl: 'data:image/png;base64,AAAA' })),
   react: vi.fn(() => Promise.resolve()),
+  editMessage: vi.fn(() => Promise.resolve()),
 };
 
 const ev = { senderFrame: { url: TRUSTED }, sender: {} };
@@ -84,7 +85,7 @@ beforeEach(() => {
 });
 
 it('registers every chat channel', () => {
-  expect(h.handlers.size).toBe(22);
+  expect(h.handlers.size).toBe(23);
 });
 
 it('chat:react validates + delegates', async () => {
@@ -98,6 +99,19 @@ it('chat:react validates + delegates', async () => {
   expect(svc.react).toHaveBeenCalledWith('work', 'general@conf.example', 'm1', '👍', true);
   await expect(
     call(IpcChannels.chatReact, { accountId: 'work', conversationId: 'c', messageId: 'm1', emoji: '👍' }),
+  ).rejects.toBeDefined();
+});
+
+it('chat:edit-message validates + delegates', async () => {
+  await call(IpcChannels.chatEditMessage, {
+    accountId: 'work',
+    conversationId: 'general@conf.example',
+    messageId: 'm1',
+    body: 'fixed typo',
+  });
+  expect(svc.editMessage).toHaveBeenCalledWith('work', 'general@conf.example', 'm1', 'fixed typo');
+  await expect(
+    call(IpcChannels.chatEditMessage, { accountId: 'work', conversationId: 'c', messageId: 'm1' }),
   ).rejects.toBeDefined();
 });
 

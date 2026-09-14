@@ -102,4 +102,12 @@ export interface ChatClientPort {
     emoji: string,
     on: boolean,
   ) => Promise<void>;
+  /** Replace an already-sent message's body — optional; the timeline's Edit action needs it.
+   *  `messageId` is the message's `protocolId`. Throws if the protocol has no edit capability. */
+  editChatMessage?: (
+    accountId: string,
+    conversationId: string,
+    messageId: string,
+    body: string,
+  ) => Promise<void>;
 }

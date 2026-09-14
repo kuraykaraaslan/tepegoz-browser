@@ -44,6 +44,7 @@ export const chatApi: Pick<
   | 'inviteToChatRoom'
   | 'resolveChatMedia'
   | 'reactToChatMessage'
+  | 'editChatMessage'
   | 'onChatState'
 > = {
   listChatAccounts: () => invoke<ChatAccountsSnapshot>(IpcChannels.chatListAccounts),
@@ -102,6 +103,8 @@ export const chatApi: Pick<
     emoji: string,
     on: boolean,
   ) => invoke<void>(IpcChannels.chatReact, { accountId, conversationId, messageId, emoji, on }),
+  editChatMessage: (accountId: string, conversationId: string, messageId: string, body: string) =>
+    invoke<void>(IpcChannels.chatEditMessage, { accountId, conversationId, messageId, body }),
   onChatState: (callback: (event: ChatStateEvent) => void) => {
     const listener = (_event: unknown, payload: ChatStateEvent): void => {
       callback(payload);

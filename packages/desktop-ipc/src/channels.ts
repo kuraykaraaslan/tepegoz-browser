@@ -286,6 +286,7 @@ export const IpcChannels = {
   chatResolveMedia: 'chat:resolve-media',
   /** Renderer→main: add / remove one of the local user's emoji reactions on a message. */
   chatReact: 'chat:react',
+  chatEditMessage: 'chat:edit-message',
   /** Renderer→main: add a contact to the roster and request their presence. */
   chatAddContact: 'chat:add-contact',
   /** Renderer→main: remove a contact from the roster and cancel any subscription. */

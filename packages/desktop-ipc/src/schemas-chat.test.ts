@@ -5,6 +5,7 @@ import {
   ChatAddContactSchema,
   ChatConversationArgSchema,
   ChatDiscoverRoomsSchema,
+  ChatEditMessageSchema,
   ChatGetHistorySchema,
   ChatJoinRoomSchema,
   ChatRemoveContactSchema,
@@ -88,6 +89,35 @@ describe('ChatSetPresenceSchema', () => {
     expect(
       ChatSetPresenceSchema.safeParse({ accountId: 'a', presence: 'dnd', statusText: 'x'.repeat(513) })
         .success,
+    ).toBe(false);
+  });
+});
+
+describe('ChatEditMessageSchema', () => {
+  it('accepts an account, conversation, message id, and new body', () => {
+    const res = ChatEditMessageSchema.safeParse({
+      accountId: 'a',
+      conversationId: 'c',
+      messageId: 'm1',
+      body: 'fixed typo',
+    });
+    expect(res.success).toBe(true);
+  });
+
+  it('rejects a missing message id', () => {
+    expect(
+      ChatEditMessageSchema.safeParse({ accountId: 'a', conversationId: 'c', body: 'x' }).success,
+    ).toBe(false);
+  });
+
+  it('caps the body the same as ChatSendMessageSchema — one shared bound, not two', () => {
+    expect(
+      ChatEditMessageSchema.safeParse({
+        accountId: 'a',
+        conversationId: 'c',
+        messageId: 'm1',
+        body: 'x'.repeat(100_001),
+      }).success,
     ).toBe(false);
   });
 });

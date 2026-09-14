@@ -424,6 +424,58 @@ describe('useChatState', () => {
     expect(result.current.selectedConversationId).toBeNull();
   });
 
+  it('editMessage is null without port support; otherwise calls the port for the selected conversation (no optimistic patch)', async () => {
+    const plain = makePort();
+    const { result: noSupport } = renderHook(() => useChatState(plain.port));
+    await waitFor(() => expect(noSupport.current.loading).toBe(false));
+    expect(noSupport.current.editMessage).toBeNull();
+
+    const editChatMessage = vi.fn(() => Promise.resolve());
+    const { port } = makePort({
+      editChatMessage,
+      listChatConversations: () => Promise.resolve([conv({ accountId: 'home' })]),
+    });
+    const { result } = renderHook(() => useChatState(port));
+    await waitFor(() => expect(result.current.conversations.length).toBe(1));
+    act(() => {
+      result.current.selectConversation('c1');
+    });
+    await waitFor(() => expect(result.current.activeAccountId).toBe('home'));
+
+    await act(async () => {
+      await result.current.editMessage?.('p1', 'fixed typo');
+    });
+    expect(editChatMessage).toHaveBeenCalledWith('home', 'c1', 'p1', 'fixed typo');
+  });
+
+  it('startEditing / cancelEditing track the Composer edit target; switching conversation clears it', async () => {
+    const { port } = makePort({
+      listChatConversations: () => Promise.resolve([conv({ accountId: 'home' }), conv({ id: 'c2', accountId: 'home' })]),
+    });
+    const { result } = renderHook(() => useChatState(port));
+    await waitFor(() => expect(result.current.conversations.length).toBe(2));
+    expect(result.current.editingMessage).toBeNull();
+
+    act(() => {
+      result.current.startEditing('p1', 'hi');
+    });
+    expect(result.current.editingMessage).toEqual({ messageId: 'p1', body: 'hi' });
+
+    act(() => {
+      result.current.cancelEditing();
+    });
+    expect(result.current.editingMessage).toBeNull();
+
+    act(() => {
+      result.current.startEditing('p1', 'hi');
+    });
+    // A conversation switch must not leave a stale edit target pointed at the old conversation.
+    act(() => {
+      result.current.selectConversation('c2');
+    });
+    expect(result.current.editingMessage).toBeNull();
+  });
+
   it('switching accounts clears the selection', async () => {
     const { port } = makePort();
     const { result } = renderHook(() => useChatState(port));

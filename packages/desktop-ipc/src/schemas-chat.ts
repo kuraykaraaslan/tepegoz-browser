@@ -140,3 +140,13 @@ export const ChatReactSchema = z.object({
   emoji: z.string().min(1).max(64),
   on: z.boolean(),
 });
+
+/** `chat:edit-message` — replace an already-sent message's body (XEP-0308 / Matrix `m.replace`;
+ *  501s on a protocol with no edit capability, IRC has none). Reuses `OutgoingMessageSchema`'s own
+ *  body bound so the length limit can never drift between send and edit. */
+export const ChatEditMessageSchema = z.object({
+  accountId: z.string().min(1).max(64),
+  conversationId: z.string().min(1).max(128),
+  messageId: z.string().min(1).max(128),
+  body: OutgoingMessageSchema.shape.body,
+});

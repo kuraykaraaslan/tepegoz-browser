@@ -280,6 +280,8 @@ export const chatIpcService: ChatIpcService = {
   resolveMedia: (accountId, mediaRef) => requireService().resolveMedia(accountId, mediaRef),
   react: (accountId, conversationId, messageId, emoji, on) =>
     requireService().react(accountId, conversationId, messageId, emoji, on),
+  editMessage: (accountId, conversationId, messageId, body) =>
+    requireService().editMessage(accountId, conversationId, messageId, body),
 };
 
 /** Test seam. */

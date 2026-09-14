@@ -355,11 +355,12 @@ export class ChatAccountRunner {
       this.deps.emit({ kind: 'change', accountId: this.accountId, change });
     }
 
+    // No adapter reads `mediaPath` yet (XEP-0363 / MSC upload-and-embed is the "separate, larger
+    // piece of work" `http-upload.ts` flags) — `mediaRef` above is for the local echo/store only.
     const receipt = await this.deps.adapter.sendMessage(session, conversationId, {
       body: body.body,
       replyToId: body.replyToId ?? null,
-      mediaPath: null,
-      mediaRef,
+      mediaPath: body.mediaPath ?? null,
     });
     const settled: ChatMessage = { ...temp, id: receipt.protocolId, protocolId: receipt.protocolId, deliveryState: 'sent' };
     for (const change of this.state.reconcileSend(conversationId, tempId, settled)) {
@@ -511,6 +512,20 @@ export class ChatAccountRunner {
       throw new AppError('this protocol does not support reactions', 501);
     }
     await this.deps.adapter.react(this.requireSession(), conversationId, messageId, emoji, on);
+  }
+
+  /** Replace an already-sent message's body. Write-only, same shape as `react()` — the server echo
+   *  (XEP-0308 / Matrix `m.replace`) is what folds the edit into local state via the normal
+   *  `ingest()` path, not this method directly. */
+  async editMessage(conversationId: string, messageId: string, body: string): Promise<void> {
+    if (this.deps.adapter.editMessage === undefined) {
+      throw new AppError('this protocol does not support editing messages', 501);
+    }
+    await this.deps.adapter.editMessage(this.requireSession(), conversationId, messageId, {
+      body,
+      replyToId: null,
+      mediaPath: null,
+    });
   }
 
   /**

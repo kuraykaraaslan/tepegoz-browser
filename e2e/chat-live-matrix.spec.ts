@@ -121,7 +121,7 @@ async function invalidateAliceSessions(): Promise<void> {
   });
 }
 
-test('adds a live Matrix account, joins a room, sends/reacts, and recovers from a forced token invalidation', async ({}, testInfo) => {
+test('adds a live Matrix account, joins a room, sends/reacts/edits, and recovers from a forced token invalidation', async ({}, testInfo) => {
   testInfo.setTimeout(90_000);
   // The self-signed test cert isn't in Node's default trust store — scoped to this one process, and
   // only for the fixture-setup fetch above (the launched Electron app trusts it via
@@ -189,6 +189,21 @@ test('adds a live Matrix account, joins a room, sends/reacts, and recovers from 
     await window.getByRole('button', { name: 'Add reaction' }).click();
     await window.getByRole('menuitem', { name: '👍' }).click();
     await expect(window.getByRole('button', { name: '👍 1' })).toBeVisible({ timeout: 10_000 });
+
+    // Edit our own message (m.replace) — closes X-chat.5's "edits" Functional DoD line for real:
+    // `MatrixAdapter.editMessage` sends the `m.replace` event, the server round-trips it back down
+    // `/sync`, `matrix/events.ts` recognizes it and emits a `message-edit` ChatEvent, and
+    // `chat-core`'s fold turns that into a `message-updated` change the store applies in place —
+    // this proves that whole chain, not just the composer's local edit-mode UI.
+    await window.getByRole('button', { name: 'Edit message' }).click();
+    await expect(window.getByText('Editing message')).toBeVisible();
+    await expect(composer).toHaveValue(body);
+    const correctedBody = `corrected: ${body}`;
+    await composer.fill(correctedBody);
+    await composer.press('Enter');
+    await expect(window.getByText(correctedBody)).toBeVisible({ timeout: 15_000 });
+    await expect(window.getByText('edited')).toBeVisible();
+    await expect(window.getByText(body, { exact: true })).toHaveCount(0);
 
     // Force a real M_UNKNOWN_TOKEN — not a fixture, the app's actual running session's token — and
     // prove `MatrixAdapter.syncLoop`'s re-login path (packages/chat-adapters/src/matrix/adapter.ts)

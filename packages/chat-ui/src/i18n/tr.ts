@@ -69,6 +69,7 @@ export const tr: ChatUiStrings = {
     inReplyTo: 'Şu mesaja yanıt',
     quoteAttachment: 'Ek',
     addReaction: 'Tepki ekle',
+    edit: 'Mesajı düzenle',
   },
   delivery: {
     pending: 'Gönderiliyor…',

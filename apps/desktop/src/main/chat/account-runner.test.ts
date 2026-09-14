@@ -535,6 +535,20 @@ describe('ChatAccountRunner — actions', () => {
     await expect(runner.react('room@conf', 'm1', '👍', true)).rejects.toThrow(/reactions/);
   });
 
+  it('editMessage 501s without adapter support; otherwise delegates with a write-only OutgoingMessage', async () => {
+    const { runner, adapter } = await online();
+    await expect(runner.editMessage('room@conf', 'm1', 'fixed')).rejects.toThrow(/editing messages/);
+
+    const editMessage = vi.fn(() => Promise.resolve());
+    (adapter as unknown as { editMessage: typeof editMessage }).editMessage = editMessage;
+    await runner.editMessage('room@conf', 'm1', 'fixed');
+    expect(editMessage).toHaveBeenCalledWith(expect.anything(), 'room@conf', 'm1', {
+      body: 'fixed',
+      replyToId: null,
+      mediaPath: null,
+    });
+  });
+
   it('a roster-remove event is not persisted as a contact', async () => {
     const { adapter, store } = await online();
     const contact = { id: 'acc:c@x', accountId: 'acc', address: 'c@x', name: '', groups: [], presence: 'offline' as const, statusText: '', subscription: 'none' as const };

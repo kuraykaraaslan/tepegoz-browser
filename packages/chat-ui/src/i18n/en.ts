@@ -102,6 +102,8 @@ export const en = {
     quoteAttachment: 'Attachment',
     /** Accessible label for the "+" button that opens the quick-reaction picker. */
     addReaction: 'Add reaction',
+    /** Accessible label for the per-message "edit this message" trigger (own messages only). */
+    edit: 'Edit message',
   },
   delivery: {
     pending: 'Sending…',

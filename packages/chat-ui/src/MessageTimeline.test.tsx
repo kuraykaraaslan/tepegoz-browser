@@ -215,6 +215,45 @@ describe('MessageTimeline', () => {
     expect(screen.queryByRole('menu')).toBeNull();
   });
 
+  it('no Edit trigger without onEdit, without isOwn, or on someone else\'s message', () => {
+    const onEdit = vi.fn();
+    wrap(<MessageTimeline messages={[msg({ protocolId: 'srv-1' })]} now={T0} isOwn={() => true} />);
+    expect(screen.queryByRole('button', { name: 'Edit message' })).toBeNull();
+    cleanup();
+    wrap(<MessageTimeline messages={[msg({ protocolId: 'srv-1' })]} now={T0} onEdit={onEdit} />);
+    expect(screen.queryByRole('button', { name: 'Edit message' })).toBeNull();
+  });
+
+  it('clicking Edit on an own message calls onEdit with its protocolId + current body', () => {
+    const onEdit = vi.fn();
+    wrap(
+      <MessageTimeline
+        messages={[msg({ protocolId: 'srv-1', body: 'oops typo' })]}
+        now={T0}
+        isOwn={() => true}
+        onEdit={onEdit}
+      />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Edit message' }));
+    expect(onEdit).toHaveBeenCalledWith('srv-1', 'oops typo');
+  });
+
+  it('no Edit trigger on a redacted or still-pending own message', () => {
+    const onEdit = vi.fn();
+    wrap(
+      <MessageTimeline
+        messages={[
+          msg({ id: 'a', protocolId: 'srv-1', redacted: true }),
+          msg({ id: 'b', protocolId: 'srv-2', deliveryState: 'pending' }),
+        ]}
+        now={T0}
+        isOwn={() => true}
+        onEdit={onEdit}
+      />,
+    );
+    expect(screen.queryByRole('button', { name: 'Edit message' })).toBeNull();
+  });
+
   it('every message keeps its own timestamp even when the sender header is collapsed', () => {
     wrap(
       <MessageTimeline

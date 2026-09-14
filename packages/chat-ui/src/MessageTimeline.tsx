@@ -37,6 +37,9 @@ export interface MessageTimelineProps {
   onJumpToMessage?: (protocolId: string) => void;
   /** Add / remove the local user's reaction on a message. Absent ⇒ reactions render read-only. */
   onReact?: (protocolId: string, emoji: string, on: boolean) => void;
+  /** Start editing one of the local user's own messages. Absent, not `isOwn`, or a redacted /
+   *  still-pending message ⇒ no Edit trigger renders. */
+  onEdit?: (protocolId: string, body: string) => void;
   groupWindowMs?: BuildTimelineOptions<ChatMessage>['groupWindowMs'];
   /** Keep at most this many most-recent messages in the DOM (default {@link TIMELINE_WINDOW}); a
    *  `0` renders everything. Older messages collapse into one "N earlier messages" row. */
@@ -124,6 +127,11 @@ function MessageBody({
  *  default bar is the same idea). */
 const QUICK_REACTIONS = ['👍', '❤️', '😂', '😮', '😢', '👏'];
 
+/** Not user-facing text — a fixed glyph, same convention as `ReactionsBar`'s literal "+". Rendered
+ *  as an expression (not raw JSX text) since a non-ASCII symbol trips `i18next/no-literal-string`
+ *  where a plain punctuation character wouldn't. */
+const EDIT_GLYPH = '✎';
+
 function ReactionsBar({
   message,
   strings,
@@ -204,6 +212,7 @@ export function MessageTimeline({
   onOpenMedia,
   onJumpToMessage,
   onReact,
+  onEdit,
   groupWindowMs,
   maxMessages = TIMELINE_WINDOW,
 }: Readonly<MessageTimelineProps>) {
@@ -323,6 +332,21 @@ export function MessageTimeline({
                 <time className="chat-msg__time">
                   {formatClockTime(message.originTs || message.receivedAt, locale)}
                 </time>
+                {own &&
+                  onEdit !== undefined &&
+                  !message.redacted &&
+                  (message.deliveryState === 'sent' ||
+                    message.deliveryState === 'delivered' ||
+                    message.deliveryState === 'read') && (
+                    <button
+                      type="button"
+                      className="chat-msg__edit"
+                      aria-label={s.timeline.edit}
+                      onClick={() => onEdit(message.protocolId, message.body)}
+                    >
+                      {EDIT_GLYPH}
+                    </button>
+                  )}
               </span>
               <ReactionsBar message={message} strings={s} onReact={onReact} />
             </div>

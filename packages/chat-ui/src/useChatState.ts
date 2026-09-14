@@ -50,6 +50,14 @@ export interface UseChatState {
   react:
     | ((conversationId: string, protocolId: string, emoji: string, on: boolean) => Promise<void>)
     | null;
+  /** Replace an already-sent message's body — `null` when the port does not support it. */
+  editMessage: ((protocolId: string, body: string) => Promise<void>) | null;
+  /** The message the Composer is currently seeded to edit, if any. */
+  editingMessage: { messageId: string; body: string } | null;
+  /** Enter edit mode for one of the local user's own messages. */
+  startEditing: (messageId: string, body: string) => void;
+  /** Leave edit mode without submitting (Composer's ✕ / Escape). */
+  cancelEditing: () => void;
   refresh: () => Promise<void>;
   /** MUC — present only when the port supports rooms. */
   rooms:
@@ -74,6 +82,9 @@ export function useChatState(port: ChatClientPort): UseChatState {
   const [client, setClient] = useState<ChatClientState>(emptyChatClientState);
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [editingMessage, setEditingMessage] = useState<{ messageId: string; body: string } | null>(
+    null,
+  );
 
   const refresh = useCallback(async (): Promise<void> => {
     const snapshot = await port.listChatAccounts();
@@ -140,6 +151,9 @@ export function useChatState(port: ChatClientPort): UseChatState {
   const selectConversation = useCallback(
     (conversationId: string | null): void => {
       setSelectedConversationId(conversationId);
+      // An edit target from the previous conversation must not survive the switch — it would
+      // otherwise submit against a `selectedConversationId` the Composer's banner no longer matches.
+      setEditingMessage(null);
       if (conversationId === null) return;
       // The unified Chats tab can select a conversation belonging to any configured account, not
       // just the one the account switcher currently shows — resolve the owning account from the
@@ -255,6 +269,25 @@ export function useChatState(port: ChatClientPort): UseChatState {
     };
   }, [reactToChatMessage, activeAccountId]);
 
+  const { editChatMessage } = port;
+  const editMessage = useMemo(() => {
+    if (editChatMessage === undefined) return null;
+    return async (protocolId: string, body: string): Promise<void> => {
+      if (activeAccountId === null || selectedConversationId === null) return;
+      // No optimistic patch — like `react()`'s sibling in `account-runner.ts`, the server echo
+      // (XEP-0308 / Matrix `m.replace`) is the source of truth for the edited body.
+      await editChatMessage(activeAccountId, selectedConversationId, protocolId, body);
+    };
+  }, [editChatMessage, activeAccountId, selectedConversationId]);
+
+  const startEditing = useCallback((messageId: string, body: string): void => {
+    setEditingMessage({ messageId, body });
+  }, []);
+
+  const cancelEditing = useCallback((): void => {
+    setEditingMessage(null);
+  }, []);
+
   const { inviteToChatRoom } = port;
   const inviteToRoom = useMemo(() => {
     if (inviteToChatRoom === undefined) return null;
@@ -354,6 +387,10 @@ export function useChatState(port: ChatClientPort): UseChatState {
     removeContact,
     leaveRoom,
     react,
+    editMessage,
+    editingMessage,
+    startEditing,
+    cancelEditing,
     refresh,
     rooms,
   };

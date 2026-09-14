@@ -539,6 +539,34 @@ kept so the user can retry) and disables the Join button mid-flight; `<ChatWorks
 the Chats tab once the join actually resolves, staying on the room browser (with the visible error)
 otherwise.
 
+Then (2026-09-14) **message editing — a complete, previously-unwired vertical slice.**
+`ChatAdapter.editMessage?` (XMPP, Matrix) had existed since X-chat.1/X-chat.5's original build, and
+`<Composer>` already had full edit-mode UI (seed text, banner, cancel, Escape) — but nothing between
+them was ever connected: no IPC channel, no `ChatService`/`ChatAccountRunner` method, no timeline
+trigger, no `useChatState` field. Same "built but unwired" shape as the Chats-tab and room-join bugs
+above. Closed the whole stack: `chat:edit-message` IPC (`ChatEditMessageSchema` reuses
+`OutgoingMessageSchema`'s own body bound, so the length limit can't drift from `send`) →
+`ChatService.editMessage` → `ChatAccountRunner.editMessage` (501s on a protocol with no
+`adapter.editMessage`, same convention as `react`) → `useChatState.editMessage` +
+`editingMessage`/`startEditing`/`cancelEditing` state → a per-own-message "✎" trigger in
+`<MessageTimeline>` (hidden for a redacted or still-`pending`/`failed` message) → `<ChatWorkspace>`
+branching `Composer`'s `onSubmit` on `draft.editMessageId`. The receive side needed nothing new — XMPP's
+`stanzas.ts` and Matrix's `events.ts` already parsed an incoming correction into a `message-edit`
+ChatEvent, and `chat-core`'s fold already turned that into the `message-updated` change
+`chat-store.ts` applies in place; only the SEND half and the UI trigger were missing.
+Along the way, found a second, protocol-specific gap: `XMPP_CAPS.edits` has claimed `true` since
+X-chat.1 (XEP-0308 is a real, documented capability of the protocol), and `stanzas.ts`'s
+`buildMessage` already accepted a `replaceId` — but `XmppAdapter` had no `editMessage` method at all,
+so the caps claim was aspirational, not real; every XMPP edit attempt would have 501'd. Added
+`XmppAdapter.editMessage` (a `<message>` with `<replace id="{id}" xmlns="urn:xmpp:message-correct:0"/>`,
+mirroring `sendMessage`'s room-vs-1:1 `type` handling and SM outbound tracking) — 2 new adapter tests.
+**Verified live end-to-end against both real servers**, not just unit-tested: extended
+`chat-live-matrix.spec.ts` and `chat-live-xmpp.spec.ts` to edit a just-sent own message through the
+real UI (Edit button → seeded composer → resubmit → the timeline shows the corrected body + an
+"edited" marker, the original text gone) — both pass clean. Agent-level edit access
+(`chat_update_item`) is explicitly out of scope here: it needs its own HITL/danger-class design
+decision, the same way `chat_create_message` does, not a quick add alongside the human path.
+
 **Remaining:** the runtime Functional DoD (media round-trip needs a live account). · **Depends on:**
 X-chat.1 · **Branch:** `main` · **Risk:** low.
 
@@ -574,7 +602,11 @@ X-chat.1 · **Branch:** `main` · **Risk:** low.
 
 ### Functional DoD
 - [ ] A human holds a real XMPP conversation across two accounts: send/receive, reactions, edits,
-      typing, read receipts, an image attachment round-trips through the sandbox.
+      typing, read receipts, an image attachment round-trips through the sandbox. **"edits" closed
+      live 2026-09-14** (see the build-history note above — `chat-live-xmpp.spec.ts` now edits a real
+      message through the UI, not just XEP-0308 at the adapter level); the two-account /
+      typing / receipts / image-attachment parts of this compound line are still what's open, so the
+      box stays unchecked.
 - [x] `@tepegoz/chat-ui` component tests (125); the media path asserts no remote fetch
       (`MessageMedia` / `MessageTimeline` tests).
 - [ ] Sub-phase DoD template ✔.
@@ -1049,9 +1081,13 @@ DoD-template checklist.
       changes (a `chat-live-matrix-resumption.spec.ts` draft, a `pause()`/`resume()` addition to
       `tcp-passthrough.ts`) rather than ship a flaky or half-diagnosed test — recorded here so a
       future attempt starts from "assert behaviorally, not on connState" and "the harness's own
-      fetch-failed quirk, not yet root-caused" instead of re-deriving both from scratch. **Still
-      open:** spaces, media, edits, sync-drop recovery — the e2e now exercises connect + room
-      message + join + reaction + token recovery.
+      fetch-failed quirk, not yet root-caused" instead of re-deriving both from scratch. **Edits
+      closed live 2026-09-14** — see X-chat.2's build-history note: the adapter's `editMessage` had
+      existed since this sub-phase's original build, but nothing above it was ever wired until now;
+      `chat-live-matrix.spec.ts` edits a real message through the UI and confirms the corrected body
+      + "edited" marker round-trip through a real `/sync`. **Still open:** spaces, media, sync-drop
+      recovery — the e2e now exercises connect + room message + join + reaction + edit + token
+      recovery.
 - [ ] Sub-phase DoD template ✔ — **6 of 7 conditions verified 2026-09-14, box stays unchecked
       because it's an all-or-nothing item and condition 7 (the sub-phase's own Functional DoD,
       directly above) is still genuinely `[~]`, not a rubber-stamp gap like X-chat.3/X-chat.4's
@@ -1068,7 +1104,7 @@ DoD-template checklist.
       through; the schema-level test above covers the type-safety half. **Self-review** — `git log`
       confirms no AI attribution trailer on any commit this session (CI-enforced). Only condition 7
       is what's actually blocking this checkbox, and it needs real remaining work (spaces, media,
-      edits, sync-drop), not more verification.
+      sync-drop), not more verification.
 
 ---
 

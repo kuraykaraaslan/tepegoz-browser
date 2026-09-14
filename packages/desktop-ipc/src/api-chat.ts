@@ -151,6 +151,15 @@ export interface ChatApi {
     emoji: string,
     on: boolean,
   ): Promise<void>;
+  /** Replace an already-sent message's body. `messageId` is the message's `protocolId`. Throws if
+   *  the protocol has no edit capability (IRC has none). The server echo (XEP-0308 / Matrix
+   *  `m.replace`) is what actually updates local state — this only writes. */
+  editChatMessage(
+    accountId: string,
+    conversationId: string,
+    messageId: string,
+    body: string,
+  ): Promise<void>;
   /** Subscribe to the `chat:state` push. Returns an unsubscribe. */
   onChatState(callback: (event: ChatStateEvent) => void): () => void;
 }

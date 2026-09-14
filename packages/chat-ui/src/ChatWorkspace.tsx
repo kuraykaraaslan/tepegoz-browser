@@ -393,13 +393,26 @@ export function ChatWorkspace({
                         },
                       }
                     : {})}
+                  {...(chat.editMessage !== null
+                    ? {
+                        onEdit: (protocolId: string, body: string) => {
+                          chat.startEditing(protocolId, body);
+                        },
+                      }
+                    : {})}
                 />
                 {selected.kind === 'room' && membersOpen && selectedRoom !== undefined && (
                   <RoomMemberList room={selectedRoom} />
                 )}
               </div>
               <Composer
-                onSubmit={(draft) => chat.send(draft.text, { replyToId: draft.replyToId })}
+                onSubmit={(draft) =>
+                  draft.editMessageId !== null
+                    ? chat.editMessage?.(draft.editMessageId, draft.text)
+                    : chat.send(draft.text, { replyToId: draft.replyToId })
+                }
+                editing={chat.editingMessage}
+                onCancelContext={chat.cancelEditing}
               />
             </>
           )}

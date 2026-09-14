@@ -220,6 +220,32 @@ describe('XmppAdapter — live traffic', () => {
     expect(sent).not.toContain('type="chat"');
   });
 
+  it('editMessage writes a tracked correction (XEP-0308) with a fresh stanza id', async () => {
+    const { server, adapter, session } = await connected();
+    await adapter.editMessage(session, 'bob@example.com', 'm1', {
+      body: 'fixed typo',
+      replyToId: null,
+      mediaPath: null,
+    });
+    const sent = server.lastWritten();
+    expect(sent).toMatch(/^<message to="bob@example.com" id="t-/);
+    expect(sent).toContain('<body>fixed typo</body>');
+    expect(sent).toContain('<replace id="m1" xmlns="urn:xmpp:message-correct:0"/>');
+    expect(sent).toContain('type="chat"');
+    expect(session.sm.unackedCount).toBe(1);
+  });
+
+  it('editMessage in a joined room uses type="groupchat"', async () => {
+    const { server, adapter, session } = await connected();
+    await adapter.joinRoom(session, 'general@conf.example.com');
+    await adapter.editMessage(session, 'general@conf.example.com', 'm1', {
+      body: 'fixed',
+      replyToId: null,
+      mediaPath: null,
+    });
+    expect(server.lastWritten()).toContain('type="groupchat"');
+  });
+
   it('setPresence and markRead write the right stanzas', async () => {
     const { server, adapter, session } = await connected();
     await adapter.setPresence(session, 'dnd', 'busy');

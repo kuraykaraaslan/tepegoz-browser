@@ -8,6 +8,7 @@ import {
   ChatAddContactSchema,
   ChatRemoveContactSchema,
   ChatDiscoverRoomsSchema,
+  ChatEditMessageSchema,
   ChatGetHistorySchema,
   ChatJoinRoomSchema,
   ChatLeaveRoomSchema,
@@ -105,6 +106,7 @@ export interface ChatIpcService {
     emoji: string,
     on: boolean,
   ) => Promise<void>;
+  editMessage: (accountId: string, conversationId: string, messageId: string, body: string) => Promise<void>;
 }
 
 export function registerChatIpc(service: ChatIpcService): void {
@@ -203,6 +205,11 @@ export function registerChatIpc(service: ChatIpcService): void {
   handleAsync(IpcChannels.chatReact, async (_event, payload): Promise<void> => {
     const { accountId, conversationId, messageId, emoji, on } = parsePayload(ChatReactSchema, payload);
     await service.react(accountId, conversationId, messageId, emoji, on);
+  });
+
+  handleAsync(IpcChannels.chatEditMessage, async (_event, payload): Promise<void> => {
+    const { accountId, conversationId, messageId, body } = parsePayload(ChatEditMessageSchema, payload);
+    await service.editMessage(accountId, conversationId, messageId, body);
   });
 
   handleAsync(IpcChannels.chatAddContact, async (_event, payload): Promise<void> => {

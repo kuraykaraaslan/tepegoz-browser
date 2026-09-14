@@ -99,7 +99,7 @@ async function openChatPage(window: Page): Promise<void> {
   await expect(window.getByRole('tab', { name: 'Chats' })).toBeVisible({ timeout: 20_000 });
 }
 
-test('adds a live XMPP account, joins a MUC room, sends a message, reacts to it, gets pinged under a muted notify level, and leaves', async ({}, testInfo) => {
+test('adds a live XMPP account, joins a MUC room, sends a message, reacts to it, edits it, gets pinged under a muted notify level, and leaves', async ({}, testInfo) => {
   testInfo.setTimeout(120_000);
   const profileDir = join(process.cwd(), '.chat-live-xmpp-profile');
   mkdirSync(profileDir, { recursive: true });
@@ -170,6 +170,20 @@ test('adds a live XMPP account, joins a MUC room, sends a message, reacts to it,
     await window.getByRole('button', { name: 'Add reaction' }).click();
     await window.getByRole('menuitem', { name: '👍' }).click();
     await expect(window.getByRole('button', { name: '👍 1' })).toBeVisible({ timeout: 10_000 });
+
+    // Edit our own message (XEP-0308) — closes X-chat.1/X-chat.3's "edits" Functional DoD line for
+    // real: `XmppAdapter.editMessage` sends a `<replace>`-tagged correction, the room reflects it
+    // back down, `stanzas.ts`'s `messageEvent` recognizes it and emits a `message-edit` ChatEvent,
+    // and `chat-core`'s fold turns that into a `message-updated` change the store applies in place.
+    await window.getByRole('button', { name: 'Edit message' }).click();
+    await expect(window.getByText('Editing message')).toBeVisible();
+    await expect(composer).toHaveValue(body);
+    const correctedBody = `corrected: ${body}`;
+    await composer.fill(correctedBody);
+    await composer.press('Enter');
+    await expect(window.getByText(correctedBody)).toBeVisible({ timeout: 15_000 });
+    await expect(window.getByText('edited')).toBeVisible();
+    await expect(window.getByText(body, { exact: true })).toHaveCount(0);
 
     // Roster: add a contact (RFC 6121 roster-add + presence subscribe) through the real Contacts
     // tab, then remove it (roster-remove) — both round-trip through Prosody's roster-push, which is

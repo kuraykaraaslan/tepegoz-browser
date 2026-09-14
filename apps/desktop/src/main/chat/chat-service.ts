@@ -308,6 +308,15 @@ export class ChatService {
     return this.require(accountId).react(conversationId, messageId, emoji, on);
   }
 
+  async editMessage(
+    accountId: string,
+    conversationId: string,
+    messageId: string,
+    body: string,
+  ): Promise<void> {
+    return this.require(accountId).editMessage(conversationId, messageId, body);
+  }
+
   async resolveMedia(
     accountId: string,
     mediaRef: string,
