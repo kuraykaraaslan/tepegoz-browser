@@ -6,7 +6,7 @@ describe('clipboard tools', () => {
   it('registers HITL-gated clipboard tools', () => {
     CapabilityRegistry.reset();
     const host: ClipboardToolsHost = {
-      readText: () => 'hello',
+      readText: () => Promise.resolve('hello'),
       writeText: () => ({ ok: true }),
     };
 

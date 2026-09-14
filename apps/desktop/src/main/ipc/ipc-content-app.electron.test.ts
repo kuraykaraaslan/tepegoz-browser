@@ -237,8 +237,8 @@ describe('the read handlers', () => {
   });
 });
 
-it('appCopyDiagnostics composes the block AND writes it to the clipboard', () => {
-  expect(call(CH.appCopyDiagnostics)).toBe('DIAG BLOCK');
+it('appCopyDiagnostics composes the block AND writes it to the clipboard', async () => {
+  await expect(call(CH.appCopyDiagnostics)).resolves.toBe('DIAG BLOCK');
   expect(clipboard.writeText).toHaveBeenCalledWith('DIAG BLOCK');
 });
 

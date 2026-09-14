@@ -5,7 +5,7 @@ import type { ClipboardReadTextInput, ClipboardWriteTextInput } from './index';
 import { ClipboardReadTextInputSchema, ClipboardWriteTextInputSchema } from './schemas';
 
 export interface ClipboardToolsHost {
-  readText(input: ClipboardReadTextInput): string;
+  readText(input: ClipboardReadTextInput): Promise<string>;
   writeText(input: ClipboardWriteTextInput): unknown;
 }
 

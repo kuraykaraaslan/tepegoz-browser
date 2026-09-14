@@ -83,8 +83,8 @@ export default class ClipboardService {
     auditWebContents(wc, 'copy-image');
   }
 
-  static writeText(input: ClipboardWriteTextInput): void {
-    clipboard.writeText(input.text);
+  static async writeText(input: ClipboardWriteTextInput): Promise<void> {
+    await clipboard.writeText(input.text);
     audit(
       createClipboardAuditMetadata({
         operation: 'write-text',
@@ -97,8 +97,8 @@ export default class ClipboardService {
     );
   }
 
-  static readText(input: ClipboardReadTextInput = {}): string {
-    const text = clipboard.readText();
+  static async readText(input: ClipboardReadTextInput = {}): Promise<string> {
+    const text = await clipboard.readText();
     audit(
       createClipboardAuditMetadata({
         operation: 'read-text',

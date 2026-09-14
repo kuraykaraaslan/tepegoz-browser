@@ -11,7 +11,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
  * failure with a warning.
  */
 
-const clip = vi.hoisted(() => ({ writeText: vi.fn(), readText: vi.fn(() => '') }));
+const clip = vi.hoisted(() => ({
+  writeText: vi.fn(() => Promise.resolve()),
+  readText: vi.fn(() => Promise.resolve('')),
+}));
 vi.mock('electron', () => ({ clipboard: clip }));
 
 vi.mock('@tepegoz/clipboard', () => ({
@@ -52,7 +55,7 @@ function fakeWc(url = 'https://shop.test/cart', destroyed = false) {
 beforeEach(() => {
   vi.clearAllMocks();
   db.value = { __db: true };
-  clip.readText.mockReturnValue('');
+  clip.readText.mockResolvedValue('');
 });
 
 describe('editing commands', () => {
@@ -106,8 +109,8 @@ describe('editing commands', () => {
 });
 
 describe('writeText / readText', () => {
-  it('writeText copies then audits length + sha, honouring a non-default actor/origin', () => {
-    ClipboardService.writeText({ text: 'hello', actor: 'agent', origin: 'https://a.test' });
+  it('writeText copies then audits length + sha, honouring a non-default actor/origin', async () => {
+    await ClipboardService.writeText({ text: 'hello', actor: 'agent', origin: 'https://a.test' });
     expect(clip.writeText).toHaveBeenCalledWith('hello');
     expect(lastPayload()).toMatchObject({
       operation: 'write-text',
@@ -119,8 +122,8 @@ describe('writeText / readText', () => {
     });
   });
 
-  it('writeText of an empty string records an empty kind and defaults the actor to user', () => {
-    ClipboardService.writeText({ text: '' });
+  it('writeText of an empty string records an empty kind and defaults the actor to user', async () => {
+    await ClipboardService.writeText({ text: '' });
     expect(lastPayload()).toMatchObject({
       operation: 'write-text',
       actor: 'user',
@@ -129,9 +132,9 @@ describe('writeText / readText', () => {
     });
   });
 
-  it('readText returns the clipboard text and audits it with a sha', () => {
-    clip.readText.mockReturnValue('copied');
-    expect(ClipboardService.readText()).toBe('copied');
+  it('readText returns the clipboard text and audits it with a sha', async () => {
+    clip.readText.mockResolvedValue('copied');
+    await expect(ClipboardService.readText()).resolves.toBe('copied');
     expect(lastPayload()).toMatchObject({
       operation: 'read-text',
       contentKind: 'text',
@@ -140,9 +143,9 @@ describe('writeText / readText', () => {
     });
   });
 
-  it('readText of an empty clipboard omits the sha', () => {
-    clip.readText.mockReturnValue('');
-    expect(ClipboardService.readText({ actor: 'agent' })).toBe('');
+  it('readText of an empty clipboard omits the sha', async () => {
+    clip.readText.mockResolvedValue('');
+    await expect(ClipboardService.readText({ actor: 'agent' })).resolves.toBe('');
     const p = lastPayload();
     expect(p).toMatchObject({ operation: 'read-text', actor: 'agent', contentKind: 'empty' });
     expect(p.contentSha256).toBeUndefined();

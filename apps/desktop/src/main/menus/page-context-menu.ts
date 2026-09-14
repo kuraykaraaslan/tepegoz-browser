@@ -222,7 +222,7 @@ export function runPageMenuAction(action: PageMenuAction): void {
       break;
     case 'copy-link':
       if (ctx !== null && ctx.linkUrl.length > 0) {
-        ClipboardService.writeText({
+        void ClipboardService.writeText({
           text: ctx.linkUrl,
           actor: 'user',
           origin: safeOrigin(ctx.pageUrl),
@@ -239,7 +239,7 @@ export function runPageMenuAction(action: PageMenuAction): void {
       break;
     case 'copy-media-link':
       if (ctx !== null && ctx.srcUrl.length > 0) {
-        ClipboardService.writeText({
+        void ClipboardService.writeText({
           text: ctx.srcUrl,
           actor: 'user',
           origin: safeOrigin(ctx.pageUrl),

@@ -18,7 +18,7 @@ productName: Tepegöz
 # bumped while this line still said 33.4.11, so the packager would have shipped an installer built
 # against a different Electron than the one the app was developed and tested on. `electron-version.test.ts`
 # now fails when the two drift.
-electronVersion: 43.4.1
+electronVersion: 44.2.0
 
 directories:
   # Installer + unpacked output → apps/desktop/dist/ (git-ignored). This is ~1 GB (win-unpacked +

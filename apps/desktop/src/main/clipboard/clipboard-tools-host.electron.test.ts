@@ -23,13 +23,13 @@ beforeEach(() => {
 });
 
 describe('readText', () => {
-  it('stamps the agent actor and fills origin from the active tab', () => {
-    clipboardToolsHost.readText({});
+  it('stamps the agent actor and fills origin from the active tab', async () => {
+    await clipboardToolsHost.readText({});
     expect(svc.readText).toHaveBeenCalledWith({ actor: 'agent', origin: 'https://shop.test' });
   });
 
-  it('keeps a caller-supplied origin', () => {
-    clipboardToolsHost.readText({ origin: 'https://given.test' });
+  it('keeps a caller-supplied origin', async () => {
+    await clipboardToolsHost.readText({ origin: 'https://given.test' });
     expect(svc.readText).toHaveBeenCalledWith({ actor: 'agent', origin: 'https://given.test' });
   });
 });
@@ -46,15 +46,15 @@ describe('writeText', () => {
 });
 
 describe('activeOrigin fallback', () => {
-  it('is undefined when there is no active tab', () => {
+  it('is undefined when there is no active tab', async () => {
     tab.url = undefined;
-    clipboardToolsHost.readText({});
+    await clipboardToolsHost.readText({});
     expect(svc.readText).toHaveBeenCalledWith({ actor: 'agent', origin: undefined });
   });
 
-  it('is undefined when the tab URL will not parse', () => {
+  it('is undefined when the tab URL will not parse', async () => {
     tab.url = 'not a url';
-    clipboardToolsHost.readText({});
+    await clipboardToolsHost.readText({});
     expect(svc.readText).toHaveBeenCalledWith({ actor: 'agent', origin: undefined });
   });
 });

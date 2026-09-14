@@ -131,9 +131,9 @@ export function registerAppIpc(): void {
   // Diagnostics: main composes AND copies. The renderer supplies no text, so this channel cannot be
   // used to write arbitrary content to the user's clipboard — the only thing it can put there is this
   // build's own version block.
-  handle(IpcChannels.appCopyDiagnostics, (): string => {
+  handle(IpcChannels.appCopyDiagnostics, async (): Promise<string> => {
     const text = diagnosticsText(buildAppInfo(isMicaSupported()), mainLocale());
-    clipboard.writeText(text);
+    await clipboard.writeText(text);
     return text;
   });
 
