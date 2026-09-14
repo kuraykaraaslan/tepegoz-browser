@@ -378,17 +378,33 @@
   box-shadow: var(--cu-shadow-sm);
   z-index: 1;
 }
-.chat-workspace__conv-head h2 {
-  margin: 0;
-  font-size: 15px;
-  font-weight: 700;
-}
 .chat-workspace__conv-head-avatar {
   flex: none;
   display: inline-flex;
 }
-.chat-workspace__conv-head .chat-mute-menu,
-.chat-workspace__conv-head .chat-workspace__archive:first-of-type {
+/* Shrinks as one unit so a long JID-length name truncates instead of squeezing the actions off the
+ * right edge — the exact "cramped" layout reported against a long address here. */
+.chat-workspace__conv-head-id {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+.chat-workspace__conv-head-id h2 {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+}
+.chat-workspace__conv-head-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: none;
   margin-inline-start: auto;
 }
 .chat-workspace__typing {

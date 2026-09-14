@@ -406,28 +406,34 @@ export function ChatWorkspace({
                   <span className="chat-workspace__conv-head-avatar">
                     <Avatar name={conversationTitle(selected)} seed={selected.id} />
                   </span>
-                  <h2>{conversationTitle(selected)}</h2>
-                  {notEncrypted && <NotEncryptedBadge />}
-                  {typing.length > 0 && (
-                    <span className="chat-workspace__typing">{s.workspace.typing}</span>
-                  )}
-                  {chat.muteFor !== null && chat.setMuted !== null && (
-                    <MuteMenu
-                      mutedNow={isMutedNow(selected, Date.now())}
-                      onMuteFor={(durationMs) => void chat.muteFor?.(selected.id, durationMs)}
-                      onUnmute={() => void chat.setMuted?.(selected.id, false)}
-                    />
-                  )}
-                  {chat.setArchived !== null && (
-                    <button
-                      type="button"
-                      className="chat-workspace__archive"
-                      aria-pressed={selected.archived}
-                      onClick={() => void chat.setArchived?.(selected.id, !selected.archived)}
-                    >
-                      {selected.archived ? s.workspace.unarchive : s.workspace.archive}
-                    </button>
-                  )}
+                  {/* The identity group shrinks and truncates as one unit — a long JID-length name
+                   *  must never squeeze the mute/archive controls out of reach on the right. */}
+                  <span className="chat-workspace__conv-head-id">
+                    <h2 title={conversationTitle(selected)}>{conversationTitle(selected)}</h2>
+                    {notEncrypted && <NotEncryptedBadge />}
+                    {typing.length > 0 && (
+                      <span className="chat-workspace__typing">{s.workspace.typing}</span>
+                    )}
+                  </span>
+                  <span className="chat-workspace__conv-head-actions">
+                    {chat.muteFor !== null && chat.setMuted !== null && (
+                      <MuteMenu
+                        mutedNow={isMutedNow(selected, Date.now())}
+                        onMuteFor={(durationMs) => void chat.muteFor?.(selected.id, durationMs)}
+                        onUnmute={() => void chat.setMuted?.(selected.id, false)}
+                      />
+                    )}
+                    {chat.setArchived !== null && (
+                      <button
+                        type="button"
+                        className="chat-workspace__archive"
+                        aria-pressed={selected.archived}
+                        onClick={() => void chat.setArchived?.(selected.id, !selected.archived)}
+                      >
+                        {selected.archived ? s.workspace.unarchive : s.workspace.archive}
+                      </button>
+                    )}
+                  </span>
                 </header>
               )}
               {selected.kind === 'room' && roomTypingLabel(typing, s.workspace) !== null && (

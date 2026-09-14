@@ -678,11 +678,18 @@ tooltip**, landed together with a real fix the first one exposed:
   visually-hidden span (the existing `chat-presence__sr-only` utility) rather than only a mouse-only
   affordance.
 
+Then a **DM header layout fix** — the identity group (avatar, name, encryption badge, typing
+indicator) had no truncation at all, so a JID-length name pushed the mute/archive controls out to an
+uncontrolled width instead of yielding to them. Split the header into two flex groups: an identity
+group that shrinks and ellipsis-truncates the name as one unit (`min-width: 0` + `text-overflow:
+ellipsis`, the full name still available via `title`), and an actions group (mute, archive) that never
+shrinks and stays pinned to the right edge.
+
 **Still open, tracked but not started:** a "New Chat" popup (contacts + existing groups + a generic
-address field) replacing the "Find a room" tab; a DM header layout pass (too cramped); blocking a
-contact where the protocol supports it; emoji-shortcode (`:smile:`) rendering; markdown-lite rendering
-for bridge-sourced messages; a WhatsApp-style hover/right-click reaction trigger; and richer context
-menus (messages, room-list rows, contacts).
+address field) replacing the "Find a room" tab; blocking a contact where the protocol supports it;
+emoji-shortcode (`:smile:`) rendering; markdown-lite rendering for bridge-sourced messages; a
+WhatsApp-style hover/right-click reaction trigger; and richer context menus (messages, room-list rows,
+contacts).
 
 **Remaining:** the runtime Functional DoD (media round-trip needs a live account). · **Depends on:**
 X-chat.1 · **Branch:** `main` · **Risk:** low.
