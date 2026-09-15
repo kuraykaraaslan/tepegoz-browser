@@ -23,3 +23,12 @@ export {
   type ReceiptVerdict,
   type ReplayReceipt,
 } from './replay-receipt';
+export {
+  buildRunReport,
+  renderRunReportMarkdown,
+  type BuildRunReportInput,
+  type RunReport,
+  type RunReportStep,
+  type RunReportTerminal,
+  type RunReportTokenUsage,
+} from './run-report';

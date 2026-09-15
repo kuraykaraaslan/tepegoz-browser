@@ -38,6 +38,14 @@ append-only Journal.
 > `safeStorage`. A receipt cannot be produced from a real task yet — only from data handed to
 > `buildReceipt` directly, which is how the whole test suite exercises it. The Accountability
 > Dashboard, Counterfactual Dry-Run, Cost & Risk Contract, and Data Rights export are untouched.
+>
+> **2026-09-15.** The unsigned run-report transform landed: `buildRunReport` + `renderRunReportMarkdown`
+> in `@tepegoz/notary` (79 tests now), structuring one run's Journal events (ordered by `lsn`, latency
+> between steps, terminal outcome from the last `TaskSucceeded`/`TaskFailed`, optional token usage) into
+> the single self-contained Markdown document the task below specifies. **Still owed:** nothing in
+> `apps/desktop` calls it yet — no IPC channel, no "save/share report" affordance in the Agent Console, no
+> wiring to `EventJournal.readRecent`/`TokenStore`/the history turn's goal for real data. A report exists
+> only from data handed to `buildRunReport` directly, same caveat as the receipt above.
 
 ## Tasks
 
@@ -56,7 +64,7 @@ append-only Journal.
       sent) for non-repudiation of WHEN (keeps local-first default) — not started
 - [ ] _Risk:_ chaining over redacted payloads proves the redacted record is intact, not the original PII →
       hash the pre-redaction content into a sealed **local-only** digest so redaction is itself provable — not started; recorded as an open risk in [ADR-0030](../../docs/adr/0030-notary-service.md)
-- [ ] **An unsigned, human-readable run report — shippable BEFORE the wiring above, and that is the point.**
+- [~] **An unsigned, human-readable run report — shippable BEFORE the wiring above, and that is the point.**
       Because nothing in `apps/desktop` calls the Notary yet, **no run produces any artifact at all today**.
       A single self-contained file per run (goal, each step with its tool call, arguments, result, latency
       and policy decision, screenshots inline, terminal reason, token cost) gives a user something to read,
@@ -64,7 +72,14 @@ append-only Journal.
       Three constraints keep it honest: it is **explicitly labelled "not a proof"** so it is never confused
       with a Replay Receipt; it runs the same Logger-grade redaction as the journal; and it is a _view over_
       journal events, never a second source of truth — the day the Notary is wired, the same events sign
-      without the report changing shape. **Four separate tracks converged on this**, which is the strongest
+      without the report changing shape.
+      _(landed: [run-report.ts](../../packages/notary/src/run-report.ts) — `buildRunReport` structures one
+      run's events (latency, terminal outcome, optional token usage) and `renderRunReportMarkdown` renders
+      the document; both pure/tested, no redaction of their own since journal events are already redacted
+      at append time. **Owed:** desktop wiring — an IPC channel reading `EventJournal`/`TokenStore` for a
+      real `runId` and an Agent Console affordance to save/share the result; screenshots-inline is not yet
+      in scope.)_
+      **Four separate tracks converged on this**, which is the strongest
       single signal in the parity set:
       [`../tracks/openai-cua-sample-agent-parity.md`](../../docs/parities/openai-cua-sample-agent-parity.md) P1,
       [`../tracks/nova-act-agent-parity.md`](../../docs/parities/nova-act-agent-parity.md) P1,
