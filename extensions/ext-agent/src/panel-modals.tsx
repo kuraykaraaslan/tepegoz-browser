@@ -112,6 +112,12 @@ export function PanelModals({
               {planPreview.sites.join(', ')}
             </p>
           )}
+          {planPreview.guaranteedApprovals > 0 && (
+            <p className="mt-2 text-xs text-text-secondary">
+              <span className="font-medium text-text-primary">{a.planGuaranteedApprovals}:</span>{' '}
+              {planPreview.guaranteedApprovals}
+            </p>
+          )}
           <ul className="mt-3 space-y-1.5 overflow-auto">
             {planPreview.steps.map((step, i) => (
               <li key={step.id}>

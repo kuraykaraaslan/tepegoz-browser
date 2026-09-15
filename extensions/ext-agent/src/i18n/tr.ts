@@ -73,6 +73,7 @@ export const tr: AgentStrings = {
     destructive: 'Geri alınamaz',
   },
   planSites: 'Bu planın etkileşeceği siteler',
+  planGuaranteedApprovals: 'Her zaman onayınızı gerektirecek adımlar',
   // İnsana Devir Denetleyicisi — CAPTCHA / 2FA / giriş duvarı algılandığında ajan kontrolü geri verir.
   handoff: {
     notifyTitle: 'Sıra sizde — Tepegöz duraklattı',

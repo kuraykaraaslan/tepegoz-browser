@@ -26,10 +26,15 @@ append-only Journal.
 - [~] **Pre-flight Cost & Risk Contract** shown + accepted before run; on failure the auto-refund is a
       verifiable before/after diff against the contract
       _(2026-09-15: the plan-preview modal — already blocking, already accepted before a run — now shows
-      each step's declared danger class AND which sites the plan will touch (reusing `planGrantScope`'s
-      own URL-collection heuristic, so the preview and the grant it leads to can never disagree about
-      scope). Cost estimation, the HITL-gate count, and the refund diff are still open; see the task note
-      below.)_
+      each step's declared danger class, which sites the plan will touch (reusing `planGrantScope`'s own
+      URL-collection heuristic, so the preview and the grant it leads to can never disagree about scope),
+      AND a floor count of `guaranteedApprovals` — steps whose `classifyRisk`-derived tier is one
+      `NEVER_AUTO_GRANTABLE_TIERS` names, which per `risk-tier.ts`'s own invariant asks a human "every
+      time", under every autonomy level, no exceptions. Shown only when > 0 (a "0" line would misleadingly
+      read as "nothing will ask for approval" — this is a floor, not the total, since `ask`/`notify`
+      autonomy prompts for more than just these tiers, and that fuller count needs the live Policy Kernel,
+      unavailable at plan-preview time). Cost estimation and the refund diff are still open; see the task
+      note below.)_
 - [~] **Data Rights**: a subject-access export + a **provable erasure** (tombstone + blob-refcount decrement)
       complete end-to-end; erasure is itself an append-only recorded event
       _(2026-09-15: subject-access export is real — see the task note below — but read-only; erasure is
@@ -224,7 +229,7 @@ append-only Journal.
 
 - [~] Before any task runs, surface a binding **Run Contract**: estimated token cost (from the DAG cost
       estimator), highest danger-class node, count of HITL gates, which adapters/sites will be touched
-      _(2026-09-15, two of the four corners landed. **Highest danger-class node:** the plan-preview
+      _(2026-09-15, three of the four corners landed. **Highest danger-class node:** the plan-preview
       modal (already a blocking pre-flight gate, `requestPlanApproval` in `ipc-agent-run.ts`) now carries
       each step's DECLARED `dangerClass` from `CapabilityRegistry`, and `panel-modals.tsx` renders it as
       a badge — read-only steps stay unbadged so the signal does not train the user to stop looking.
@@ -235,11 +240,15 @@ append-only Journal.
       now carries `sites` — deduped hostnames from `planGrantScope`'s existing URL-collection heuristic
       (entry tab + every URL found in a step's arguments), the SAME computation `mintPlanGrant` already
       used to size the approval grant, so the preview a user reads and the grant they approve can never
-      silently disagree about scope. **Not attempted:** the token-cost estimate (no DAG cost estimator
-      exists anywhere in the codebase yet — a real modeling exercise, not a wiring one, and a wrong
-      estimate would be worse than none), the HITL-gate count (needs `resolveAutonomy` against user
-      prefs, which the plan-preview does not currently evaluate per step), and the post-run verifiable
-      refund diff.)_
+      silently disagree about scope. **Count of HITL gates (a FLOOR, not the total):** `guaranteedApprovals`
+      — this turned out achievable without `resolveAutonomy`/the live Policy Kernel after all:
+      `classifyRisk` (already used by `planGrantScope`) is a pure function of a step's declared
+      `dangerClass` + its own arguments, so calling it per step and counting how many land in
+      `NEVER_AUTO_GRANTABLE_TIERS` gives an ALWAYS-TRUE lower bound — those tiers prompt under every
+      autonomy level, no exceptions, so this can never overclaim. Rendered only when > 0. **Not
+      attempted:** the token-cost estimate (no DAG cost estimator exists anywhere in the codebase yet — a
+      real modeling exercise, not a wiring one, and a wrong estimate would be worse than none) and the
+      post-run verifiable refund diff.)_
 - [ ] User accepts (recorded as an event); on failure/loop/abort the Token-Ledger auto-refund is shown as a
       reconciled before/after with a verifiable diff ("promised ≤X, spent Y, refunded Z"), replayable from the
       Journal — weaponizes competitors' #1/#2 cost complaints (no refund, no pre-cost telegraphing)

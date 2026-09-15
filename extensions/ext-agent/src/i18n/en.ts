@@ -76,6 +76,10 @@ export const en = {
   // "Sites this plan will touch" — best-effort (see AgentPlanPreview.sites' own doc), so it is labelled
   // as a plan property, not a guarantee.
   planSites: 'Sites this plan will touch',
+  // A label + bare count ("Steps that will always need your approval: 2") rather than a sentence with
+  // the number in it, deliberately — it reads correctly for 0, 1, or any N with no plural handling
+  // needed. See AgentPlanPreview.guaranteedApprovals' own doc: this is a FLOOR, not the total.
+  planGuaranteedApprovals: 'Steps that will always need your approval',
   // Human Handoff Controller — shown when a CAPTCHA / 2FA / login wall is detected and the agent hands back.
   handoff: {
     notifyTitle: 'Your turn — Tepegöz paused',

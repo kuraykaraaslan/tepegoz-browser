@@ -7,10 +7,15 @@ import { agentDict } from './i18n';
 import type { AgentPlanPreview } from './types';
 
 /**
- * The plan-preview modal's per-step declared-danger-class badge and "sites touched" line (Phase 7
- * "Pre-flight Cost & Risk Contract" — the two halves achievable before any step runs).
+ * The plan-preview modal's per-step declared-danger-class badge, "sites touched" line, and
+ * "guaranteed approvals" count (Phase 7 "Pre-flight Cost & Risk Contract" — the corners achievable
+ * before any step runs).
  */
-function show(steps: AgentPlanPreview['steps'], sites: string[] = []) {
+function show(
+  steps: AgentPlanPreview['steps'],
+  sites: string[] = [],
+  guaranteedApprovals = 0,
+) {
   const preview: AgentPlanPreview = {
     runId: 'run-1',
     groupId: 'g1',
@@ -18,6 +23,7 @@ function show(steps: AgentPlanPreview['steps'], sites: string[] = []) {
     goal: 'Buy milk',
     steps,
     sites,
+    guaranteedApprovals,
   };
   render(
     <PanelModals
@@ -69,5 +75,18 @@ describe('the plan-preview modal shows which sites the plan will touch', () => {
   it('shows no sites line at all when nothing could be identified', () => {
     show([{ id: 's1', tool: 'nav', rationale: 'go' }], []);
     expect(screen.queryByText('Sites this plan will touch:')).toBeNull();
+  });
+});
+
+describe('the plan-preview modal shows a floor count of guaranteed approvals', () => {
+  it('shows the count when at least one step is guaranteed to need approval', () => {
+    show([{ id: 's1', tool: 'files_delete_item', rationale: 'clean up' }], [], 2);
+    expect(screen.getByText('Steps that will always need your approval:')).toBeDefined();
+    expect(screen.getByText('2')).toBeDefined();
+  });
+
+  it('shows no line at all when the count is zero — this field is a FLOOR, so "0" would misleadingly read as "nothing will ask for approval" when other prompts can still fire', () => {
+    show([{ id: 's1', tool: 'nav', rationale: 'go' }], [], 0);
+    expect(screen.queryByText('Steps that will always need your approval:')).toBeNull();
   });
 });

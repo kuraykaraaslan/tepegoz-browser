@@ -9,7 +9,12 @@ import {
 } from '@tepegoz/desktop-ipc';
 import { AgentRunInputSchema } from '@tepegoz/desktop-ipc/schemas';
 import type { ConfirmRequest } from '@tepegoz/capability-plane';
-import { PlanGrantStore, REMEMBERED_GRANT_DAYS, resolveAutonomy } from '@tepegoz/security-policy';
+import {
+  classifyRisk,
+  PlanGrantStore,
+  REMEMBERED_GRANT_DAYS,
+  resolveAutonomy,
+} from '@tepegoz/security-policy';
 import { CapabilityRegistry } from '@tepegoz/capability-plane';
 import { TokenLedger } from '@tepegoz/model-gateway';
 import { TokenStore } from '@tepegoz/persistence';
@@ -530,25 +535,34 @@ export function registerAgentRunIpc(): void {
       const scope = planGrantScope(plan, entryUrl, (toolId) =>
         CapabilityRegistry.get(toolId)?.descriptor.dangerClass,
       );
+      // dangerClass is the tool's own DECLARED class (registration-time, static) — not the finer
+      // RiskTier a HITL prompt shows later, which depends on this step's actual arguments and is not
+      // known yet. Absent when the tool id does not resolve (a plan naming a tool this build has never
+      // registered), so the preview never crashes on an unrecognized step — and such a step cannot
+      // contribute to guaranteedApprovals either, the same "unknown tool contributes nothing" rule
+      // planGrantScope applies.
+      let guaranteedApprovals = 0;
+      const steps = plan.steps.map((s) => {
+        const dangerClass = CapabilityRegistry.get(s.tool)?.descriptor.dangerClass;
+        if (dangerClass !== undefined) {
+          const tier = classifyRisk({ descriptor: { id: s.tool, dangerClass }, args: s.args }).tier;
+          if (NEVER_AUTO_GRANTABLE_TIERS.includes(tier)) guaranteedApprovals += 1;
+        }
+        return {
+          id: s.id,
+          tool: s.tool,
+          rationale: s.rationale,
+          ...(dangerClass !== undefined ? { dangerClass } : {}),
+        };
+      });
       const preview: AgentPlanPreview = {
         runId,
         groupId,
         planId,
         goal: plan.goal,
-        // dangerClass is the tool's own DECLARED class (registration-time, static) — not the finer
-        // RiskTier a HITL prompt shows later, which depends on this step's actual arguments and is not
-        // known yet. Absent when the tool id does not resolve (a plan naming a tool this build has
-        // never registered), so the preview never crashes on an unrecognized step.
-        steps: plan.steps.map((s) => {
-          const dangerClass = CapabilityRegistry.get(s.tool)?.descriptor.dangerClass;
-          return {
-            id: s.id,
-            tool: s.tool,
-            rationale: s.rationale,
-            ...(dangerClass !== undefined ? { dangerClass } : {}),
-          };
-        }),
+        steps,
         sites: hostnamesOf(scope.urls),
+        guaranteedApprovals,
       };
       if (!sender.isDestroyed()) sender.send(IpcChannels.agentPlanPreview, preview);
       return new Promise<PlanApprovalDecision>((resolve) => {

@@ -53,7 +53,9 @@ vi.mock('@tepegoz/shared-types', () => ({
   AgentDeltaSchema,
   CompletionOutcomeSchema,
   MAX_DELTA_TEXT: 2000,
-  NEVER_AUTO_GRANTABLE_TIERS: [] as string[],
+  // The real, small, stable constant — not an empty stub — so a test can actually exercise "this tier
+  // is one of the ones that always prompts" without also having to fake the constant's own contents.
+  NEVER_AUTO_GRANTABLE_TIERS: ['financial', 'credential', 'destructive'] as string[],
 }));
 
 const PlanGrantStore = vi.hoisted(() => ({
@@ -65,10 +67,14 @@ const PlanGrantStore = vi.hoisted(() => ({
 const resolveAutonomy = vi.hoisted(() =>
   vi.fn<() => { decision: string; reason: string }>(() => ({ decision: 'ask', reason: 'r' })),
 );
+const classifyRisk = vi.hoisted(() =>
+  vi.fn<() => { tier: string; reasons: string[] }>(() => ({ tier: 'read', reasons: [] })),
+);
 vi.mock('@tepegoz/security-policy', () => ({
   PlanGrantStore,
   REMEMBERED_GRANT_DAYS: 30,
   resolveAutonomy,
+  classifyRisk,
 }));
 const capabilityRegistry = vi.hoisted(() => ({
   get: vi.fn((): { descriptor: { dangerClass?: string } } | undefined => undefined),
@@ -525,6 +531,43 @@ describe('the injected requestPlanApproval hook', () => {
           { id: 's2', tool: 'unregistered_tool', rationale: 'unknown to this build' },
         ],
       }),
+    );
+  });
+
+  it('counts guaranteedApprovals as the steps whose classified tier is never-auto-grantable', async () => {
+    await run();
+    const threeStepPlan = {
+      goal: 'x',
+      steps: [
+        { id: 's1', tool: 'files_delete_item', rationale: 'a', args: {} },
+        { id: 's2', tool: 'nav', rationale: 'b', args: {} },
+        { id: 's3', tool: 'payments_send_money', rationale: 'c', args: {} },
+      ],
+    };
+    // mockReturnValueOnce ×3, not a persistent mockReturnValue — this must not leak into later tests.
+    capabilityRegistry.get
+      .mockReturnValueOnce({ descriptor: { dangerClass: 'destructive' } })
+      .mockReturnValueOnce({ descriptor: { dangerClass: 'read' } })
+      .mockReturnValueOnce({ descriptor: { dangerClass: 'financial' } });
+    classifyRisk
+      .mockReturnValueOnce({ tier: 'destructive', reasons: [] }) // s1 — counts
+      .mockReturnValueOnce({ tier: 'ui-write', reasons: [] }) // s2 — does not
+      .mockReturnValueOnce({ tier: 'financial', reasons: [] }); // s3 — counts
+    void hooksArg().requestPlanApproval(threeStepPlan);
+    expect(send).toHaveBeenCalledWith(
+      IpcChannels.agentPlanPreview,
+      expect.objectContaining({ guaranteedApprovals: 2 }),
+    );
+  });
+
+  it('never counts a step whose tool did not resolve — unknown contributes nothing, same as its dangerClass', async () => {
+    await run();
+    capabilityRegistry.get.mockReturnValueOnce(undefined);
+    void hooksArg().requestPlanApproval(plan);
+    expect(classifyRisk).not.toHaveBeenCalled();
+    expect(send).toHaveBeenCalledWith(
+      IpcChannels.agentPlanPreview,
+      expect.objectContaining({ guaranteedApprovals: 0 }),
     );
   });
 

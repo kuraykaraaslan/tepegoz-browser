@@ -152,6 +152,15 @@ export interface AgentPlanPreview {
    * arguments never spell out literally). Empty when nothing could be identified.
    */
   sites: string[];
+  /**
+   * A FLOOR, not the total: how many steps classify into a tier `NEVER_AUTO_GRANTABLE_TIERS` names
+   * (financial/credential/destructive) — the ones that ask for approval under every autonomy level and
+   * every grant, no exceptions (`risk-tier.ts`: "a human decides each one, every time"). The `ask`/
+   * `notify` autonomy levels prompt for MORE than just these, but that count depends on the live Policy
+   * Kernel (site state, taint), which is not available yet at plan-preview time — showing a number that
+   * could later read as an undercount is safer than showing one that could read as a false promise.
+   */
+  guaranteedApprovals: number;
 }
 
 export interface AgentRunResult {
