@@ -2,11 +2,12 @@ import { shell } from 'electron';
 import { AppError } from '@tepegoz/libs';
 import { IpcChannels } from '@tepegoz/desktop-ipc';
 import { DataRightsExportRequestSchema, type DataRightsExportResult } from '@tepegoz/shared-types';
-import { AgentConversationStore, EventJournal, HistoryStore } from '@tepegoz/persistence';
+import { AgentConversationStore, DownloadStore, EventJournal, HistoryStore } from '@tepegoz/persistence';
 import { BookmarkTreeStore } from '@tepegoz/bookmarks';
 import {
   buildSubjectAccessReport,
   renderSubjectAccessMarkdown,
+  searchDownloadsForSubject,
   searchEventsForSubject,
 } from '../privacy/subject-access-search';
 import { getDb } from '../db/database.electron';
@@ -24,6 +25,7 @@ import { handleAsync } from './ipc-helpers';
 // other search dimensions' own caps.
 const MAX_HISTORY_MATCHES = 500;
 const MAX_BOOKMARK_MATCHES = 500;
+const MAX_DOWNLOAD_ROWS = 500;
 
 export function registerDataRightsIpc(): void {
   handleAsync(
@@ -37,6 +39,10 @@ export function registerDataRightsIpc(): void {
       const matchedTurns = AgentConversationStore.searchTurnsForSubject(db, subject);
       const matchedHistory = HistoryStore.search(db, subject, MAX_HISTORY_MATCHES, 0);
       const matchedBookmarks = BookmarkTreeStore.search(db, subject, MAX_BOOKMARK_MATCHES);
+      // Downloads have no fold-column index either — the same reasoning as the Journal below, but
+      // bounded to DownloadStore.list's own recent-first window rather than truly unbounded.
+      const recentDownloads = DownloadStore.list(db, MAX_DOWNLOAD_ROWS);
+      const matchedDownloads = searchDownloadsForSubject(recentDownloads, subject);
       // Unbounded — the Journal has no fold-column index to search by (see subject-access-search.ts's
       // module doc), so this reads every row this device has ever written. Fine at today's scale; a
       // known limit worth revisiting once a real install has years of history.
@@ -52,6 +58,7 @@ export function registerDataRightsIpc(): void {
           matchedTurns,
           matchedHistory,
           matchedBookmarks,
+          matchedDownloads,
         }),
       );
       const now = new Date(generatedAt);
@@ -69,6 +76,7 @@ export function registerDataRightsIpc(): void {
         matchedEvents: matchedEvents.length,
         matchedHistoryEntries: matchedHistory.length,
         matchedBookmarks: matchedBookmarks.length,
+        matchedDownloads: matchedDownloads.length,
         filePath,
       };
     },

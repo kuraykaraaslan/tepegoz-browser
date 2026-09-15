@@ -4,10 +4,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
  * `registerDataRightsIpc` — `privacy:data-rights-export` (Phase 7 Data Rights, first slice). Pinned: it
  * is NOT gated behind the agent-enabled guard (past data stays exportable even with the extension off);
  * it 503s with no search attempted when there is no database; it searches the conversation store, the
- * full Event Journal, browsing History, and Bookmarks (real `searchEventsForSubject`/
- * `buildSubjectAccessReport`/`renderSubjectAccessMarkdown`, not mocked — a thin adapter is exactly where
- * a real check is cheap); and it writes + reveals the Markdown, returning accurate match counts across
- * all four dimensions.
+ * full Event Journal, browsing History, Bookmarks, and Downloads (real `searchEventsForSubject`/
+ * `searchDownloadsForSubject`/`buildSubjectAccessReport`/`renderSubjectAccessMarkdown`, not mocked — a
+ * thin adapter is exactly where a real check is cheap); and it writes + reveals the Markdown, returning
+ * accurate match counts across all five dimensions.
  */
 
 const helpers = vi.hoisted(() => ({
@@ -29,10 +29,12 @@ const conversationStore = vi.hoisted(() => ({
 }));
 const journal = vi.hoisted(() => ({ readFrom: vi.fn(() => [] as unknown[]) }));
 const historyStore = vi.hoisted(() => ({ search: vi.fn(() => [] as unknown[]) }));
+const downloadStore = vi.hoisted(() => ({ list: vi.fn(() => [] as unknown[]) }));
 vi.mock('@tepegoz/persistence', () => ({
   AgentConversationStore: conversationStore,
   EventJournal: journal,
   HistoryStore: historyStore,
+  DownloadStore: downloadStore,
 }));
 const bookmarkStore = vi.hoisted(() => ({ search: vi.fn(() => [] as unknown[]) }));
 vi.mock('@tepegoz/bookmarks', () => ({ BookmarkTreeStore: bookmarkStore }));
@@ -56,6 +58,7 @@ const call = (payload: unknown) =>
     matchedEvents: number;
     matchedHistoryEntries: number;
     matchedBookmarks: number;
+    matchedDownloads: number;
     filePath: string;
   }>;
 
@@ -67,6 +70,7 @@ beforeEach(() => {
   journal.readFrom.mockReturnValue([]);
   historyStore.search.mockReturnValue([]);
   bookmarkStore.search.mockReturnValue([]);
+  downloadStore.list.mockReturnValue([]);
   fsHost.writeExport.mockResolvedValue('/home/u/tepegoz/export.md');
   registerDataRightsIpc();
 });
@@ -79,11 +83,12 @@ describe('registerDataRightsIpc', () => {
     expect(fsHost.writeExport).not.toHaveBeenCalled();
   });
 
-  it('searches conversations + history + bookmarks SCOPED to the subject, and reads the FULL journal (no fold index to scope by)', async () => {
+  it('searches conversations + history + bookmarks SCOPED to the subject, lists recent downloads, and reads the FULL journal (no fold index to scope by)', async () => {
     await call({ subject: 'kaya@example.com' });
     expect(conversationStore.searchTurnsForSubject).toHaveBeenCalledWith({}, 'kaya@example.com');
     expect(historyStore.search).toHaveBeenCalledWith({}, 'kaya@example.com', 500, 0);
     expect(bookmarkStore.search).toHaveBeenCalledWith({}, 'kaya@example.com', 500);
+    expect(downloadStore.list).toHaveBeenCalledWith({}, 500);
     expect(journal.readFrom).toHaveBeenCalledWith({}, 0);
   });
 
@@ -130,6 +135,13 @@ describe('registerDataRightsIpc', () => {
     bookmarkStore.search.mockReturnValue([
       { url: 'https://example.com/kaya-bm', title: 'Kaya (bookmarked)', ts: 1600, favicon: null },
     ]);
+    downloadStore.list.mockReturnValue([
+      // searchDownloadsForSubject runs a REAL filter (downloads have no fold-index to pre-filter by,
+      // unlike history/bookmarks above), so unlike those mocks this fixture must actually contain the
+      // subject for the match to happen.
+      { id: 'd1', filename: 'kaya@example.com-report.pdf', url: 'https://example.com/d', createdAt: 1700 },
+      { id: 'd2', filename: 'unrelated.zip', url: 'https://example.com/z', createdAt: 1800 },
+    ]);
 
     const result = await call({ subject: 'kaya@example.com' });
 
@@ -139,6 +151,7 @@ describe('registerDataRightsIpc', () => {
       matchedEvents: 1,
       matchedHistoryEntries: 1,
       matchedBookmarks: 1,
+      matchedDownloads: 1,
       filePath: '/home/u/tepegoz/export.md',
     });
     expect(shell.showItemInFolder).toHaveBeenCalledWith('/home/u/tepegoz/export.md');
@@ -151,6 +164,7 @@ describe('registerDataRightsIpc', () => {
     expect(markdown).toContain('contacted kaya@example.com');
     expect(markdown).toContain('[Kaya profile](https://example.com/kaya)');
     expect(markdown).toContain('[Kaya (bookmarked)](https://example.com/kaya-bm)');
+    expect(markdown).toContain('[kaya@example.com-report.pdf](https://example.com/d)');
     expect(markdown).not.toContain('unrelated');
   });
 });

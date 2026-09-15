@@ -1,30 +1,30 @@
 import { foldForSearch } from '@tepegoz/i18n';
 import type { EventRecord } from '@tepegoz/shared-types';
 import type { AgentConversationTurn } from '@tepegoz/ext-agent/history';
-import type { HistoryEntry } from '@tepegoz/persistence';
+import type { HistoryEntry, PersistedDownload } from '@tepegoz/persistence';
 import type { BookmarkEntry } from '@tepegoz/bookmarks';
 
 /**
  * Data Rights — subject-access search (Phase 7, KVKK/GDPR self-service, first slice). Treats the local
- * Event Journal + Agent Conversation store + browsing History + Bookmarks as a queryable personal-data
- * corpus: given a subject string (an email, a name, a domain — whatever the requester was called in
- * what was said TO or BY the agent, or visible in a URL/page title/bookmark tag), find every place it
- * appears and render a portable, human-readable disclosure document.
+ * Event Journal + Agent Conversation store + browsing History + Bookmarks + Downloads as a queryable
+ * personal-data corpus: given a subject string (an email, a name, a domain — whatever the requester was
+ * called in what was said TO or BY the agent, or visible in a URL/page title/bookmark tag/filename),
+ * find every place it appears and render a portable, human-readable disclosure document.
  *
  * Deliberately narrower than the phase's own aspiration ("events, FTS5 memory, CAS blobs"): this is
  * agent-conversation turns (raw, unredacted — a subject-access response has to show the real data),
  * Event Journal payloads (already redacted at append time, so a secret never leaves via this path
- * either), browsing History, and Bookmarks — the latter two both via `HistoryStore.search`/
- * `BookmarkTreeStore.search`, the SAME folded-LIKE queries the History page and the bookmarks manager
- * already run — no separate search rule for this module to invent. Downloads and the CAS blob store are
- * not yet in scope — a real gap, recorded as such rather than implied to be covered.
+ * either), browsing History and Bookmarks (both via `HistoryStore.search`/`BookmarkTreeStore.search`,
+ * the SAME folded-LIKE queries their own pages already run), and Downloads (`DownloadStore.list` — no
+ * fold-column index exists for downloads, so this one matches in JS, the same as the Journal). The CAS
+ * blob store is not yet in scope — a real gap, recorded as such rather than implied to be covered.
  *
- * The Event Journal has no fold-column index (unlike the other three sources, which each reuse their
- * own store's existing folded-LIKE contract), so matching runs in JS over whatever the caller hands in —
- * the caller decides how much history that is.
+ * Two of the five sources (Journal, Downloads) have no fold-column index, so matching for those runs in
+ * JS over whatever the caller hands in — the caller decides how much history that is.
  */
 
 const MAX_EVENT_MATCHES = 500;
+const MAX_DOWNLOAD_MATCHES = 500;
 
 /** Every event whose actor, correlationId, or payload (stringified) mentions `subject`, Turkish-fold
  *  matched the same way `AgentConversationStore` does. Capped, oldest-first within the input order. */
@@ -51,6 +51,25 @@ export function searchEventsForSubject(
   return matches;
 }
 
+/** Every download whose filename or URL mentions `subject`, Turkish-fold matched the same way every
+ *  other dimension here is. Capped, in list order (`DownloadStore.list`'s own — newest first). */
+export function searchDownloadsForSubject(
+  downloads: readonly PersistedDownload[],
+  subject: string,
+): PersistedDownload[] {
+  const needle = foldForSearch(subject);
+  if (needle.length === 0) return [];
+  const matches: PersistedDownload[] = [];
+  for (const d of downloads) {
+    const haystack = foldForSearch(`${d.filename} ${d.url}`);
+    if (haystack.includes(needle)) {
+      matches.push(d);
+      if (matches.length >= MAX_DOWNLOAD_MATCHES) break;
+    }
+  }
+  return matches;
+}
+
 export interface SubjectAccessReport {
   subject: string;
   generatedAt: number;
@@ -58,12 +77,13 @@ export interface SubjectAccessReport {
   matchedTurns: readonly AgentConversationTurn[];
   matchedHistory: readonly HistoryEntry[];
   matchedBookmarks: readonly BookmarkEntry[];
+  matchedDownloads: readonly PersistedDownload[];
 }
 
 /** Structure a subject-access search's already-matched slices (from `searchEventsForSubject`,
- *  `AgentConversationStore.searchTurnsForSubject`, `HistoryStore.search`, and
- *  `BookmarkTreeStore.search`) into one report. Pure — no I/O, no further filtering; the caller already
- *  did every search. */
+ *  `AgentConversationStore.searchTurnsForSubject`, `HistoryStore.search`, `BookmarkTreeStore.search`,
+ *  and `searchDownloadsForSubject`) into one report. Pure — no I/O, no further filtering; the caller
+ *  already did every search. */
 export function buildSubjectAccessReport(input: {
   subject: string;
   generatedAt: number;
@@ -71,6 +91,7 @@ export function buildSubjectAccessReport(input: {
   matchedTurns: readonly AgentConversationTurn[];
   matchedHistory: readonly HistoryEntry[];
   matchedBookmarks: readonly BookmarkEntry[];
+  matchedDownloads: readonly PersistedDownload[];
 }): SubjectAccessReport {
   return {
     subject: input.subject,
@@ -79,6 +100,7 @@ export function buildSubjectAccessReport(input: {
     matchedTurns: input.matchedTurns,
     matchedHistory: input.matchedHistory,
     matchedBookmarks: input.matchedBookmarks,
+    matchedDownloads: input.matchedDownloads,
   };
 }
 
@@ -94,10 +116,20 @@ export function renderSubjectAccessMarkdown(report: SubjectAccessReport): string
   lines.push('');
   lines.push(
     `> Generated ${isoOrUnknown(report.generatedAt)}. A local search of the Agent Conversation ` +
-      'history, the Event Journal, browsing History, and Bookmarks for anything mentioning this ' +
-      'subject. Downloads and stored files are **not yet covered** by this search.',
+      'history, the Event Journal, browsing History, Bookmarks, and Downloads for anything ' +
+      'mentioning this subject. The stored-file (blob) store is **not yet covered** by this search.',
   );
   lines.push('');
+  lines.push(`## Downloads (${String(report.matchedDownloads.length)})`);
+  lines.push('');
+  if (report.matchedDownloads.length === 0) {
+    lines.push('_No download mentions this subject._');
+  } else {
+    for (const d of report.matchedDownloads) {
+      lines.push(`- [${isoOrUnknown(d.createdAt)}] [${d.filename}](${d.url})`);
+    }
+    lines.push('');
+  }
   lines.push(`## Browsing history (${String(report.matchedHistory.length)})`);
   lines.push('');
   if (report.matchedHistory.length === 0) {

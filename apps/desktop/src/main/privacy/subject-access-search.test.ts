@@ -1,11 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import type { EventRecord } from '@tepegoz/shared-types';
 import type { AgentConversationTurn } from '@tepegoz/ext-agent/history';
-import type { HistoryEntry } from '@tepegoz/persistence';
+import type { HistoryEntry, PersistedDownload } from '@tepegoz/persistence';
 import type { BookmarkEntry } from '@tepegoz/bookmarks';
 import {
   buildSubjectAccessReport,
   renderSubjectAccessMarkdown,
+  searchDownloadsForSubject,
   searchEventsForSubject,
 } from './subject-access-search';
 
@@ -67,6 +68,24 @@ function bookmarkEntry(over: Partial<BookmarkEntry> = {}): BookmarkEntry {
   };
 }
 
+function download(over: Partial<PersistedDownload> = {}): PersistedDownload {
+  return {
+    id: 'd1',
+    url: 'https://example.com/kaya.pdf',
+    filename: 'kaya.pdf',
+    status: 'completed',
+    risk: 'normal',
+    trustVerdict: 'safe',
+    receivedBytes: 100,
+    totalBytes: 100,
+    canResume: false,
+    createdAt: 1000,
+    updatedAt: 1000,
+    provenance: { actor: 'user' },
+    ...over,
+  };
+}
+
 describe('searchEventsForSubject', () => {
   it('matches on the payload text', () => {
     const events = [event({ payload: { message: 'about kaya@example.com' } })];
@@ -101,6 +120,25 @@ describe('searchEventsForSubject', () => {
   });
 });
 
+describe('searchDownloadsForSubject', () => {
+  it('matches on filename or URL', () => {
+    expect(searchDownloadsForSubject([download({ filename: 'kaya-report.pdf' })], 'kaya')).toHaveLength(
+      1,
+    );
+    expect(
+      searchDownloadsForSubject([download({ url: 'https://kaya.example/x' })], 'kaya'),
+    ).toHaveLength(1);
+  });
+
+  it('returns nothing for an empty subject', () => {
+    expect(searchDownloadsForSubject([download()], '')).toEqual([]);
+  });
+
+  it('is empty for a subject nothing mentions', () => {
+    expect(searchDownloadsForSubject([download()], 'nobody-mentioned-this')).toEqual([]);
+  });
+});
+
 describe('buildSubjectAccessReport', () => {
   it('orders matched events by lsn regardless of input order', () => {
     const report = buildSubjectAccessReport({
@@ -110,13 +148,14 @@ describe('buildSubjectAccessReport', () => {
       matchedTurns: [],
       matchedHistory: [],
       matchedBookmarks: [],
+      matchedDownloads: [],
     });
     expect(report.matchedEvents.map((e) => e.id)).toEqual(['e1', 'e2']);
   });
 });
 
 describe('renderSubjectAccessMarkdown', () => {
-  it('includes the subject, matched conversation content, matched journal events, matched history, and matched bookmarks', () => {
+  it('includes the subject, matched conversation content, matched journal events, matched history, matched bookmarks, and matched downloads', () => {
     const report = buildSubjectAccessReport({
       subject: 'kaya@example.com',
       generatedAt: 5000,
@@ -124,6 +163,7 @@ describe('renderSubjectAccessMarkdown', () => {
       matchedTurns: [turn({ responseSummary: 'Sent.' })],
       matchedHistory: [historyEntry({ title: 'Kaya — Example', url: 'https://example.com/kaya' })],
       matchedBookmarks: [bookmarkEntry({ title: 'Kaya (bookmarked)', url: 'https://example.com/b' })],
+      matchedDownloads: [download({ filename: 'kaya-report.pdf', url: 'https://example.com/d' })],
     });
     const md = renderSubjectAccessMarkdown(report);
     expect(md).toContain('kaya@example.com');
@@ -132,6 +172,7 @@ describe('renderSubjectAccessMarkdown', () => {
     expect(md).toContain('AgentStepExecuted');
     expect(md).toContain('[Kaya — Example](https://example.com/kaya)');
     expect(md).toContain('[Kaya (bookmarked)](https://example.com/b)');
+    expect(md).toContain('[kaya-report.pdf](https://example.com/d)');
   });
 
   it('falls back to the bare URL when a history entry or a bookmark has no title', () => {
@@ -142,6 +183,7 @@ describe('renderSubjectAccessMarkdown', () => {
       matchedTurns: [],
       matchedHistory: [historyEntry({ title: '', url: 'https://example.com/kaya' })],
       matchedBookmarks: [bookmarkEntry({ title: '', url: 'https://example.com/b' })],
+      matchedDownloads: [],
     });
     const md = renderSubjectAccessMarkdown(report);
     expect(md).toContain('[https://example.com/kaya](https://example.com/kaya)');
@@ -156,15 +198,17 @@ describe('renderSubjectAccessMarkdown', () => {
       matchedTurns: [],
       matchedHistory: [],
       matchedBookmarks: [],
+      matchedDownloads: [],
     });
     const md = renderSubjectAccessMarkdown(report);
     expect(md).toContain('No conversation turn mentions this subject');
     expect(md).toContain('No journal event mentions this subject');
     expect(md).toContain('No history entry mentions this subject');
     expect(md).toContain('No bookmark mentions this subject');
+    expect(md).toContain('No download mentions this subject');
   });
 
-  it('discloses the coverage gap up front — downloads/stored files are not searched yet', () => {
+  it('discloses the coverage gap up front — the stored-file (blob) store is not searched yet', () => {
     const report = buildSubjectAccessReport({
       subject: 'x',
       generatedAt: 0,
@@ -172,6 +216,7 @@ describe('renderSubjectAccessMarkdown', () => {
       matchedTurns: [],
       matchedHistory: [],
       matchedBookmarks: [],
+      matchedDownloads: [],
     });
     const md = renderSubjectAccessMarkdown(report);
     expect(md).toContain('not yet covered');

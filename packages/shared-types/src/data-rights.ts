@@ -20,6 +20,7 @@ export interface DataRightsExportResult {
   matchedEvents: number;
   matchedHistoryEntries: number;
   matchedBookmarks: number;
+  matchedDownloads: number;
   /** Absolute path to the written Markdown SAR document. */
   filePath: string;
 }
