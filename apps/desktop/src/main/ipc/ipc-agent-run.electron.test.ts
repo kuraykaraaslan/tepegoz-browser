@@ -528,6 +528,33 @@ describe('the injected requestPlanApproval hook', () => {
     );
   });
 
+  it('sends deduped hostnames from planGrantScope’s URLs as "sites", dropping anything unparseable', async () => {
+    await run();
+    planGrantScopeMock.mockReturnValueOnce({
+      urls: ['https://a.example/cart', 'https://a.example/checkout', 'https://b.example/', 'not-a-url'],
+      tiers: [],
+    });
+    void hooksArg().requestPlanApproval(plan);
+    expect(send).toHaveBeenCalledWith(
+      IpcChannels.agentPlanPreview,
+      expect.objectContaining({ sites: ['a.example', 'b.example'] }),
+    );
+  });
+
+  it('derives the plan-scope entry URL from the active tab, the same input mintPlanGrant uses', async () => {
+    await run();
+    bh.browserHost.listTabs.mockReturnValue([
+      { active: false, url: 'https://inactive.example' },
+      { active: true, url: 'https://active.example/page' },
+    ]);
+    void hooksArg().requestPlanApproval(plan);
+    expect(planGrantScopeMock).toHaveBeenCalledWith(
+      plan,
+      'https://active.example/page',
+      expect.any(Function),
+    );
+  });
+
   it('does not mint a grant when the renderer rejects the plan', async () => {
     await run();
     const pending = hooksArg().requestPlanApproval(plan);

@@ -73,6 +73,9 @@ export const en = {
     financial: 'Financial',
     destructive: 'Destructive',
   },
+  // "Sites this plan will touch" — best-effort (see AgentPlanPreview.sites' own doc), so it is labelled
+  // as a plan property, not a guarantee.
+  planSites: 'Sites this plan will touch',
   // Human Handoff Controller — shown when a CAPTCHA / 2FA / login wall is detected and the agent hands back.
   handoff: {
     notifyTitle: 'Your turn — Tepegöz paused',

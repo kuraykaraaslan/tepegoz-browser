@@ -106,6 +106,12 @@ export function PanelModals({
           {planPreview.goal.length > 0 && (
             <p className="mt-2 text-sm text-text-primary">{planPreview.goal}</p>
           )}
+          {planPreview.sites.length > 0 && (
+            <p className="mt-2 text-xs text-text-secondary">
+              <span className="font-medium text-text-primary">{a.planSites}:</span>{' '}
+              {planPreview.sites.join(', ')}
+            </p>
+          )}
           <ul className="mt-3 space-y-1.5 overflow-auto">
             {planPreview.steps.map((step, i) => (
               <li key={step.id}>

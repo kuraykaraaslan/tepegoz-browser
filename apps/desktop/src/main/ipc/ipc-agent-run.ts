@@ -73,6 +73,21 @@ function scopeHostField(url: string): { scopeHost?: string } {
   }
 }
 
+/** Deduped hostnames for the plan-preview "sites touched" line — an unparseable entry (a step's
+ *  arguments matched something URL-shaped that `new URL` still rejects) is dropped rather than shown
+ *  as garbage. */
+function hostnamesOf(urls: readonly string[]): string[] {
+  const hosts = new Set<string>();
+  for (const u of urls) {
+    try {
+      hosts.add(new URL(u).host);
+    } catch {
+      // not a real URL — skip
+    }
+  }
+  return [...hosts];
+}
+
 /**
  * The completion outcome, validated before it leaves main.
  *
@@ -508,6 +523,13 @@ export function registerAgentRunIpc(): void {
         return Promise.resolve({ approved: true });
       }
       const planId = `plan-${randomUUID()}`;
+      // Same "entry tab + every URL found in a step's arguments" heuristic planGrantScope uses to size
+      // the approval grant, reused here rather than reinvented — the preview and the grant it leads to
+      // should never be able to disagree about what the plan touches.
+      const entryUrl = browserHost.listTabs().find((t) => t.active)?.url ?? null;
+      const scope = planGrantScope(plan, entryUrl, (toolId) =>
+        CapabilityRegistry.get(toolId)?.descriptor.dangerClass,
+      );
       const preview: AgentPlanPreview = {
         runId,
         groupId,
@@ -526,6 +548,7 @@ export function registerAgentRunIpc(): void {
             ...(dangerClass !== undefined ? { dangerClass } : {}),
           };
         }),
+        sites: hostnamesOf(scope.urls),
       };
       if (!sender.isDestroyed()) sender.send(IpcChannels.agentPlanPreview, preview);
       return new Promise<PlanApprovalDecision>((resolve) => {

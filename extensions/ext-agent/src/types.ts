@@ -145,6 +145,13 @@ export interface AgentPlanPreview {
   planId: string;
   goal: string;
   steps: AgentPlanStep[];
+  /**
+   * Hostnames the plan is expected to touch — the entry tab's origin plus any URL found in a step's
+   * arguments (best-effort text scan, the same heuristic `planGrantScope` already uses to size the
+   * approval grant; not a guarantee, since a tool can resolve a target at run time in a way its
+   * arguments never spell out literally). Empty when nothing could be identified.
+   */
+  sites: string[];
 }
 
 export interface AgentRunResult {

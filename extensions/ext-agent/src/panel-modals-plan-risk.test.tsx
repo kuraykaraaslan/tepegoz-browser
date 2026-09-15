@@ -7,16 +7,17 @@ import { agentDict } from './i18n';
 import type { AgentPlanPreview } from './types';
 
 /**
- * The plan-preview modal's per-step declared-danger-class badge (Phase 7 "Pre-flight Cost & Risk
- * Contract" — the "highest danger-class node" half, visible before any step runs).
+ * The plan-preview modal's per-step declared-danger-class badge and "sites touched" line (Phase 7
+ * "Pre-flight Cost & Risk Contract" — the two halves achievable before any step runs).
  */
-function show(steps: AgentPlanPreview['steps']) {
+function show(steps: AgentPlanPreview['steps'], sites: string[] = []) {
   const preview: AgentPlanPreview = {
     runId: 'run-1',
     groupId: 'g1',
     planId: 'plan-1',
     goal: 'Buy milk',
     steps,
+    sites,
   };
   render(
     <PanelModals
@@ -55,5 +56,18 @@ describe('the plan-preview modal shows each step’s declared danger class', () 
     expect(screen.queryByText('Destructive')).toBeNull();
     expect(screen.queryByText('Financial')).toBeNull();
     expect(screen.queryByText('Changes something')).toBeNull();
+  });
+});
+
+describe('the plan-preview modal shows which sites the plan will touch', () => {
+  it('lists the sites when the plan names any', () => {
+    show([{ id: 's1', tool: 'nav', rationale: 'go' }], ['a.example', 'b.example']);
+    expect(screen.getByText('Sites this plan will touch:')).toBeDefined();
+    expect(screen.getByText(/a\.example, b\.example/)).toBeDefined();
+  });
+
+  it('shows no sites line at all when nothing could be identified', () => {
+    show([{ id: 's1', tool: 'nav', rationale: 'go' }], []);
+    expect(screen.queryByText('Sites this plan will touch:')).toBeNull();
   });
 });
