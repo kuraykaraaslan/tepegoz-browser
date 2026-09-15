@@ -39,6 +39,15 @@ append-only Journal.
 > `buildReceipt` directly, which is how the whole test suite exercises it. The Accountability
 > Dashboard, Counterfactual Dry-Run, Cost & Risk Contract, and Data Rights export are untouched.
 >
+> **Update, 2026-09-15 — the migration/schema half of that gap is closed, the compute half is not.**
+> `events` now HAS `prev_hash`/`self_hash` columns (migration v26, nullable, no backfill — see the task
+> note below), and `EventRecord`/`EventInput` (`@tepegoz/shared-types`) carry optional `prevHash`/
+> `selfHash`. `EventJournal.append` persists them when a caller supplies both, and a new
+> `EventJournal.tailHash(db)` reads back the most recent hashed row's `selfHash` (null if none). It still
+> computes nothing itself — by design: `@tepegoz/notary`'s `selfHashOf` lives in a layer persistence must
+> not depend on, so the actual folding has to happen at a caller in `apps/desktop`, which is the piece
+> still not built. `buildReceipt` still only runs on data handed to it directly.
+>
 > **2026-09-15.** The unsigned run-report transform landed: `buildRunReport` + `renderRunReportMarkdown`
 > in `@tepegoz/notary` (79 tests now), structuring one run's Journal events (ordered by `lsn`, latency
 > between steps, terminal outcome from the last `TaskSucceeded`/`TaskFailed`, optional token usage) into
@@ -70,10 +79,17 @@ append-only Journal.
   case that matters most for a signing key: a stored-but-undecryptable or malformed key THROWS instead of
   silently minting a replacement, because a silent replacement would orphan every checkpoint already
   signed under the old key with no record of why verification later fails. Nothing calls
-  `getOrCreate()` yet. **Still owed:** the migration adding chain columns to the `events` table (needs
-  the `database-change-delivery.md` blocking-rule review CLAUDE.md calls out — deliberately not done in
-  the same pass as the key), `EventJournal.append` computing `prevHash`/`selfHash`, and the periodic
-  checkpoint fold that actually calls this key.)_
+  `getOrCreate()` yet.
+  **Also landed, same day:** migration v26 (`prev_hash`/`self_hash` on `events`, nullable, no backfill —
+  a pre-existing row was never actually chained, so it stays NULL forever rather than pretending
+  otherwise) + the matching optional `prevHash`/`selfHash` fields on `EventRecord`/`EventInput`
+  (`@tepegoz/shared-types`) + `EventJournal.append` persisting them when given +
+  `EventJournal.tailHash(db)` to read back where a chain left off. `EventJournal.append` still computes
+  NEITHER field itself — `@tepegoz/notary`'s `selfHashOf` sits in a layer `@tepegoz/persistence` must not
+  depend on (dependency-cruiser), so persistence only stores what a caller already folded. **Still owed:**
+  the `apps/desktop` call site that actually uses `selfHashOf` + `tailHash` + `NotarySigningKeyStore` to
+  chain live appends and periodically sign a checkpoint — until that exists, every future row still reads
+  as unchained too, same as history.)_
 - [~] Portable, self-contained **Replay Receipt**: signed event subtree + authorizing **policy-IR snapshot** +
   model/provider/cost (from Token Ledger) + `cas://` blob hashes
   _(landed: [replay-receipt.ts](../../packages/notary/src/replay-receipt.ts) — the event subtree + checkpoint. **Owed:** the policy-IR snapshot and Token Ledger fields are not part of the receipt shape yet.)_

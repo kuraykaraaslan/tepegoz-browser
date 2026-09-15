@@ -18,6 +18,8 @@ interface EventRow {
   blob_ref: string | null;
   redacted: number;
   device_id: string;
+  prev_hash: string | null;
+  self_hash: string | null;
 }
 
 function rowToEvent(row: EventRow): EventRecord {
@@ -33,7 +35,12 @@ function rowToEvent(row: EventRow): EventRecord {
     deviceId: row.device_id,
   };
   // Re-validate on the way out (the journal is the contract boundary).
-  return EventSchema.parse(row.blob_ref !== null ? { ...base, blobRef: row.blob_ref } : base);
+  return EventSchema.parse({
+    ...base,
+    ...(row.blob_ref !== null ? { blobRef: row.blob_ref } : {}),
+    ...(row.prev_hash !== null ? { prevHash: row.prev_hash } : {}),
+    ...(row.self_hash !== null ? { selfHash: row.self_hash } : {}),
+  });
 }
 
 /**
@@ -47,8 +54,14 @@ export class EventJournal {
     const deviceId = MetaStore.deviceId(db);
     const info = db
       .prepare(
-        `INSERT INTO events (id, type, ts, actor, correlation_id, payload, blob_ref, redacted, device_id)
-         VALUES (@id, @type, @ts, @actor, @correlationId, @payload, @blobRef, @redacted, @deviceId)`,
+        `INSERT INTO events (
+           id, type, ts, actor, correlation_id, payload, blob_ref, redacted, device_id,
+           prev_hash, self_hash
+         )
+         VALUES (
+           @id, @type, @ts, @actor, @correlationId, @payload, @blobRef, @redacted, @deviceId,
+           @prevHash, @selfHash
+         )`,
       )
       .run({
         id: e.id,
@@ -60,8 +73,26 @@ export class EventJournal {
         blobRef: e.blobRef ?? null,
         redacted: e.redacted ? 1 : 0,
         deviceId,
+        // Neither computed nor required here — see the migration's note. A caller chaining this append
+        // (persistence must not depend on @tepegoz/notary) supplies both already folded, or neither.
+        prevHash: e.prevHash ?? null,
+        selfHash: e.selfHash ?? null,
       });
     return EventSchema.parse({ ...e, lsn: Number(info.lastInsertRowid), deviceId });
+  }
+
+  /**
+   * The most recent HASHED event's `selfHash` — the value a caller chaining the NEXT append must supply
+   * as that event's `prevHash`. Null when no event in this journal has been chained yet (either this
+   * device pre-dates chain wiring, or every row so far was appended without hash fields) — a caller sees
+   * null and knows to start from `@tepegoz/notary`'s own `GENESIS_HASH`, which this package does not
+   * import or know about.
+   */
+  static tailHash(db: Db): string | null {
+    const row = db
+      .prepare('SELECT self_hash FROM events WHERE self_hash IS NOT NULL ORDER BY lsn DESC LIMIT 1')
+      .get() as { self_hash: string } | undefined;
+    return row?.self_hash ?? null;
   }
 
   /** Read all events with lsn strictly greater than `fromLsn`, in order. */

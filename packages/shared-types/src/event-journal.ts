@@ -28,6 +28,22 @@ export const EventSchema = z.object({
   redacted: z.boolean(),
   /** Originating device — the append-only journal's sync key (day-0 sync-meta for Phase 3). */
   deviceId: z.string().min(1),
+  /**
+   * Phase 7 NotaryService hash chain (`@tepegoz/notary`'s `selfHashOf`) — a sha256 hex digest, present
+   * only from the point a device started chaining onward. Absent on every event written before that
+   * wiring landed, and the journal itself does not compute these: a caller that wants a chained event
+   * supplies both fields already folded (see `@tepegoz/notary`'s `hash-chain` module for how). Kept
+   * optional rather than backfilled — a chain over redacted history it did not itself observe forming
+   * would prove nothing beyond "reproducible from current rows", not "unaltered since it was written".
+   */
+  prevHash: z
+    .string()
+    .regex(/^[a-f0-9]{64}$/)
+    .optional(),
+  selfHash: z
+    .string()
+    .regex(/^[a-f0-9]{64}$/)
+    .optional(),
 });
 export type EventRecord = z.infer<typeof EventSchema>;
 

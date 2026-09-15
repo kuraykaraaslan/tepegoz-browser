@@ -69,4 +69,39 @@ describe('EventJournal', () => {
     expect(EventJournal.readRecent(db, -5)).toHaveLength(0);
     expect(EventJournal.readRecent(db, 10_000)).toHaveLength(1);
   });
+
+  describe('the hash-chain columns (Phase 7 — persistence only stores what it is given)', () => {
+    const HASH_A = 'a'.repeat(64);
+    const HASH_B = 'b'.repeat(64);
+
+    it('round-trips prevHash/selfHash when a caller supplies them', () => {
+      const e = EventJournal.append(db, { ...makeEvent('run-1'), prevHash: HASH_A, selfHash: HASH_B });
+      expect(e.prevHash).toBe(HASH_A);
+      expect(e.selfHash).toBe(HASH_B);
+      const read = EventJournal.readFrom(db, e.lsn - 1)[0];
+      expect(read?.prevHash).toBe(HASH_A);
+      expect(read?.selfHash).toBe(HASH_B);
+    });
+
+    it('omits prevHash/selfHash entirely (not null) for an ordinary unchained append', () => {
+      const e = EventJournal.append(db, makeEvent('run-1'));
+      expect(e).not.toHaveProperty('prevHash');
+      expect(e).not.toHaveProperty('selfHash');
+      const read = EventJournal.readFrom(db, e.lsn - 1)[0];
+      expect(read).not.toHaveProperty('prevHash');
+      expect(read).not.toHaveProperty('selfHash');
+    });
+
+    it('tailHash is null when nothing in the journal has ever been chained', () => {
+      EventJournal.append(db, makeEvent('run-1'));
+      EventJournal.append(db, makeEvent('run-2'));
+      expect(EventJournal.tailHash(db)).toBeNull();
+    });
+
+    it('tailHash is the MOST RECENT hashed event, skipping any later unhashed ones', () => {
+      EventJournal.append(db, { ...makeEvent('run-1'), prevHash: HASH_A, selfHash: HASH_B });
+      EventJournal.append(db, makeEvent('run-2')); // appended without chaining
+      expect(EventJournal.tailHash(db)).toBe(HASH_B);
+    });
+  });
 });

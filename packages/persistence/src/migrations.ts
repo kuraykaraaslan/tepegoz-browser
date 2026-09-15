@@ -825,6 +825,20 @@ const MIGRATIONS: Migration[] = [
       db.exec("ALTER TABLE chat_contacts ADD COLUMN blocked INTEGER NOT NULL DEFAULT 0;");
     },
   },
+  {
+    version: 26,
+    up: (db) => {
+      // Phase 7 NotaryService: the two hash-chain columns the events table has never had (see ADR-0030).
+      // NULL, not backfilled: `@tepegoz/notary`'s selfHashOf/chainEvents live in a HIGHER layer than this
+      // package (persistence must not depend on notary — dependency-cruiser), so nothing here computes a
+      // hash; a caller that wants a chained append supplies both fields already folded. Every row written
+      // before that caller exists reads as NULL forever, which is honest: it was never actually chained.
+      db.exec(`
+        ALTER TABLE events ADD COLUMN prev_hash TEXT;
+        ALTER TABLE events ADD COLUMN self_hash TEXT;
+      `);
+    },
+  },
 ];
 
 /**
