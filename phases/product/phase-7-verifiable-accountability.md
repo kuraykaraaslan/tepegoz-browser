@@ -61,7 +61,19 @@ append-only Journal.
 
 - [~] Per-event **hash chain**: `prevHash` + `selfHash` over the canonical (payload/`blobRef`/ts/actor); folded
   periodically into **Ed25519-signed checkpoints** (signing key in `safeStorage`)
-  _(landed: [hash-chain.ts](../../packages/notary/src/hash-chain.ts) + [checkpoint.ts](../../packages/notary/src/checkpoint.ts). **Owed:** the `safeStorage`-backed key and wiring into `EventJournal.append` — nothing in `apps/desktop` calls this yet.)_
+  _(landed: [hash-chain.ts](../../packages/notary/src/hash-chain.ts) + [checkpoint.ts](../../packages/notary/src/checkpoint.ts).
+  **2026-09-15, key custody landed too:**
+  [notary-signing-key.electron.ts](../../apps/desktop/src/main/notary/notary-signing-key.electron.ts) —
+  `NotarySigningKeyStore.getOrCreate()` generates the device's Ed25519 key on first use and persists it
+  through `safeStorage` (mirrors `vpn-secrets.electron.ts`/`chat-secrets.electron.ts`), refusing rather
+  than falling back to plaintext when the keychain is unavailable. Deliberately conservative on the one
+  case that matters most for a signing key: a stored-but-undecryptable or malformed key THROWS instead of
+  silently minting a replacement, because a silent replacement would orphan every checkpoint already
+  signed under the old key with no record of why verification later fails. Nothing calls
+  `getOrCreate()` yet. **Still owed:** the migration adding chain columns to the `events` table (needs
+  the `database-change-delivery.md` blocking-rule review CLAUDE.md calls out — deliberately not done in
+  the same pass as the key), `EventJournal.append` computing `prevHash`/`selfHash`, and the periodic
+  checkpoint fold that actually calls this key.)_
 - [~] Portable, self-contained **Replay Receipt**: signed event subtree + authorizing **policy-IR snapshot** +
   model/provider/cost (from Token Ledger) + `cas://` blob hashes
   _(landed: [replay-receipt.ts](../../packages/notary/src/replay-receipt.ts) — the event subtree + checkpoint. **Owed:** the policy-IR snapshot and Token Ledger fields are not part of the receipt shape yet.)_
