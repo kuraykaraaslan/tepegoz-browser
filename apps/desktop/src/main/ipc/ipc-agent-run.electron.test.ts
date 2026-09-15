@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { GENESIS_HASH } from '@tepegoz/notary';
 
 /**
  * `registerAgentRunIpc` — the `agent:run` handler that streams live events + round-trips HITL
@@ -82,10 +83,16 @@ const TokenStore = vi.hoisted(() => ({
   recordRun: vi.fn(),
   refundRun: vi.fn(),
 }));
-const EventJournal = vi.hoisted(() => ({ append: vi.fn() }));
+const EventJournal = vi.hoisted(() => ({ append: vi.fn(), tailHash: vi.fn((): string | null => null) }));
 vi.mock('@tepegoz/persistence', () => ({ EventJournal, TokenStore }));
 
-vi.mock('node:crypto', () => ({ randomUUID: () => 'uuid-x' }));
+// randomUUID is stubbed for deterministic ids; createHash is kept real — appendChainedEvent's
+// selfHashOf (unmocked, see below) needs it, same as ipc-agent-run-report.electron.test.ts's choice
+// not to mock @tepegoz/notary.
+vi.mock('node:crypto', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('node:crypto')>()),
+  randomUUID: () => 'uuid-x',
+}));
 
 const AgentService = vi.hoisted(() => ({
   run: vi.fn<
@@ -565,6 +572,30 @@ describe('journal + history + token-ledger projections', () => {
     );
   });
 
+  it('onEvent chains the journal append off EventJournal.tailHash (Phase 7) — genesis first, then the prior selfHash', async () => {
+    getDb.mockReturnValue({ __db: true });
+    journalTypes.step_ok = 'AgentStepExecuted';
+    await run();
+
+    EventJournal.tailHash.mockReturnValueOnce(null); // nothing chained yet on this device
+    hooksArg().onEvent('step_ok', 'first step');
+    const firstCall = EventJournal.append.mock.calls[0]![1] as {
+      prevHash: string;
+      selfHash: string;
+    };
+    expect(firstCall.prevHash).toBe(GENESIS_HASH);
+    expect(firstCall.selfHash).toMatch(/^[a-f0-9]{64}$/);
+
+    EventJournal.tailHash.mockReturnValueOnce(firstCall.selfHash); // chains onto its own prior tail
+    hooksArg().onEvent('step_ok', 'second step');
+    const secondCall = EventJournal.append.mock.calls[1]![1] as {
+      prevHash: string;
+      selfHash: string;
+    };
+    expect(secondCall.prevHash).toBe(firstCall.selfHash);
+    expect(secondCall.selfHash).not.toBe(firstCall.selfHash);
+  });
+
   it('onEvent swallows and logs a failing journal append', async () => {
     getDb.mockReturnValue({ __db: true });
     journalTypes.error = 'AgentError';
@@ -602,7 +633,7 @@ describe('journal + history + token-ledger projections', () => {
     );
   });
 
-  it('onCheckpoint falls back to the raw checkpoint when it cannot be stringified', async () => {
+  it('onCheckpoint safely logs (never throws out of the run) when the checkpoint cannot be chained at all', async () => {
     getDb.mockReturnValue({ __db: true });
     await run();
     EventJournal.append.mockClear();
@@ -610,9 +641,10 @@ describe('journal + history + token-ledger projections', () => {
     circular.self = circular;
 
     expect(() => hooksArg().onCheckpoint(circular)).not.toThrow();
-    expect(EventJournal.append).toHaveBeenCalledWith(
-      { __db: true },
-      expect.objectContaining({ type: 'CheckpointWritten', payload: circular }),
+    expect(EventJournal.append).not.toHaveBeenCalled();
+    expect(Logger.warn).toHaveBeenCalledWith(
+      'Journal checkpoint append failed',
+      expect.any(Object),
     );
   });
 

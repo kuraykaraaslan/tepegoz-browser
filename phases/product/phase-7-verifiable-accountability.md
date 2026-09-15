@@ -39,14 +39,20 @@ append-only Journal.
 > `buildReceipt` directly, which is how the whole test suite exercises it. The Accountability
 > Dashboard, Counterfactual Dry-Run, Cost & Risk Contract, and Data Rights export are untouched.
 >
-> **Update, 2026-09-15 — the migration/schema half of that gap is closed, the compute half is not.**
-> `events` now HAS `prev_hash`/`self_hash` columns (migration v26, nullable, no backfill — see the task
-> note below), and `EventRecord`/`EventInput` (`@tepegoz/shared-types`) carry optional `prevHash`/
-> `selfHash`. `EventJournal.append` persists them when a caller supplies both, and a new
-> `EventJournal.tailHash(db)` reads back the most recent hashed row's `selfHash` (null if none). It still
-> computes nothing itself — by design: `@tepegoz/notary`'s `selfHashOf` lives in a layer persistence must
-> not depend on, so the actual folding has to happen at a caller in `apps/desktop`, which is the piece
-> still not built. `buildReceipt` still only runs on data handed to it directly.
+> **Update, 2026-09-15 — the migration/schema half of that gap is closed, and the compute half now runs
+> for ONE call site.** `events` HAS `prev_hash`/`self_hash` columns (migration v26, nullable, no
+> backfill), `EventRecord`/`EventInput` (`@tepegoz/shared-types`) carry optional `prevHash`/`selfHash`,
+> `EventJournal.append` persists them when given, and `EventJournal.tailHash(db)` reads back where a
+> chain left off. `apps/desktop/src/main/notary/chained-journal.ts`'s `appendChainedEvent` is the caller
+> that actually folds `selfHashOf` (persistence still may not depend on `@tepegoz/notary` — the compute
+> stays out of that package by design), and `ipc-agent-run.ts`'s `onEvent`/`onCheckpoint` — every
+> `AgentStepExecuted`/`PolicyBlocked`/`HitlRequested`/`HandoffRequested`/`TaskSucceeded`/`TaskFailed`/
+> `CheckpointWritten` row a live agent run writes — now go through it. **What still does not chain:**
+> every OTHER domain (downloads, uploads, chat, tasks, …) still calls `EventJournal.append` directly,
+> unchained — intentionally scoped to the agent-run path first, same as the run-report before it. No
+> signing key is fetched yet (`NotarySigningKeyStore.getOrCreate()` still has no caller) and no checkpoint
+> is ever folded/signed — only the per-event chain runs today. `buildReceipt` still only runs on data
+> handed to it directly; a receipt still cannot be produced from a real run.
 >
 > **2026-09-15.** The unsigned run-report transform landed: `buildRunReport` + `renderRunReportMarkdown`
 > in `@tepegoz/notary` (79 tests now), structuring one run's Journal events (ordered by `lsn`, latency
@@ -84,12 +90,17 @@ append-only Journal.
   a pre-existing row was never actually chained, so it stays NULL forever rather than pretending
   otherwise) + the matching optional `prevHash`/`selfHash` fields on `EventRecord`/`EventInput`
   (`@tepegoz/shared-types`) + `EventJournal.append` persisting them when given +
-  `EventJournal.tailHash(db)` to read back where a chain left off. `EventJournal.append` still computes
-  NEITHER field itself — `@tepegoz/notary`'s `selfHashOf` sits in a layer `@tepegoz/persistence` must not
-  depend on (dependency-cruiser), so persistence only stores what a caller already folded. **Still owed:**
-  the `apps/desktop` call site that actually uses `selfHashOf` + `tailHash` + `NotarySigningKeyStore` to
-  chain live appends and periodically sign a checkpoint — until that exists, every future row still reads
-  as unchained too, same as history.)_
+  `EventJournal.tailHash(db)` to read back where a chain left off.
+  **Third commit, same day — the actual fold now runs for one call site:**
+  [chained-journal.ts](../../apps/desktop/src/main/notary/chained-journal.ts)'s `appendChainedEvent`
+  reads `tailHash`, computes `selfHash` via `@tepegoz/notary`'s `selfHashOf` (persistence still may not
+  import that package — the fold has to live here), and calls `EventJournal.append` with both fields
+  filled in. `ipc-agent-run.ts`'s `onEvent`/`onCheckpoint` — every agent-run journal write — now goes
+  through it instead of `EventJournal.append` directly. **Still owed:** every OTHER append call site
+  (downloads/uploads/chat/tasks/…) still writes unchained — scoped to agent runs first, deliberately, same
+  as the run-report; `NotarySigningKeyStore.getOrCreate()` still has no caller, so no checkpoint is ever
+  signed; and nothing folds a periodic `Checkpoint` at all yet — today the chain grows unboundedly with no
+  anchor, which is the next piece.)_
 - [~] Portable, self-contained **Replay Receipt**: signed event subtree + authorizing **policy-IR snapshot** +
   model/provider/cost (from Token Ledger) + `cas://` blob hashes
   _(landed: [replay-receipt.ts](../../packages/notary/src/replay-receipt.ts) — the event subtree + checkpoint. **Owed:** the policy-IR snapshot and Token Ledger fields are not part of the receipt shape yet.)_

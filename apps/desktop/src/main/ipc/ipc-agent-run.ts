@@ -12,7 +12,7 @@ import type { ConfirmRequest } from '@tepegoz/capability-plane';
 import { PlanGrantStore, REMEMBERED_GRANT_DAYS, resolveAutonomy } from '@tepegoz/security-policy';
 import { CapabilityRegistry } from '@tepegoz/capability-plane';
 import { TokenLedger } from '@tepegoz/model-gateway';
-import { EventJournal, TokenStore } from '@tepegoz/persistence';
+import { TokenStore } from '@tepegoz/persistence';
 import {
   AgentDeltaSchema,
   MAX_DELTA_TEXT,
@@ -43,6 +43,7 @@ import {
 import { createRunControl, unregisterRunControl } from '../agent/agent-run-lock.electron';
 import FileOperationsHost from '../file-operations/file-operations-host';
 import { getDb } from '../db/database.electron';
+import { appendChainedEvent } from '../notary/chained-journal';
 import { mainStrings } from '../lib/i18n-main';
 import { setTrayAgentRunning } from '../tray';
 import NotificationHost from '../notifications/notification-host';
@@ -260,7 +261,9 @@ export function registerAgentRunIpc(): void {
         });
         broadcastConversationsState();
       }
-      // Project agent events into the Event Journal (append-only audit; DoD "→ Event Journal").
+      // Project agent events into the Event Journal (append-only audit; DoD "→ Event Journal"), CHAINED
+      // (Phase 7 NotaryService — the agent-run journaling path is the first call site wired onto
+      // appendChainedEvent; other domains still append unchained, see that function's scope note).
       // message/detail can carry model output (untrusted) — strip secrets/PII BEFORE the write and
       // mark the record accordingly, per the journal schema's redaction contract (plan §13.9).
       const db = getDb();
@@ -269,7 +272,7 @@ export function registerAgentRunIpc(): void {
         const safeMessage = Logger.redact(message);
         const safeDetail = detail !== undefined ? Logger.redact(detail) : undefined;
         try {
-          EventJournal.append(db, {
+          appendChainedEvent(db, {
             id: randomUUID(),
             type,
             ts: Date.now(),
@@ -310,7 +313,7 @@ export function registerAgentRunIpc(): void {
         payload = checkpoint;
       }
       try {
-        EventJournal.append(db, {
+        appendChainedEvent(db, {
           id: randomUUID(),
           type: 'CheckpointWritten',
           ts: Date.now(),
