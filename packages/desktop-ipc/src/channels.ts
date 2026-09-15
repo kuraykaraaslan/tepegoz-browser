@@ -183,6 +183,10 @@ export const IpcChannels = {
   /** Renderer→main: write a full diagnostic bundle (chat + per-tab DOM/PNG snapshots + memory + journal +
    *  manifest) into a `~/tepegoz/ai_agent_export_<stamp>/` folder and reveal it → absolute folder path. */
   agentExportBundle: 'agent:export-bundle',
+  /** Renderer→main: the unsigned, human-readable Run Report for ONE run (Phase 7 NotaryService —
+   *  "shippable before the wiring"). Main reads that run's Journal events + token totals, renders the
+   *  Markdown, writes it to `~/tepegoz/` and reveals it → absolute file path. */
+  agentExportRunReport: 'agent:export-run-report',
   // Agent extension conversation history. The product surface is the ext-agent page, not a core page.
   agentConversationsList: 'agent-conversations:list',
   agentConversationsGet: 'agent-conversations:get',

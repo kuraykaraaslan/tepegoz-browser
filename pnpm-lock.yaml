@@ -262,6 +262,9 @@ importers:
       '@tepegoz/newtab-ui':
         specifier: workspace:*
         version: link:../../packages/newtab-ui
+      '@tepegoz/notary':
+        specifier: workspace:*
+        version: link:../../packages/notary
       '@tepegoz/notifications':
         specifier: workspace:*
         version: link:../../packages/notifications

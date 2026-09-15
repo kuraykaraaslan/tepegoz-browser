@@ -259,6 +259,15 @@ export interface AgentBundleExportInput {
   };
 }
 
+/** Input for the per-run Run Report export (Phase 7 NotaryService — the unsigned, human-readable view
+ *  over one run's Journal events, "shippable before the wiring"). Only `runId` + the goal the panel
+ *  already has as the turn's prompt — the events, latency, terminal outcome and token cost are all read
+ *  from the main-process Journal/Token Ledger, which the renderer cannot reach directly. */
+export interface AgentRunReportExportInput {
+  runId: string;
+  goal: string;
+}
+
 /** A file the user attached to a message via the native file picker. */
 export interface AgentFileAttachment {
   name: string;
@@ -357,6 +366,9 @@ export interface AgentHostApi {
   /** Write a full diagnostic bundle (chat + per-tab DOM/PNG snapshots + memory + journal + manifest) to a
    *  `~/tepegoz/ai_agent_export_<stamp>/` folder and reveal it. Resolves to the absolute folder path. */
   exportAgentBundle(input: AgentBundleExportInput): Promise<string>;
+  /** Write the unsigned, human-readable Run Report for ONE run to `~/tepegoz/` and reveal it. Resolves
+   *  to the absolute file path. Explicitly not a proof — see {@link AgentRunReportExportInput}. */
+  exportAgentRunReport(input: AgentRunReportExportInput): Promise<string>;
   /** Open a URL from agent output in a new browser tab. */
   createTab(url?: string): void;
   /** Capture the active page's current text selection. Returns empty string if nothing is selected. */

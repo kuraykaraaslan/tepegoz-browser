@@ -92,6 +92,14 @@ export const AgentExportBundleSchema = z.object({
     .optional(),
 });
 
+/** `agent:export-run-report` payload — the run whose Journal events to render (main reads them; the
+ *  renderer never touches the journal directly) plus the goal the panel already has (the turn's prompt),
+ *  echoed into the report header without a second main-process lookup. */
+export const AgentExportRunReportSchema = z.object({
+  runId: AgentRunIdSchema,
+  goal: z.string().min(1).max(MAX_USER_PROMPT_CHARS),
+});
+
 export const HistoryQuerySchema = z.string().max(200);
 export const HistoryUrlSchema = z.string().min(1).max(4096);
 

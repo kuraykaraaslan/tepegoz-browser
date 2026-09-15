@@ -42,10 +42,18 @@ append-only Journal.
 > **2026-09-15.** The unsigned run-report transform landed: `buildRunReport` + `renderRunReportMarkdown`
 > in `@tepegoz/notary` (79 tests now), structuring one run's Journal events (ordered by `lsn`, latency
 > between steps, terminal outcome from the last `TaskSucceeded`/`TaskFailed`, optional token usage) into
-> the single self-contained Markdown document the task below specifies. **Still owed:** nothing in
-> `apps/desktop` calls it yet — no IPC channel, no "save/share report" affordance in the Agent Console, no
-> wiring to `EventJournal.readRecent`/`TokenStore`/the history turn's goal for real data. A report exists
-> only from data handed to `buildRunReport` directly, same caveat as the receipt above.
+> the single self-contained Markdown document the task below specifies.
+>
+> **Same day, wired into a real run.** `agent:export-run-report` is a live IPC channel now:
+> `registerAgentRunReportIpc` (`apps/desktop/src/main/ipc/ipc-agent-run-report.ts`) reads the SPECIFIC
+> run's events via `EventJournal.readRecent(db, 1000, runId)` — never a global/unscoped read — plus its
+> non-refunded token totals via the new `TokenStore.totalsForRun(db, correlationId)`, renders the real
+> Markdown, and writes it to `~/tepegoz/` exactly like the existing plain chat-log export. Callable
+> end-to-end from `window.api.exportAgentRunReport({ runId, goal })` today. **Still owed:** no Agent
+> Console affordance calls it — there is no button/menu item yet, so a user cannot reach it without the
+> devtools console. That is a UI-placement decision (a new icon next to the existing header-star export,
+> or a per-run action — the panel has no per-turn action pattern today to extend) deliberately left
+> unmade rather than guessed at.
 
 ## Tasks
 
@@ -76,9 +84,12 @@ append-only Journal.
       _(landed: [run-report.ts](../../packages/notary/src/run-report.ts) — `buildRunReport` structures one
       run's events (latency, terminal outcome, optional token usage) and `renderRunReportMarkdown` renders
       the document; both pure/tested, no redaction of their own since journal events are already redacted
-      at append time. **Owed:** desktop wiring — an IPC channel reading `EventJournal`/`TokenStore` for a
-      real `runId` and an Agent Console affordance to save/share the result; screenshots-inline is not yet
-      in scope.)_
+      at append time. **Also landed, same day:** the desktop wiring —
+      [ipc-agent-run-report.ts](../../apps/desktop/src/main/ipc/ipc-agent-run-report.ts) registers
+      `agent:export-run-report`, reading the real `EventJournal`/`TokenStore` SCOPED to one `runId` and
+      writing the rendered report to `~/tepegoz/` like the existing exports. **Owed:** an Agent Console
+      affordance (button/menu item) to reach it — today it is callable only via
+      `window.api.exportAgentRunReport`, not from a click; screenshots-inline is not yet in scope.)_
       **Four separate tracks converged on this**, which is the strongest
       single signal in the parity set:
       [`../tracks/openai-cua-sample-agent-parity.md`](../../docs/parities/openai-cua-sample-agent-parity.md) P1,

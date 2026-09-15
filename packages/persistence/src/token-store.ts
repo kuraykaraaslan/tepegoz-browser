@@ -117,6 +117,26 @@ export class TokenStore {
     };
   }
 
+  /** Non-refunded, non-tombstoned totals for ONE run (the run report's token-cost line). Same exclusion
+   *  rule as {@link lifetimeTotals}: an auto-refunded run reads as zero cost, since its quota was given
+   *  back. */
+  static totalsForRun(db: Db, correlationId: string): TokenTotals {
+    const row = db
+      .prepare(
+        `SELECT SUM(input_tokens) AS input_tokens, SUM(output_tokens) AS output_tokens, SUM(calls) AS calls
+         FROM token_usage WHERE correlation_id = @correlationId AND refunded = 0 AND tombstone = 0`,
+      )
+      .get({ correlationId }) as TotalsRow;
+    const inputTokens = row.input_tokens ?? 0;
+    const outputTokens = row.output_tokens ?? 0;
+    return {
+      inputTokens,
+      outputTokens,
+      totalTokens: inputTokens + outputTokens,
+      calls: row.calls ?? 0,
+    };
+  }
+
   /** Per-(provider,model,capability) aggregation of non-refunded usage, highest total first. */
   static usageByModel(db: Db): TokenUsageByModel[] {
     const rows = db

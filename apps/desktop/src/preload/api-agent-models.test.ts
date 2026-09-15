@@ -120,6 +120,12 @@ const INVOKES: Row[] = [
     IpcChannels.agentExportBundle,
     { conversationId: 'c1' },
   ],
+  [
+    'exportAgentRunReport',
+    () => api.exportAgentRunReport({ runId: 'run-1', goal: 'Book a table' }),
+    IpcChannels.agentExportRunReport,
+    { runId: 'run-1', goal: 'Book a table' },
+  ],
   ['capturePageScreenshot', () => api.capturePageScreenshot(), IpcChannels.tabsCapture],
   [
     'listExtensionManifests',

@@ -13,6 +13,7 @@ import type {
   AgentEvent,
   AgentFileAttachment,
   AgentPlanPreview,
+  AgentRunReportExportInput,
   AgentRunResult,
   ProviderId,
   TokenUsageSnapshot,
@@ -123,6 +124,9 @@ export interface AgentApi {
   /** Write a full diagnostic bundle (chat + per-tab DOM/PNG snapshots + memory + journal + manifest) to a
    *  `~/tepegoz/ai_agent_export_<stamp>/` folder and reveal it. Resolves to the absolute folder path. */
   exportAgentBundle(input: AgentBundleExportInput): Promise<string>;
+  /** Write the unsigned, human-readable Run Report for ONE run to `~/tepegoz/` and reveal it. Resolves
+   *  to the absolute file path. Explicitly not a proof — see {@link AgentRunReportExportInput}. */
+  exportAgentRunReport(input: AgentRunReportExportInput): Promise<string>;
   /** Capture the active page's current text selection. Returns empty string when nothing is selected. */
   capturePageSelection(): Promise<string>;
   /** Open a native file picker and return the selected files' content. */

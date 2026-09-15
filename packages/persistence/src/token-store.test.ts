@@ -76,6 +76,34 @@ describe('TokenStore', () => {
     expect(TokenStore.refundRun(db, 'run-1', 3)).toBe(0);
   });
 
+  it('totalsForRun scopes to ONE correlationId, excluding other runs and a refunded run', () => {
+    const db = openDatabase(':memory:');
+    migrate(db);
+    TokenStore.recordRun(db, {
+      correlationId: 'run-1',
+      ts: 1,
+      entries: [entry(), entry({ capability: 'exec', outputTokens: 50 })],
+    }); // 100+200 + 100+50 = 450
+    TokenStore.recordRun(db, { correlationId: 'run-2', ts: 2, entries: [entry()] });
+
+    const totals = TokenStore.totalsForRun(db, 'run-1');
+    expect(totals).toEqual({ inputTokens: 200, outputTokens: 250, totalTokens: 450, calls: 2 });
+  });
+
+  it('totalsForRun is zero for an unknown run and for one that was fully refunded', () => {
+    const db = openDatabase(':memory:');
+    migrate(db);
+    expect(TokenStore.totalsForRun(db, 'no-such-run')).toEqual({
+      inputTokens: 0,
+      outputTokens: 0,
+      totalTokens: 0,
+      calls: 0,
+    });
+    TokenStore.recordRun(db, { correlationId: 'run-bad', ts: 1, entries: [entry()] });
+    TokenStore.refundRun(db, 'run-bad', 2);
+    expect(TokenStore.totalsForRun(db, 'run-bad').totalTokens).toBe(0);
+  });
+
   it('aggregates usage by provider/model/capability, highest total first', () => {
     const db = openDatabase(':memory:');
     migrate(db);

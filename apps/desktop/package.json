@@ -92,6 +92,7 @@
     "@tepegoz/nav-toolbar": "workspace:*",
     "@tepegoz/navigation": "workspace:*",
     "@tepegoz/newtab-ui": "workspace:*",
+    "@tepegoz/notary": "workspace:*",
     "@tepegoz/notifications": "workspace:*",
     "@tepegoz/notifications-ui": "workspace:*",
     "@tepegoz/omnibox": "workspace:*",

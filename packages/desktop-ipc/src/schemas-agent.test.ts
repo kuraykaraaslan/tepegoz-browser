@@ -3,6 +3,7 @@ import {
   AgentApprovalResponseSchema,
   AgentExportBundleSchema,
   AgentExportConversationSchema,
+  AgentExportRunReportSchema,
   AgentNewConversationSchema,
   AgentOpenFileSchema,
   AgentPlanResponseSchema,
@@ -121,6 +122,20 @@ describe('the export schemas', () => {
       }),
     ).toMatchObject({ groupId: 'g1' });
     expect(AgentExportBundleSchema.safeParse({ chatContent: 'log' }).success).toBe(false);
+  });
+});
+
+describe('AgentExportRunReportSchema', () => {
+  it('accepts a runId + goal', () => {
+    expect(AgentExportRunReportSchema.parse({ runId: 'run-1', goal: 'Book a table' })).toEqual({
+      runId: 'run-1',
+      goal: 'Book a table',
+    });
+  });
+
+  it('rejects a missing runId or an empty goal', () => {
+    expect(AgentExportRunReportSchema.safeParse({ goal: 'x' }).success).toBe(false);
+    expect(AgentExportRunReportSchema.safeParse({ runId: 'run-1', goal: '' }).success).toBe(false);
   });
 });
 
