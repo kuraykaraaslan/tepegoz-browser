@@ -3,6 +3,7 @@ import { AppError } from '@tepegoz/libs';
 import { IpcChannels } from '@tepegoz/desktop-ipc';
 import { DataRightsExportRequestSchema, type DataRightsExportResult } from '@tepegoz/shared-types';
 import { AgentConversationStore, EventJournal, HistoryStore } from '@tepegoz/persistence';
+import { BookmarkTreeStore } from '@tepegoz/bookmarks';
 import {
   buildSubjectAccessReport,
   renderSubjectAccessMarkdown,
@@ -18,9 +19,11 @@ import { handleAsync } from './ipc-helpers';
  * collected, which does not stop being the user's to export just because they later turned the
  * extension off.
  */
+
 // A subject-access export needs everything it can find, not a UI page's worth — same reasoning as the
 // other search dimensions' own caps.
 const MAX_HISTORY_MATCHES = 500;
+const MAX_BOOKMARK_MATCHES = 500;
 
 export function registerDataRightsIpc(): void {
   handleAsync(
@@ -33,6 +36,7 @@ export function registerDataRightsIpc(): void {
       }
       const matchedTurns = AgentConversationStore.searchTurnsForSubject(db, subject);
       const matchedHistory = HistoryStore.search(db, subject, MAX_HISTORY_MATCHES, 0);
+      const matchedBookmarks = BookmarkTreeStore.search(db, subject, MAX_BOOKMARK_MATCHES);
       // Unbounded — the Journal has no fold-column index to search by (see subject-access-search.ts's
       // module doc), so this reads every row this device has ever written. Fine at today's scale; a
       // known limit worth revisiting once a real install has years of history.
@@ -41,7 +45,14 @@ export function registerDataRightsIpc(): void {
 
       const generatedAt = Date.now();
       const markdown = renderSubjectAccessMarkdown(
-        buildSubjectAccessReport({ subject, generatedAt, matchedEvents, matchedTurns, matchedHistory }),
+        buildSubjectAccessReport({
+          subject,
+          generatedAt,
+          matchedEvents,
+          matchedTurns,
+          matchedHistory,
+          matchedBookmarks,
+        }),
       );
       const now = new Date(generatedAt);
       const pad = (n: number): string => String(n).padStart(2, '0');
@@ -57,6 +68,7 @@ export function registerDataRightsIpc(): void {
         matchedTurns: matchedTurns.length,
         matchedEvents: matchedEvents.length,
         matchedHistoryEntries: matchedHistory.length,
+        matchedBookmarks: matchedBookmarks.length,
         filePath,
       };
     },

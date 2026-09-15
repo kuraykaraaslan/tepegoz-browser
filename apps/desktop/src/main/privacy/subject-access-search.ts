@@ -2,22 +2,24 @@ import { foldForSearch } from '@tepegoz/i18n';
 import type { EventRecord } from '@tepegoz/shared-types';
 import type { AgentConversationTurn } from '@tepegoz/ext-agent/history';
 import type { HistoryEntry } from '@tepegoz/persistence';
+import type { BookmarkEntry } from '@tepegoz/bookmarks';
 
 /**
  * Data Rights — subject-access search (Phase 7, KVKK/GDPR self-service, first slice). Treats the local
- * Event Journal + Agent Conversation store + browsing History as a queryable personal-data corpus:
- * given a subject string (an email, a name, a domain — whatever the requester was called in what was
- * said TO or BY the agent, or visible in a URL/page title), find every place it appears and render a
- * portable, human-readable disclosure document.
+ * Event Journal + Agent Conversation store + browsing History + Bookmarks as a queryable personal-data
+ * corpus: given a subject string (an email, a name, a domain — whatever the requester was called in
+ * what was said TO or BY the agent, or visible in a URL/page title/bookmark tag), find every place it
+ * appears and render a portable, human-readable disclosure document.
  *
  * Deliberately narrower than the phase's own aspiration ("events, FTS5 memory, CAS blobs"): this is
  * agent-conversation turns (raw, unredacted — a subject-access response has to show the real data),
  * Event Journal payloads (already redacted at append time, so a secret never leaves via this path
- * either), and browsing History (`HistoryStore.search`, the SAME folded-LIKE query the History page
- * itself uses — no separate search rule for this module to drift from). Bookmarks, downloads, and the
- * blob store are not yet in scope — a real gap, recorded as such rather than implied to be covered.
+ * either), browsing History, and Bookmarks — the latter two both via `HistoryStore.search`/
+ * `BookmarkTreeStore.search`, the SAME folded-LIKE queries the History page and the bookmarks manager
+ * already run — no separate search rule for this module to invent. Downloads and the CAS blob store are
+ * not yet in scope — a real gap, recorded as such rather than implied to be covered.
  *
- * The Event Journal has no fold-column index (unlike conversations and history, which both reuse their
+ * The Event Journal has no fold-column index (unlike the other three sources, which each reuse their
  * own store's existing folded-LIKE contract), so matching runs in JS over whatever the caller hands in —
  * the caller decides how much history that is.
  */
@@ -55,17 +57,20 @@ export interface SubjectAccessReport {
   matchedEvents: EventRecord[];
   matchedTurns: readonly AgentConversationTurn[];
   matchedHistory: readonly HistoryEntry[];
+  matchedBookmarks: readonly BookmarkEntry[];
 }
 
 /** Structure a subject-access search's already-matched slices (from `searchEventsForSubject`,
- *  `AgentConversationStore.searchTurnsForSubject`, and `HistoryStore.search`) into one report. Pure —
- *  no I/O, no further filtering; the caller already did every search. */
+ *  `AgentConversationStore.searchTurnsForSubject`, `HistoryStore.search`, and
+ *  `BookmarkTreeStore.search`) into one report. Pure — no I/O, no further filtering; the caller already
+ *  did every search. */
 export function buildSubjectAccessReport(input: {
   subject: string;
   generatedAt: number;
   matchedEvents: readonly EventRecord[];
   matchedTurns: readonly AgentConversationTurn[];
   matchedHistory: readonly HistoryEntry[];
+  matchedBookmarks: readonly BookmarkEntry[];
 }): SubjectAccessReport {
   return {
     subject: input.subject,
@@ -73,6 +78,7 @@ export function buildSubjectAccessReport(input: {
     matchedEvents: [...input.matchedEvents].sort((a, b) => a.lsn - b.lsn),
     matchedTurns: input.matchedTurns,
     matchedHistory: input.matchedHistory,
+    matchedBookmarks: input.matchedBookmarks,
   };
 }
 
@@ -88,8 +94,8 @@ export function renderSubjectAccessMarkdown(report: SubjectAccessReport): string
   lines.push('');
   lines.push(
     `> Generated ${isoOrUnknown(report.generatedAt)}. A local search of the Agent Conversation ` +
-      'history, the Event Journal, and browsing History for anything mentioning this subject. ' +
-      'Bookmarks, downloads, and stored files are **not yet covered** by this search.',
+      'history, the Event Journal, browsing History, and Bookmarks for anything mentioning this ' +
+      'subject. Downloads and stored files are **not yet covered** by this search.',
   );
   lines.push('');
   lines.push(`## Browsing history (${String(report.matchedHistory.length)})`);
@@ -99,6 +105,16 @@ export function renderSubjectAccessMarkdown(report: SubjectAccessReport): string
   } else {
     for (const h of report.matchedHistory) {
       lines.push(`- [${isoOrUnknown(h.ts)}] [${h.title.length > 0 ? h.title : h.url}](${h.url})`);
+    }
+    lines.push('');
+  }
+  lines.push(`## Bookmarks (${String(report.matchedBookmarks.length)})`);
+  lines.push('');
+  if (report.matchedBookmarks.length === 0) {
+    lines.push('_No bookmark mentions this subject._');
+  } else {
+    for (const b of report.matchedBookmarks) {
+      lines.push(`- [${isoOrUnknown(b.ts)}] [${b.title.length > 0 ? b.title : b.url}](${b.url})`);
     }
     lines.push('');
   }

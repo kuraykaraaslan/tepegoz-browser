@@ -269,12 +269,14 @@ append-only Journal.
       install has years of history). Writes a self-contained Markdown SAR document to `~/tepegoz/`.
       Deliberately NOT gated behind the agent-enabled guard: past data stays exportable even after the
       extension is turned off.
-      **Same day, a third dimension added:** browsing History
-      (`HistoryStore.search`, the SAME folded-LIKE query the History page itself already runs — no
-      third search rule invented either). **Not yet covered:** bookmarks, downloads, and the CAS blob
-      store. No UI affordance — devtools-console-only via `window.api.exportDataRights({ subject })`,
-      same starting point every other Phase 7 export took before its own UI-reachability pass. i18n:
-      none needed yet (no renderer strings — the export is a file, not a rendered surface).)_
+      **Same day, a third AND fourth dimension added:** browsing History (`HistoryStore.search`) and
+      Bookmarks (`BookmarkTreeStore.search`, which also matches on tags — a small bonus this module
+      didn't have to build), each the SAME folded-LIKE query its own page already runs — no third or
+      fourth search rule invented. **Not yet covered:** downloads and the CAS blob store — the last two
+      of the phase's implied sources. No UI affordance — devtools-console-only via
+      `window.api.exportDataRights({ subject })`, same starting point every other Phase 7 export took
+      before its own UI-reachability pass. i18n: none needed yet (no renderer strings — the export is a
+      file, not a rendered surface).)_
 - [ ] **Provable erasure**: tombstone events + blob-refcount decrement + memory-audit purge, recorded as
       append-only "erasure performed" events so deletion is itself provable (reuses the `kv` tombstone column
       already in schema v1)

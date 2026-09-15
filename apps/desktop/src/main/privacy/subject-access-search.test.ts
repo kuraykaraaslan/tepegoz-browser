@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { EventRecord } from '@tepegoz/shared-types';
 import type { AgentConversationTurn } from '@tepegoz/ext-agent/history';
 import type { HistoryEntry } from '@tepegoz/persistence';
+import type { BookmarkEntry } from '@tepegoz/bookmarks';
 import {
   buildSubjectAccessReport,
   renderSubjectAccessMarkdown,
@@ -56,6 +57,16 @@ function historyEntry(over: Partial<HistoryEntry> = {}): HistoryEntry {
   };
 }
 
+function bookmarkEntry(over: Partial<BookmarkEntry> = {}): BookmarkEntry {
+  return {
+    url: 'https://example.com/kaya',
+    title: 'Kaya profile',
+    favicon: null,
+    ts: 1000,
+    ...over,
+  };
+}
+
 describe('searchEventsForSubject', () => {
   it('matches on the payload text', () => {
     const events = [event({ payload: { message: 'about kaya@example.com' } })];
@@ -98,19 +109,21 @@ describe('buildSubjectAccessReport', () => {
       matchedEvents: [event({ lsn: 2, id: 'e2' }), event({ lsn: 1, id: 'e1' })],
       matchedTurns: [],
       matchedHistory: [],
+      matchedBookmarks: [],
     });
     expect(report.matchedEvents.map((e) => e.id)).toEqual(['e1', 'e2']);
   });
 });
 
 describe('renderSubjectAccessMarkdown', () => {
-  it('includes the subject, matched conversation content, matched journal events, and matched history', () => {
+  it('includes the subject, matched conversation content, matched journal events, matched history, and matched bookmarks', () => {
     const report = buildSubjectAccessReport({
       subject: 'kaya@example.com',
       generatedAt: 5000,
       matchedEvents: [event()],
       matchedTurns: [turn({ responseSummary: 'Sent.' })],
       matchedHistory: [historyEntry({ title: 'Kaya — Example', url: 'https://example.com/kaya' })],
+      matchedBookmarks: [bookmarkEntry({ title: 'Kaya (bookmarked)', url: 'https://example.com/b' })],
     });
     const md = renderSubjectAccessMarkdown(report);
     expect(md).toContain('kaya@example.com');
@@ -118,18 +131,21 @@ describe('renderSubjectAccessMarkdown', () => {
     expect(md).toContain('Sent.');
     expect(md).toContain('AgentStepExecuted');
     expect(md).toContain('[Kaya — Example](https://example.com/kaya)');
+    expect(md).toContain('[Kaya (bookmarked)](https://example.com/b)');
   });
 
-  it('falls back to the bare URL when a history entry has no title', () => {
+  it('falls back to the bare URL when a history entry or a bookmark has no title', () => {
     const report = buildSubjectAccessReport({
       subject: 'kaya',
       generatedAt: 5000,
       matchedEvents: [],
       matchedTurns: [],
       matchedHistory: [historyEntry({ title: '', url: 'https://example.com/kaya' })],
+      matchedBookmarks: [bookmarkEntry({ title: '', url: 'https://example.com/b' })],
     });
     const md = renderSubjectAccessMarkdown(report);
     expect(md).toContain('[https://example.com/kaya](https://example.com/kaya)');
+    expect(md).toContain('[https://example.com/b](https://example.com/b)');
   });
 
   it('says plainly when a dimension found nothing, rather than an empty section', () => {
@@ -139,20 +155,23 @@ describe('renderSubjectAccessMarkdown', () => {
       matchedEvents: [],
       matchedTurns: [],
       matchedHistory: [],
+      matchedBookmarks: [],
     });
     const md = renderSubjectAccessMarkdown(report);
     expect(md).toContain('No conversation turn mentions this subject');
     expect(md).toContain('No journal event mentions this subject');
     expect(md).toContain('No history entry mentions this subject');
+    expect(md).toContain('No bookmark mentions this subject');
   });
 
-  it('discloses the coverage gap up front — bookmarks/downloads/blobs are not searched yet', () => {
+  it('discloses the coverage gap up front — downloads/stored files are not searched yet', () => {
     const report = buildSubjectAccessReport({
       subject: 'x',
       generatedAt: 0,
       matchedEvents: [],
       matchedTurns: [],
       matchedHistory: [],
+      matchedBookmarks: [],
     });
     const md = renderSubjectAccessMarkdown(report);
     expect(md).toContain('not yet covered');

@@ -4,9 +4,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
  * `registerDataRightsIpc` — `privacy:data-rights-export` (Phase 7 Data Rights, first slice). Pinned: it
  * is NOT gated behind the agent-enabled guard (past data stays exportable even with the extension off);
  * it 503s with no search attempted when there is no database; it searches the conversation store, the
- * full Event Journal, and browsing History (real `searchEventsForSubject`/`buildSubjectAccessReport`/
- * `renderSubjectAccessMarkdown`, not mocked — a thin adapter is exactly where a real check is cheap);
- * and it writes + reveals the Markdown, returning accurate match counts across all three dimensions.
+ * full Event Journal, browsing History, and Bookmarks (real `searchEventsForSubject`/
+ * `buildSubjectAccessReport`/`renderSubjectAccessMarkdown`, not mocked — a thin adapter is exactly where
+ * a real check is cheap); and it writes + reveals the Markdown, returning accurate match counts across
+ * all four dimensions.
  */
 
 const helpers = vi.hoisted(() => ({
@@ -33,6 +34,8 @@ vi.mock('@tepegoz/persistence', () => ({
   EventJournal: journal,
   HistoryStore: historyStore,
 }));
+const bookmarkStore = vi.hoisted(() => ({ search: vi.fn(() => [] as unknown[]) }));
+vi.mock('@tepegoz/bookmarks', () => ({ BookmarkTreeStore: bookmarkStore }));
 
 const getDb = vi.hoisted(() => vi.fn((): unknown => ({})));
 vi.mock('../db/database.electron', () => ({ getDb }));
@@ -52,6 +55,7 @@ const call = (payload: unknown) =>
     matchedTurns: number;
     matchedEvents: number;
     matchedHistoryEntries: number;
+    matchedBookmarks: number;
     filePath: string;
   }>;
 
@@ -62,6 +66,7 @@ beforeEach(() => {
   conversationStore.searchTurnsForSubject.mockReturnValue([]);
   journal.readFrom.mockReturnValue([]);
   historyStore.search.mockReturnValue([]);
+  bookmarkStore.search.mockReturnValue([]);
   fsHost.writeExport.mockResolvedValue('/home/u/tepegoz/export.md');
   registerDataRightsIpc();
 });
@@ -74,10 +79,11 @@ describe('registerDataRightsIpc', () => {
     expect(fsHost.writeExport).not.toHaveBeenCalled();
   });
 
-  it('searches conversations + history SCOPED to the subject, and reads the FULL journal (no fold index to scope by)', async () => {
+  it('searches conversations + history + bookmarks SCOPED to the subject, and reads the FULL journal (no fold index to scope by)', async () => {
     await call({ subject: 'kaya@example.com' });
     expect(conversationStore.searchTurnsForSubject).toHaveBeenCalledWith({}, 'kaya@example.com');
     expect(historyStore.search).toHaveBeenCalledWith({}, 'kaya@example.com', 500, 0);
+    expect(bookmarkStore.search).toHaveBeenCalledWith({}, 'kaya@example.com', 500);
     expect(journal.readFrom).toHaveBeenCalledWith({}, 0);
   });
 
@@ -121,6 +127,9 @@ describe('registerDataRightsIpc', () => {
     historyStore.search.mockReturnValue([
       { url: 'https://example.com/kaya', title: 'Kaya profile', ts: 1500, visitCount: 2, favicon: null },
     ]);
+    bookmarkStore.search.mockReturnValue([
+      { url: 'https://example.com/kaya-bm', title: 'Kaya (bookmarked)', ts: 1600, favicon: null },
+    ]);
 
     const result = await call({ subject: 'kaya@example.com' });
 
@@ -129,6 +138,7 @@ describe('registerDataRightsIpc', () => {
       matchedTurns: 1,
       matchedEvents: 1,
       matchedHistoryEntries: 1,
+      matchedBookmarks: 1,
       filePath: '/home/u/tepegoz/export.md',
     });
     expect(shell.showItemInFolder).toHaveBeenCalledWith('/home/u/tepegoz/export.md');
@@ -140,6 +150,7 @@ describe('registerDataRightsIpc', () => {
     expect(markdown).toContain('Email kaya@example.com');
     expect(markdown).toContain('contacted kaya@example.com');
     expect(markdown).toContain('[Kaya profile](https://example.com/kaya)');
+    expect(markdown).toContain('[Kaya (bookmarked)](https://example.com/kaya-bm)');
     expect(markdown).not.toContain('unrelated');
   });
 });
