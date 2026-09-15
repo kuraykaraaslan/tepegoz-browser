@@ -90,6 +90,13 @@ export const AgentExportBundleSchema = z.object({
       title: z.string().max(200).optional(),
     })
     .optional(),
+  /** Phase 7: the session's own turns (each with the runId that journaled it), so the bundle can also
+   *  gather a per-run Notary report/receipt — the renderer's Turn state is the only place a runId is
+   *  known; main cannot derive "which runIds belong to this group" from the journal alone. */
+  turns: z
+    .array(z.object({ runId: AgentRunIdSchema, prompt: z.string().min(1).max(MAX_USER_PROMPT_CHARS) }))
+    .max(500)
+    .optional(),
 });
 
 /** `agent:export-run-report` payload — the run whose Journal events to render (main reads them; the

@@ -229,8 +229,19 @@ export function useAgentActions(deps: AgentActionsDeps) {
         : {}),
       ...(title.length > 0 ? { title } : {}),
     };
+    // Phase 7: hand main the (runId, prompt) pairs it cannot derive on its own, so the bundle also
+    // gathers a per-run Notary report/receipt for every turn that actually ran (a restored/failed-before-
+    // dispatch turn has no runId and is excluded, same as it would be from any per-run artifact).
+    const turns = activeState.turns
+      .filter((t): t is typeof t & { runId: string } => t.runId !== null)
+      .map((t) => ({ runId: t.runId, prompt: t.prompt }));
     void api
-      .exportAgentBundle({ chatContent: content, groupId: activeGroupId, meta })
+      .exportAgentBundle({
+        chatContent: content,
+        groupId: activeGroupId,
+        meta,
+        ...(turns.length > 0 ? { turns } : {}),
+      })
       .then(() => {
         setExportError(null);
         setLogExported(true);

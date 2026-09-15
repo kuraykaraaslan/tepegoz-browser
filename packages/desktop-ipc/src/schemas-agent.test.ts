@@ -124,6 +124,23 @@ describe('the export schemas', () => {
     ).toMatchObject({ groupId: 'g1' });
     expect(AgentExportBundleSchema.safeParse({ chatContent: 'log' }).success).toBe(false);
   });
+
+  it('AgentExportBundleSchema — turns is optional, and rejects a turn with an empty prompt or runId', () => {
+    expect(
+      AgentExportBundleSchema.parse({
+        chatContent: 'log',
+        groupId: 'g1',
+        turns: [{ runId: 'run-1', prompt: 'do it' }],
+      }),
+    ).toMatchObject({ turns: [{ runId: 'run-1', prompt: 'do it' }] });
+    expect(
+      AgentExportBundleSchema.safeParse({
+        chatContent: 'log',
+        groupId: 'g1',
+        turns: [{ runId: '', prompt: 'do it' }],
+      }).success,
+    ).toBe(false);
+  });
 });
 
 describe('AgentExportRunReportSchema', () => {

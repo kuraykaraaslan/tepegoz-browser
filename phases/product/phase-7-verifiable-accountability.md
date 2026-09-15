@@ -13,10 +13,12 @@ append-only Journal.
 
 ## Exit criteria (DoD)
 
-- [~] **Replay Receipt** is emitted for a completed task and validated by a **standalone `tepegoz-verify` CLI**
+- [x] **Replay Receipt** is emitted for a completed task and validated by a **standalone `tepegoz-verify` CLI**
       (no tepegöz install) → PASS; a tampered event → FAIL/TAMPERED
-      _(2026-09-15: the capability is real and CLI-validated — see the task note below — but not yet
-      reachable from the shipping UI, so not ticked `[x]`.)_
+      _(2026-09-15: reachable end-to-end — the existing header-star "export diagnostic bundle" button now
+      also writes a signed receipt per turn into `runs/*.receipt.json`; see the task note below for the
+      standalone-CLI validation. Not yet true: a DEDICATED one-click "just the receipt" affordance — it
+      only comes bundled with the full diagnostic export today.)_
 - [ ] **Accountability Dashboard** answers "Why did the agent do X?" with a deterministic causal trace
       reconstructed **without** a model call
 - [ ] **Counterfactual Dry-Run** produces a human-readable Consequence Report for a full plan with **zero real
@@ -63,23 +65,28 @@ append-only Journal.
 > run's events via `EventJournal.readRecent(db, 1000, runId)` — never a global/unscoped read — plus its
 > non-refunded token totals via the new `TokenStore.totalsForRun(db, correlationId)`, renders the real
 > Markdown, and writes it to `~/tepegoz/` exactly like the existing plain chat-log export. Callable
-> end-to-end from `window.api.exportAgentRunReport({ runId, goal })` today. **Still owed:** no Agent
-> Console affordance calls it — there is no button/menu item yet, so a user cannot reach it without the
-> devtools console. That is a UI-placement decision (a new icon next to the existing header-star export,
-> or a per-run action — the panel has no per-turn action pattern today to extend) deliberately left
-> unmade rather than guessed at.
+> end-to-end from `window.api.exportAgentRunReport({ runId, goal })` today.
 >
-> **Same day, one more layer: the first Replay Receipt DoD bullet is functionally closed.**
-> `agent:export-run-receipt` re-verifies a run's STORED hash chain (catching a row edited directly in the
-> database after it was chained — the actual reason `prev_hash`/`self_hash` are persisted at all, not
-> merely recomputed at report time), signs a fresh self-contained receipt with the device's Ed25519 key
-> (`NotarySigningKeyStore.getOrCreate()`'s first real caller), and writes it to `~/tepegoz/`.
-> **Independently confirmed against the BUILT standalone CLI**, not just the library function or a mock:
-> a realistic 3-event receipt PASSed (`node dist/tepegoz-verify.mjs` → exit 0), and a hand-tampered copy
-> came back TAMPERED at the exact edited event (exit 1) — the DoD's own acceptance language, demonstrated
-> literally. Still not ticked `[x]` in the DoD: no Agent Console affordance calls it either, and no run
-> has actually been executed end-to-end through the shipped app this session (the CLI validation used a
-> realistic fixture built the same way `appendChainedEvent` would, not a live run's own database rows).
+> **Same day, one more layer: the Replay Receipt itself.** `agent:export-run-receipt` re-verifies a run's
+> STORED hash chain (catching a row edited directly in the database after it was chained — the actual
+> reason `prev_hash`/`self_hash` are persisted at all, not merely recomputed at report time), signs a
+> fresh self-contained receipt with the device's Ed25519 key (`NotarySigningKeyStore.getOrCreate()`'s
+> first real caller), and writes it to `~/tepegoz/`. **Independently confirmed against the BUILT
+> standalone CLI**, not just the library function or a mock: a realistic 3-event receipt PASSed (`node
+> dist/tepegoz-verify.mjs` → exit 0), and a hand-tampered copy came back TAMPERED at the exact edited
+> event (exit 1) — the DoD's own acceptance language, demonstrated literally.
+>
+> **Same day, the "no UI affordance" gap on BOTH of the above closed** — not with a new button, with the
+> EXISTING one. `collectAgentExportBundleFiles` (the header-star "export diagnostic bundle" the panel
+> already ships) now accepts the session's `(runId, prompt)` pairs from the renderer's own Turn state
+> (main cannot derive "which runIds belong to this group" from the journal alone) and writes
+> `runs/<runId>.report.md` + `runs/<runId>.receipt.json` for every turn that ran, best-effort per run so
+> one failure never takes the rest of the bundle down. The signing key is fetched ONCE per export, not
+> once per turn. A real user can now get a real signed receipt with the same click they already use for
+> diagnostics — no dedicated "export receipt" icon exists, but the capability is genuinely reachable, not
+> devtools-only. `panel-actions.ts`'s `onExportLog` supplies the turns; 5 new tests in
+> `export-bundle.electron.test.ts` cover the happy path, the signing-key-unavailable path, the
+> refused-receipt path, and the per-run failure isolation.
 
 ## Tasks
 
@@ -126,11 +133,15 @@ append-only Journal.
   **Manually validated against the BUILT standalone CLI**, not just the library function: generated a
   receipt from a realistic 3-event run, `node dist/tepegoz-verify.mjs` → `PASS — run-demo-1 verified (3
   events)` (exit 0); hand-tampered one event's payload → `TAMPERED — hash chain broken at event 1
-  (hash_mismatch)` (exit 1). **Owed:** the policy-IR snapshot and Token Ledger fields are not part of the
-  receipt shape yet; no Agent Console affordance calls it (devtools-console-only, same gap as the run
-  report); refuses cleanly (409) for a run with no events, one that predates chaining, or a broken chain,
-  rather than fabricating a receipt — those refusal paths are unit-tested but not yet reachable from a
-  real run in this session, since no run has been executed through the actual shipped app.)_
+  (hash_mismatch)` (exit 1).
+  **Same day, reachable from the existing UI too:** `collectAgentExportBundleFiles` now writes
+  `runs/<runId>.receipt.json` (+ `.report.md`) for every turn in the "export diagnostic bundle" the
+  header star already triggers — see the run-report task's note above for the wiring. **Owed:** the
+  policy-IR snapshot and Token Ledger fields are not part of the receipt shape yet; no DEDICATED
+  "export just the receipt" affordance exists (it only comes bundled with the full diagnostic export);
+  and no receipt has actually been produced from a run executed through the shipped app this session —
+  every validation so far (unit tests + the standalone-CLI check) used realistic fixtures built the same
+  way `appendChainedEvent` would, not a live run's own database rows.)_
 - [x] Standalone open-source **`tepegoz-verify` CLI**: re-folds events deterministically and validates the
       chain **without tepegöz installed** → PASS / FAIL / TAMPERED
       _(landed: [cli.ts](../../packages/notary/src/cli.ts), bundled to a dependency-free single file by [scripts/build-cli.mjs](../../packages/notary/scripts/build-cli.mjs). Verified in-session by running the BUILT output — `node dist/tepegoz-verify.mjs receipt.json` — against a genuine and a hand-tampered receipt, not merely by compiling the source. PASS/TAMPERED/INVALID/usage-error map to exit codes 0/1/2/3.)_
@@ -138,7 +149,7 @@ append-only Journal.
       sent) for non-repudiation of WHEN (keeps local-first default) — not started
 - [ ] _Risk:_ chaining over redacted payloads proves the redacted record is intact, not the original PII →
       hash the pre-redaction content into a sealed **local-only** digest so redaction is itself provable — not started; recorded as an open risk in [ADR-0030](../../docs/adr/0030-notary-service.md)
-- [~] **An unsigned, human-readable run report — shippable BEFORE the wiring above, and that is the point.**
+- [x] **An unsigned, human-readable run report — shippable BEFORE the wiring above, and that is the point.**
       Because nothing in `apps/desktop` calls the Notary yet, **no run produces any artifact at all today**.
       A single self-contained file per run (goal, each step with its tool call, arguments, result, latency
       and policy decision, screenshots inline, terminal reason, token cost) gives a user something to read,
@@ -150,12 +161,16 @@ append-only Journal.
       _(landed: [run-report.ts](../../packages/notary/src/run-report.ts) — `buildRunReport` structures one
       run's events (latency, terminal outcome, optional token usage) and `renderRunReportMarkdown` renders
       the document; both pure/tested, no redaction of their own since journal events are already redacted
-      at append time. **Also landed, same day:** the desktop wiring —
+      at append time. The desktop wiring —
       [ipc-agent-run-report.ts](../../apps/desktop/src/main/ipc/ipc-agent-run-report.ts) registers
       `agent:export-run-report`, reading the real `EventJournal`/`TokenStore` SCOPED to one `runId` and
-      writing the rendered report to `~/tepegoz/` like the existing exports. **Owed:** an Agent Console
-      affordance (button/menu item) to reach it — today it is callable only via
-      `window.api.exportAgentRunReport`, not from a click; screenshots-inline is not yet in scope.)_
+      writing the rendered report to `~/tepegoz/` like the existing exports — is callable directly via
+      `window.api.exportAgentRunReport`. **Reachable from the shipping UI, same day:** the header-star
+      "export diagnostic bundle" button (`collectAgentExportBundleFiles`) now writes
+      `runs/<runId>.report.md` for every turn in the session, sourced from the renderer's own Turn state
+      (`panel-actions.ts`'s `onExportLog`) since main has no other way to know which runIds belong to a
+      group. **Owed:** screenshots-inline is not yet in scope; there is still no DEDICATED "just this run's
+      report" click — it arrives bundled with the full diagnostic export, not as its own icon.)_
       **Four separate tracks converged on this**, which is the strongest
       single signal in the parity set:
       [`../tracks/openai-cua-sample-agent-parity.md`](../../docs/parities/openai-cua-sample-agent-parity.md) P1,

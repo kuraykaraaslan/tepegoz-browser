@@ -42,14 +42,36 @@ const h = vi.hoisted(() => {
     })),
     conversationMemory: vi.fn<() => unknown[]>(() => [{ role: 'user', content: 'hi' }]),
     currentConversation: vi.fn<() => unknown>(() => null),
-    readRecent: vi.fn<() => unknown[]>(() => [{ id: 'e1' }]),
+    readRecent: vi.fn<(db: unknown, limit: number, runId?: string) => unknown[]>(() => [{ id: 'e1' }]),
     hasActiveAgentRun: vi.fn<() => boolean>(() => false),
+    deviceId: vi.fn<() => string>(() => 'device-1'),
+    buildRunReport: vi.fn((input: { runId: string; goal: string }) => ({ ...input })),
+    renderRunReportMarkdown: vi.fn<() => string>(() => '# report'),
+    buildRunReceipt: vi.fn<() => { ok: true; receipt: unknown } | { ok: false; reason: string }>(() => ({
+      ok: true,
+      receipt: { correlationId: 'run-1' },
+    })),
+    getOrCreateKey: vi.fn<() => { privateKeyPem: string; publicKeyPem: string }>(() => ({
+      privateKeyPem: 'P',
+      publicKeyPem: 'Q',
+    })),
   };
 });
 
 vi.mock('electron', () => ({ app: { getVersion: () => '9.9.9' } }));
 vi.mock('@tepegoz/browser-tools', () => ({ buildElementsSnapshot: h.buildElementsSnapshot }));
-vi.mock('@tepegoz/persistence', () => ({ EventJournal: { readRecent: h.readRecent } }));
+vi.mock('@tepegoz/persistence', () => ({
+  EventJournal: { readRecent: h.readRecent },
+  MetaStore: { deviceId: h.deviceId },
+}));
+vi.mock('@tepegoz/notary', () => ({
+  buildRunReport: h.buildRunReport,
+  renderRunReportMarkdown: h.renderRunReportMarkdown,
+}));
+vi.mock('../notary/build-run-receipt', () => ({ buildRunReceipt: h.buildRunReceipt }));
+vi.mock('../notary/notary-signing-key.electron', () => ({
+  default: { getOrCreate: h.getOrCreateKey },
+}));
 vi.mock('../tabs', () => ({ default: h.tabs }));
 vi.mock('../db/database.electron', () => ({ getDb: () => ({}) }));
 vi.mock('./browser-host.electron', () => ({
@@ -75,6 +97,12 @@ describe('collectAgentExportBundleFiles', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     h.hasActiveAgentRun.mockReturnValue(false);
+    h.deviceId.mockReturnValue('device-1');
+    h.buildRunReport.mockImplementation((input: { runId: string; goal: string }) => ({ ...input }));
+    h.renderRunReportMarkdown.mockReturnValue('# report');
+    h.buildRunReceipt.mockReturnValue({ ok: true, receipt: { correlationId: 'run-1' } });
+    h.getOrCreateKey.mockReturnValue({ privateKeyPem: 'P', publicKeyPem: 'Q' });
+    h.readRecent.mockImplementation(() => [{ id: 'e1' }]);
     h.tabs.getState.mockReturnValue({
       tabs: [
         { id: 'web-1', title: 'One', url: 'https://a/1', groupId: 'G' },
@@ -184,4 +212,80 @@ describe('collectAgentExportBundleFiles', () => {
     ) as unknown[];
     expect(journal).toEqual([]);
   });
+
+  describe('per-run Notary artifacts (Phase 7)', () => {
+    const TURNS = [
+      { runId: 'run-1', prompt: 'book a table' },
+      { runId: 'run-2', prompt: 'find a flight' },
+    ];
+
+    it('gathers nothing when no turns are supplied — same bundle as before this field existed', async () => {
+      const files = await collectAgentExportBundleFiles(INPUT, 0);
+      expect(paths(files).some((p) => p.startsWith('runs/'))).toBe(false);
+      expect(manifestOf(files).runs).toEqual([]);
+      expect(h.getOrCreateKey).not.toHaveBeenCalled();
+    });
+
+    it('writes a report + receipt per turn, fetching the signing key only ONCE for the whole bundle', async () => {
+      const files = await collectAgentExportBundleFiles({ ...INPUT, turns: TURNS }, 0);
+      expect(paths(files)).toEqual(
+        expect.arrayContaining([
+          'runs/run-1.report.md',
+          'runs/run-1.receipt.json',
+          'runs/run-2.report.md',
+          'runs/run-2.receipt.json',
+        ]),
+      );
+      expect(h.getOrCreateKey).toHaveBeenCalledTimes(1);
+      const runs = manifestOf(files).runs as RunEntry[];
+      expect(runs.map((r) => r.runId)).toEqual(['run-1', 'run-2']);
+      expect(runs.every((r) => r.report.status === 'ok' && r.receipt.status === 'ok')).toBe(true);
+    });
+
+    it('still writes the report, but skips (never fabricates) the receipt, when the signing key is unavailable', async () => {
+      h.getOrCreateKey.mockImplementation(() => {
+        throw new Error('keychain locked');
+      });
+      const files = await collectAgentExportBundleFiles({ ...INPUT, turns: TURNS }, 0);
+      expect(paths(files)).toContain('runs/run-1.report.md');
+      expect(paths(files)).not.toContain('runs/run-1.receipt.json');
+      const runs = manifestOf(files).runs as RunEntry[];
+      expect(runs[0]?.report.status).toBe('ok');
+      expect(runs[0]?.receipt).toEqual({ status: 'skipped', reason: expect.stringContaining('keychain locked') as string });
+    });
+
+    it('skips just the receipt, keeping the report, when buildRunReceipt itself refuses', async () => {
+      h.buildRunReceipt.mockReturnValue({ ok: false, reason: 'not_chained' });
+      const files = await collectAgentExportBundleFiles({ ...INPUT, turns: [TURNS[0]!] }, 0);
+      expect(paths(files)).toContain('runs/run-1.report.md');
+      expect(paths(files)).not.toContain('runs/run-1.receipt.json');
+      const runs = manifestOf(files).runs as RunEntry[];
+      expect(runs[0]?.receipt).toEqual({ status: 'skipped', reason: 'not_chained' });
+    });
+
+    it('a failure gathering ONE run does not take the rest of the bundle down (best-effort, per run)', async () => {
+      h.readRecent.mockImplementation((_db: unknown, _limit: number, runId?: string) => {
+        if (runId === 'run-1') throw new Error('journal read exploded');
+        return runId === undefined ? [{ id: 'e1' }] : [{ id: 'e1', correlationId: runId }];
+      });
+      const files = await collectAgentExportBundleFiles({ ...INPUT, turns: TURNS }, 0);
+      // run-1 failed entirely; run-2 still produced both files.
+      expect(paths(files)).not.toContain('runs/run-1.report.md');
+      expect(paths(files)).toContain('runs/run-2.report.md');
+      expect(paths(files)).toContain('runs/run-2.receipt.json');
+      const runs = manifestOf(files).runs as RunEntry[];
+      expect(runs[0]).toMatchObject({
+        runId: 'run-1',
+        report: { status: 'skipped' },
+        receipt: { status: 'skipped' },
+      });
+      expect(runs[1]).toMatchObject({ runId: 'run-2', report: { status: 'ok' } });
+    });
+  });
 });
+
+interface RunEntry {
+  runId: string;
+  report: { status: string; file?: string; reason?: string };
+  receipt: { status: string; file?: string; reason?: string };
+}

@@ -1,13 +1,16 @@
 import { app } from 'electron';
 import type { z } from 'zod';
 import { buildElementsSnapshot } from '@tepegoz/browser-tools';
-import { EventJournal } from '@tepegoz/persistence';
+import { EventJournal, MetaStore, type Db } from '@tepegoz/persistence';
+import { buildRunReport, renderRunReportMarkdown, type SigningKeyPair } from '@tepegoz/notary';
 import type { AgentExportBundleSchema } from '@tepegoz/desktop-ipc/schemas';
 import TabManager from '../tabs';
 import { getDb } from '../db/database.electron';
 import { browserHost } from './browser-host.electron';
 import AgentService from './agent-service.electron';
 import { hasActiveAgentRun } from './agent-run-lock.electron';
+import { buildRunReceipt } from '../notary/build-run-receipt';
+import NotarySigningKeyStore from '../notary/notary-signing-key.electron';
 
 /**
  * Collect the files for the agent **diagnostic bundle** (the header star) — the deep, analyse-later
@@ -24,6 +27,7 @@ import { hasActiveAgentRun } from './agent-run-lock.electron';
  */
 
 const MAX_JOURNAL_EVENTS = 300;
+const MAX_RUN_EVENTS = 500;
 
 /** The validated boundary payload (matches the renderer-facing `AgentBundleExportInput`), typed against
  *  the zod schema so the parsed handler value flows through without an exact-optional mismatch. */
@@ -51,6 +55,18 @@ interface TabManifestEntry {
   active: boolean;
   dom: TabCaptureOutcome;
   screenshot: TabCaptureOutcome;
+}
+
+interface RunArtifactOutcome {
+  status: 'ok' | 'skipped';
+  file?: string;
+  reason?: string;
+}
+
+interface RunManifestEntry {
+  runId: string;
+  report: RunArtifactOutcome;
+  receipt: RunArtifactOutcome;
 }
 
 function errText(err: unknown): string {
@@ -134,11 +150,84 @@ async function captureTab(
   return entry;
 }
 
+/** A runId is server-generated (`run-<counter>`) but still gets the same filename-safe treatment as
+ *  every other dynamic string this app turns into a path component (mirrors `chat-secrets.electron.ts`'s
+ *  `fileFor`) — defense in depth, not a response to any known-unsafe caller. */
+function safeRunFilePart(runId: string): string {
+  return runId.replace(/[^A-Za-z0-9._-]/g, '_').slice(0, 100);
+}
+
+/**
+ * Gather a per-run Notary report + receipt for every turn in this session (Phase 7). Best-effort per
+ * run, same "no silent gap" rule as the tab captures: a report always writes (it handles zero events
+ * gracefully on its own), and a receipt is skipped — recorded as such, never fabricated — when the
+ * signing key is unavailable or the run cannot produce one (no events, unchained, or a broken chain).
+ * The signing key is fetched ONCE for the whole bundle, not per turn: touching the OS keychain has a
+ * real cost, and a session can have many turns.
+ */
+function collectRunArtifacts(
+  db: Db,
+  turns: readonly { runId: string; prompt: string }[],
+  exportedAt: number,
+  files: BundleFile[],
+): RunManifestEntry[] {
+  if (turns.length === 0) return [];
+  let keyPair: SigningKeyPair | null = null;
+  let keyUnavailableReason: string | null = null;
+  try {
+    keyPair = NotarySigningKeyStore.getOrCreate();
+  } catch (err) {
+    keyUnavailableReason = errText(err);
+  }
+  const deviceId = MetaStore.deviceId(db);
+
+  return turns.map((turn) => {
+    try {
+      const safe = safeRunFilePart(turn.runId);
+      const events = EventJournal.readRecent(db, MAX_RUN_EVENTS, turn.runId);
+
+      const reportFile = `runs/${safe}.report.md`;
+      const report = buildRunReport({
+        runId: turn.runId,
+        goal: turn.prompt,
+        generatedAt: exportedAt,
+        events,
+      });
+      files.push({ relPath: reportFile, content: renderRunReportMarkdown(report) });
+
+      let receipt: RunArtifactOutcome;
+      if (keyPair === null) {
+        receipt = { status: 'skipped', reason: keyUnavailableReason ?? 'signing key unavailable' };
+      } else {
+        const result = buildRunReceipt(turn.runId, deviceId, events, keyPair);
+        if (result.ok) {
+          const receiptFile = `runs/${safe}.receipt.json`;
+          files.push({ relPath: receiptFile, content: JSON.stringify(result.receipt, null, 2) });
+          receipt = { status: 'ok', file: receiptFile };
+        } else {
+          receipt = { status: 'skipped', reason: result.reason };
+        }
+      }
+
+      return { runId: turn.runId, report: { status: 'ok', file: reportFile }, receipt };
+    } catch (err) {
+      // A failure gathering ONE run's artifacts (a journal read error, most plausibly) must not take
+      // the rest of the bundle down with it — same rule as every other best-effort step here.
+      const reason = errText(err);
+      return {
+        runId: turn.runId,
+        report: { status: 'skipped', reason },
+        receipt: { status: 'skipped', reason },
+      };
+    }
+  });
+}
+
 export async function collectAgentExportBundleFiles(
   input: BundleInput,
   exportedAt: number,
 ): Promise<BundleFile[]> {
-  const { chatContent, groupId, meta } = input;
+  const { chatContent, groupId, meta, turns } = input;
   const files: BundleFile[] = [];
 
   // chat.md — the renderer-rendered transcript, verbatim (the renderer owns the live turns/events).
@@ -183,6 +272,11 @@ export async function collectAgentExportBundleFiles(
   }
   files.push({ relPath: 'journal.json', content: JSON.stringify(journal, null, 2) });
 
+  // runs/*.report.md + runs/*.receipt.json — per-run Notary artifacts (Phase 7). Best-effort, same
+  // degrade-gracefully rule as everything else: no database, no turns.
+  const runManifest =
+    db !== null && turns !== undefined ? collectRunArtifacts(db, turns, exportedAt, files) : [];
+
   // manifest.json — environment + session diagnostics + per-tab capture outcomes (no silent gaps).
   const manifest = {
     exportedAt: new Date(exportedAt).toISOString(),
@@ -198,6 +292,7 @@ export async function collectAgentExportBundleFiles(
     memoryMessages: memory.length,
     journalEvents: journal.length,
     tabs: tabManifest,
+    runs: runManifest,
   };
   files.push({ relPath: 'manifest.json', content: JSON.stringify(manifest, null, 2) });
 

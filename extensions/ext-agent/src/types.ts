@@ -257,6 +257,11 @@ export interface AgentBundleExportInput {
     tokens?: { inputTokens?: number; outputTokens?: number; totalTokens?: number };
     title?: string;
   };
+  /** Phase 7: this session's own turns (each with the runId that journaled it), so the bundle also
+   *  gathers a per-run Notary report/receipt for every turn that has one. Main cannot derive "which
+   *  runIds belong to this group" from the journal alone — the renderer's Turn state is the only place
+   *  a runId is known. Omitted or empty ⇒ no run artifacts, same as before this field existed. */
+  turns?: { runId: string; prompt: string }[];
 }
 
 /** Input for the per-run Run Report export (Phase 7 NotaryService — the unsigned, human-readable view
