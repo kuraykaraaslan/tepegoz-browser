@@ -66,6 +66,12 @@ export const tr: AgentStrings = {
   planBody:
     'İstemediğiniz adımların işaretini kaldırıp çalıştırın. Onaylayana kadar hiçbir şey yürütülmez.',
   planRun: 'Planı çalıştır',
+  planStepRisk: {
+    read: 'Salt okunur',
+    state_changing: 'Bir şeyi değiştirir',
+    financial: 'Finansal',
+    destructive: 'Geri alınamaz',
+  },
   // İnsana Devir Denetleyicisi — CAPTCHA / 2FA / giriş duvarı algılandığında ajan kontrolü geri verir.
   handoff: {
     notifyTitle: 'Sıra sizde — Tepegöz duraklattı',

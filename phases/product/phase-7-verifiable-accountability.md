@@ -23,8 +23,11 @@ append-only Journal.
       reconstructed **without** a model call
 - [ ] **Counterfactual Dry-Run** produces a human-readable Consequence Report for a full plan with **zero real
       side-effects**, then commits the identical plan for real on approval
-- [ ] **Pre-flight Cost & Risk Contract** shown + accepted before run; on failure the auto-refund is a
+- [~] **Pre-flight Cost & Risk Contract** shown + accepted before run; on failure the auto-refund is a
       verifiable before/after diff against the contract
+      _(2026-09-15: the plan-preview modal — already blocking, already accepted before a run — now shows
+      each step's declared danger class. Cost estimation, the HITL-gate count, sites-touched, and the
+      refund diff are all still open; see the task note below.)_
 - [~] **Data Rights**: a subject-access export + a **provable erasure** (tombstone + blob-refcount decrement)
       complete end-to-end; erasure is itself an append-only recorded event
       _(2026-09-15: subject-access export is real — see the task note below — but read-only; erasure is
@@ -217,8 +220,21 @@ append-only Journal.
 
 ### L3/L7 — Pre-flight Cost & Risk Contract
 
-- [ ] Before any task runs, surface a binding **Run Contract**: estimated token cost (from the DAG cost
+- [~] Before any task runs, surface a binding **Run Contract**: estimated token cost (from the DAG cost
       estimator), highest danger-class node, count of HITL gates, which adapters/sites will be touched
+      _(2026-09-15, the "highest danger-class node" corner landed — the only one of the four that was
+      achievable without first solving a harder problem. The plan-preview modal (already a blocking
+      pre-flight gate, `requestPlanApproval` in `ipc-agent-run.ts`) now carries each step's DECLARED
+      `dangerClass` from `CapabilityRegistry`, and `panel-modals.tsx` renders it as a badge — read-only
+      steps stay unbadged so the signal does not train the user to stop looking. Deliberately NOT the
+      same axis as the six-tier `RiskTier` a HITL prompt shows later (`risk-tier.ts`'s own module doc:
+      `dangerClass` is author-declared and static, `RiskTier` is derived from a step's actual arguments
+      and not knowable before it runs) — a separate palette (`DANGER_CLASS_TONE`) keeps the two from
+      being visually conflated. **Not attempted:** the token-cost estimate (no DAG cost estimator exists
+      anywhere in the codebase yet — a real modeling exercise, not a wiring one, and a wrong estimate
+      would be worse than none), the HITL-gate count (needs `resolveAutonomy` against user prefs, which
+      the plan-preview does not currently evaluate per step), which sites will be touched, and the
+      post-run verifiable refund diff.)_
 - [ ] User accepts (recorded as an event); on failure/loop/abort the Token-Ledger auto-refund is shown as a
       reconciled before/after with a verifiable diff ("promised ≤X, spent Y, refunded Z"), replayable from the
       Journal — weaponizes competitors' #1/#2 cost complaints (no refund, no pre-cost telegraphing)

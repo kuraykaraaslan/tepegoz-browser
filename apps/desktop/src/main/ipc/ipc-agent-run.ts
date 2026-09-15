@@ -513,7 +513,19 @@ export function registerAgentRunIpc(): void {
         groupId,
         planId,
         goal: plan.goal,
-        steps: plan.steps.map((s) => ({ id: s.id, tool: s.tool, rationale: s.rationale })),
+        // dangerClass is the tool's own DECLARED class (registration-time, static) — not the finer
+        // RiskTier a HITL prompt shows later, which depends on this step's actual arguments and is not
+        // known yet. Absent when the tool id does not resolve (a plan naming a tool this build has
+        // never registered), so the preview never crashes on an unrecognized step.
+        steps: plan.steps.map((s) => {
+          const dangerClass = CapabilityRegistry.get(s.tool)?.descriptor.dangerClass;
+          return {
+            id: s.id,
+            tool: s.tool,
+            rationale: s.rationale,
+            ...(dangerClass !== undefined ? { dangerClass } : {}),
+          };
+        }),
       };
       if (!sender.isDestroyed()) sender.send(IpcChannels.agentPlanPreview, preview);
       return new Promise<PlanApprovalDecision>((resolve) => {

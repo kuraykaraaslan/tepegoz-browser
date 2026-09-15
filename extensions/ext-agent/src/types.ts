@@ -129,6 +129,13 @@ export interface AgentPlanStep {
   id: string;
   tool: string;
   rationale: string;
+  /**
+   * The tool's DECLARED danger class (author-supplied at registration, not derived from this step's
+   * actual arguments — that finer classification, `RiskTier`, is only known once a step is about to
+   * run). Absent when the tool id does not resolve in the registry — a plan can reference a tool by
+   * name the current build simply does not know, and that must not crash the preview.
+   */
+  dangerClass?: RiskLevel;
 }
 
 export interface AgentPlanPreview {
@@ -179,8 +186,8 @@ export interface TokenUsageSnapshot {
  * a UI package must not own it. See `resolveAutonomy` in `@tepegoz/security-policy` for the decision
  * this level feeds, which runs in main and never in this renderer.
  */
-import type { AgentAutonomy, RiskTier } from '@tepegoz/shared-types';
-export type { AgentAutonomy, RiskTier };
+import type { AgentAutonomy, RiskLevel, RiskTier } from '@tepegoz/shared-types';
+export type { AgentAutonomy, RiskLevel, RiskTier };
 
 /** One user-selectable model within a provider (the panel's Model dropdown). */
 export interface AgentModelInfo {

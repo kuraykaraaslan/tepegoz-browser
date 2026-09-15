@@ -63,6 +63,16 @@ export const en = {
   planTitle: 'Review the plan',
   planBody: 'Uncheck any step you do not want, then run. Nothing executes until you approve.',
   planRun: 'Run plan',
+  // Each step's DECLARED danger class (the tool's own static self-classification), shown before any
+  // step runs. Deliberately not the same label set as the six live risk tiers a HITL prompt shows
+  // later — that finer classification depends on the step's actual arguments, which are not known yet
+  // at plan-preview time.
+  planStepRisk: {
+    read: 'Read-only',
+    state_changing: 'Changes something',
+    financial: 'Financial',
+    destructive: 'Destructive',
+  },
   // Human Handoff Controller — shown when a CAPTCHA / 2FA / login wall is detected and the agent hands back.
   handoff: {
     notifyTitle: 'Your turn — Tepegöz paused',

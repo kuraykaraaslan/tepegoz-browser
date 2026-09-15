@@ -70,9 +70,10 @@ vi.mock('@tepegoz/security-policy', () => ({
   REMEMBERED_GRANT_DAYS: 30,
   resolveAutonomy,
 }));
-vi.mock('@tepegoz/capability-plane', () => ({
-  CapabilityRegistry: { get: vi.fn(() => undefined) },
+const capabilityRegistry = vi.hoisted(() => ({
+  get: vi.fn((): { descriptor: { dangerClass?: string } } | undefined => undefined),
 }));
+vi.mock('@tepegoz/capability-plane', () => ({ CapabilityRegistry: capabilityRegistry }));
 
 vi.mock('@tepegoz/model-gateway', () => ({
   TokenLedger: { runScoped: (fn: () => unknown) => fn(), snapshotEntries: vi.fn(() => []) },
@@ -499,6 +500,32 @@ describe('the injected requestPlanApproval hook', () => {
     entry.resolve({ approved: true });
     expect(await pending).toEqual({ approved: true });
     expect(PlanGrantStore.mint).toHaveBeenCalled();
+  });
+
+  it('includes each step’s DECLARED dangerClass from the CapabilityRegistry, omitting it for an unrecognized tool', async () => {
+    await run();
+    const twoStepPlan = {
+      goal: 'buy milk',
+      steps: [
+        { id: 's1', tool: 'nav', rationale: 'go' },
+        { id: 's2', tool: 'unregistered_tool', rationale: 'unknown to this build' },
+      ],
+    };
+    // Queued in step order: requestPlanApproval maps the steps in sequence, one .get() call each.
+    capabilityRegistry.get.mockImplementationOnce(() => ({
+      descriptor: { dangerClass: 'destructive' },
+    }));
+    capabilityRegistry.get.mockImplementationOnce(() => undefined);
+    void hooksArg().requestPlanApproval(twoStepPlan);
+    expect(send).toHaveBeenCalledWith(
+      IpcChannels.agentPlanPreview,
+      expect.objectContaining({
+        steps: [
+          { id: 's1', tool: 'nav', rationale: 'go', dangerClass: 'destructive' },
+          { id: 's2', tool: 'unregistered_tool', rationale: 'unknown to this build' },
+        ],
+      }),
+    );
   });
 
   it('does not mint a grant when the renderer rejects the plan', async () => {

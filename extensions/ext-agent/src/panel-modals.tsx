@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Modal, cn } from '@tepegoz/ui';
 import type { Resources } from '@tepegoz/i18n';
 import type { AgentStrings } from './i18n';
-import type { AgentApprovalRequest, AgentPlanPreview, RiskTier } from './types';
+import type { AgentApprovalRequest, AgentPlanPreview, RiskLevel, RiskTier } from './types';
 import { BTN_GHOST, BTN_PRIMARY } from './panel-styles';
 
 /** Escalating visual weight, so the six classes are distinguishable at a glance and not just by text.
@@ -29,6 +29,21 @@ const RISK_TONE: Readonly<Record<RiskTier, string>> = {
   'data-egress': 'border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-300',
   financial: 'border-amber-600/50 bg-amber-600/10 text-amber-800 dark:text-amber-200',
   credential: 'border-red-500/40 bg-red-500/10 text-red-700 dark:text-red-300',
+  destructive: 'border-red-600/50 bg-red-600/10 text-red-800 dark:text-red-200',
+};
+
+/**
+ * A step's DECLARED danger class in the plan-preview modal — the tool's own static registration-time
+ * classification, shown before any step has run (Phase 7 "Pre-flight Cost & Risk Contract", the
+ * "highest danger-class node" half — token-cost estimation is a separate, harder problem not attempted
+ * here). Deliberately a SEPARATE palette from {@link RISK_TONE}: `RiskLevel` (4 classes) and `RiskTier`
+ * (6, argument-derived) are different axes — see `risk-tier.ts`'s module doc — so reusing one map for
+ * both would silently claim an equivalence that is not true.
+ */
+const DANGER_CLASS_TONE: Readonly<Record<RiskLevel, string>> = {
+  read: 'border-border-subtle bg-surface-base text-text-secondary',
+  state_changing: 'border-border-subtle bg-surface-base text-text-primary',
+  financial: 'border-amber-600/50 bg-amber-600/10 text-amber-800 dark:text-amber-200',
   destructive: 'border-red-600/50 bg-red-600/10 text-red-800 dark:text-red-200',
 };
 
@@ -107,6 +122,18 @@ export function PanelModals({
                     <span className="font-mono text-text-primary">
                       {String(i + 1)}. {step.tool}
                     </span>
+                    {/* Only shown above 'read' — a badge on every low-stakes step would train the user
+                        to stop looking at it by the time one actually matters. */}
+                    {step.dangerClass !== undefined && step.dangerClass !== 'read' && (
+                      <span
+                        className={cn(
+                          'ml-1.5 rounded border px-1 py-0.5 align-middle text-[0.65rem] font-medium',
+                          DANGER_CLASS_TONE[step.dangerClass],
+                        )}
+                      >
+                        {a.planStepRisk[step.dangerClass]}
+                      </span>
+                    )}
                     {step.rationale.length > 0 && (
                       <span className="ml-1 break-words text-text-secondary">
                         — {step.rationale}
