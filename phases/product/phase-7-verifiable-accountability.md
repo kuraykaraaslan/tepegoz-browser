@@ -25,8 +25,11 @@ append-only Journal.
       side-effects**, then commits the identical plan for real on approval
 - [ ] **Pre-flight Cost & Risk Contract** shown + accepted before run; on failure the auto-refund is a
       verifiable before/after diff against the contract
-- [ ] **Data Rights**: a subject-access export + a **provable erasure** (tombstone + blob-refcount decrement)
+- [~] **Data Rights**: a subject-access export + a **provable erasure** (tombstone + blob-refcount decrement)
       complete end-to-end; erasure is itself an append-only recorded event
+      _(2026-09-15: subject-access export is real — see the task note below — but read-only; erasure is
+      untouched, deliberately: a wrong deletion is a worse failure than a missing feature, and deserves
+      its own pass rather than riding in on a search feature's momentum.)_
 - [ ] **i18n:** en+tr keys added for new surfaces (Notary/receipt UI, Accountability Dashboard, Dry-Run report,
       Cost/Risk contract, Data Rights panel, Compliance Pack export)
 - [x] ADR accepted: **ADR-0014** (NotaryService: hash-chained Journal + signed Replay Receipts + anchoring)
@@ -222,9 +225,25 @@ append-only Journal.
 
 ### L1/L2/L6 — KVKK/GDPR self-service + living Compliance Pack
 
-- [ ] **Data Rights** panel treating the local Journal + memory + blob store as a queryable personal-data
+- [~] **Data Rights** panel treating the local Journal + memory + blob store as a queryable personal-data
       corpus: enter a subject (email/domain/name/profile) → deterministic search across events, FTS5 memory,
       CAS blobs → a portable **SAR export bundle** (machine- + human-readable, en+tr)
+      _(2026-09-15, first slice landed — READ-ONLY, erasure deliberately not attempted in the same pass:
+      [subject-access-search.ts](../../apps/desktop/src/main/privacy/subject-access-search.ts) +
+      [ipc-data-rights.ts](../../apps/desktop/src/main/ipc/ipc-data-rights.ts) register
+      `privacy:data-rights-export`. Searches TWO of the four named sources: Agent Conversation turns
+      (`AgentConversationStore.searchTurnsForSubject`, reusing the exact folded-`LIKE` + Turkish
+      `foldForSearch` contract `list()` already uses — no new search rule to drift from) and the full
+      Event Journal (`searchEventsForSubject`, JS-side since the journal has no fold-column index —
+      unbounded `EventJournal.readFrom(db, 0)`, a known scaling limit worth revisiting once a real
+      install has years of history). Writes a self-contained Markdown SAR document to `~/tepegoz/`.
+      Deliberately NOT gated behind the agent-enabled guard: past data stays exportable even after the
+      extension is turned off. **Not yet covered:** browser history, bookmarks, downloads, and the CAS
+      blob store — the phase's own "events, FTS5 memory, CAS blobs" is three sources, this is two
+      different ones (conversations + journal), narrower on purpose rather than claimed complete. No UI
+      affordance — devtools-console-only via `window.api.exportDataRights({ subject })`, same starting
+      point every other Phase 7 export took before its own UI-reachability pass. i18n: none needed yet
+      (no renderer strings — the export is a file, not a rendered surface).)_
 - [ ] **Provable erasure**: tombstone events + blob-refcount decrement + memory-audit purge, recorded as
       append-only "erasure performed" events so deletion is itself provable (reuses the `kv` tombstone column
       already in schema v1)

@@ -12,6 +12,7 @@ import { tasksApi } from './api-tasks';
 import { trustApi } from './api-trust';
 import { profilesApi } from './api-profiles';
 import { chatApi } from './api-chat';
+import { privacyApi } from './api-privacy';
 
 /**
  * The ONLY bridge between renderer and main. A small, named, typed API — never raw ipcRenderer
@@ -31,6 +32,7 @@ const api: TepegozApi = {
   ...trustApi,
   ...profilesApi,
   ...chatApi,
+  ...privacyApi,
   platform: process.platform,
 };
 

@@ -26,6 +26,7 @@ export * from './agent-delta';
 export * from './agent-prompt';
 export * from './site-data';
 export * from './browsing-data';
+export * from './data-rights';
 export * from './network-privacy';
 export * from './agent-memory';
 export * from './recipe-ir';

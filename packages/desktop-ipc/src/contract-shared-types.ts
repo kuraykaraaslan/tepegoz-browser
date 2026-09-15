@@ -128,6 +128,10 @@ export type {
   BrowsingDataRange,
 } from '@tepegoz/shared-types';
 
+// Data Rights — subject-access export (Phase 7, KVKK/GDPR self-service). Type-only, same reasoning as
+// the browsing-data types above.
+export type { DataRightsExportRequest, DataRightsExportResult } from '@tepegoz/shared-types';
+
 // The address-bar "Site information" bubble (Chrome's Page Info). Type-only — the classifier +
 // schemas live in `@tepegoz/shared-types`; the sandboxed preload only needs the shapes.
 export type {

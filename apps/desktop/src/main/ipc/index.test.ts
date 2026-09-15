@@ -19,6 +19,7 @@ const reg = vi.hoisted(() =>
       'uploads',
       'tasks',
       'siteData',
+      'dataRights',
       'pageInfo',
       'network',
       'trust',
@@ -38,6 +39,7 @@ vi.mock('./ipc-downloads', () => ({ registerDownloadsIpc: reg.downloads }));
 vi.mock('./ipc-uploads', () => ({ registerUploadsIpc: reg.uploads }));
 vi.mock('./ipc-tasks', () => ({ registerTasksIpc: reg.tasks }));
 vi.mock('./ipc-site-data', () => ({ registerSiteDataIpc: reg.siteData }));
+vi.mock('./ipc-data-rights', () => ({ registerDataRightsIpc: reg.dataRights }));
 vi.mock('./ipc-page-info', () => ({ registerPageInfoIpc: reg.pageInfo }));
 vi.mock('./ipc-network', () => ({ registerNetworkIpc: reg.network }));
 vi.mock('./ipc-trust', () => ({ registerTrustIpc: reg.trust }));

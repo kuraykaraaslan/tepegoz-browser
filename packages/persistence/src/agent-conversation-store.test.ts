@@ -132,6 +132,61 @@ describe('agent conversation history', () => {
     expect(AgentConversationStore.list(db, { query: '_' })).toEqual([]);
   });
 
+  describe('searchTurnsForSubject (Data Rights — subject-access search)', () => {
+    it('returns the TURN itself, not just which conversation matched — a SAR needs the data, not a pointer', () => {
+      beginTurn(uuid(20), 'Draft an email to kaya@example.com', 1_000);
+      const turns = AgentConversationStore.searchTurnsForSubject(db, 'kaya@example.com');
+      expect(turns).toHaveLength(1);
+      expect(turns[0]).toMatchObject({ prompt: 'Draft an email to kaya@example.com' });
+    });
+
+    it('matches on the response as well as the prompt, folded the same Turkish-aware way as list()', () => {
+      const turnId = uuid(21);
+      beginTurn(turnId, 'Bir şey sor', 1_000);
+      AgentConversationStore.appendEvent(db, turnId, {
+        runId: `run-${turnId}`,
+        groupId: GROUP,
+        kind: 'done',
+        message: 'ŞİŞLİ için özet hazır',
+        ts: 2_000,
+      });
+      expect(AgentConversationStore.searchTurnsForSubject(db, 'sisli')).toHaveLength(1);
+    });
+
+    it('returns turns across MULTIPLE conversations, ordered oldest first', () => {
+      AgentConversationStore.ensure(db, { id: uuid(30), groupId: GROUP, prompt: 'first', ts: 1_000 });
+      AgentConversationStore.addTurn(db, {
+        id: uuid(31),
+        conversationId: uuid(30),
+        runId: 'run-a',
+        prompt: 'Contact person Ayşe',
+        attachments: [],
+        ts: 1_000,
+      });
+      AgentConversationStore.ensure(db, { id: uuid(32), groupId: GROUP, prompt: 'second', ts: 2_000 });
+      AgentConversationStore.addTurn(db, {
+        id: uuid(33),
+        conversationId: uuid(32),
+        runId: 'run-b',
+        prompt: 'Follow up with Ayşe again',
+        attachments: [],
+        ts: 2_000,
+      });
+      const turns = AgentConversationStore.searchTurnsForSubject(db, 'ayse');
+      expect(turns.map((t) => t.id)).toEqual([uuid(31), uuid(33)]);
+    });
+
+    it('is empty (never throws) for a subject nothing mentions', () => {
+      beginTurn(uuid(34), 'Book a table', 1_000);
+      expect(AgentConversationStore.searchTurnsForSubject(db, 'nobody-mentioned-this')).toEqual([]);
+    });
+
+    it('respects the escape clause — a literal % in the subject matches nothing wild', () => {
+      beginTurn(uuid(35), 'Plain prompt', 1_000);
+      expect(AgentConversationStore.searchTurnsForSubject(db, '%')).toEqual([]);
+    });
+  });
+
   it('backfills rows written before the fold columns existed, once', () => {
     const turnId = uuid(15);
     beginTurn(turnId, 'İSTANBUL için plan', 1_000);

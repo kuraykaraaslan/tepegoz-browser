@@ -7,6 +7,7 @@ import { registerDownloadsIpc } from './ipc-downloads';
 import { registerUploadsIpc } from './ipc-uploads';
 import { registerTasksIpc } from './ipc-tasks';
 import { registerSiteDataIpc } from './ipc-site-data';
+import { registerDataRightsIpc } from './ipc-data-rights';
 import { registerPageInfoIpc } from './ipc-page-info';
 import { registerNetworkIpc } from './ipc-network';
 import { registerTrustIpc } from './ipc-trust';
@@ -33,6 +34,7 @@ export function registerIpc(): void {
   registerUploadsIpc();
   registerTasksIpc();
   registerSiteDataIpc();
+  registerDataRightsIpc();
   registerPageInfoIpc();
   registerNetworkIpc();
   registerTrustIpc();

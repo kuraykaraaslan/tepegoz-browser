@@ -117,6 +117,26 @@ export class AgentConversationStore {
     return rows.map(rowToSummary);
   }
 
+  /**
+   * Every turn whose prompt or response mentions `subject` (Data Rights — Phase 7 KVKK/GDPR self-
+   * service). Same folded-column + escaped-LIKE contract as {@link list}, but returns the actual turn
+   * content across EVERY conversation rather than which conversations matched — a subject-access
+   * request needs to see the data itself, not a pointer to it. Capped at `limit` (default 500, own bound
+   * from `list`'s 200-row UI-pagination cap — a compliance export legitimately needs more than a page).
+   */
+  static searchTurnsForSubject(db: Db, subject: string, limit = 500): AgentConversationTurn[] {
+    const like = likeContains(foldForSearch(subject));
+    const cappedLimit = Math.max(1, Math.min(Math.trunc(limit), 2000));
+    const rows = db
+      .prepare(
+        `SELECT * FROM agent_conversation_turns
+         WHERE prompt_fold LIKE ? ${LIKE_ESCAPE_CLAUSE} OR response_fold LIKE ? ${LIKE_ESCAPE_CLAUSE}
+         ORDER BY created_at ASC LIMIT ?`,
+      )
+      .all(like, like, cappedLimit) as TurnRow[];
+    return rows.map(rowToTurn);
+  }
+
   static get(db: Db, id: string): AgentConversationDetail | null {
     const row = db.prepare('SELECT * FROM agent_conversations WHERE id = ?').get(id) as
       ConversationRow | undefined;

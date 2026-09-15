@@ -18,6 +18,7 @@ import type { PageMenuAction, PageMenuContext, PageMenuContributionActionInput }
 import type { HistoryEntry } from './contract';
 import type { PageInfo, SiteClearPlan } from './contract';
 import type { BrowsingDataClearRequest, BrowsingDataClearResult } from './contract';
+import type { DataRightsExportRequest, DataRightsExportResult } from './contract';
 import type { BookmarkEntry, BookmarkNodeType, BookmarkTreeNode } from './contract';
 import type { ReaderArticle } from '@tepegoz/reader';
 import type { StoredScreenshot } from '@tepegoz/screenshots';
@@ -95,6 +96,9 @@ export interface UiApi {
   // Bookmarks. Only http(s) pages are bookmarkable (internal tepegoz:// pages are rejected in main).
   /** Clear browsing data over a time range. Returns what was actually removed, per category. */
   clearBrowsingData(request: BrowsingDataClearRequest): Promise<BrowsingDataClearResult>;
+  /** Data Rights: search the local Agent Conversation history + Event Journal for a subject and write a
+   *  portable SAR (subject-access) Markdown document to `~/tepegoz/`, revealed in the file manager. */
+  exportDataRights(request: DataRightsExportRequest): Promise<DataRightsExportResult>;
   /** All bookmarks, newest-first. */
   listBookmarks(): Promise<BookmarkEntry[]>;
   /** Add the page if absent, else remove it. Returns the resulting bookmarked state. */

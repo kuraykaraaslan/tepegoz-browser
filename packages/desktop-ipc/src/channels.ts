@@ -357,6 +357,10 @@ export const IpcChannels = {
   /** main → chrome: focus + select the address bar (Ctrl+L / Alt+D, pressed while a page had focus). */
   /** The unified "Clear browsing data" action (range + categories). Per-site forget is separate. */
   browsingDataClear: 'privacy:clear-browsing-data',
+  /** Data Rights — subject-access export (Phase 7 KVKK/GDPR self-service). Searches the local Agent
+   *  Conversation history + Event Journal for a subject and writes a portable SAR document to
+   *  `~/tepegoz/` → { subject, matchedTurns, matchedEvents, filePath }. */
+  dataRightsExport: 'privacy:data-rights-export',
   omniboxFocus: 'omnibox:focus',
   /** main → chrome: Ctrl/Cmd+K arrived (any focus context) — toggle the Command Palette. `main` scope
    *  like `find`/`omniboxFocus`, so it works while a browsed PAGE has focus, not only the chrome. */

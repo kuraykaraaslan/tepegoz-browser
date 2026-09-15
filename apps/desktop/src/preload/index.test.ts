@@ -34,6 +34,7 @@ describe('preload entry', () => {
       'listUploads', // uploadsApi
       'listTasks', // tasksApi
       'listTrustProfiles', // trustApi
+      'exportDataRights', // privacyApi
     ]) {
       expect(typeof api[method]).toBe('function');
     }
