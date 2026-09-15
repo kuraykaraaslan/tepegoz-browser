@@ -100,6 +100,12 @@ export const AgentExportRunReportSchema = z.object({
   goal: z.string().min(1).max(MAX_USER_PROMPT_CHARS),
 });
 
+/** `agent:export-run-receipt` payload — just the run to build a Replay Receipt for; everything else
+ *  (goal, device id, signing key) main already has or derives. */
+export const AgentExportRunReceiptSchema = z.object({
+  runId: AgentRunIdSchema,
+});
+
 export const HistoryQuerySchema = z.string().max(200);
 export const HistoryUrlSchema = z.string().min(1).max(4096);
 

@@ -126,6 +126,12 @@ const INVOKES: Row[] = [
     IpcChannels.agentExportRunReport,
     { runId: 'run-1', goal: 'Book a table' },
   ],
+  [
+    'exportAgentRunReceipt',
+    () => api.exportAgentRunReceipt({ runId: 'run-1' }),
+    IpcChannels.agentExportRunReceipt,
+    { runId: 'run-1' },
+  ],
   ['capturePageScreenshot', () => api.capturePageScreenshot(), IpcChannels.tabsCapture],
   [
     'listExtensionManifests',

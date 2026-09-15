@@ -268,6 +268,12 @@ export interface AgentRunReportExportInput {
   goal: string;
 }
 
+/** Input for the per-run signed Replay Receipt export (Phase 7 NotaryService DoD). Just the run — main
+ *  already has (or derives) everything else a receipt needs. */
+export interface AgentRunReceiptExportInput {
+  runId: string;
+}
+
 /** A file the user attached to a message via the native file picker. */
 export interface AgentFileAttachment {
   name: string;
@@ -369,6 +375,9 @@ export interface AgentHostApi {
   /** Write the unsigned, human-readable Run Report for ONE run to `~/tepegoz/` and reveal it. Resolves
    *  to the absolute file path. Explicitly not a proof — see {@link AgentRunReportExportInput}. */
   exportAgentRunReport(input: AgentRunReportExportInput): Promise<string>;
+  /** Write a signed Replay Receipt for ONE run to `~/tepegoz/` and reveal it. Resolves to the absolute
+   *  file path; rejects when the run has no events, predates chaining, or fails integrity verification. */
+  exportAgentRunReceipt(input: AgentRunReceiptExportInput): Promise<string>;
   /** Open a URL from agent output in a new browser tab. */
   createTab(url?: string): void;
   /** Capture the active page's current text selection. Returns empty string if nothing is selected. */

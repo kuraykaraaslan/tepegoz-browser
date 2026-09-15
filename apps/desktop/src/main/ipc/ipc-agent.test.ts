@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 /**
  * `ipc-agent.ts` — the agent-IPC facade. Two things it owns:
- *   - `registerAgentIpc` composes the seven concern registrars — a missed one is an unwired domain;
+ *   - `registerAgentIpc` composes the eight concern registrars — a missed one is an unwired domain;
  *   - `abortActiveAgentRuns` (called from before-quit) aborts every run AND fail-safe-DENIES every
  *     HITL prompt parked on a promise, so quit doesn't race a half-finished run against teardown.
  */
@@ -25,6 +25,7 @@ const reg = vi.hoisted(() => ({
   background: vi.fn(),
   config: vi.fn(),
   runReport: vi.fn(),
+  runReceipt: vi.fn(),
 }));
 vi.mock('./ipc-agent-run', () => ({ registerAgentRunIpc: reg.run }));
 vi.mock('./ipc-agent-controls', () => ({ registerAgentControlIpc: reg.control }));
@@ -35,6 +36,7 @@ vi.mock('./ipc-agent-skills', () => ({
 }));
 vi.mock('./ipc-agent-config', () => ({ registerAgentConfigIpc: reg.config }));
 vi.mock('./ipc-agent-run-report', () => ({ registerAgentRunReportIpc: reg.runReport }));
+vi.mock('./ipc-agent-run-receipt', () => ({ registerAgentRunReceiptIpc: reg.runReceipt }));
 
 const { registerAgentIpc, abortActiveAgentRuns } = await import('./ipc-agent');
 
@@ -47,7 +49,7 @@ beforeEach(() => {
 });
 
 describe('registerAgentIpc', () => {
-  it('invokes all seven concern registrars exactly once', () => {
+  it('invokes all eight concern registrars exactly once', () => {
     registerAgentIpc();
     for (const f of Object.values(reg)) expect(f).toHaveBeenCalledTimes(1);
   });

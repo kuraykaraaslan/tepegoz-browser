@@ -15,6 +15,7 @@ import {
   type AgentEvent,
   type AgentFileAttachment,
   type AgentPlanPreview,
+  type AgentRunReceiptExportInput,
   type AgentRunReportExportInput,
   type AgentRunResult,
   type AIAdaptor,
@@ -71,6 +72,7 @@ export const agentModelsApi: Pick<
   | 'exportChatLog'
   | 'exportAgentBundle'
   | 'exportAgentRunReport'
+  | 'exportAgentRunReceipt'
   | 'capturePageSelection'
   | 'pickAgentFiles'
   | 'capturePageScreenshot'
@@ -214,6 +216,8 @@ export const agentModelsApi: Pick<
     invoke<string>(IpcChannels.agentExportBundle, input),
   exportAgentRunReport: (input: AgentRunReportExportInput) =>
     invoke<string>(IpcChannels.agentExportRunReport, input),
+  exportAgentRunReceipt: (input: AgentRunReceiptExportInput) =>
+    invoke<string>(IpcChannels.agentExportRunReceipt, input),
   capturePageSelection: () => invoke<string>(IpcChannels.agentCaptureSelection),
   pickAgentFiles: () => invoke<AgentFileAttachment[]>(IpcChannels.agentPickFiles),
   capturePageScreenshot: () => invoke<string | null>(IpcChannels.tabsCapture),

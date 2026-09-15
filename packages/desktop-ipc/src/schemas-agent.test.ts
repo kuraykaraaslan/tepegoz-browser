@@ -3,6 +3,7 @@ import {
   AgentApprovalResponseSchema,
   AgentExportBundleSchema,
   AgentExportConversationSchema,
+  AgentExportRunReceiptSchema,
   AgentExportRunReportSchema,
   AgentNewConversationSchema,
   AgentOpenFileSchema,
@@ -136,6 +137,17 @@ describe('AgentExportRunReportSchema', () => {
   it('rejects a missing runId or an empty goal', () => {
     expect(AgentExportRunReportSchema.safeParse({ goal: 'x' }).success).toBe(false);
     expect(AgentExportRunReportSchema.safeParse({ runId: 'run-1', goal: '' }).success).toBe(false);
+  });
+});
+
+describe('AgentExportRunReceiptSchema', () => {
+  it('accepts a runId alone', () => {
+    expect(AgentExportRunReceiptSchema.parse({ runId: 'run-1' })).toEqual({ runId: 'run-1' });
+  });
+
+  it('rejects a missing or empty runId', () => {
+    expect(AgentExportRunReceiptSchema.safeParse({}).success).toBe(false);
+    expect(AgentExportRunReceiptSchema.safeParse({ runId: '' }).success).toBe(false);
   });
 });
 

@@ -13,8 +13,10 @@ append-only Journal.
 
 ## Exit criteria (DoD)
 
-- [ ] **Replay Receipt** is emitted for a completed task and validated by a **standalone `tepegoz-verify` CLI**
+- [~] **Replay Receipt** is emitted for a completed task and validated by a **standalone `tepegoz-verify` CLI**
       (no tepegöz install) → PASS; a tampered event → FAIL/TAMPERED
+      _(2026-09-15: the capability is real and CLI-validated — see the task note below — but not yet
+      reachable from the shipping UI, so not ticked `[x]`.)_
 - [ ] **Accountability Dashboard** answers "Why did the agent do X?" with a deterministic causal trace
       reconstructed **without** a model call
 - [ ] **Counterfactual Dry-Run** produces a human-readable Consequence Report for a full plan with **zero real
@@ -49,10 +51,7 @@ append-only Journal.
 > `AgentStepExecuted`/`PolicyBlocked`/`HitlRequested`/`HandoffRequested`/`TaskSucceeded`/`TaskFailed`/
 > `CheckpointWritten` row a live agent run writes — now go through it. **What still does not chain:**
 > every OTHER domain (downloads, uploads, chat, tasks, …) still calls `EventJournal.append` directly,
-> unchained — intentionally scoped to the agent-run path first, same as the run-report before it. No
-> signing key is fetched yet (`NotarySigningKeyStore.getOrCreate()` still has no caller) and no checkpoint
-> is ever folded/signed — only the per-event chain runs today. `buildReceipt` still only runs on data
-> handed to it directly; a receipt still cannot be produced from a real run.
+> unchained — intentionally scoped to the agent-run path first, same as the run-report before it.
 >
 > **2026-09-15.** The unsigned run-report transform landed: `buildRunReport` + `renderRunReportMarkdown`
 > in `@tepegoz/notary` (79 tests now), structuring one run's Journal events (ordered by `lsn`, latency
@@ -69,6 +68,18 @@ append-only Journal.
 > devtools console. That is a UI-placement decision (a new icon next to the existing header-star export,
 > or a per-run action — the panel has no per-turn action pattern today to extend) deliberately left
 > unmade rather than guessed at.
+>
+> **Same day, one more layer: the first Replay Receipt DoD bullet is functionally closed.**
+> `agent:export-run-receipt` re-verifies a run's STORED hash chain (catching a row edited directly in the
+> database after it was chained — the actual reason `prev_hash`/`self_hash` are persisted at all, not
+> merely recomputed at report time), signs a fresh self-contained receipt with the device's Ed25519 key
+> (`NotarySigningKeyStore.getOrCreate()`'s first real caller), and writes it to `~/tepegoz/`.
+> **Independently confirmed against the BUILT standalone CLI**, not just the library function or a mock:
+> a realistic 3-event receipt PASSed (`node dist/tepegoz-verify.mjs` → exit 0), and a hand-tampered copy
+> came back TAMPERED at the exact edited event (exit 1) — the DoD's own acceptance language, demonstrated
+> literally. Still not ticked `[x]` in the DoD: no Agent Console affordance calls it either, and no run
+> has actually been executed end-to-end through the shipped app this session (the CLI validation used a
+> realistic fixture built the same way `appendChainedEvent` would, not a live run's own database rows).
 
 ## Tasks
 
@@ -103,7 +114,23 @@ append-only Journal.
   anchor, which is the next piece.)_
 - [~] Portable, self-contained **Replay Receipt**: signed event subtree + authorizing **policy-IR snapshot** +
   model/provider/cost (from Token Ledger) + `cas://` blob hashes
-  _(landed: [replay-receipt.ts](../../packages/notary/src/replay-receipt.ts) — the event subtree + checkpoint. **Owed:** the policy-IR snapshot and Token Ledger fields are not part of the receipt shape yet.)_
+  _(landed: [replay-receipt.ts](../../packages/notary/src/replay-receipt.ts) — the event subtree + checkpoint.
+  **2026-09-15, wired into a real run:**
+  [build-run-receipt.ts](../../apps/desktop/src/main/notary/build-run-receipt.ts) +
+  [ipc-agent-run-receipt.ts](../../apps/desktop/src/main/ipc/ipc-agent-run-receipt.ts) register
+  `agent:export-run-receipt` — the first real caller of `NotarySigningKeyStore.getOrCreate()`. It
+  re-verifies the run's STORED hash chain (catches a row edited directly in the database after
+  `appendChainedEvent` wrote it — a fresh re-hash alone would launder that), then builds a fresh,
+  self-contained receipt re-chained from `GENESIS_HASH` (never the device's real tail — a standalone
+  verifier has nothing to check an arbitrary claimed tail against) and signs it with the device key.
+  **Manually validated against the BUILT standalone CLI**, not just the library function: generated a
+  receipt from a realistic 3-event run, `node dist/tepegoz-verify.mjs` → `PASS — run-demo-1 verified (3
+  events)` (exit 0); hand-tampered one event's payload → `TAMPERED — hash chain broken at event 1
+  (hash_mismatch)` (exit 1). **Owed:** the policy-IR snapshot and Token Ledger fields are not part of the
+  receipt shape yet; no Agent Console affordance calls it (devtools-console-only, same gap as the run
+  report); refuses cleanly (409) for a run with no events, one that predates chaining, or a broken chain,
+  rather than fabricating a receipt — those refusal paths are unit-tested but not yet reachable from a
+  real run in this session, since no run has been executed through the actual shipped app.)_
 - [x] Standalone open-source **`tepegoz-verify` CLI**: re-folds events deterministically and validates the
       chain **without tepegöz installed** → PASS / FAIL / TAMPERED
       _(landed: [cli.ts](../../packages/notary/src/cli.ts), bundled to a dependency-free single file by [scripts/build-cli.mjs](../../packages/notary/scripts/build-cli.mjs). Verified in-session by running the BUILT output — `node dist/tepegoz-verify.mjs receipt.json` — against a genuine and a hand-tampered receipt, not merely by compiling the source. PASS/TAMPERED/INVALID/usage-error map to exit codes 0/1/2/3.)_

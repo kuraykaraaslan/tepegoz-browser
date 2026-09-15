@@ -187,6 +187,11 @@ export const IpcChannels = {
    *  "shippable before the wiring"). Main reads that run's Journal events + token totals, renders the
    *  Markdown, writes it to `~/tepegoz/` and reveals it → absolute file path. */
   agentExportRunReport: 'agent:export-run-report',
+  /** Renderer→main: a signed Replay Receipt for ONE run (Phase 7 NotaryService DoD). Main re-verifies
+   *  the run's stored hash chain, signs a fresh self-contained receipt with the device key, writes it to
+   *  `~/tepegoz/` and reveals it → absolute file path. Refuses (409) for a run with no events, one that
+   *  predates chaining, or a chain that fails integrity verification. */
+  agentExportRunReceipt: 'agent:export-run-receipt',
   // Agent extension conversation history. The product surface is the ext-agent page, not a core page.
   agentConversationsList: 'agent-conversations:list',
   agentConversationsGet: 'agent-conversations:get',

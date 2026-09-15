@@ -13,6 +13,7 @@ import type {
   AgentEvent,
   AgentFileAttachment,
   AgentPlanPreview,
+  AgentRunReceiptExportInput,
   AgentRunReportExportInput,
   AgentRunResult,
   ProviderId,
@@ -127,6 +128,9 @@ export interface AgentApi {
   /** Write the unsigned, human-readable Run Report for ONE run to `~/tepegoz/` and reveal it. Resolves
    *  to the absolute file path. Explicitly not a proof — see {@link AgentRunReportExportInput}. */
   exportAgentRunReport(input: AgentRunReportExportInput): Promise<string>;
+  /** Write a signed Replay Receipt for ONE run to `~/tepegoz/` and reveal it. Resolves to the absolute
+   *  file path; rejects when the run has no events, predates chaining, or fails integrity verification. */
+  exportAgentRunReceipt(input: AgentRunReceiptExportInput): Promise<string>;
   /** Capture the active page's current text selection. Returns empty string when nothing is selected. */
   capturePageSelection(): Promise<string>;
   /** Open a native file picker and return the selected files' content. */

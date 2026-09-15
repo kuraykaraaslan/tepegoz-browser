@@ -6,13 +6,14 @@ import { registerAgentConversationIpc } from './ipc-agent-conversations';
 import { registerAgentBackgroundIpc, registerAgentSkillsIpc } from './ipc-agent-skills';
 import { registerAgentConfigIpc } from './ipc-agent-config';
 import { registerAgentRunReportIpc } from './ipc-agent-run-report';
+import { registerAgentRunReceiptIpc } from './ipc-agent-run-receipt';
 
 /**
  * Agent run/config + HITL (approval + plan-preview) IPC domain (split out of `ipc.ts`, ADR-0010
  * 250-line cap). This facade composes the concern registrars (run / controls / conversations / config /
- * run-report) that live in the sibling `ipc-agent-*.ts` modules; the shared per-run tracking state is
- * owned by `ipc-agent-shared.ts`. Public surface (`registerAgentIpc`, `abortActiveAgentRuns`) is
- * unchanged.
+ * run-report / run-receipt) that live in the sibling `ipc-agent-*.ts` modules; the shared per-run
+ * tracking state is owned by `ipc-agent-shared.ts`. Public surface (`registerAgentIpc`,
+ * `abortActiveAgentRuns`) is unchanged.
  */
 
 /** Abort every in-flight agent run and unblock any HITL prompt parked on a promise (fail-safe deny),
@@ -39,4 +40,5 @@ export function registerAgentIpc(): void {
   registerAgentBackgroundIpc();
   registerAgentConfigIpc();
   registerAgentRunReportIpc();
+  registerAgentRunReceiptIpc();
 }
