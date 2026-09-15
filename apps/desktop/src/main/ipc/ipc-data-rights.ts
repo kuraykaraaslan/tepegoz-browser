@@ -2,7 +2,7 @@ import { shell } from 'electron';
 import { AppError } from '@tepegoz/libs';
 import { IpcChannels } from '@tepegoz/desktop-ipc';
 import { DataRightsExportRequestSchema, type DataRightsExportResult } from '@tepegoz/shared-types';
-import { AgentConversationStore, EventJournal } from '@tepegoz/persistence';
+import { AgentConversationStore, EventJournal, HistoryStore } from '@tepegoz/persistence';
 import {
   buildSubjectAccessReport,
   renderSubjectAccessMarkdown,
@@ -18,6 +18,10 @@ import { handleAsync } from './ipc-helpers';
  * collected, which does not stop being the user's to export just because they later turned the
  * extension off.
  */
+// A subject-access export needs everything it can find, not a UI page's worth — same reasoning as the
+// other search dimensions' own caps.
+const MAX_HISTORY_MATCHES = 500;
+
 export function registerDataRightsIpc(): void {
   handleAsync(
     IpcChannels.dataRightsExport,
@@ -28,6 +32,7 @@ export function registerDataRightsIpc(): void {
         throw new AppError('No database available to search.', 503);
       }
       const matchedTurns = AgentConversationStore.searchTurnsForSubject(db, subject);
+      const matchedHistory = HistoryStore.search(db, subject, MAX_HISTORY_MATCHES, 0);
       // Unbounded — the Journal has no fold-column index to search by (see subject-access-search.ts's
       // module doc), so this reads every row this device has ever written. Fine at today's scale; a
       // known limit worth revisiting once a real install has years of history.
@@ -36,7 +41,7 @@ export function registerDataRightsIpc(): void {
 
       const generatedAt = Date.now();
       const markdown = renderSubjectAccessMarkdown(
-        buildSubjectAccessReport({ subject, generatedAt, matchedEvents, matchedTurns }),
+        buildSubjectAccessReport({ subject, generatedAt, matchedEvents, matchedTurns, matchedHistory }),
       );
       const now = new Date(generatedAt);
       const pad = (n: number): string => String(n).padStart(2, '0');
@@ -51,6 +56,7 @@ export function registerDataRightsIpc(): void {
         subject,
         matchedTurns: matchedTurns.length,
         matchedEvents: matchedEvents.length,
+        matchedHistoryEntries: matchedHistory.length,
         filePath,
       };
     },

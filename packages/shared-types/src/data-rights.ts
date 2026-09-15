@@ -18,6 +18,7 @@ export interface DataRightsExportResult {
   subject: string;
   matchedTurns: number;
   matchedEvents: number;
+  matchedHistoryEntries: number;
   /** Absolute path to the written Markdown SAR document. */
   filePath: string;
 }

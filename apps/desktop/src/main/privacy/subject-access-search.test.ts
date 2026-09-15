@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { EventRecord } from '@tepegoz/shared-types';
 import type { AgentConversationTurn } from '@tepegoz/ext-agent/history';
+import type { HistoryEntry } from '@tepegoz/persistence';
 import {
   buildSubjectAccessReport,
   renderSubjectAccessMarkdown,
@@ -40,6 +41,17 @@ function turn(over: Partial<AgentConversationTurn> = {}): AgentConversationTurn 
     attachments: [],
     createdAt: 1000,
     updatedAt: 1000,
+    ...over,
+  };
+}
+
+function historyEntry(over: Partial<HistoryEntry> = {}): HistoryEntry {
+  return {
+    url: 'https://example.com/kaya',
+    title: 'Kaya profile',
+    ts: 1000,
+    visitCount: 1,
+    favicon: null,
     ...over,
   };
 }
@@ -85,24 +97,39 @@ describe('buildSubjectAccessReport', () => {
       generatedAt: 5000,
       matchedEvents: [event({ lsn: 2, id: 'e2' }), event({ lsn: 1, id: 'e1' })],
       matchedTurns: [],
+      matchedHistory: [],
     });
     expect(report.matchedEvents.map((e) => e.id)).toEqual(['e1', 'e2']);
   });
 });
 
 describe('renderSubjectAccessMarkdown', () => {
-  it('includes the subject, matched conversation content, and matched journal events', () => {
+  it('includes the subject, matched conversation content, matched journal events, and matched history', () => {
     const report = buildSubjectAccessReport({
       subject: 'kaya@example.com',
       generatedAt: 5000,
       matchedEvents: [event()],
       matchedTurns: [turn({ responseSummary: 'Sent.' })],
+      matchedHistory: [historyEntry({ title: 'Kaya — Example', url: 'https://example.com/kaya' })],
     });
     const md = renderSubjectAccessMarkdown(report);
     expect(md).toContain('kaya@example.com');
     expect(md).toContain('Email kaya@example.com');
     expect(md).toContain('Sent.');
     expect(md).toContain('AgentStepExecuted');
+    expect(md).toContain('[Kaya — Example](https://example.com/kaya)');
+  });
+
+  it('falls back to the bare URL when a history entry has no title', () => {
+    const report = buildSubjectAccessReport({
+      subject: 'kaya',
+      generatedAt: 5000,
+      matchedEvents: [],
+      matchedTurns: [],
+      matchedHistory: [historyEntry({ title: '', url: 'https://example.com/kaya' })],
+    });
+    const md = renderSubjectAccessMarkdown(report);
+    expect(md).toContain('[https://example.com/kaya](https://example.com/kaya)');
   });
 
   it('says plainly when a dimension found nothing, rather than an empty section', () => {
@@ -111,18 +138,21 @@ describe('renderSubjectAccessMarkdown', () => {
       generatedAt: 5000,
       matchedEvents: [],
       matchedTurns: [],
+      matchedHistory: [],
     });
     const md = renderSubjectAccessMarkdown(report);
     expect(md).toContain('No conversation turn mentions this subject');
     expect(md).toContain('No journal event mentions this subject');
+    expect(md).toContain('No history entry mentions this subject');
   });
 
-  it('discloses the coverage gap up front — history/bookmarks/downloads/blobs are not searched yet', () => {
+  it('discloses the coverage gap up front — bookmarks/downloads/blobs are not searched yet', () => {
     const report = buildSubjectAccessReport({
       subject: 'x',
       generatedAt: 0,
       matchedEvents: [],
       matchedTurns: [],
+      matchedHistory: [],
     });
     const md = renderSubjectAccessMarkdown(report);
     expect(md).toContain('not yet covered');

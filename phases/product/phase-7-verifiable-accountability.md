@@ -261,19 +261,20 @@ append-only Journal.
       _(2026-09-15, first slice landed — READ-ONLY, erasure deliberately not attempted in the same pass:
       [subject-access-search.ts](../../apps/desktop/src/main/privacy/subject-access-search.ts) +
       [ipc-data-rights.ts](../../apps/desktop/src/main/ipc/ipc-data-rights.ts) register
-      `privacy:data-rights-export`. Searches TWO of the four named sources: Agent Conversation turns
+      `privacy:data-rights-export`. Searched Agent Conversation turns
       (`AgentConversationStore.searchTurnsForSubject`, reusing the exact folded-`LIKE` + Turkish
       `foldForSearch` contract `list()` already uses — no new search rule to drift from) and the full
       Event Journal (`searchEventsForSubject`, JS-side since the journal has no fold-column index —
       unbounded `EventJournal.readFrom(db, 0)`, a known scaling limit worth revisiting once a real
       install has years of history). Writes a self-contained Markdown SAR document to `~/tepegoz/`.
       Deliberately NOT gated behind the agent-enabled guard: past data stays exportable even after the
-      extension is turned off. **Not yet covered:** browser history, bookmarks, downloads, and the CAS
-      blob store — the phase's own "events, FTS5 memory, CAS blobs" is three sources, this is two
-      different ones (conversations + journal), narrower on purpose rather than claimed complete. No UI
-      affordance — devtools-console-only via `window.api.exportDataRights({ subject })`, same starting
-      point every other Phase 7 export took before its own UI-reachability pass. i18n: none needed yet
-      (no renderer strings — the export is a file, not a rendered surface).)_
+      extension is turned off.
+      **Same day, a third dimension added:** browsing History
+      (`HistoryStore.search`, the SAME folded-LIKE query the History page itself already runs — no
+      third search rule invented either). **Not yet covered:** bookmarks, downloads, and the CAS blob
+      store. No UI affordance — devtools-console-only via `window.api.exportDataRights({ subject })`,
+      same starting point every other Phase 7 export took before its own UI-reachability pass. i18n:
+      none needed yet (no renderer strings — the export is a file, not a rendered surface).)_
 - [ ] **Provable erasure**: tombstone events + blob-refcount decrement + memory-audit purge, recorded as
       append-only "erasure performed" events so deletion is itself provable (reuses the `kv` tombstone column
       already in schema v1)
