@@ -1,9 +1,10 @@
 import { cn } from '@tepegoz/ui';
+import type { Resources } from '@tepegoz/i18n';
 import { DEFAULT_AGENT_MAX_STEPS } from '@tepegoz/shared-types';
 import type { AgentStrings } from './i18n';
 import type { AgentEvent } from './types';
 import { GaugeIcon, KIND_DOT } from './panel-icons';
-import { humanizeStepMessage } from './panel-step-message';
+import { humanizeStepDetail, humanizeStepMessage } from './panel-step-message';
 
 /**
  * Wall time of each tool call, aligned to `steps` (S8 PR9). No new data path: the audit stream
@@ -49,6 +50,7 @@ export function StepFeed({
   latestMessage,
   onToggle,
   a,
+  c,
 }: {
   steps: AgentEvent[];
   open: boolean;
@@ -56,6 +58,7 @@ export function StepFeed({
   latestMessage: string | undefined;
   onToggle: () => void;
   a: AgentStrings;
+  c: Resources;
 }) {
   if (steps.length === 0) return null;
   // One `step_start` is emitted per acting step (the reactor's own per-iteration audit hook), so
@@ -124,7 +127,7 @@ export function StepFeed({
                   </span>
                   {e.detail !== undefined && e.detail.length > 0 && (
                     <span className="ml-1 text-text-secondary [overflow-wrap:anywhere]">
-                      — {e.detail}
+                      — {humanizeStepDetail(e.detail, c)}
                     </span>
                   )}
                 </div>

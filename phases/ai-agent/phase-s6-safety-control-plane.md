@@ -360,11 +360,18 @@ the decision; the code still enforces the old absolute deny, which is the honest
       `step_start` event's `detail` (plus any critic-divergence note), which `panel-step-feed.tsx`
       renders in the per-run "reasoning" list for every step — collapsed by default, but never dropped.
       This line is scoped narrowly on purpose ("this row is the plane's obligation," presentation is
-      S8's) and the plane holds its half. **Not done, named rather than silently bundled in:** that
-      reasoning row currently shows the raw `snake_case` code (e.g. `read_allowed`), not the humanized
-      title `panel-modals.tsx`'s `explain()` already looks up for the approval modal — a real, separate
-      polish opportunity (thread `Resources` into `StepFeed`, reuse `explain()`) that is presentation,
-      not plumbing, and was left unbuilt rather than scope-crept into this line._
+      S8's) and the plane holds its half. **The presentation half landed too, 2026-09-16, as its own
+      small follow-up:** the reasoning row showed the raw `snake_case` code (e.g. `read_allowed`)
+      because nothing had ever looked it up — `panel-modals.tsx`'s approval dialog already had the exact
+      same code → human title mapping (`c.permissions`) for the SAME reason codes, just never applied
+      here. New `humanizeStepDetail` in `panel-step-message.ts` reuses that lookup and now shows
+      `Allowed (read_allowed)` — title first, raw code kept in parentheses so support can still name it
+      exactly, same "both, never one instead of the other" convention the modal itself uses. An
+      intent-divergence suffix (when the S6 PR4 critic disagreed) survives untouched, and an unrecognised
+      code is returned as-is rather than guessed at. Needed threading a new `c: Resources` prop through
+      `panel.tsx` → `panel-thread.tsx` → `StepFeed`, since the reasoning view previously only received
+      its own package's `AgentStrings`. 4 new tests on the lookup (`panel-step-message.test.ts`), plus
+      `panel-step-feed.test.tsx` and `panel-thread.test.tsx` updated for the new required `c` prop._
 - [ ] **A third HITL answer: `edit`.** Approval is `approve`/`deny` today, so a call with one wrong argument
       must be rejected and the whole turn re-driven. Letting the human **fix the argument and then approve**
       is a genuinely new capability, and the edited call must **re-enter the kernel from the top** — an edited

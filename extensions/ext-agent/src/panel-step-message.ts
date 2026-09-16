@@ -1,3 +1,4 @@
+import type { Resources } from '@tepegoz/i18n';
 import type { AgentStrings } from './i18n';
 import type { AgentEvent } from './types';
 import { toolIntent } from './panel-tool-intent';
@@ -34,4 +35,34 @@ export function humanizeStepMessage(kind: AgentEvent['kind'], message: string, a
     return m[2] === 'allow' ? intent : `${intent} · ${a.stepDecision[m[2] as 'ask' | 'deny']}`;
   }
   return message;
+}
+
+/** Same lookup `panel-modals.tsx`'s approval dialog already uses for a reason code's Permission Debug
+ *  text — duplicated here (six lines) rather than imported, since the two files have no other reason to
+ *  depend on each other and this is a stable, tiny table shape. */
+function explainTitle(c: Resources, reason: string): string | null {
+  const table = c.permissions as Record<string, { title: string } | undefined>;
+  return table[reason]?.title ?? null;
+}
+
+/** `agent-runtime-loop.ts`'s audit handler stamps a `step_start` event's `detail` with the policy
+ *  reason code (S6: "say why a call was allowed, asked about, or denied") and, when the advisory critic
+ *  saw a divergence, an ` — intent divergence: …` suffix. The StepFeed showed the bare code — e.g.
+ *  `read_allowed` — because nothing had ever looked it up; `panel-modals.tsx`'s approval dialog already
+ *  has the exact same code → human title mapping for the SAME reason codes (`c.permissions`), just never
+ *  applied here. `\S+` captures the whole code (reason codes are snake_case, no internal whitespace) and
+ *  the rest of the string — the divergence suffix, or nothing — is preserved untouched. A code this
+ *  build has no text for (an older journal entry, a future policy) is returned as-is, same "only
+ *  improve, never mangle" rule as {@link humanizeStepMessage}. */
+const DETAIL_RE = /^(\S+)(.*)$/;
+
+export function humanizeStepDetail(
+  detail: string | undefined,
+  c: Resources,
+): string | undefined {
+  if (detail === undefined) return detail;
+  const m = DETAIL_RE.exec(detail);
+  if (m === null) return detail;
+  const title = explainTitle(c, m[1]!);
+  return title === null ? detail : `${title} (${m[1]!})${m[2]!}`;
 }

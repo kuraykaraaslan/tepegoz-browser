@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
+import { coreDict } from '@tepegoz/i18n';
 import { agentDict } from './i18n';
-import { humanizeStepMessage } from './panel-step-message';
+import { humanizeStepDetail, humanizeStepMessage } from './panel-step-message';
 
 const a = agentDict.en;
+const c = coreDict.en;
 
 describe('humanizeStepMessage', () => {
   it('maps a step_ok / step_error to the localized intent + status glyph', () => {
@@ -41,5 +43,28 @@ describe('humanizeStepMessage', () => {
     expect(humanizeStepMessage('step_ok', 'weird message with no glyph', a)).toBe(
       'weird message with no glyph',
     );
+  });
+});
+
+describe('humanizeStepDetail', () => {
+  it('prefixes a known reason code with its Permission Debug title, keeping the raw code visible', () => {
+    expect(humanizeStepDetail('read_allowed', c)).toBe(
+      `${c.permissions.read_allowed.title} (read_allowed)`,
+    );
+  });
+
+  it('preserves an intent-divergence suffix appended after the reason code', () => {
+    const detail = 'read_allowed — intent divergence: goal mismatch';
+    expect(humanizeStepDetail(detail, c)).toBe(
+      `${c.permissions.read_allowed.title} (read_allowed) — intent divergence: goal mismatch`,
+    );
+  });
+
+  it('returns an unrecognised code untouched — never a guessed title', () => {
+    expect(humanizeStepDetail('some_future_reason_code', c)).toBe('some_future_reason_code');
+  });
+
+  it('passes undefined through unchanged', () => {
+    expect(humanizeStepDetail(undefined, c)).toBeUndefined();
   });
 });

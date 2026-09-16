@@ -2,6 +2,7 @@
 import { createRef } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { coreDict } from '@tepegoz/i18n';
 import { PanelThread } from './panel-thread';
 import { agentDict } from './i18n';
 import type { AgentHostApi } from './types';
@@ -15,6 +16,7 @@ import type { Turn } from './panel-state';
  */
 
 const a = agentDict.en;
+const c = coreDict.en;
 const api = { createTab: vi.fn(), openAgentFile: vi.fn() } as unknown as AgentHostApi;
 const onRetry = vi.fn();
 
@@ -40,6 +42,7 @@ function renderThread(turns: Turn[] = [turn()]) {
   return render(
     <PanelThread
       a={a}
+      c={c}
       api={api}
       listRef={createRef()}
       turns={turns}
@@ -222,6 +225,7 @@ describe('PanelThread — humanized tool intent in the reasoning transcript (A3)
     return render(
       <PanelThread
         a={a}
+        c={c}
         api={api}
         listRef={createRef()}
         turns={[reasoningTurn()]}
@@ -272,6 +276,7 @@ describe('PanelThread — Retry a failed turn (S8)', () => {
     render(
       <PanelThread
         a={a}
+        c={c}
         api={api}
         listRef={createRef()}
         turns={[errorTurn()]}

@@ -1,6 +1,7 @@
 import type { MutableRefObject } from 'react';
 import { cn } from '@tepegoz/ui';
 import { Markdown } from '@tepegoz/markdown';
+import type { Resources } from '@tepegoz/i18n';
 import type { AgentStrings } from './i18n';
 import type { CompletionOutcome } from '@tepegoz/shared-types';
 import type { AgentHostApi } from './types';
@@ -19,6 +20,7 @@ import { PROSE_KINDS, STEP_KINDS, type Turn } from './panel-state';
  */
 interface PanelThreadProps {
   a: AgentStrings;
+  c: Resources;
   api: AgentHostApi;
   listRef: MutableRefObject<HTMLDivElement | null>;
   turns: Turn[];
@@ -49,6 +51,7 @@ const EVIDENCE_TONE: Record<CompletionOutcome, string> = {
 
 export function PanelThread({
   a,
+  c,
   api,
   listRef,
   turns,
@@ -158,6 +161,7 @@ export function PanelThread({
                   }
                   onToggle={() => onToggleSteps(turn.id)}
                   a={a}
+                  c={c}
                 />
 
                 {turn.approvals !== undefined && <TurnApprovals approvals={turn.approvals} a={a} />}

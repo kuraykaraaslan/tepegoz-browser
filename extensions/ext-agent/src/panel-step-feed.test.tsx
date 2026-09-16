@@ -2,11 +2,13 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { DEFAULT_AGENT_MAX_STEPS } from '@tepegoz/shared-types';
+import { coreDict } from '@tepegoz/i18n';
 import { StepFeed } from './panel-step-feed';
 import { agentDict } from './i18n';
 import type { AgentEvent } from './types';
 
 const a = agentDict.en;
+const c = coreDict.en;
 
 const step = (kind: AgentEvent['kind'], message: string, ts: number): AgentEvent => ({
   runId: 'r1',
@@ -34,6 +36,7 @@ describe('StepFeed', () => {
         latestMessage={undefined}
         onToggle={vi.fn()}
         a={a}
+        c={c}
       />,
     );
     expect(container.firstChild).toBeNull();
@@ -48,6 +51,7 @@ describe('StepFeed', () => {
         latestMessage={undefined}
         onToggle={vi.fn()}
         a={a}
+        c={c}
       />,
     );
     expect(screen.getByText(`${a.progress} (3)`)).toBeTruthy();
@@ -65,6 +69,7 @@ describe('StepFeed', () => {
         latestMessage="Reading the page"
         onToggle={vi.fn()}
         a={a}
+        c={c}
       />,
     );
     expect(screen.getByText('· Reading the page')).toBeTruthy();
@@ -75,7 +80,15 @@ describe('StepFeed', () => {
   it('marks the last step as running (pulsing) only while the turn is working', () => {
     const inFlight = [step('step_ok', 'browser_get_page ✓', 1), step('step_start', 'act', 2)];
     const { container, rerender } = render(
-      <StepFeed steps={inFlight} open working latestMessage={undefined} onToggle={vi.fn()} a={a} />,
+      <StepFeed
+        steps={inFlight}
+        open
+        working
+        latestMessage={undefined}
+        onToggle={vi.fn()}
+        a={a}
+        c={c}
+      />,
     );
     // Exactly one pulsing dot — the trailing in-flight step_start.
     expect(container.querySelectorAll('.animate-pulse')).toHaveLength(1);
@@ -89,6 +102,7 @@ describe('StepFeed', () => {
         latestMessage={undefined}
         onToggle={vi.fn()}
         a={a}
+        c={c}
       />,
     );
     expect(container.querySelectorAll('.animate-pulse')).toHaveLength(0);
@@ -103,6 +117,7 @@ describe('StepFeed', () => {
         latestMessage={undefined}
         onToggle={vi.fn()}
         a={a}
+        c={c}
       />,
     );
     expect(container.querySelectorAll('.animate-pulse')).toHaveLength(0);
@@ -117,6 +132,7 @@ describe('StepFeed', () => {
         latestMessage={undefined}
         onToggle={vi.fn()}
         a={a}
+        c={c}
       />,
     );
     // One `step_start` in the fixture → "step 1 of 25", visible whether the feed is open or collapsed.
@@ -132,7 +148,15 @@ describe('StepFeed', () => {
       step('step_start', 'c', 5),
     ];
     render(
-      <StepFeed steps={many} open working latestMessage={undefined} onToggle={vi.fn()} a={a} />,
+      <StepFeed
+        steps={many}
+        open
+        working
+        latestMessage={undefined}
+        onToggle={vi.fn()}
+        a={a}
+        c={c}
+      />,
     );
     expect(screen.getByText(`· step 3 of ${DEFAULT_AGENT_MAX_STEPS}`)).toBeTruthy();
   });
@@ -149,6 +173,7 @@ describe('StepFeed', () => {
         latestMessage={undefined}
         onToggle={vi.fn()}
         a={a}
+        c={c}
       />,
     );
     const budget = screen.getByText(
@@ -167,6 +192,7 @@ describe('StepFeed', () => {
         latestMessage={undefined}
         onToggle={vi.fn()}
         a={a}
+        c={c}
       />,
     );
     expect(screen.getByText(`· step 2 of ${DEFAULT_AGENT_MAX_STEPS}`)).toBeTruthy();
@@ -184,6 +210,7 @@ describe('StepFeed', () => {
         latestMessage={undefined}
         onToggle={vi.fn()}
         a={a}
+        c={c}
       />,
     );
     expect(screen.getByText('400ms')).toBeTruthy();
@@ -198,6 +225,7 @@ describe('StepFeed', () => {
         latestMessage={undefined}
         onToggle={vi.fn()}
         a={a}
+        c={c}
       />,
     );
     expect(screen.getByText('1.2s')).toBeTruthy();
@@ -209,6 +237,7 @@ describe('StepFeed', () => {
         latestMessage={undefined}
         onToggle={vi.fn()}
         a={a}
+        c={c}
       />,
     );
     // step_error is timed too.
@@ -224,6 +253,7 @@ describe('StepFeed', () => {
         latestMessage={undefined}
         onToggle={vi.fn()}
         a={a}
+        c={c}
       />,
     );
     // Neither row can be paired into a duration → no ms/s annotation anywhere.
@@ -240,6 +270,7 @@ describe('StepFeed', () => {
         latestMessage={undefined}
         onToggle={onToggle}
         a={a}
+        c={c}
       />,
     );
     fireEvent.click(screen.getByRole('button'));

@@ -141,6 +141,7 @@ export function AgentPanel({ api, onClose }: AgentPanelProps) {
 
       <PanelThread
         a={a}
+        c={c}
         api={api}
         listRef={listRef}
         turns={turns}
