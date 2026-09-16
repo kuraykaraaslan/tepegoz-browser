@@ -46,6 +46,37 @@ const files = ROOTS.flatMap((root) => {
   return walk(abs);
 });
 
+// Checked case-SENSITIVE regardless of host OS. Windows/macOS default filesystems fold case, so
+// `fs.existsSync('THREAT-MODEL.md')` resolves fine on a dev machine even when the real file is
+// `threat-model.md` — and this gate exists specifically to catch what a Linux CI runner (case-
+// sensitive) would reject. A local green run on Windows must mean the same thing a green run on
+// Ubuntu means, or the gate is decoration for anyone not running Linux.
+const dirCache = new Map();
+function entriesOf(dir) {
+  let cached = dirCache.get(dir);
+  if (cached === undefined) {
+    try {
+      cached = new Set(fs.readdirSync(dir));
+    } catch {
+      cached = new Set();
+    }
+    dirCache.set(dir, cached);
+  }
+  return cached;
+}
+
+/** True only if every path segment matches the on-disk casing exactly, all the way from the root. */
+function existsCaseSensitive(absPath) {
+  const parsed = path.parse(absPath);
+  const segments = path.relative(parsed.root, absPath).split(path.sep).filter(Boolean);
+  let dir = parsed.root;
+  for (const segment of segments) {
+    if (!entriesOf(dir).has(segment)) return false;
+    dir = path.join(dir, segment);
+  }
+  return true;
+}
+
 let total = 0;
 const broken = [];
 
@@ -61,7 +92,8 @@ for (const file of files) {
       // A malformed percent-escape is not a path we can resolve; check it verbatim.
     }
     total += 1;
-    if (!fs.existsSync(path.resolve(path.dirname(file), target))) {
+    const resolved = path.resolve(path.dirname(file), target);
+    if (!fs.existsSync(resolved) || !existsCaseSensitive(resolved)) {
       broken.push(`${path.relative(process.cwd(), file).replace(/\\/g, '/')} -> ${raw}`);
     }
   }

@@ -43,7 +43,7 @@ site, so the same failure reads the same everywhere and can be localized.
 - **No untimed outbound call.** All outbound HTTP goes through the central `@tepegoz/http` seam
   (`createHttpClient`), which imposes a per-request timeout and maps failures to redacted `AppError`s.
   Vendor SDKs are not added for services that speak REST.
-- The trust model these serve is [`THREAT-MODEL.md`](THREAT-MODEL.md); reporting is
+- The trust model these serve is [`threat-model.md`](threat-model.md); reporting is
   [`../SECURITY.md`](../SECURITY.md).
 
 ## 4. Localization

@@ -47,7 +47,7 @@ Read these four things before treating any row as a plan:
 | ------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------ | --: | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | [webbrain-agent-parity.md](../parities/webbrain-agent-parity.md)                           | Shipping GPL-3.0 Chrome/Firefox/Edge agent extension; ~62 tools, 108 provider cards, 58+ site adapters, full offline-RAG stack |   9 | The broadest list: provider catalog, an offline knowledge corpus reusing Phase 8's `HybridRetriever` **without** the GPL Xapian dependency, PDF/iframe/shadow-DOM perception, site-guidance adapters, tool-declaring skills, gated mutating fetch, slash commands, small-model tool tiering |
 | [kilocode-agent-parity.md](../parities/kilocode-agent-parity.md)                           | Shipping open-source **coding** agent (VS Code/JetBrains/CLI, OpenCode-derived CLI)                                            |   7 | Category-split up front; only overlapping axes carried — provider breadth, MCP marketplace, mode system, checkpoints, context condensing, custom-mode/rules chain                                                                                                                           |
-| [librechat-agent-parity.md](../parities/librechat-agent-parity.md)                         | Mature multi-provider open-source chat/agent **UI** platform                                                                   |   6 | Agent Console UX: steer queue + pending-steer chips, context-fill gauge, activity-phase grouping, message-level actions, multi-question `clarify`. Detail pre-sorted in [`../../docs/others/librechat-agent-ui-learnings.md`](../versus/librechat-agent-ui-learnings.md)                    |
+| [librechat-agent-parity.md](../parities/librechat-agent-parity.md)                         | Mature multi-provider open-source chat/agent **UI** platform                                                                   |   6 | Agent Console UX: steer queue + pending-steer chips, context-fill gauge, activity-phase grouping, message-level actions, multi-question `clarify`. Detail pre-sorted in [`../versus/librechat-agent-ui-learnings.md`](../versus/librechat-agent-ui-learnings.md)                            |
 | [playwright-mcp-agent-parity.md](../parities/playwright-mcp-agent-parity.md)               | Microsoft's MCP **server** over Playwright; a11y-snapshot perception                                                           |   6 | Perception + tool-definition shape, and a concrete reference for Phase 1b's planned-but-unbuilt MCP **server** surface                                                                                                                                                                      |
 | [skyvern-agent-parity.md](../parities/skyvern-agent-parity.md)                             | AGPL enterprise form/workflow automation, shipping                                                                             |   6 | Workflow-shaped runs, signed-webhook/OTel run export, enterprise-grade retry/observability                                                                                                                                                                                                  |
 | [browseros-agent-agent-parity.md](../parities/browseros-agent-agent-parity.md)             | AGPL agent extension of BrowserOS — the closest rival by both licence and thesis (local agent, Ollama)                         |   5 | Nearest-neighbour comparison; local-model routing and agent-surface parity                                                                                                                                                                                                                  |
@@ -74,7 +74,7 @@ Read these four things before treating any row as a plan:
 ## Where these rows now appear in the roadmap (2026-09-02)
 
 The workstreams above whose stated home is a **product phase** have been cross-referenced into
-[`../product/`](../product/), following the same convention
+[`../../phases/product/`](../../phases/product/), following the same convention
 [`browser-settings-feature-gap.md`](browser-settings-feature-gap.md) already used: one `- [ ]` row in the
 owning section, naming the nearest existing behaviour and citing the track and workstream it came from.
 
@@ -92,7 +92,7 @@ already-ticked Phase 1a omnibox row
 ([`../product/phase-1a-walking-skeleton-mvp.md`](../../phases/product/phase-1a-walking-skeleton-mvp.md)).
 
 **As of 2026-09-02 the fold is complete in both directions:** every leaf workstream in all 25 tracks now
-has a citation in a phase file — the product-homed ones in [`../product/`](../product/), and the rest in
+has a citation in a phase file — the product-homed ones in [`../../phases/product/`](../../phases/product/), and the rest in
 [`../ai-agent/`](../../phases/ai-agent/README.md), which took the larger share. They arrived as new
 sections rather than scattered rows, so each is readable as one body of work: **S2 PR7** (perception reach
 — the most-cited gap in the whole survey), **S6 PR10** (credential broker, gated mutating fetch, read-only
@@ -105,8 +105,9 @@ A mechanical audit over track headings → phase citations reports zero unhomed 
 > exist on disk only. Until they are committed, every citation added to a phase file above is a link to a
 > file that is not in the repository.
 
-Companion comparisons (the input to these tracks) are in [[`../versus/`](../versus/)](../../docs/others/);
-closed-source rivals that could not be read as source are researched separately in
+Companion comparisons (the input to these tracks) are in [`../versus/`](../versus/) (formerly
+`docs/others/`, renamed when this folder moved under `docs/`); closed-source rivals that could not be
+read as source are researched separately in
 `../../docs/research-*.md`.
 
 Language note: the Turkish-language documents are kept in their original language — they are the record
