@@ -18,11 +18,16 @@ control.
 
 ## Project status — read this first
 
-**Pre-release. Shipped and signed; not stable, not audited.**
+**Pre-release. Builds, but unsigned; not stable, not audited.**
 
-Signed installers are published for Windows, macOS and Linux, and the source builds in three commands.
-What is still missing is measurement: **no independent security audit** has been performed and the
-automation has **not** been independently benchmarked. **No development phase is closed yet**; the
+Installers build for Windows, macOS and Linux, and the source builds in three commands. **They are not
+signed or notarized today** — `apps/desktop/electron-builder.yml` and `.github/workflows/release.yml`
+both say so explicitly ("all builds are UNSIGNED (dev-only)"), and there is no `CSC_LINK`/`APPLE_ID`
+wiring anywhere in the repo to check that against. An earlier revision of this line claimed signed
+installers ship; that was wrong, corrected 2026-09-16 on inspection of the actual release workflow, not
+on a claim about it. What is still missing beyond that: **no independent security audit** has been
+performed and the automation has **not** been independently benchmarked. **No development phase is
+closed yet**; the
 roadmap tracks status by what has been _measured_, not by what has been written, and by that bar every
 phase still reads amber. See [`phases/README.md`](phases/README.md) for the per-phase truth.
 

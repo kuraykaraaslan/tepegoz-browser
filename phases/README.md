@@ -22,13 +22,13 @@ Everything in this folder's root is either this index or a directory — plannin
 exactly one of the five, chosen by **truth status**. Put a new document in the folder whose status it
 actually has; do not start a sixth pile.
 
-| Folder                                | What it holds                                                                                                            | Truth status                                             |
-| ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------- |
-| [`product/`](product/)                | The numbered product roadmap — Phases 0–12 plus M (Macros) and E (Extras)                                                | Committed · sequenced · DoD-gated                        |
-| [`ai-agent/`](ai-agent/README.md)     | The sole authoritative AI agent competence program (v3, S0–S12)                                                          | Committed · sequenced · measurement-gated                |
-| [`tracks/`](../docs/tracks/README.md) | One-off plans outside the numbered roadmap — two complete, one in progress, one deferred, one superseded, three proposed | **Mixed — read that folder's index first. Not roadmap.** |
+| Folder                                | What it holds                                                                                                                      | Truth status                                             |
+| ------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
+| [`product/`](product/)                | The numbered product roadmap — Phases 0–12 plus M (Macros) and E (Extras)                                                          | Committed · sequenced · DoD-gated                        |
+| [`ai-agent/`](ai-agent/README.md)     | The sole authoritative AI agent competence program (v3, S0–S12)                                                                    | Committed · sequenced · measurement-gated                |
+| [`tracks/`](../docs/tracks/README.md) | One-off plans outside the numbered roadmap — two complete, one in progress, one deferred, one superseded, three proposed           | **Mixed — read that folder's index first. Not roadmap.** |
 | [`extensions/`](extensions/README.md) | Design docs for net-new first-class internal extensions large enough to need their own DoD (mail client, multi-protocol messenger) | **📋 Proposed — not scheduled. Not roadmap.**            |
-| [`ai/`](ai-agent/README.md)           | The retired v2 AI track                                                                                                  | Tombstone stub — redirects only, add nothing             |
+| [`ai/`](ai-agent/README.md)           | The retired v2 AI track                                                                                                            | Tombstone stub — redirects only, add nothing             |
 
 ## Phase index & status
 
@@ -97,13 +97,20 @@ Google adapter package, password manager, WebAuthn and fingerprinting work are f
 > until it closes the accountability argument is a plan rather than a property.
 > Sources: [`../docs/research-other-ai-browsers.md`](../docs/research/research-other-ai-browsers.md).
 
-**Windows code-signing was deferred to the production gate, and that gate has now been passed.** It was
-always a distribution concern rather than a build concern: v1 development, CI, e2e and UAT all ran
-unsigned, which kept an external-lead-time dependency off the critical path. A signing identity is now
-configured and releases ship signed on Windows and notarized on macOS, so the "shippable signed
-installer" claim and auto-update **signature verification** are both testable. Phase 0's DoD still
-closes without asserting them, because it was written and evidenced before the certificate existed —
-that is a record of how it closed, not a live gap.
+**Windows code-signing is still deferred to the production gate, and that gate has NOT been passed.**
+This paragraph previously claimed the opposite ("a signing identity is now configured and releases ship
+signed") — false, corrected 2026-09-16 on inspection of the actual release pipeline rather than on a
+claim about it: `apps/desktop/electron-builder.yml`'s `win:`/`mac:` sections are commented-out TODOs
+("not configured yet → unsigned dev-only builds" / "unset → unsigned dev-only builds"),
+`.github/workflows/release.yml` says outright "all builds are UNSIGNED (dev-only). Code signing is
+still BLOCKING for public distribution", and no `CSC_LINK`/`APPLE_ID`/`notarize: true` exists anywhere
+in the repo to contradict either comment. It remains what it always was: a distribution concern rather
+than a build concern — v1 development, CI, e2e and UAT all run unsigned, which keeps an external-lead-
+time dependency off the critical path — but "shippable signed installer" and auto-update **signature
+verification** are NOT yet testable, and the auto-update runtime line below stays blocked on it. Phase
+0's DoD still closes without asserting a signed artifact, which is correct — it was written and
+evidenced as a build-time property, and code-signing was always out of that DoD's scope by the ship
+line above, not something this correction reopens.
 
 **Horizontal gates.** Coverage (**S80/B85/F86/L80 over 62 packages, plus `apps/desktop` at its own ratcheting floor**), i18n en+tr parity and UAT signoff
 appear as a separate box in _every_ phase's DoD but are one body of work. They are done once and ticked
@@ -185,9 +192,9 @@ it predates this folder. **Everything in [`extensions/`](extensions/README.md) i
 scheduled, not in the v1 ship line.** An extension doc earns roadmap status the same way a `tracks/`
 doc does: promotion into a product `phase-*.md` DoD or an ADR.
 
-| Doc | Extension | Sub-phases | Goal | Status |
-| --- | --- | --- | --- | --- |
-| [extensions/ext-mail.md](extensions/ext-mail.md) | `@tepegoz/ext-mail` | 9 (X-mail.0–.8) | Full **multi-account** mail client — IMAP/SMTP + JMAP + (Phase 3) OAuth Gmail/Graph, reader, compose, filters, and a complete agent capability set behind the one PEP. ADR-0046 owed. | 📋 Proposed |
+| Doc                                              | Extension           | Sub-phases        | Goal                                                                                                                                                                                                                                       | Status      |
+| ------------------------------------------------ | ------------------- | ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------- |
+| [extensions/ext-mail.md](extensions/ext-mail.md) | `@tepegoz/ext-mail` | 9 (X-mail.0–.8)   | Full **multi-account** mail client — IMAP/SMTP + JMAP + (Phase 3) OAuth Gmail/Graph, reader, compose, filters, and a complete agent capability set behind the one PEP. ADR-0046 owed.                                                      | 📋 Proposed |
 | [extensions/ext-chat.md](extensions/ext-chat.md) | `@tepegoz/ext-chat` | 11 (X-chat.0–.10) | **Multi-account, multi-protocol** messenger on a Pidgin/libpurple protocol-plugin model — native XMPP/IRC/Matrix, out-of-process bridges for Telegram/Slack/Discord/(caveated) WhatsApp, agent-drivable behind the one PEP. ADR-0047 owed. | 📋 Proposed |
 
 Shared prerequisites (block both): extend `ExtensionPermissionSchema`, a `background-connection`
