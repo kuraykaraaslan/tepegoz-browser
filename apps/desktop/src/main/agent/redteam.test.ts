@@ -104,6 +104,20 @@ describe('red-team: sensitive-site lockout (1Password / bank / crypto class)', (
     expect(decision.decision).toBe('ask');
     expect(decision.reason).toBe('sensitive_site_read');
   });
+
+  it('denies an agent-initiated PDF export of a sensitive-site page', () => {
+    // phase-2c's "Print + print-preview" DoD line called this lockout vacuous on the grounds that no
+    // agent tool could print or save a PDF — true when it was written, false since `browser_export_pdf`
+    // (state_changing) shipped 2026-09-02. It goes through the same single PEP as every other
+    // state_changing tool, with no PDF-specific carve-out, so the lockout applies to it by construction.
+    const decision = PolicyKernel.evaluate({
+      descriptor: { id: 'browser_export_pdf', dangerClass: 'state_changing' },
+      taintedArgs: false,
+      targetUrl: 'https://my.bank.example/statement',
+    });
+    expect(decision.decision).toBe('deny');
+    expect(decision.reason).toBe('sensitive_site_lockout');
+  });
 });
 
 describe('red-team: egress firewall (exfiltration)', () => {
