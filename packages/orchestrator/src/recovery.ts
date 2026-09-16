@@ -23,10 +23,24 @@ export interface AgentFailure {
   code?: ToolErrorCode | undefined;
 }
 
+/**
+ * Who can act on this failure (S3 PR7b — the recovery-taxonomy cross-check against Amazon Nova Act's
+ * SDK, which cuts the same failure space on a different axis: `ActAgentError` / `ActExecutionError` /
+ * `ActClientError` / `ActServerError`, grouped by "the user can retry with a different request" vs.
+ * everything else). This taxonomy classifies by WHAT SHOULD HAPPEN NEXT (continue / retry / replan /
+ * stop); `whoRetries` is the cross-check answer laid on top of that, as a sub-label rather than a second
+ * taxonomy: `'agent'` when the reactor can retry the SAME step itself with no new input (a fresh read, a
+ * bounded JSON repair, a corrected argument shape), `'user'` when only a human decision unblocks it
+ * (approve differently, sign in, solve a CAPTCHA, remove a secret from context, or the failure is not
+ * safely recoverable at all).
+ */
+export type WhoRetries = 'agent' | 'user';
+
 export interface RecoveryAdvice {
   retryable: boolean;
   instruction: string;
   nextTool?: string | undefined;
+  whoRetries: WhoRetries;
 }
 
 // The Egress Firewall's block/deny messages (model-gateway messages.ts) both carry this stable phrase.
@@ -164,6 +178,7 @@ export function recoveryAdviceFor(failure: AgentFailure): RecoveryAdvice {
     case 'selector_stale':
       return {
         retryable: true,
+        whoRetries: 'agent',
         nextTool: 'browser_get_elements',
         instruction:
           'The element reference is stale. Re-read the current tab with browser_get_elements, then retry with a fresh ref. If the target is not in the listing, it is usually off-screen or hidden — scroll (or use browser_update_page scroll_to_text) or open the menu/panel holding it, then re-read.',
@@ -171,6 +186,7 @@ export function recoveryAdviceFor(failure: AgentFailure): RecoveryAdvice {
     case 'navigation_timeout':
       return {
         retryable: true,
+        whoRetries: 'agent',
         nextTool: 'browser_validate_page',
         instruction:
           'The navigation or load wait timed out. Validate the page state with browser_validate_page, then continue from the current URL.',
@@ -178,25 +194,34 @@ export function recoveryAdviceFor(failure: AgentFailure): RecoveryAdvice {
     case 'page_changed':
       return {
         retryable: true,
+        whoRetries: 'agent',
         nextTool: 'browser_get_elements',
         instruction:
           'The page changed while acting. Re-read the page and elements before choosing the next action; if the new state is not in the listing yet, scroll or re-read once more before deciding.',
       };
     case 'model_malformed':
+      // Cross-check divergence, recorded rather than silently matched: Nova Act's SDK puts
+      // "unparseable model output" under `ActAgentError` — the USER's to retry with a different
+      // request. Ours retries the SAME step itself, bounded (`maxDecisionRepairs` in reactor.ts), and
+      // usually succeeds without any new input, because the repair targets a JSON-shape slip rather
+      // than a genuinely bad task. `'agent'` here is a considered difference, not a miss.
       return {
         retryable: true,
+        whoRetries: 'agent',
         instruction:
           'The previous model response was malformed. Retry once with strict JSON matching the required decision schema.',
       };
     case 'transient':
       return {
         retryable: true,
+        whoRetries: 'agent',
         instruction:
           'This looks transient. Retry only after re-reading or validating the current state; do not repeat the same side effect blindly.',
       };
     case 'no_active_page':
       return {
         retryable: true,
+        whoRetries: 'agent',
         nextTool: 'browser_update_location',
         instruction:
           'There is no active web page yet (you may be on the new-tab page). Open one first with ' +
@@ -206,24 +231,28 @@ export function recoveryAdviceFor(failure: AgentFailure): RecoveryAdvice {
     case 'policy_denied':
       return {
         retryable: false,
+        whoRetries: 'user',
         instruction:
           'Policy or user approval denied this action. Stop or ask the user for a safer alternative.',
       };
     case 'auth_handoff':
       return {
         retryable: false,
+        whoRetries: 'user',
         instruction:
           'Authentication or CAPTCHA needs human handoff. Do not try to solve it automatically.',
       };
     case 'egress_blocked':
       return {
         retryable: false,
+        whoRetries: 'user',
         instruction:
           'The Egress Firewall stopped this run because the outbound model request looked like it contained a secret, and it was not sent. Remove the sensitive value from context or narrow the task, then start again.',
       };
     case 'validation':
       return {
         retryable: true,
+        whoRetries: 'agent',
         instruction:
           "The arguments did not match the tool's input schema. Read the reported field errors below, " +
           'then retry with corrected arguments that match the schema exactly (right field names, types, ' +
@@ -232,6 +261,7 @@ export function recoveryAdviceFor(failure: AgentFailure): RecoveryAdvice {
     case 'unknown':
       return {
         retryable: false,
+        whoRetries: 'user',
         instruction: 'The failure is not safely recoverable without a new user decision.',
       };
   }

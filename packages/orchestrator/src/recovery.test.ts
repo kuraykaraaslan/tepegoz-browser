@@ -7,6 +7,7 @@ import {
   recoveryAdviceFor,
   stopReasonForFailure,
   type AgentFailureKind,
+  type WhoRetries,
 } from './recovery';
 
 const err = (code: ToolError['code'], message: string, retryable: boolean): ToolError => ({
@@ -194,6 +195,39 @@ describe('stopReasonForFailure + recoveryAdviceFor cover every AgentFailureKind'
     const advice = recoveryAdviceFor(failure);
     expect(advice.instruction.length).toBeGreaterThan(10);
     expect(typeof advice.retryable).toBe('boolean');
+  });
+
+  // S3 PR7b: the Nova Act cross-check axis ("who can retry") laid over this taxonomy's own axis
+  // ("what should happen next"). Table, not a loop over `retryable`, because the one deliberate
+  // divergence (`model_malformed`: retryable by the AGENT here, by the USER on Nova's SDK) would
+  // otherwise be invisible — a mechanical `retryable ? 'agent' : 'user'` derivation would hide exactly
+  // the case this cross-check exists to surface.
+  const WHO_RETRIES: Record<AgentFailureKind, WhoRetries> = {
+    transient: 'agent',
+    policy_denied: 'user',
+    page_changed: 'agent',
+    selector_stale: 'agent',
+    navigation_timeout: 'agent',
+    auth_handoff: 'user',
+    model_malformed: 'agent',
+    validation: 'agent',
+    egress_blocked: 'user',
+    no_active_page: 'agent',
+    unknown: 'user',
+  };
+
+  it.each(ALL_KINDS)('%s names who can retry', (kind) => {
+    const failure = { kind, message: 'm' } as Parameters<typeof stopReasonForFailure>[0];
+    expect(recoveryAdviceFor(failure).whoRetries).toBe(WHO_RETRIES[kind]);
+  });
+
+  it('every non-retryable kind is the USER\'s to retry (nothing stops silently retryable)', () => {
+    for (const kind of ALL_KINDS) {
+      const advice = recoveryAdviceFor({ kind, message: 'm' } as Parameters<
+        typeof stopReasonForFailure
+      >[0]);
+      if (!advice.retryable) expect(advice.whoRetries).toBe('user');
+    }
   });
 
   it('maps the distinctive stop reasons', () => {

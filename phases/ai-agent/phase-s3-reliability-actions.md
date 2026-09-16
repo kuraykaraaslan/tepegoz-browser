@@ -388,7 +388,7 @@ re-snapshotting).
 
 ### PR7b — recovery-taxonomy cross-check (small, doc-shaped)
 
-- [ ] **Cross-check the recovery taxonomy against Amazon Nova Act's, which is cut on a different axis.** The
+- [x] **Cross-check the recovery taxonomy against Amazon Nova Act's, which is cut on a different axis.** The
       taxonomy here classifies by **what should happen next** (continue / retry / replan / stop, over policy
       denial · stale selector · page changed · nav timeout · auth handoff · transient · malformed model
       output). Nova Act's SDK cuts the same space by **who can retry**: `ActAgentError` (task impossible,
@@ -398,6 +398,19 @@ re-snapshotting).
       wrong; used together they are a **cross-check** — a failure that this taxonomy says "retry" to but whose
       only possible retrier is the human is a misclassification worth catching. Cheapest form: add the
       "who can retry" answer as a sub-label on the existing `Decision` reason rather than a second taxonomy.
+      _Landed as `WhoRetries` (`'agent' | 'user'`) on `RecoveryAdvice`
+      ([`recovery.ts`](../../packages/orchestrator/src/recovery.ts)), populated for all 11
+      `AgentFailureKind`s: `'agent'` when the reactor can retry the same step with no new input (a fresh
+      read, a bounded JSON repair, a corrected argument shape), `'user'` when only a human decision
+      unblocks it. **The cross-check found exactly the divergence it was built to find:** Nova Act's SDK
+      puts "unparseable model output" under `ActAgentError` — the user's to retry with a different request.
+      Ours retries the SAME step itself, bounded (`maxDecisionRepairs`), and usually succeeds with no new
+      input, because the repair targets a JSON-shape slip rather than a genuinely bad task — so
+      `model_malformed` is `'agent'` here, recorded as a considered difference rather than silently matched
+      or silently left as the mismatch it would be under a naive `retryable ? 'agent' : 'user'` derivation.
+      Exhaustive per-kind table + an invariant test (every non-retryable kind names `'user'`) in
+      `recovery.test.ts`, additive to every existing consumer (`RecoveryAdvice` is a plain interface, not a
+      switch anyone exhausts)._
       [`../../docs/research-computer-use-agents.md`](../../docs/research/research-computer-use-agents.md).
 
 ### PR7c — Run termination + loop hardening (competitor-parity extraction)
