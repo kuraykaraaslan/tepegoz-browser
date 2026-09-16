@@ -348,11 +348,23 @@ the decision; the code still enforces the old absolute deny, which is the honest
       that should NOT be): `create()` resolves to `{ id }` alone, and `list()` never carries the internal
       `paths` field. Mutation-verified — reintroducing `paths` into `publicRecord()` failed the new test
       immediately, confirming it actually catches the leak rather than passing vacuously._
-- [ ] **Say _why_ a call was allowed, asked about, or denied.** The kernel's verdicts already carry
+- [x] **Say _why_ a call was allowed, asked about, or denied.** The kernel's verdicts already carry
       machine-readable reasons (`policy-reasons.ts`); they are not surfaced. Presentation lives in
       [S8](phase-s8-assistant-ux.md) PR7's permission-debug view — this row is the plane's obligation to keep
       the reason attached all the way to the boundary.
       [`../tracks/kilocode-agent-parity.md`](../../docs/parities/kilocode-agent-parity.md) P5.
+      — _Investigated 2026-09-16 and it already holds, for every decision, not only ask/deny: traced
+      `policy.reason` end to end — `ToolGateway.invoke()`'s FIRST `auditHandler` call
+      (`tool-gateway.ts:155`) fires unconditionally, before the decision branches, so `allow` carries a
+      reason exactly like `ask`/`deny` do. `agent-runtime-loop.ts`'s audit handler forwards it as a
+      `step_start` event's `detail` (plus any critic-divergence note), which `panel-step-feed.tsx`
+      renders in the per-run "reasoning" list for every step — collapsed by default, but never dropped.
+      This line is scoped narrowly on purpose ("this row is the plane's obligation," presentation is
+      S8's) and the plane holds its half. **Not done, named rather than silently bundled in:** that
+      reasoning row currently shows the raw `snake_case` code (e.g. `read_allowed`), not the humanized
+      title `panel-modals.tsx`'s `explain()` already looks up for the approval modal — a real, separate
+      polish opportunity (thread `Resources` into `StepFeed`, reuse `explain()`) that is presentation,
+      not plumbing, and was left unbuilt rather than scope-crept into this line._
 - [ ] **A third HITL answer: `edit`.** Approval is `approve`/`deny` today, so a call with one wrong argument
       must be rejected and the whole turn re-driven. Letting the human **fix the argument and then approve**
       is a genuinely new capability, and the edited call must **re-enter the kernel from the top** — an edited
