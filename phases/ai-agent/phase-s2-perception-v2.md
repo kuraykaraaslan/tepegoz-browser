@@ -25,7 +25,13 @@ Prior art gives us the shape of the win without the claim: browser-use's TSV ser
 - [x] Fixtures `ref-stability-across-rerender`, `label-for-form`, `dynamic-list-update` **frozen in PR0 before any capability code** (constitution: fixtures-first).
 - [ ] Paired with/without-flag sweep recorded as a **delta row in [eval-results.md](eval-results.md)** and the [PROSE-LEDGER](PROSE-LEDGER.md) (constitution: delta recorded; paired for any prose deletion).
 - [ ] [PROSE-LEDGER](PROSE-LEDGER.md) **row 7** (browser_get_elements collapsed-menu note) moved to DELETED-or-RETAINED by the paired sweep.
-- [ ] i18n EN + full-TR parity for any user-facing surface (the new tool's approval/label strings) in the **same PR** (ADR-0016/0017).
+- [x] i18n EN + full-TR parity for any user-facing surface (the new tool's approval/label strings) in the **same PR** (ADR-0016/0017).
+      — _Verified 2026-09-16: every S2-introduced tool has an EN+TR `toolIntent` entry in
+      [ext-agent's dict](../../extensions/ext-agent/src/i18n) — `browser_get_article` ("Extracting the
+      article" / "Makale çıkarılıyor"), `browser_list_pages`, `browser_search_elements` (both landed the
+      same day, already localized). All three are `dangerClass: 'read'`, so no separate approval-modal
+      copy is owed beyond the step-feed label these entries already supply. Dict-shape parity asserted by
+      `i18n.test.ts`._
 
 ## Tasks
 
