@@ -387,11 +387,25 @@ re-snapshotting).
 
 ### PR7c — Run termination + loop hardening (competitor-parity extraction)
 
-- [ ] **A run must never end in silence.** Confirm — and add where missing — that every terminal path emits a
-      report the user can read: what was achieved, what was not, and why it stopped. browser-use makes this a
-      guaranteed property of its agent rather than a best effort, and it is the failure users complain about
-      loudest across the rival studies (a run that simply stops). Pairs with the failure-reason surface in
-      [S8](phase-s8-assistant-ux.md) PR7 — this is the engine half, that is the presentation half.
+- [x] **A run must never end in silence — audited 2026-09-16, already true across every path checked; nothing
+      to add.** Confirmed at four independent layers, not one mechanism: (1) the Reactor's own graceful
+      terminal returns (`completed`/`aborted`/`max_steps`/`loop_detected`/`handoff`/failure-derived) all
+      funnel through `terminalMessageFor` (`packages/agent-runtime/src/agent-runtime-helpers.ts:72-96`),
+      which falls back to `strings.generic` for any reason it doesn't specifically name — there is no
+      stoppedReason that resolves to an empty message. (2) A THROW anywhere inside the interactive run body
+      is caught by `ipc-agent-run.ts:631`'s `catch (err) { onEvent('error', …) }` and re-thrown, verified
+      by `ipc-agent-run.electron.test.ts`'s 429-quota case asserting the `kind: 'error'` event fires.
+      (3) A throw BEFORE that try block (e.g. `AgentService.beginHistoryTurn` at `ipc-agent-run.ts:212`)
+      instead rejects the whole IPC call, caught by the renderer's own `.catch()` in
+      `extensions/ext-agent/src/panel-actions.ts:134`, which falls back to a localized `a.runFailed`
+      string when the error carries no message — this is the mechanism phase-1a's "Agent Console startup
+      failure visibility" line already closed. (4) The background/scheduled-task path has its own
+      catch-all (`apps/desktop/src/main/agent/task-agent-runner.electron.ts:171`) turning any throw into
+      `{ok:false, error}`, which `task-service-scheduler.electron.ts:220-221` turns into a done/failed
+      notification. Overlapping on purpose — a bug in any one layer still leaves
+      the others standing — but that also means there is no single "add the missing case" left to do; the
+      property already holds. Pairs with the failure-reason surface in [S8](phase-s8-assistant-ux.md) PR7
+      — this is the engine half, that is the presentation half.
       [`../tracks/browser-use-agent-parity.md`](../../docs/parities/browser-use-agent-parity.md) P1.
 - [ ] **Bucket repeated coordinate clicks by a ~5px grid — premise checked 2026-09-16, does not transfer as
       written.** The rival tools this was ported from (webbrain/browser-use) drive clicks by raw x/y, so a
