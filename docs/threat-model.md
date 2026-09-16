@@ -237,9 +237,13 @@ typed. The browser cannot verify where a loopback SOCKS port comes out and never
 - Safe Browsing (ADR-0043) is a default-on outbound feed to Google: 4-byte hash prefixes on cache-miss
   navigations plus a periodic prefix-list refresh, carrying a shared release API key and no user
   identifier. k-anonymity bounds what a prefix reveals; it is not zero. The switch-off state and the
-  no-key state both produce zero attributable traffic. Not yet wired: the API key itself (release
-  input), delta-application against a stored list version (full replace each refresh today), and an
-  explicit app-scope kill-switch check (a tunnelled-and-down general binding already fails the fetch
-  closed at the network layer → `unknown`).
+  no-key state both produce zero attributable traffic. **Corrected 2026-09-16:** incremental
+  (delta) list updates are already built and wired, not "full replace each refresh" —
+  `safe-browsing-prefix-store.ts`'s `applyDelta` applies a checksum-verified delta and falls back to a
+  full refresh only on `'need-full'` (an out-of-range removal index or checksum mismatch), and
+  `createHashListDeltaFetcher` is gated on the exact same missing condition as the rest of this
+  feature. Genuinely not yet wired: the API key itself (release input, which is what keeps both
+  fetchers `null` today) and an explicit app-scope kill-switch check (a tunnelled-and-down general
+  binding already fails the fetch closed at the network layer → `unknown`).
 
 _Revisit before each release and whenever a new trust boundary (e.g., managed proxy, extensions) lands._
