@@ -5,7 +5,7 @@ real actions on the pages you are logged into. That combination means a vulnerab
 user money, credentials, or data — not just a crash. Security reports are the most valuable
 contribution this project can receive, and they are treated accordingly.
 
-The design this policy defends is written down in [`docs/THREAT-MODEL.md`](docs/THREAT-MODEL.md). Read
+The design this policy defends is written down in [`docs/threat-model.md`](docs/threat-model.md). Read
 it before reporting: it states what is already known to be untrusted, what is deliberately fail-closed,
 and what is a documented gap rather than a discovery.
 

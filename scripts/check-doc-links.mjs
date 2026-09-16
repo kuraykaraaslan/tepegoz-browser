@@ -8,8 +8,8 @@
 // regression from a different way of counting. The constitution forbids exactly that kind of
 // unfalsifiable claim, so the gate is now a command anyone can re-run instead of a number to trust.
 //
-// Usage: `pnpm docs:links`            (checks phases/**, the S0 gate)
-//        `pnpm docs:links docs .`     (pass roots to widen the check)
+// Usage: `pnpm docs:links`   (checks phases/**, the S0 gate)
+//        `pnpm docs:links .` (pass a root to widen the check — CI runs this for the full repo)
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -21,11 +21,16 @@ const ROOTS = roots.length > 0 ? roots : ['phases'];
 // can resolve — so it is not a broken link either.
 const RELATIVE_LINK = /\]\(\s*(?!https?:|mailto:|tepegoz:|#|\/|\\)([^)\s]+?)(?:\s+"[^"]*")?\s*\)/g;
 
+// Directories that are never this repo's own documentation: dependency trees, VCS internals, and
+// `.claude/worktrees/*` — other agent sessions' isolated checkouts, which duplicate whatever this repo
+// looked like when they branched and would otherwise report every fix here as still broken there.
+const EXCLUDED_DIRS = new Set(['node_modules', '.git', '.claude']);
+
 /** Markdown files under `dir`, recursively. */
 function walk(dir) {
   return fs.readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
     const full = path.join(dir, entry.name);
-    if (entry.isDirectory()) return entry.name === 'node_modules' ? [] : walk(full);
+    if (entry.isDirectory()) return EXCLUDED_DIRS.has(entry.name) ? [] : walk(full);
     return entry.name.endsWith('.md') ? [full] : [];
   });
 }

@@ -118,12 +118,12 @@ exam.
 ## Architecture, and where to read first
 
 - [`phases/README.md`](phases/README.md) — the roadmap index and the cross-cutting gates. **Start here.**
-- [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — the L0–L10 layer model, an index pointing at the
+- [`docs/architecture.md`](docs/architecture.md) — the L0–L10 layer model, an index pointing at the
   document that owns each piece.
 - [`docs/adr/`](docs/adr/) — the decision record. A change that contradicts an accepted ADR needs a new
   ADR, not a quiet edit.
 - [`docs/package-map.md`](docs/package-map.md) — the realized module map.
-- [`docs/THREAT-MODEL.md`](docs/THREAT-MODEL.md) — what is trusted, what is not, and why.
+- [`docs/threat-model.md`](docs/threat-model.md) — what is trusted, what is not, and why.
 
 **New work targets a package, not `apps/desktop` growth.** The desktop app is a thin Electron shell over
 the `@tepegoz/*` packages.
