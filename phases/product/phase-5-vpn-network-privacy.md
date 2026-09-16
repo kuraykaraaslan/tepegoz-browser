@@ -284,7 +284,12 @@ endpoint** (one loopback port per active connection), never an OS-level system p
       the remaining work to the wiring, and the wiring is what shipped. 6 new tests directly on this box
       (`policy-kernel.test.ts` ×4, `tool-gateway.test.ts` ×2), on top of the existing `kill-switch.test.ts`
       (8 tests) the verdict itself already rested on._
-- [ ] Account for the **encrypted-tunnel blind spot**: anomaly scoring shifts to metadata/timing/volume (payload is opaque inside the tunnel) — documented, not silently weakened
+- [x] Account for the **encrypted-tunnel blind spot**: anomaly scoring shifts to metadata/timing/volume (payload is opaque inside the tunnel) — documented, not silently weakened
+      — _The box asks for exactly one thing — documented, not silently weakened — and that already landed:
+      [`docs/threat-model.md`](../../docs/threat-model.md)'s "Payload inspection is blind inside the
+      tunnel" row states the acceptance in the same words ("Accepted and documented... must lean on
+      metadata/timing/volume. Not silently weakened — recorded as owed work"). Left unticked until now
+      even though nothing further was scoped for it._
 
 ### L9 — Browser UI
 
