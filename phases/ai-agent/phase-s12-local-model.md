@@ -60,8 +60,28 @@ Because S12 is three gated sub-phases, the DoD is partitioned. S12a is `local` (
 
 ### PR1 — S12a: wire the local provider into the real decision path (Lane C, no reactor collision)
 
-- [ ] Replace the `local-slm` **placeholder** in [`models.ts:137-141`](../../packages/model-gateway/src/models.ts) (line drifted from the original `:77-79` citation as the file grew; corrected 2026-09-16) with a real profile pointing the `exec`/`classify` tiers at a catalogued GGUF model id; keep `plan` on the frontier tier for now.
-- [ ] Serve the [`model-router.ts`](../../packages/model-gateway/src/model-router.ts) `eligibleForLocal` route through [`local-provider.ts`](../../packages/local-inference/src/local-provider.ts) so a `SIMPLE_CAPABILITIES` decision actually reaches the GGUF backend (today the branch resolves to a stub).
+- [~] Replace the `local-slm` **placeholder** in [`models.ts:137-141`](../../packages/model-gateway/src/models.ts) (line drifted from the original `:77-79` citation as the file grew; corrected 2026-09-16) with a real profile pointing the `exec`/`classify` tiers at a catalogued GGUF model id; keep `plan` on the frontier tier for now.
+      — _Re-checked 2026-09-16: the string is **not read by anything that decides which model runs**.
+      `LocalProvider.complete()` (`local-provider.ts:24-30`) ignores `req.model` entirely and resolves
+      the real model itself via `config.resolveModel()` (`ModelManager`/prefs) — so `local-slm` is a
+      routing no-op, not a broken pointer, and "replacing" it would change no behavior. What it MIGHT
+      still affect is cosmetic: `effectiveReq.model` (the placeholder string) is what `TokenLedger.record`
+      stores as the model label for a local-tier call, so a Token Ledger UI showing "which model" for a
+      local run could show `local-slm` instead of the real resolved GGUF id — **not verified either way**
+      (no UI surface renders that field in a string search of the codebase), left open as a narrower,
+      separate cosmetic question rather than the routing gap this line originally described._
+- [x] Serve the [`model-router.ts`](../../packages/model-gateway/src/model-router.ts) `eligibleForLocal` route through [`local-provider.ts`](../../packages/local-inference/src/local-provider.ts) so a `SIMPLE_CAPABILITIES` decision actually reaches the GGUF backend (today the branch resolves to a stub).
+      — _**Stale claim, corrected 2026-09-16: this is not a stub.**
+      `agent-runtime-providers.ts`'s `registerRunProvider` (lines 154-156) already registers a real
+      `LocalProvider` whenever `localAvailable` is true — for BOTH the whole-agent-local path
+      (`localProvider.mode: 'default'`/an explicit `'local'` override) AND, separately, ALONGSIDE a
+      cloud-provider run, specifically so a `SIMPLE_CAPABILITIES` classify-tier decision can offload to it
+      mid-run even when the main model is cloud. Already tested:
+      `agent-runtime-providers.test.ts`'s "picks whole-agent-local when mode:default and local is
+      available" and "also registers the on-device provider alongside a cloud run when local is
+      available" assert exactly this via a `ModelGateway.register` spy. The gap this line describes does
+      not exist in the reactor path; S12a's real remaining blocker is the funded/local sweep to MEASURE
+      the resulting quality/cost, not the wiring._
 - [x] Bind [`json-grammar.ts`](../../packages/local-inference/src/json-grammar.ts) constrained decoding to the decision schema so [`reactor-decision.ts`](../../packages/orchestrator/src/reactor-decision.ts) `extractJson`/`coerceDecisionShape` gets schema-valid output; add a `local-provider` gateway test mirroring [`streaming-guard.test.ts`](../../packages/model-gateway/src/streaming-guard.test.ts) (non-streaming lock preserved).
 - [ ] File-cap: keep the router change a thin edit; if profile config exceeds 250 lines, split a `local-profiles.ts` under model-gateway (documented split, not `apps/desktop` growth).
 
