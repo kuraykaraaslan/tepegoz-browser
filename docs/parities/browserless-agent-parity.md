@@ -87,6 +87,18 @@ source exists to read.
 
 ## P1 — Destination-validation guard for agent-driven outbound fetch (NEW, small)
 
+> **Status (checked 2026-09-17, not previously recorded here): landed.** `createHttpClient`'s
+> `blockPrivateHosts` option is this section's classifier + enforcement point: literal-address rejection
+> (2026-09-08), moved to the `@tepegoz/http` seam so every caller shares it (2026-09-09), and
+> connection-time resolved-IP validation via a custom Node `lookup` (`pinningLookup`) that defeats DNS
+> rebinding — resolve, validate the resolved IP, connect to that exact address, no second lookup in
+> between (2026-09-17). `web_get_page`/`web_search` both route through it. The DoD's redirect-hop
+> re-check is done (every hop, both literal and resolved-address); an explicit chain-length cap and a
+> caller-supplied allowlist parameter (as opposed to simply not enabling the guard on the local-model
+> client) remain open. Full record: `phases/product/phase-2-adapters-safe-browsing.md` L10.
+>
+> Original proposal kept below for context.
+
 **Goal.** Close a real, verified gap: `web_get_page`/`web_search` dispatch whatever URL the model (or a
 page, through indirect prompt injection — "visit this URL for more detail") supplies, through
 `@tepegoz/http`'s `createHttpClient`, with **no check that the resolved host isn't loopback, an RFC1918
