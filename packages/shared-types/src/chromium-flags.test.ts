@@ -6,6 +6,7 @@ import {
   chromiumFlagDef,
   enabledChromiumFlagIds,
   type ChromiumFlagApply,
+  type ChromiumFlagId,
 } from './chromium-flags';
 
 /** The command-line target of an apply spec, whatever its kind — for allowlist-content assertions. */
@@ -53,8 +54,8 @@ describe('chromium flag allowlist', () => {
       kind: 'switch',
       switch: 'force-dark-mode',
     });
-    // @ts-expect-error — exercising the runtime guard with a bad id
-    expect(() => chromiumFlagDef('nope')).toThrow(/unknown chromium flag/);
+    // Exercising the runtime guard with a bad id.
+    expect(() => chromiumFlagDef('nope' as ChromiumFlagId)).toThrow(/unknown chromium flag/);
   });
 });
 

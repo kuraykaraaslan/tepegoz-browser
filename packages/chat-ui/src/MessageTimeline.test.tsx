@@ -94,8 +94,8 @@ describe('MessageTimeline', () => {
     );
     const list = container.querySelector('.chat-timeline') as HTMLOListElement;
     expect(list.scrollTop).toBe(4000);
-    // @ts-expect-error restoring jsdom's own accessor pair
-    delete HTMLElement.prototype.scrollHeight;
+    // Restoring jsdom's own accessor pair.
+    delete (HTMLElement.prototype as unknown as Record<string, unknown>).scrollHeight;
   });
 
   it('shows a redacted placeholder instead of the body', () => {

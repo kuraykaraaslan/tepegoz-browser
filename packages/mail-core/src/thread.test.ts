@@ -55,8 +55,8 @@ describe('stripSubjectPrefixes / normaliseSubject / isReplySubject', () => {
   });
 
   it('is total on a non-string / empty subject', () => {
-    // @ts-expect-error — exercising the runtime guard
-    expect(stripSubjectPrefixes(undefined).base).toBe('');
+    // Exercising the runtime guard with a non-string input.
+    expect(stripSubjectPrefixes(undefined as unknown as string).base).toBe('');
     expect(normaliseSubject('')).toBe('');
   });
 

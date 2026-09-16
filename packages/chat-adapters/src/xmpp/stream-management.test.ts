@@ -123,16 +123,16 @@ describe('StreamManager — resumption', () => {
 describe('StreamManager — 32-bit wrap', () => {
   it('inbound counter wraps at 2^32', () => {
     const sm = new StreamManager();
-    // @ts-expect-error — poke the private counter to just below the modulo for the wrap test
-    sm.inbound = 0xffffffff;
+    // Poke the private counter to just below the modulo for the wrap test.
+    (sm as unknown as { inbound: number }).inbound = 0xffffffff;
     sm.countInbound();
     expect(sm.inboundCount).toBe(0);
   });
 
   it('acks a pre-wrap seq using modular comparison', () => {
     const sm = new StreamManager();
-    // @ts-expect-error — set outbound near the wrap boundary
-    sm.outbound = 0xfffffffe;
+    // Set outbound near the wrap boundary.
+    (sm as unknown as { outbound: number }).outbound = 0xfffffffe;
     sm.trackOutbound('<m1/>'); // seq 0xffffffff
     sm.trackOutbound('<m2/>'); // seq 0
     sm.trackOutbound('<m3/>'); // seq 1

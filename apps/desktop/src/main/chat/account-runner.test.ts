@@ -634,10 +634,9 @@ describe('ChatAccountRunner — actions', () => {
 
   it('discoverRooms / joinRoom no-op when the adapter lacks MUC support', async () => {
     const { runner, adapter } = await online();
-    // @ts-expect-error deliberately drop the optional methods
-    adapter.discoverRooms = undefined;
-    // @ts-expect-error deliberately drop the optional methods
-    adapter.joinRoom = undefined;
+    // Deliberately drop the optional methods.
+    (adapter as { discoverRooms?: unknown }).discoverRooms = undefined;
+    (adapter as { joinRoom?: unknown }).joinRoom = undefined;
     expect(await runner.discoverRooms('conf.example')).toEqual([]);
     await expect(runner.joinRoom('x@conf')).resolves.toBeNull();
   });
