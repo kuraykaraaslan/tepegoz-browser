@@ -1,6 +1,6 @@
 # Phase S7 — Speed (W3 Speed)
 
-**Status:** 🟠 Measurement-owed (PR1–PR4 landed 2026-08-19; only the ⏸ funded PR5 sweep is open) · **Depends on:** [S1](phase-s1-foundation-native-loop.md) (native + streaming), [S2](phase-s2-perception-v2.md) (perception economy) · **Track:** [AI Agent Super](README.md)
+**Status:** 🟠 Measurement-owed (PR1–PR4 landed 2026-08-19; only the ⏸ funded PR5 sweep is open; PR7's pre-flight request-body size guard landed 2026-09-16) · **Depends on:** [S1](phase-s1-foundation-native-loop.md) (native + streaming), [S2](phase-s2-perception-v2.md) (perception economy) · **Track:** [AI Agent Super](README.md)
 
 **Goal:** Set explicit wall-clock/task and $/task targets for the agent — the first such targets in the repo — and hit them by cutting forced round-trips and per-step token burn, without trading away reliability. Speed is won by eliminating waste (redundant validation passes, invisible-tab realism delays, verbose decision encodings), not by dropping steps or corners. Every contributing change lands as its own single-change sweep so its speed win and its reliability cost are attributed independently, with completion-rate equivalence as the standing guardrail. This phase owns the `$`/wall-clock half of north-star condition 4.
 
@@ -174,10 +174,26 @@ Targets are **derived from S0's baseline** and **pre-registered in PR1 before an
       What is missing is the tier below them, for when deterministic trimming is not enough: one summarization
       call, its output clearly marked as a summary in the transcript so a later reader knows the detail was
       lossy. [`../tracks/librechat-agent-parity.md`](../../docs/parities/librechat-agent-parity.md) P4.
-- [ ] **Pre-flight request-body size guard.** The caching path is otherwise landed and wired; the verified gap
+- [x] **Pre-flight request-body size guard.** The caching path is otherwise landed and wired; the verified gap
       is that nothing checks the assembled body against the provider's limit _before_ dispatch, so an
       over-budget run fails at the provider instead of being trimmed locally. Small and concrete.
       [`../tracks/anthropic-quickstarts-agent-parity.md`](../../docs/parities/anthropic-quickstarts-agent-parity.md) P1.
+      — _Landed 2026-09-16 as `ModelGateway.assertWithinContextWindow` (`packages/model-gateway/src/gateway.ts`),
+      called in `dispatch()` right before the Egress Firewall. Reuses `egressPayload` (the SAME assembled
+      body the firewall already inspects) and `cache-plan.ts`'s own `ASSUMED_CHARS_PER_TOKEN` estimate —
+      no second estimation convention introduced. A new `context-window.ts` table maps exact model ids to
+      a verified input-token ceiling; an unlisted model is a deliberate no-op, not a guessed limit,
+      because a wrong ceiling in either direction is worse than none (too low silently fails a call that
+      would have succeeded; too high never catches the real overflow). Only Anthropic's entries are
+      freshly verified (against the vendor's own current model-overview page, 2026-09-16); Kimi/Nova
+      carry forward figures `models.ts`'s own comments already asserted as fact. **Scoped down from
+      "trimmed locally"** to "fails locally with a clear reason" — actual trimming needs the separate,
+      still-open "Context eviction policy" line above, which needs its own design (an ADR-worthy call
+      on WHAT to trim), not a side effect of a size check. **Side finding, not fixed here:** researching
+      this surfaced that the OpenAI (`gpt-5`) and Gemini (`gemini-3-pro`/`gemini-3-flash-lite`) model ids
+      this project has configured no longer appear on either vendor's current model-lineup page — real
+      catalog drift, left for a deliberate retune rather than a silent fix bundled into this line. 6 new
+      tests (`context-window.test.ts`, `gateway.test.ts`)._
 - [ ] **Intra-run action-result cache, model-in-the-loop on a miss.** Distinct from both existing mechanisms:
       not Phase 6's model-free recipe replay, and not prompt caching — a within-run memo of "this observation
       for this element on this page" so a repeated look-up inside one run does not re-perceive. On a miss the

@@ -8,7 +8,8 @@ import type {
   ModelProvider,
 } from './types';
 import { egressTextOf } from './content';
-import { cacheEffect } from './cache-plan';
+import { ASSUMED_CHARS_PER_TOKEN, cacheEffect } from './cache-plan';
+import { contextWindowFor } from './context-window';
 import { GatewayMessages } from './messages';
 import { TokenLedger } from './token-ledger';
 
@@ -243,6 +244,32 @@ export class ModelGateway {
   }
 
   /**
+   * Pre-flight size guard (S7 PR7): fail LOCALLY, with a clear reason, before an over-budget request
+   * ever reaches the provider — rather than the same call failing at the provider with whatever 400 body
+   * that vendor happens to send back, after a real network round trip has already been spent.
+   *
+   * The estimate is honest about being an estimate: {@link ASSUMED_CHARS_PER_TOKEN} is the same
+   * chars-per-token approximation the cache-planning path already uses (no real tokenizer is wired for
+   * every vendor here), and {@link contextWindowFor} returns `null` for any model this table has no
+   * verified ceiling for — in which case this is a deliberate no-op, not a guessed limit. `maxTokens` is
+   * reserved against the same ceiling as the input: a request that fills the whole window leaves the
+   * model no room to answer, which the provider would reject anyway.
+   */
+  private static assertWithinContextWindow(req: CanonRequest): void {
+    const ceiling = contextWindowFor(req.model);
+    if (ceiling === null) return;
+    const estimatedTokens = Math.ceil(
+      ModelGateway.egressPayload(req).length / ASSUMED_CHARS_PER_TOKEN,
+    );
+    if (estimatedTokens + req.maxTokens > ceiling) {
+      throw new AppError(
+        GatewayMessages.requestTooLarge(estimatedTokens, req.maxTokens, ceiling),
+        400,
+      );
+    }
+  }
+
+  /**
    * Stream a model call: identical guards, identical settled result as {@link complete}, plus output
    * fragments delivered to `onDelta` as they arrive.
    *
@@ -289,6 +316,10 @@ export class ModelGateway {
     if (provider === undefined) {
       throw new AppError(GatewayMessages.noProviderRegistered(effectiveReq.provider), 503);
     }
+
+    // Pre-flight size guard (S7 PR7): a request already too large for this model's context window fails
+    // HERE, with a clear local reason, instead of at the provider after a real network round trip.
+    ModelGateway.assertWithinContextWindow(effectiveReq);
 
     // Egress Firewall (before the request leaves the device): a possible secret leak is routed to HITL
     // and throws if the user cancels (or fails closed with no handler); a warn is surfaced and allowed.

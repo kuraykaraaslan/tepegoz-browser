@@ -55,6 +55,57 @@ describe('ModelGateway', () => {
     expect(res.text).toBe('ok');
   });
 
+  describe('pre-flight size guard (S7 PR7)', () => {
+    it('rejects locally, before the provider is called, when the estimate exceeds the ceiling', async () => {
+      const provider = new MockProvider('should-not-be-returned');
+      const spy = vi.spyOn(provider, 'complete');
+      ModelGateway.register(provider);
+      // moonshot-v1-8k's 8,000-token ceiling ≈ 36,000 chars at 4.5 chars/token (cache-plan's own
+      // estimate) — 40,000 chars of input alone already clears it.
+      const huge = 'x'.repeat(40_000);
+      await expect(
+        ModelGateway.complete(
+          req({ model: 'moonshot-v1-8k', messages: [{ role: 'user', content: huge }] }),
+        ),
+      ).rejects.toThrow(/Request too large/);
+      expect(spy).not.toHaveBeenCalled();
+    });
+
+    it('allows a request that fits, on the same listed model', async () => {
+      ModelGateway.register(new MockProvider('ok'));
+      const small = 'x'.repeat(100);
+      const res = await ModelGateway.complete(
+        req({ model: 'moonshot-v1-8k', messages: [{ role: 'user', content: small }] }),
+      );
+      expect(res.text).toBe('ok');
+    });
+
+    it('reserves room for maxTokens against the same ceiling as the input', async () => {
+      ModelGateway.register(new MockProvider('should-not-be-returned'));
+      // Input alone fits comfortably (~2,000 tokens), but the requested 7,000 output tokens push the
+      // total past the 8,000-token ceiling.
+      const input = 'x'.repeat(9_000);
+      await expect(
+        ModelGateway.complete(
+          req({
+            model: 'moonshot-v1-8k',
+            maxTokens: 7_000,
+            messages: [{ role: 'user', content: input }],
+          }),
+        ),
+      ).rejects.toThrow(/Request too large/);
+    });
+
+    it('skips the check entirely for a model with no verified ceiling', async () => {
+      // 'mock-model' (the default req() model) is unlisted — an enormous request still goes through the
+      // guard untouched, exactly as it did before this line existed.
+      ModelGateway.register(new MockProvider('ok'));
+      const huge = 'x'.repeat(5_000_000);
+      const res = await ModelGateway.complete(req({ messages: [{ role: 'user', content: huge }] }));
+      expect(res.text).toBe('ok');
+    });
+  });
+
   it('inspects a secret hidden in a tool_use argument (blocks are not an egress bypass)', async () => {
     const provider = new MockProvider('should-not-be-returned');
     const spy = vi.spyOn(provider, 'complete');

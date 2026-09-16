@@ -20,4 +20,10 @@ export const GatewayMessages = {
     `Blocked: the outbound model request contains ${kinds} (potential secret exfiltration). The request was not sent.`,
   egressDenied: (kinds: string): string =>
     `Cancelled: you declined to send the outbound model request flagged for ${kinds} (potential secret exfiltration).`,
+  // S7 PR7 pre-flight size guard — estimated, not exact (there is no real tokenizer for every vendor
+  // here), so the message says so rather than implying a precise count.
+  requestTooLarge: (estimatedTokens: number, maxTokens: number, ceiling: number): string =>
+    `Request too large: an estimated ${String(estimatedTokens)} input tokens plus the requested ` +
+    `${String(maxTokens)} output tokens would exceed this model's ~${String(ceiling)}-token context ` +
+    'window. Trim the request (read less of the page, drop older turns) and try again.',
 } as const;
