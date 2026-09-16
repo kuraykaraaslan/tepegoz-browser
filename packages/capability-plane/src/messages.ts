@@ -9,4 +9,6 @@ export const CapabilityMessages = {
   toolNeedsHandler: (id: string): string => `Tool ${id} registered without a handler`,
   toolValidatorTooPermissive: (id: string): string =>
     `Tool ${id} registered with a validator that accepts anything (it said yes to a function value) — that is not validation`,
+  toolSearchNeedsEntryPoint: (id: string): string =>
+    `Tool ${id} registered as deferred, but no non-deferred tool would remain — the model needs at least one directly-callable tool to bootstrap a search`,
 } as const;

@@ -129,3 +129,48 @@ describe('CapabilityRegistry refuses a tool that cannot validate its own input',
     ).not.toThrow();
   });
 });
+
+describe('CapabilityRegistry tool-search defer rule (>=1 non-deferred)', () => {
+  const base = {
+    description: 'test tool',
+    dangerClass: 'read' as RiskLevel,
+    source: 'mcp' as const,
+    inputSchema: {},
+    requiresIdempotencyKey: false,
+  };
+
+  it('rejects the first tool ever registered being deferred (no entry point would exist)', () => {
+    expect(() =>
+      CapabilityRegistry.register({
+        descriptor: { ...base, id: 'test_search_thing', deferred: true },
+        inputSchema: passAny,
+        handler: () => 'ok',
+      }),
+    ).toThrow(/no non-deferred tool would remain/i);
+  });
+
+  it('allows a deferred tool once a non-deferred tool is already registered', () => {
+    CapabilityRegistry.register({
+      descriptor: { ...base, id: 'test_get_entrypoint' },
+      inputSchema: passAny,
+      handler: () => 'ok',
+    });
+    expect(() =>
+      CapabilityRegistry.register({
+        descriptor: { ...base, id: 'test_search_deferred', deferred: true },
+        inputSchema: passAny,
+        handler: () => 'ok',
+      }),
+    ).not.toThrow();
+    expect(CapabilityRegistry.get('test_search_deferred')?.descriptor.deferred).toBe(true);
+  });
+
+  it('treats an absent `deferred` as non-deferred (fail-safe default)', () => {
+    CapabilityRegistry.register({
+      descriptor: { ...base, id: 'test_get_plain' },
+      inputSchema: passAny,
+      handler: () => 'ok',
+    });
+    expect(CapabilityRegistry.get('test_get_plain')?.descriptor.deferred).toBeUndefined();
+  });
+});

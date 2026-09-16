@@ -44,7 +44,15 @@ export default class CapabilityRegistry {
     if (CapabilityRegistry.acceptsAnything(tool)) {
       throw new AppError(CapabilityMessages.toolValidatorTooPermissive(id), 400);
     }
+    if (tool.descriptor.deferred && !CapabilityRegistry.hasNonDeferredTool()) {
+      throw new AppError(CapabilityMessages.toolSearchNeedsEntryPoint(id), 400);
+    }
     CapabilityRegistry.tools.set(id, tool as RegisteredTool);
+  }
+
+  /** Tool-search defer rule: true while at least one currently-registered tool is directly callable. */
+  private static hasNonDeferredTool(): boolean {
+    return [...CapabilityRegistry.tools.values()].some((t) => !t.descriptor.deferred);
   }
 
   /** True when the validator accepts a value no real tool schema should. */

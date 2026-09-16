@@ -53,6 +53,15 @@ export const ToolDescriptorSchema = z.object({
   localCapable: z.boolean().optional(),
   /** Explicit UI group; absent ⇒ consumers derive it from the id's `{domain}` prefix. */
   category: z.string().max(64).optional(),
+  /**
+   * Tool-search defer rule: when the catalog grows large, most tools' schemas can be withheld from
+   * the model's context (`deferred: true`) until a search tool surfaces them — but at least one tool
+   * must stay non-deferred as an entry point, since a model with zero directly-callable tools cannot
+   * bootstrap a search. Optional and fail-safe like `localCapable` above: absent ⇒ `false` (directly
+   * callable) until a search tool exists to page the deferred set in. Enforced at
+   * `CapabilityRegistry.register` (L5).
+   */
+  deferred: z.boolean().optional(),
 });
 export type ToolDescriptor = z.infer<typeof ToolDescriptorSchema>;
 
