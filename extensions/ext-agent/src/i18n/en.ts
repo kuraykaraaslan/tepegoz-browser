@@ -327,6 +327,7 @@ export const en = {
     browser_get_console: 'Reading the console log',
     browser_get_network: 'Checking network activity',
     browser_list_pages: 'Checking the site map',
+    browser_search_elements: 'Searching the page',
     browser_analyze_page: 'Analysing the page',
     browser_click: 'Clicking',
     browser_type: 'Typing',

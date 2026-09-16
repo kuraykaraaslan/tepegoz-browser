@@ -34,6 +34,7 @@ const ValidatePageArgs = TargetTabArgs.extend({
   containsText: z.string().min(1).max(500).optional(),
   timeoutMs: z.number().int().positive().max(60_000).optional(),
 });
+const SearchElementsArgs = TargetTabArgs.extend({ query: z.string().min(1).max(200) });
 const HistoryArgs = TargetTabArgs.extend({ direction: z.enum(['back', 'forward', 'reload']) });
 const GetConsoleArgs = TargetTabArgs.extend({
   // Minimum severity to list — 'warning' lists warnings AND errors. Omitted ⇒ every level.
@@ -206,6 +207,9 @@ interface InteractionResult {
 /** Longest field value quoted back to the model, and the sanitizing pass every page-controlled string
  *  makes before it enters a prompt (a page script can rewrite an input's value on `input`). */
 const MAX_QUOTED_VALUE = 120;
+/** Max matches `browser_search_elements` returns — a query that hits everything on the page (e.g. a
+ *  single common letter) should not become a second full listing. */
+const MAX_SEARCH_MATCHES = 50;
 function safeValue(raw: string): string {
   const { text } = sanitizeContent(raw);
   return text
@@ -828,6 +832,53 @@ export function registerBrowserTools(deps: { host: BrowserHost }): void {
       );
       diffMemory.set(key, snapshot.memory);
       return snapshot;
+    },
+  });
+
+  CapabilityRegistry.register({
+    descriptor: descriptor(
+      'browser_search_elements',
+      'read',
+      'Find actionable elements (buttons, links, inputs) matching text, without paying for a full ' +
+        'browser_get_elements listing — cheaper targeting on a large page when you already know roughly ' +
+        'what you are looking for (e.g. "checkout", "unsubscribe", a product name). args: ' +
+        '{ query: string, tabId? } — omit tabId for the active tab. `query` matches case-insensitively ' +
+        "against each element's name, value, tag, role and link destination. Returns " +
+        '{ url, title, query, matches: [{ ref, role, name, tag?, href?, value? }], count }. Matches are ' +
+        `capped at ${String(MAX_SEARCH_MATCHES)}; a narrower query finds the rest. An empty result means ` +
+        'no ACTIONABLE element matched — it is not proof the page lacks the text: plain prose (a ' +
+        'paragraph, a price with no control around it) is not in this set at all, and ' +
+        'browser_validate_page\'s `containsText` answers that question instead. Use each match\'s `ref` ' +
+        'with browser_update_page exactly like a browser_get_elements ref — re-read (either tool) after ' +
+        'any navigation or page change.',
+      { aiTask: 'read_understand' },
+    ),
+    inputSchema: SearchElementsArgs,
+    handler: async (args) => {
+      const { url, title, elements } = await host.snapshotElements(args.tabId);
+      const snapshot = buildElementsSnapshot(elements, url, title);
+      const needle = args.query.toLowerCase();
+      const matchesField = (value: string | undefined): boolean =>
+        value !== undefined && value.toLowerCase().includes(needle);
+      const matches = snapshot.elements
+        .filter(
+          (el) =>
+            matchesField(el.name) ||
+            matchesField(el.value) ||
+            matchesField(el.tag) ||
+            matchesField(el.role) ||
+            matchesField(el.href),
+        )
+        .slice(0, MAX_SEARCH_MATCHES)
+        .map((el) => ({
+          ref: el.ref,
+          role: el.role,
+          name: el.name,
+          ...(el.tag !== undefined ? { tag: el.tag } : {}),
+          ...(el.href !== undefined ? { href: el.href } : {}),
+          ...(el.value !== undefined ? { value: el.value } : {}),
+        }));
+      return { url, title, query: args.query, matches, count: matches.length };
     },
   });
 

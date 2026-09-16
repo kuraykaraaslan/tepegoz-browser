@@ -1,6 +1,6 @@
 # Phase S2 — Perception v2 (W2 Perception / token-economy engine for W3 Speed)
 
-**Status:** 🟠 Measurement-owed (PR0–PR4 landed 2026-08-18; PR5 ⏸ funded; `browser_list_pages` landed 2026-09-16, exposing the already-wired sitemap reader as an agent tool) · **Depends on:** [S0 Truth & Repair](phase-s0-truth-and-repair.md) · **Track:** [AI Agent Super](README.md)
+**Status:** 🟠 Measurement-owed (PR0–PR4 landed 2026-08-18; PR5 ⏸ funded; `browser_list_pages` and `browser_search_elements` landed 2026-09-16 — the sitemap reader exposed as an agent tool, and a zero-model-cost element search scoped to actionable elements) · **Depends on:** [S0 Truth & Repair](phase-s0-truth-and-repair.md) · **Track:** [AI Agent Super](README.md)
 
 **Goal:** Give the model a stable, deduplicated, diff-based view of the page so it stops re-reading the whole world every step. Element references become identity-stable content hashes that survive snapshots within a run, unchanged regions are elided, and form-field labels are resolved during the scan so fields are named correctly. This is the clearest single perception delta against Claude for Chrome (its persistent cross-turn ref IDs) and it is simultaneously the token-economy engine that W3 Speed draws on.
 
@@ -163,10 +163,24 @@ Prior art gives us the shape of the win without the claim: browser-use's TSV ser
       DOM search, returning **at most ~200** matches as `{tag, ref, attributes}` — no HTML, no `innerText`, no
       arbitrary code, so it does not reopen ADR-0026. Cheap targeting on a large page without serializing the
       whole tree. [`../tracks/browseros-agent-agent-parity.md`](../../docs/parities/browseros-agent-agent-parity.md) P3-a.
-- [ ] **In-page free-text search at zero model cost.** A fixed, **contributor-authored** script (not
+- [x] **In-page free-text search at zero model cost.** A fixed, **contributor-authored** script (not
       model-authored — this is not `evaluate` and does not reopen ADR-0026) that answers "does this page
       contain X, and where" without spending a model call, so the agent can decide cheaply whether a page is
       even worth reading. [`../tracks/browser-use-agent-parity.md`](../../docs/parities/browser-use-agent-parity.md) P3-b.
+      — _Landed 2026-09-16 as `browser_search_elements`, **deliberately scoped to actionable elements**
+      rather than arbitrary DOM/prose — a real narrowing of the track's ask, stated rather than silently
+      substituted. It filters the SAME sanitized, ref-registered element list `browser_get_elements`
+      already returns (case-insensitive match on name/value/tag/role/href), so it opens **no new ref
+      space** and inherits every existing safety property (origin tracking, per-field sanitization,
+      capping) for free instead of adding a second CDP-level search path
+      (`DOM.performSearch`/backendNodeIds) that would need its own integration with the origin-swap
+      taint check S4 PR2 built for the existing ref system — a larger, riskier change than this line
+      needed. Plain prose with no interactive element around it (a paragraph, an unlinked price) is
+      NOT in this set; `browser_validate_page`'s `containsText` already answers that half at zero
+      model cost, and the tool's own description says so rather than implying completeness. The
+      **CSS-selector/XPath variant** ("A bounded DOM query tool", the item above this one) remains a
+      distinct, larger, not-yet-built capability — this closes the free-text half only. 6 new tests;
+      en+tr toolIntent labels._
 - [ ] **Find-in-snapshot + snapshot shaping.** The same idea one level up: search _within_ the produced
       snapshot, and shape how much of it is emitted, instead of returning a whole tree and letting the model
       scan it. [`../tracks/playwright-mcp-agent-parity.md`](../../docs/parities/playwright-mcp-agent-parity.md) P2.

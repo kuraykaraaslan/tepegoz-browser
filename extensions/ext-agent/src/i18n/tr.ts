@@ -296,6 +296,7 @@ export const tr: AgentStrings = {
     browser_get_console: 'Konsol günlüğü okunuyor',
     browser_get_network: 'Ağ etkinliği kontrol ediliyor',
     browser_list_pages: 'Site haritası kontrol ediliyor',
+    browser_search_elements: 'Sayfada aranıyor',
     browser_analyze_page: 'Sayfa çözümleniyor',
     browser_click: 'Tıklanıyor',
     browser_type: 'Yazılıyor',
