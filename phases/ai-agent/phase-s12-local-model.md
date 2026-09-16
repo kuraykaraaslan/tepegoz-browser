@@ -60,7 +60,7 @@ Because S12 is three gated sub-phases, the DoD is partitioned. S12a is `local` (
 
 ### PR1 — S12a: wire the local provider into the real decision path (Lane C, no reactor collision)
 
-- [ ] Replace the `local-slm` **placeholder** in [`models.ts:77-79`](../../packages/model-gateway/src/models.ts) with a real profile pointing the `exec`/`classify` tiers at a catalogued GGUF model id; keep `plan` on the frontier tier for now.
+- [ ] Replace the `local-slm` **placeholder** in [`models.ts:137-141`](../../packages/model-gateway/src/models.ts) (line drifted from the original `:77-79` citation as the file grew; corrected 2026-09-16) with a real profile pointing the `exec`/`classify` tiers at a catalogued GGUF model id; keep `plan` on the frontier tier for now.
 - [ ] Serve the [`model-router.ts`](../../packages/model-gateway/src/model-router.ts) `eligibleForLocal` route through [`local-provider.ts`](../../packages/local-inference/src/local-provider.ts) so a `SIMPLE_CAPABILITIES` decision actually reaches the GGUF backend (today the branch resolves to a stub).
 - [x] Bind [`json-grammar.ts`](../../packages/local-inference/src/json-grammar.ts) constrained decoding to the decision schema so [`reactor-decision.ts`](../../packages/orchestrator/src/reactor-decision.ts) `extractJson`/`coerceDecisionShape` gets schema-valid output; add a `local-provider` gateway test mirroring [`streaming-guard.test.ts`](../../packages/model-gateway/src/streaming-guard.test.ts) (non-streaming lock preserved).
 - [ ] File-cap: keep the router change a thin edit; if profile config exceeds 250 lines, split a `local-profiles.ts` under model-gateway (documented split, not `apps/desktop` growth).

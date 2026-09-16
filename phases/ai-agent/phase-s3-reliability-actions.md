@@ -393,10 +393,22 @@ re-snapshotting).
       loudest across the rival studies (a run that simply stops). Pairs with the failure-reason surface in
       [S8](phase-s8-assistant-ux.md) PR7 — this is the engine half, that is the presentation half.
       [`../tracks/browser-use-agent-parity.md`](../../docs/parities/browser-use-agent-parity.md) P1.
-- [ ] **Bucket repeated coordinate clicks by a ~5px grid.** The Reactor's no-progress replan (landed, S0/C1)
-      catches general no-progress, and a same-arguments repeat check catches literal repetition — but neither
-      catches clicking _slightly different pixels_ around the same dead spot, which is a distinct and common
-      failure. Small, additive, no new subsystem.
+- [ ] **Bucket repeated coordinate clicks by a ~5px grid — premise checked 2026-09-16, does not transfer as
+      written.** The rival tools this was ported from (webbrain/browser-use) drive clicks by raw x/y, so a
+      pixel grid is a natural loop-detection bucket for them. Tepegöz's click tool does not take
+      coordinates at all: `browser_update_page`'s `click` action takes a `ref` (`packages/browser-tools/src/browser-tools.ts:54`),
+      and the Reactor's loop-detection signature (`packages/orchestrator/src/reactor.ts:566` —
+      `` `${decision.tool}:${stableStringify(decision.args)}` ``) is built from exactly those args, which
+      never contain a coordinate. The x/y resolution happens two layers downstream, inside
+      `clickElement` in `apps/desktop/src/main/agent/cdp-driver-dom.electron.ts`, entirely inside the
+      main process — the Reactor (in `@tepegoz/orchestrator`, a separate package with no CDP access)
+      never sees it and cannot bucket by it. **So there is nothing "small, additive" to do here as
+      specified.** The real analog for a ref-based system is REF-IDENTITY drift — the same visual dead
+      spot getting a new `ref` id each perception pass, which the exact-signature check then treats as a
+      fresh, unrepeated action — but deciding when two different refs are "close enough" to count as one
+      (same accessible name + role? same approximate a11y-tree path? risk of conflating genuinely
+      different controls) is a real heuristic-design decision, not a grid-rounding formula. Left open,
+      not attempted, until that design question has an answer.
       [`../tracks/webbrain-agent-parity.md`](../../docs/parities/webbrain-agent-parity.md) P9-b, with type-aware
       bucketing from [`../tracks/browser-use-agent-parity.md`](../../docs/parities/browser-use-agent-parity.md) P1.
 - [ ] **Device emulation as a tool** — let the agent check a page's mobile layout/behaviour (viewport, UA,
