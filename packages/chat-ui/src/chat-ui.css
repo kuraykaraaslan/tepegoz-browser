@@ -66,7 +66,11 @@
 
 .chat-workspace {
   display: grid;
-  grid-template-rows: auto 1fr;
+  /* One row: every top-level child (loading state / accounts manager / the two-pane body) is the
+   * ONLY child at a time, so it must fill 100% on its own — there is no separate header row above it
+   * anymore (see `.chat-workspace__loading`'s comment for what happens when a child instead lands in
+   * an `auto` track sized to its own content). */
+  grid-template-rows: 1fr;
   height: 100%;
   min-height: 0;
   background: var(--cu-surface-base);
@@ -197,6 +201,7 @@
   display: flex;
   flex-direction: column;
   min-height: 0;
+  min-width: 0;
   border-right: 1px solid var(--cu-border);
   background: var(--cu-surface-raised);
 }
@@ -230,6 +235,18 @@
   .chat-workspace__back span {
     font-size: 16px;
     line-height: 1;
+  }
+  /* The room header's action toolbar (invite / mute / archive / notify / members / leave) is sized
+   * for the wide two-pane layout — at dock width it has nowhere to shrink to and used to squeeze the
+   * name/topic column to nothing, colliding with the topic-edit button. Wrapping it to its own row
+   * gives both groups their natural width instead of fighting over one line. */
+  .chat-room-header {
+    flex-wrap: wrap;
+    row-gap: 6px;
+  }
+  .chat-room-header__actions {
+    flex-basis: 100%;
+    justify-content: flex-end;
   }
 }
 .chat-workspace__tabs {
