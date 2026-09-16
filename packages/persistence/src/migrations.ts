@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import type { Db } from './db';
+import { MetaStore } from './meta';
 
 // Bookmark-tree seed constants — kept as literals here (persistence must not depend on @tepegoz/bookmarks).
 // These mirror BOOKMARK_ROOT_BAR / BOOKMARK_ROOT_OTHER / the position gap in @tepegoz/bookmarks (single
@@ -7,6 +8,19 @@ import type { Db } from './db';
 const ROOT_BAR = 'root-bar';
 const ROOT_OTHER = 'root-other';
 const POSITION_GAP = 1000;
+
+/**
+ * Fixed ids for the built-in skill templates seeded by migration 27 (S9 PR4) — generated once, hardcoded
+ * here rather than derived, so re-running this migration is meaningless (it never runs twice) and a
+ * FUTURE migration that wants to touch one of these specific rows (rename, retire) has a stable id to
+ * reference instead of matching on name text.
+ */
+const BUILTIN_SKILL_SUMMARIZE_PAGE = '0ef8976d-82ac-474c-b67a-125fa07888a6';
+const BUILTIN_SKILL_PDF_TABLE = '4bc3d37b-fdb5-4e09-b7d4-feaec2484caa';
+const BUILTIN_SKILL_YOUTUBE_SUMMARY = '2f469308-bb88-47b1-b687-a70ba0f3f45b';
+const BUILTIN_SKILL_PRICE_WATCH = '1bc4e044-46c2-4d6c-8dd3-f3903abde785';
+const BUILTIN_SKILL_FIYAT_TAKIBI_TR = 'f3deafbe-e625-4836-8f21-5b5fbb02e590';
+const BUILTIN_SKILL_ILAN_OZETI_TR = 'fb634f5a-d47f-4131-a65d-8c4c50c732b9';
 
 interface Migration {
   version: number;
@@ -837,6 +851,97 @@ const MIGRATIONS: Migration[] = [
         ALTER TABLE events ADD COLUMN prev_hash TEXT;
         ALTER TABLE events ADD COLUMN self_hash TEXT;
       `);
+    },
+  },
+  {
+    version: 27,
+    up: (db) => {
+      // S9 PR4: the skills library shipped with the store, the UI hook, and the launch path — and
+      // nothing in it. A user who opened the dropdown found an empty list and had to author the first
+      // template themselves, which is the exact "installed, does nothing yet" gap this phase's own rival
+      // evidence names. A HANDFUL of good templates, not HARPA's hundred-plus catalogue — every one runs
+      // on tools that already ship, none needs a new capability, and each is CONTRIBUTOR-authored trusted
+      // text (never generated from page content — PR2/PR3's boundary). Two are Turkish-first rather than
+      // translated, because a template that only ever reads as a translation of an English one is not
+      // what "Turkish-first" means here.
+      //
+      // Seeded ONCE, by a migration that never runs twice: `putSkill`'s ON CONFLICT clause does not touch
+      // `tombstone`, so a plain one-time INSERT is enough — a user who deletes one of these keeps it
+      // deleted forever (no later boot re-seeds it), and a user who edits one keeps their edit, because
+      // nothing here ever runs again to overwrite it.
+      const now = Date.now();
+      const deviceId = MetaStore.deviceId(db);
+      const insertSkill = db.prepare(
+        `INSERT INTO agent_skills (id, name, prompt, start_url, grant_profile, device_id, updated_at, version, tombstone)
+         VALUES (@id, @name, @prompt, @startUrl, @grantProfile, @deviceId, @updatedAt, 1, 0)`,
+      );
+      const readOnly = 'Read-only';
+      insertSkill.run({
+        id: BUILTIN_SKILL_SUMMARIZE_PAGE,
+        name: 'Summarize this page',
+        prompt:
+          'Read this page and give me a concise summary as a few bullet points, covering the main ' +
+          'points and any key facts or numbers.',
+        startUrl: null,
+        grantProfile: readOnly,
+        deviceId,
+        updatedAt: now,
+      });
+      insertSkill.run({
+        id: BUILTIN_SKILL_PDF_TABLE,
+        name: 'Pull the table out of this PDF',
+        prompt:
+          'This tab has a PDF open. Find the main data table on the page, extract it, and present it ' +
+          'back to me as a clean markdown table.',
+        startUrl: null,
+        grantProfile: readOnly,
+        deviceId,
+        updatedAt: now,
+      });
+      insertSkill.run({
+        id: BUILTIN_SKILL_YOUTUBE_SUMMARY,
+        name: 'Summarize this YouTube video',
+        prompt:
+          "Read this YouTube video's transcript or description and summarize what it covers as a few " +
+          'bullet points, including timestamps for the major sections if they are visible on the page.',
+        startUrl: null,
+        grantProfile: readOnly,
+        deviceId,
+        updatedAt: now,
+      });
+      insertSkill.run({
+        id: BUILTIN_SKILL_PRICE_WATCH,
+        name: 'Tell me when this price drops',
+        prompt:
+          "This page shows a product. Note the product's current price, then set up a recurring check " +
+          'on this same page and let me know as soon as the price drops below what it is now.',
+        startUrl: null,
+        grantProfile: readOnly,
+        deviceId,
+        updatedAt: now,
+      });
+      insertSkill.run({
+        id: BUILTIN_SKILL_FIYAT_TAKIBI_TR,
+        name: 'Fiyat düşünce haber ver',
+        prompt:
+          'Bu sayfada bir ürün ilanı görüntüleniyor. Ürünün şu anki fiyatını not al, ardından bu sayfayı ' +
+          'düzenli olarak kontrol edecek bir görev oluştur ve fiyat düştüğünde bana haber ver.',
+        startUrl: null,
+        grantProfile: readOnly,
+        deviceId,
+        updatedAt: now,
+      });
+      insertSkill.run({
+        id: BUILTIN_SKILL_ILAN_OZETI_TR,
+        name: 'Bu ilanı özetle',
+        prompt:
+          'Bu ilanı oku ve bana kısa maddeler halinde özetle: fiyat, konum, öne çıkan özellikler ve ' +
+          'varsa dikkat edilmesi gereken noktalar.',
+        startUrl: null,
+        grantProfile: readOnly,
+        deviceId,
+        updatedAt: now,
+      });
     },
   },
 ];

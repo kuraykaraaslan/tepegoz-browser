@@ -51,6 +51,9 @@ const call = (channel: string, payload?: unknown) => h.handlers.get(channel)?.(e
 const uuid = (n: number): string => `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`;
 
 let realDb: Db;
+/** Migration 27 seeds a handful of built-in skill templates (S9 PR4), so a freshly migrated DB is never
+ *  actually empty — every assertion below counts against this baseline instead of assuming zero. */
+let seededCount: number;
 beforeEach(() => {
   h.handlers.clear();
   requireAgentEnabled.mockReset();
@@ -60,6 +63,7 @@ beforeEach(() => {
   realDb = openDatabase(':memory:');
   migrate(realDb);
   db.value = realDb;
+  seededCount = AgentMemoryStore.listSkills(realDb).length;
   registerAgentSkillsIpc();
   registerAgentBackgroundIpc();
 });
@@ -75,7 +79,7 @@ describe('agent-enabled gate', () => {
       throw new Error('agent disabled');
     });
     expect(() => call(IpcChannels.agentSkillsSave, { name: 'x', prompt: 'y' })).toThrow();
-    expect(AgentMemoryStore.listSkills(realDb)).toEqual([]);
+    expect(AgentMemoryStore.listSkills(realDb)).toHaveLength(seededCount);
   });
 });
 
@@ -83,9 +87,11 @@ describe('agentSkillsSave', () => {
   it('mints a UUID when the renderer supplies none', () => {
     const out = call(IpcChannels.agentSkillsSave, { name: 'Invoices', prompt: 'check them' }) as {
       id: string;
+      name: string;
     }[];
-    expect(out).toHaveLength(1);
-    expect(out[0]!.id).toMatch(/^[0-9a-f-]{36}$/);
+    expect(out).toHaveLength(seededCount + 1);
+    const added = out.find((s) => s.name === 'Invoices');
+    expect(added?.id).toMatch(/^[0-9a-f-]{36}$/);
   });
 
   it('honours a renderer-supplied id on the update path (overwrites that row)', () => {
@@ -94,13 +100,15 @@ describe('agentSkillsSave', () => {
       id: string;
       name: string;
     }[];
-    expect(out).toHaveLength(1);
-    expect(out[0]).toMatchObject({ id: uuid(1), name: 'v2' });
+    // The second save overwrote the first's row rather than adding a new one — one net addition over
+    // the seeded baseline, not two.
+    expect(out).toHaveLength(seededCount + 1);
+    expect(out.find((s) => s.id === uuid(1))).toMatchObject({ id: uuid(1), name: 'v2' });
   });
 
   it('rejects a nameless payload before touching the store', () => {
     expect(() => call(IpcChannels.agentSkillsSave, { prompt: 'p' })).toThrow();
-    expect(AgentMemoryStore.listSkills(realDb)).toEqual([]);
+    expect(AgentMemoryStore.listSkills(realDb)).toHaveLength(seededCount);
   });
 
   it('returns [] and writes nothing when the database is unavailable', () => {
@@ -122,8 +130,8 @@ describe('agentSkillsDelete', () => {
     expect(AgentMemoryStore.liveGrants(realDb, uuid(2), 'billing.test')).toHaveLength(1);
 
     const out = call(IpcChannels.agentSkillsDelete, uuid(2));
-    expect(out).toEqual([]);
-    expect(AgentMemoryStore.listSkills(realDb)).toEqual([]);
+    expect(out).toHaveLength(seededCount);
+    expect(AgentMemoryStore.listSkills(realDb).find((s) => s.id === uuid(2))).toBeUndefined();
     expect(AgentMemoryStore.liveGrants(realDb, uuid(2), 'billing.test')).toEqual([]);
   });
 

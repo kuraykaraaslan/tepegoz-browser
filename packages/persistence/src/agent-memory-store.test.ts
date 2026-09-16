@@ -118,6 +118,8 @@ describe('domain memory', () => {
 });
 
 describe('skills', () => {
+  // Migration 27 seeds a handful of built-in templates (S9 PR4), so every fresh DB already carries some
+  // rows — these tests find their OWN row by id rather than assume the list is empty or a fixed length.
   it('stores and lists a skill template', () => {
     AgentMemoryStore.putSkill(db, {
       id: uuid(10),
@@ -126,19 +128,28 @@ describe('skills', () => {
       startUrl: 'https://billing.test/invoices',
     });
     const skills = AgentMemoryStore.listSkills(db);
-    expect(skills).toHaveLength(1);
-    expect(skills[0]?.startUrl).toBe('https://billing.test/invoices');
+    expect(skills.find((s) => s.id === uuid(10))?.startUrl).toBe('https://billing.test/invoices');
   });
 
   it('carries sync-meta', () => {
     AgentMemoryStore.putSkill(db, { id: uuid(11), name: 'n', prompt: 'p' });
-    expect(AgentMemoryStore.listSkills(db)[0]?.deviceId.length).toBeGreaterThan(0);
+    const skill = AgentMemoryStore.listSkills(db).find((s) => s.id === uuid(11));
+    expect(skill?.deviceId.length).toBeGreaterThan(0);
+  });
+
+  it('seeds the built-in templates once, read-only in origin, never generated from page content', () => {
+    // Not a length assertion pinned to "however many templates exist today" — the properties that
+    // actually matter: they exist, they are real UUIDs (so listSkills's own safeParse keeps them), and
+    // at least one is Turkish-first rather than a translation stub.
+    const skills = AgentMemoryStore.listSkills(db);
+    expect(skills.length).toBeGreaterThanOrEqual(4);
+    expect(skills.some((s) => s.name === 'Fiyat düşünce haber ver')).toBe(true);
   });
 
   it('forgets a skill softly, so a sync can still see the deletion', () => {
     AgentMemoryStore.putSkill(db, { id: uuid(12), name: 'n', prompt: 'p' });
     AgentMemoryStore.forgetSkill(db, uuid(12));
-    expect(AgentMemoryStore.listSkills(db)).toEqual([]);
+    expect(AgentMemoryStore.listSkills(db).find((s) => s.id === uuid(12))).toBeUndefined();
     const raw = db.prepare('SELECT tombstone FROM agent_skills WHERE id = ?').get(uuid(12));
     expect((raw as { tombstone: number }).tombstone).toBe(1);
   });

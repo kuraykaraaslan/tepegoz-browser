@@ -1,6 +1,6 @@
 # Phase S9 — Memory & Skills (W-cross)
 
-**Status:** 🟠 Measurement-owed (PR0–PR5 landed 2026-08-19; only the ⏸ funded PR6 sweep is open) · **Depends on:** [S2](phase-s2-perception-v2.md) (identity-stable refs) · [S6](phase-s6-safety-control-plane.md) (grant plane) · **Track:** [AI Agent Super](README.md)
+**Status:** 🟠 Measurement-owed (PR0–PR5 landed 2026-08-19; the skills library shipped with six built-in templates 2026-09-16, four English + two Turkish-first; only the ⏸ funded PR6 sweep is open) · **Depends on:** [S2](phase-s2-perception-v2.md) (identity-stable refs) · [S6](phase-s6-safety-control-plane.md) (grant plane) · **Track:** [AI Agent Super](README.md)
 
 **Goal:** Let the agent learn across runs. Ship three cross-run stores — a per-domain **advisory** observation memory (selector hints, layout notes, successful-path summaries), a **skill/shortcut library** of named user-triggerable task templates, and **per-task remembered grants** with expiry — all in SQLite with sync-meta columns. Memory is advisory-only, injected as tainted context, never auto-executed, and re-validated against the live DOM before use. This phase owns north-star condition 4's _"cost measurably dropping on repeat domains"_ — the repeat-visit fixtures must show wall-clock and tokens dropping without any first-visit regression.
 
@@ -91,7 +91,7 @@ Skills are **distinct from Phase 6 recipes** ([routing table](README.md#routing-
 - [x] `skill-store.ts` in [packages/persistence/src](../../packages/persistence/src): named templates `{name, prompt, start_url, grant_profile_ref}` + sync-meta; `@tepegoz/shared-types` schema; **not** a Phase-6 recipe (no signed model-free replay — document the boundary inline).
 - [x] User-triggerable entry point in [ext-agent](../../extensions/ext-agent/src) via [panel-run-config.tsx](../../extensions/ext-agent/src/panel-run-config.tsx) / a skills dropdown on [panel.tsx](../../extensions/ext-agent/src/panel.tsx); selecting a skill pre-fills the composer + start URL + grant profile. EN + full-TR dictionaries in the same PR.
 - [x] Skill launch reuses the normal reactor path (model stays in the loop) — no new execution plane.
-- [ ] **Ship the library with templates in it — it is landed but empty.** All three rows above are done, so a
+- [x] **Ship the library with templates in it — it is landed but empty.** All three rows above are done, so a
       user who opens the skills dropdown today finds nothing and has to author the first one themselves. HARPA
       AI's most-used surface is a catalogue of 100+ ready commands; the honest equivalent here is **a few good
       templates**, not a hundred: "summarize this page", "pull the table out of this PDF", "summarize this
@@ -101,6 +101,17 @@ Skills are **distinct from Phase 6 recipes** ([routing table](README.md#routing-
       in [S11](phase-s11-benchmark-h2h.md). Constraint from PR2/PR3: a packaged template is
       **contributor-authored trusted text** and must never be generated from page content.
       [`../../docs/research-harpa-ai.md`](../../docs/research/research-harpa-ai.md).
+      — _Landed 2026-09-16 as **migration 27** (`packages/persistence/src/migrations.ts`), not a
+      main-process boot-time seed: a migration runs exactly once per database by construction, so a user
+      who deletes one of these keeps it deleted forever and a user who edits one keeps their edit — a
+      re-seed on every launch would have silently clobbered both. Six templates with fixed UUIDs (four
+      English: summarize-page, pdf-table, youtube-summary, price-watch; two Turkish-first, not translated:
+      "Fiyat düşünce haber ver" and "Bu ilanı özetle", both written for a sahibinden/trendyol-style listing
+      page). `grantProfile: 'Read-only'` on all six — none does a state-changing browser action itself; the
+      price-watch pair hand off to a recurring check, matching the doc's own framing. 3 new persistence
+      tests plus fixes to two existing test files whose assertions assumed a freshly migrated skills table
+      is empty (`agent-memory-store.test.ts`, `ipc-agent-skills.electron.test.ts`) — it no longer is, by
+      design._
 
 ### PR5 — remembered grants (S6 plane, persisted with expiry)
 
