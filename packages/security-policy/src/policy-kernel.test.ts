@@ -85,6 +85,26 @@ describe('PolicyKernel.evaluate — sensitive-site lockout', () => {
   });
 });
 
+describe('PolicyKernel.evaluate — EU AI Act Annex III risk gate', () => {
+  it('denies side-effecting actions on a high-risk site (lockout overrides)', () => {
+    expect(evaluate('state_changing', { targetUrl: 'https://onfido.com/verify' })).toEqual({
+      decision: 'deny',
+      reason: 'eu_ai_act_high_risk_lockout',
+      biometric: false,
+    });
+    expect(evaluate('destructive', { targetUrl: 'https://www.equifax.com' }).decision).toBe(
+      'deny',
+    );
+  });
+  it('asks (not allow) for reads on a high-risk site', () => {
+    expect(evaluate('read', { targetUrl: 'https://onfido.com' })).toEqual({
+      decision: 'ask',
+      reason: 'eu_ai_act_high_risk_read',
+      biometric: false,
+    });
+  });
+});
+
 describe('PolicyKernel.evaluate — egress-blocked tab (Phase 5 kill-switch / DNS-leak anomaly)', () => {
   it('denies side-effecting actions on a tab whose egress is killed', () => {
     expect(evaluate('state_changing', { egressBlocked: true })).toEqual({

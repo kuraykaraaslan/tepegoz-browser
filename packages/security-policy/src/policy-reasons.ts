@@ -18,6 +18,12 @@ export const POLICY_REASONS = [
   'sensitive_site_read',
   /** Anything that CHANGES something on a sensitive origin. Denied outright, not asked. */
   'sensitive_site_lockout',
+  /** A read on an EU AI Act Annex III high-risk site (biometric/social-scoring/legal-eligibility
+   *  categorization): allowed, but confirmed first. */
+  'eu_ai_act_high_risk_read',
+  /** Anything that CHANGES something on an EU AI Act Annex III high-risk site. Denied outright — this
+   *  product commits to never being deployed for that use case. */
+  'eu_ai_act_high_risk_lockout',
   /** A read on a tab whose egress is currently killed (dropped tunnel / DNS-leak anomaly): confirmed
    *  first, since the read will simply fail rather than reach anything. */
   'tab_egress_blocked_read',

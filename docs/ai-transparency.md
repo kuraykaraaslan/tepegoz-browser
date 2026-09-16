@@ -77,7 +77,11 @@ model per provider — adding a provider is a data change plus one adapter, not 
 - **Classification: limited-risk AI system** (transparency obligations), operated under **meaningful human
   control**. tepegöz is a general-purpose browsing/automation assistant; it is not deployed for any Annex III
   high-risk use case, performs no biometric categorization, social scoring, or automated legal/eligibility
-  decisions.
+  decisions. **Enforced in code, not just documented**: the Policy Kernel's `eu-ai-act-risk` gate
+  (`packages/security-policy/src/eu-ai-act-risk.ts`) locks sites whose product IS one of those three named
+  categories — same shape as the sensitive-site lockout (state-changing/destructive/financial denied
+  outright, reads confirmed first) — so this line is a property of the running agent, not only a claim about
+  intended use.
 - **Transparency obligation (Art. 50).** Users are told they are interacting with an AI and that output may
   be inaccurate — see §6. AI-generated output is labeled in the UI.
 - **High-risk actions are gated by the user, never by the agent.** State-changing / destructive tool calls

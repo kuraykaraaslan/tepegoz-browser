@@ -54,6 +54,17 @@ export const tr: Resources = {
       why: 'İşlem, bankacılık/kripto/parola/sağlık sitesinde bir şeyi DEĞİŞTİRECEKTİ. Bu siteler yalnızca okumaya kilitlidir ve buradan hiçbir onay bu kilidi açamaz.',
       whatYouCanDo: 'İşlemi sayfada kendiniz yapın. Kilit bilinçlidir, onayla aşılamaz.',
     },
+    eu_ai_act_high_risk_read: {
+      title: 'Okumadan önce onay',
+      why: 'Bu site biyometrik tanımlama, sosyal puanlama veya otomatik uygunluk kararları veriyor — Tepegöz\'ün asla harekete geçmeyeceğini taahhüt ettiği bir kategori, bu yüzden okumak bile önce size sorulur.',
+      whatYouCanDo:
+        'Bunu siz istediyseniz onaylayın. İstemediyseniz reddedin — ajanın bu sitede olmaması gerekir.',
+    },
+    eu_ai_act_high_risk_lockout: {
+      title: 'Engellendi — yüksek riskli yapay zekâ kullanım alanı',
+      why: 'İşlem, biyometrik tanımlama, sosyal puanlama veya otomatik uygunluk kararları veren bir sitede bir şeyi DEĞİŞTİRECEKTİ. Tepegöz bunun için asla kullanılmayacak şekilde tasarlanmış ve belgelenmiştir, bu yüzden yalnızca okumaya kilitlidir ve buradan hiçbir onay bu kilidi açamaz.',
+      whatYouCanDo: 'İşlemi sayfada kendiniz yapın. Kilit bilinçlidir, onayla aşılamaz.',
+    },
     tab_egress_blocked_read: {
       title: 'Onay — bu sekme ağa erişemiyor',
       why: 'Bu sekmenin bağlantısı şu anda engelli (bir VPN/Tor tüneli düştü veya bir ağ sızıntısı denetimi başarısız oldu), bu yüzden bu okuma sayfaya gerçekten ulaşmayacak.',

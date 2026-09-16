@@ -1,5 +1,6 @@
 import type { PolicyDecision, RiskLevel, ToolDescriptor } from '@tepegoz/shared-types';
 import { isSensitiveSite } from './sensitive-site';
+import { isEuAiActHighRisk } from './eu-ai-act-risk';
 import type { PolicyReason } from './policy-reasons';
 import { applyTrust, profileFor, type TrustRule } from './trust-profile';
 
@@ -134,6 +135,16 @@ export default class PolicyKernel {
         return { decision: 'ask', reason: 'sensitive_site_read', biometric: false };
       }
       return { decision: 'deny', reason: 'sensitive_site_lockout', biometric: false };
+    }
+
+    // 2b) EU AI Act Annex III risk gate: `docs/ai-transparency.md` states tepegöz is not deployed for
+    // biometric categorization, social scoring, or automated legal/eligibility decisions. This is what
+    // makes that a property of the code rather than a claim about intended use.
+    if (ctx.targetUrl !== undefined && isEuAiActHighRisk(ctx.targetUrl)) {
+      if (risk === 'read') {
+        return { decision: 'ask', reason: 'eu_ai_act_high_risk_read', biometric: false };
+      }
+      return { decision: 'deny', reason: 'eu_ai_act_high_risk_lockout', biometric: false };
     }
 
     // 3) Tainted (web-derived) args on a side-effecting call → always HITL (injection containment).

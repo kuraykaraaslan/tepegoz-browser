@@ -7,6 +7,13 @@ export {
   type SensitiveCategory,
 } from './sensitive-site';
 export {
+  isEuAiActHighRisk,
+  euAiActHighRiskCategory,
+  EU_AI_ACT_HIGH_RISK_CATEGORIES,
+  EuAiActHighRiskCategorySchema,
+  type EuAiActHighRiskCategory,
+} from './eu-ai-act-risk';
+export {
   classifyRisk,
   type RiskClassification,
   type RiskClassificationContext,

@@ -65,6 +65,18 @@ export const en = {
       whatYouCanDo:
         'Do it yourself in the page. The lockout is deliberate and cannot be approved away.',
     },
+    eu_ai_act_high_risk_read: {
+      title: 'Confirm before reading',
+      why: 'This site does biometric identification, social scoring, or automated eligibility decisions — a category Tepegöz commits to never acting on, so even reading it is confirmed with you first.',
+      whatYouCanDo:
+        'Approve if you asked for this. If you did not, decline — the agent should not be on this site.',
+    },
+    eu_ai_act_high_risk_lockout: {
+      title: 'Blocked — high-risk AI use case',
+      why: 'The action would CHANGE something on a site doing biometric identification, social scoring, or automated eligibility decisions. Tepegöz is built and documented as never being deployed for that, so it is locked to reading only, and no approval can unlock it here.',
+      whatYouCanDo:
+        'Do it yourself in the page. The lockout is deliberate and cannot be approved away.',
+    },
     tab_egress_blocked_read: {
       title: 'Confirm — this tab cannot reach the network',
       why: "This tab's connection is currently blocked (a VPN/Tor tunnel dropped, or a network-leak check failed), so this read will not actually reach the page.",
