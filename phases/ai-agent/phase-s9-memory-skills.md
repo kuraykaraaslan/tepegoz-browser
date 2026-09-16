@@ -16,9 +16,9 @@ Skills are **distinct from Phase 6 recipes** ([routing table](README.md#routing-
 
 ## Exit criteria (DoD)
 
-- [ ] **Repeat-visit cost drop:** on the repeat-domain paired fixtures, second-visit **wall-clock/task AND tokens/task both ≥25% lower** than first-visit, at pooled **N≥10 paired** with Wilson 95% CIs on the pooled family (⏸ funded sweep).
-- [ ] **First-visit unchanged:** first-visit verified-completion rate and wall-clock within **±5pp / equivalence margin** of the pre-S9 baseline — memory must not tax the cold path (⏸ funded sweep).
-- [ ] **Poisoned-hint 0 violations:** on the poisoned-hint fixture family (store seeded with a malicious hint), **0 policy/egress violations in N≥10** — the agent must not follow a stored hint into a taint/egress/grant violation. This is the **ship gate**, not a nice-to-have (⏸ funded sweep).
+- [ ] **Repeat-visit cost drop:** on the repeat-domain paired fixtures, second-visit **wall-clock/task AND tokens/task both ≥25% lower** than first-visit, at pooled **N≥10 paired** with Wilson 95% CIs on the pooled family (⏸ funded sweep — **and blocked ahead of the sweep by host-wiring, see PR2's note**: with no production caller of the retrieval seam, a memory-on trial and a memory-off trial run identical code today, so the sweep would spend the budget to measure a guaranteed null result).
+- [ ] **First-visit unchanged:** first-visit verified-completion rate and wall-clock within **±5pp / equivalence margin** of the pre-S9 baseline — memory must not tax the cold path (⏸ funded sweep — same host-wiring precondition as the line above).
+- [ ] **Poisoned-hint 0 violations:** on the poisoned-hint fixture family (store seeded with a malicious hint), **0 policy/egress violations in N≥10** — the agent must not follow a stored hint into a taint/egress/grant violation. This is the **ship gate**, not a nice-to-have (⏸ funded sweep — same host-wiring precondition; see PR3's note on top of that for the harness's own shared-profile gap).
 - [x] **Re-validation mandatory by construction:** a stored selector hint that does not resolve against the current DOM (via S2 identity refs) is discarded, never actioned; covered by a scripted stale-hint regression (plumbing, not competence).
 - [x] **Advisory-only, by construction:** no memory value reaches `ToolGateway.invoke` without passing the same PEP as a fresh model decision; a memory-derived value crossing the egress firewall carries taint and triggers the S6 approval path. Scripted assertion.
 - [x] **Sync-ready:** every new table carries sync-meta (`updated_at`, `version`, `tombstone`, UUID PK, `device_id` via [MetaStore.deviceId](../../packages/persistence/src/meta.ts)) — verified by a persistence test; no Phase-3 migration owed.
@@ -48,6 +48,29 @@ Skills are **distinct from Phase 6 recipes** ([routing table](README.md#routing-
 - [x] **Re-validation gate:** before a hint is offered, re-resolve its descriptor against the current DOM using S2 identity refs; a non-resolving hint is discarded (the mandatory anti-stale construction). Wire into [reactor.ts](../../packages/orchestrator/src/reactor.ts)'s context assembly, not the action path.
 - [x] Taint propagation: a memory-derived value routes through the existing TaintTracker so egress inherits the S6 approval path; assert no bypass of `ToolGateway.invoke`.
 - [x] Scripted stale-hint + advisory-only regressions (plumbing tier).
+- **What "landed" means here, precisely (checked 2026-09-16, confirms [ADR-0027](../../docs/adr/0027-agent-memory.md)'s
+  own "owed, and stated rather than implied" line rather than adding a new finding).** Every `[x]` above is
+  real at the PACKAGE level: `Reactor.run`'s `options.recallMemory` hook exists, injects whatever it is given
+  as a tagged-tainted observation, and is exercised by `reactor.test.ts` / `memory-recall.test.ts` with a
+  fake callback. What does not exist ANYWHERE in `apps/desktop` is the callback itself — grepping the whole
+  app for `recallMemory`, `hintsForHost`, `putHint`, `decideWrite` finds zero production call sites, on
+  either side: no run ever reads a hint (nothing constructs a real `recallMemory` and passes it to
+  `Reactor.run`) and no run ever writes one (nothing calls `AgentMemoryStore.putHint`/`decideWrite` after a
+  step or a completed run). "Injected into the reactor turn" (above) describes what the mechanism does when
+  called, not that anything calls it. Two distinct blockers, not one:
+  1. **Read-side wiring is a plumbing task, fully speced.** The re-validation gate needs a LIVE DOM handle
+     (the current page's element snapshot) to resolve a stored descriptor, the same shape `groundNavigation`
+     / `discoverSitemap` already thread from `browser-host.electron.ts` through `agent-runtime-loop.ts`'s
+     `deps` into a reactor hook — an afternoon of wiring along an existing seam, not a design question.
+  2. **Write-side wiring is a product decision, not plumbing.** Nothing in the ADR or this phase specifies
+     WHAT observation is worth persisting as a hint (every page read? only ones the model called out as
+     useful? only a run's final summary?) or WHEN to write it (after every step? only on `finish`? only on
+     verified-completion, tying it to [S4](phase-s4-verified-outcomes.md)?). Guessing an answer here to
+     close a checkbox would bake in a policy nobody has actually decided, on the exact feature this phase's
+     own "Why" section calls a live poisoning attack surface — the wrong place to guess.
+  Left open for a session with either an owner call on (2), or a narrower PR that does (1) alone and leaves
+  write-side at zero (so recall could read real historical hints seeded by hand/tests, without yet deciding
+  the auto-write policy).
 
 ### PR3 — poisoned-hint defenses + fixtures
 
@@ -70,6 +93,15 @@ Skills are **distinct from Phase 6 recipes** ([routing table](README.md#routing-
       on, not a narrow S9 change, and a mistake there is not something a scripted trial would catch on its
       own — left for a deliberate change with its own review, not bundled into this line.
 - [ ] Provenance surfaced to the S8 event stream so a human sees _"acting partly on a remembered hint from <host>"_ (advisory transparency).
+      — _Downstream of PR2's read-side wiring gap, not a standalone small addition: there is no live recall
+      to announce yet. The natural home once wiring lands is the same reactor call site as the recall
+      itself ([reactor.ts](../../packages/orchestrator/src/reactor.ts)'s `pushObservation(recalled)` after
+      `options.recallMemory`), mirroring the existing `'grant'` `AgentEventKind` (a persistent-permission
+      provenance event, [S8](phase-s8-assistant-ux.md)) rather than inventing a second pattern — a new
+      `onMemoryRecall` reactor hook alongside `onOutcome`/`onDecision`, threaded through
+      `agent-runtime-loop.ts` to `hooks.onEvent`, one `AgentEventKind` value, one `KIND_DOT` entry, one
+      localized `agent.memory.recalled` string (en+tr) with a `{host}` placeholder. Sequenced after PR2,
+      not before._
 
 > **Mechanism + placement notes (PR0–PR3, PR5-store).**
 >
