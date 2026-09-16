@@ -54,7 +54,14 @@ work lives in Phase 2; agent orchestration (multi-tab parallelism) stays in Phas
   Electron's per-PROCESS metrics onto TABS honestly: Chromium groups same-site tabs into one renderer, so
   shared rows are flagged and report the process total as such rather than an invented per-tab share, and
   the memory total is computed from distinct processes so sharing is never double-counted. An unmeasurable
-  tab reports `null`, never `0`. **Not done:** the `tepegoz://` page, end-process, and tab discard/sleep.
+  tab reports `null`, never `0`. — _**"Not done" here was stale, corrected 2026-09-16: all three landed.**
+  The `tepegoz://process` page exists ([`ProcessPageSurface.tsx`](../../apps/desktop/src/renderer/src/components/ProcessPageSurface.tsx),
+  `@tepegoz/process-ui`); **end-process** is a two-click arm/confirm "End process" button
+  (`processMetricsEnd` → `endTabProcess` → `forcefullyCrashRenderer()`, tested in `process-page.test.tsx`)
+  distinct from **tab discard/sleep** (a gentler memory-reclaim suspend, [tabs-window-discard.ts](../../apps/desktop/src/main/tabs-window-discard.ts),
+  reachable from the tab context menu) — Chrome's Task Manager offers the same two as separate actions
+  for the same reason: ending a process is destructive (the page state is gone), discarding is not (it
+  reloads on next focus)._
 
 ## Tasks
 
