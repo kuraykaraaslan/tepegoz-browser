@@ -21,6 +21,19 @@ import CdpDriver from '../agent/cdp-driver.electron';
 import TabManager from '../tabs';
 import BrowsingWebRequestService from '../web-request/browsing-web-request-service.electron';
 
+/**
+ * S6 (aipex-agent-parity P4-a): the agent never reads an uploaded file's bytes, and this is a real
+ * security property, not an implementation detail that happens to hold today. `create()` canonicalizes
+ * and sandbox-checks each path (`FileOperationsHost.assertReadableFile`), `stat`s it for metadata
+ * only (filename/size/mimeType/risk — never content), then hands the RAW PATH straight to Chromium via
+ * `CdpDriver.setFileInputFiles` (`DOM.setFileInputFiles`), which sets the OS-level file selection on the
+ * page's `<input>` directly. The bytes travel filesystem → CDP → page; nothing in this process ever
+ * calls a content-reading function on them. `publicRecord` (below) enforces the other half: it is built
+ * field-by-field rather than spread from `ActiveUpload`, so the raw `paths` this interface still carries
+ * internally can never leak into what `list()`/`getUpload()`/the model actually see — and `create()`
+ * itself resolves to `{ id }` alone. Locked by `upload-service.electron.test.ts`'s "never leaks a raw
+ * path" tests, so a future refactor that widens either return shape fails loudly instead of silently.
+ */
 interface ActiveUpload extends UploadRecord {
   paths: string[];
   requestIds: Set<number>;

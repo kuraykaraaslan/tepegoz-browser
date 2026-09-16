@@ -135,6 +135,24 @@ describe('create', () => {
       'UploadFailed',
     );
   });
+
+  // S6 (aipex-agent-parity P4-a): the agent never reads an uploaded file's bytes. `toMatchObject` above
+  // proves the fields that SHOULD be there are; it says nothing about a field that should NOT be —
+  // these lock that half explicitly, so a later change that starts spreading the internal record (which
+  // still carries the raw filesystem `paths`) into what the model sees fails loudly.
+  it('create() resolves to the id ALONE — no path, no record, nothing else', async () => {
+    const Svc = await load();
+    const result = await Svc.create(input(), wc() as never);
+    expect(Object.keys(result)).toEqual(['id']);
+  });
+
+  it('never exposes the raw filesystem path through list()', async () => {
+    const Svc = await load();
+    await Svc.create(input(), wc() as never);
+    const rec = Svc.list()[0];
+    expect(rec).not.toHaveProperty('paths');
+    expect(JSON.stringify(rec)).not.toContain('/real/doc.pdf');
+  });
 });
 
 describe('list / state', () => {

@@ -334,11 +334,20 @@ the decision; the code still enforces the old absolute deny, which is the honest
       (nearest-existing-ancestor + re-appended tail, distinct from the direct-realpath branch a read
       exercises). Symlink cases skip gracefully (not fail) on a runner without symlink permission; this
       machine had it and all six ran for real._
-- [ ] **Write down the upload no-read guarantee.** The `upload_*` path already sets files on an `<input>` via
+- [x] **Write down the upload no-read guarantee.** The `upload_*` path already sets files on an `<input>` via
       CDP and **never reads the bytes into the agent's context** — filesystem → CDP → page. That is a real
       security property that exists only as an implementation detail today; state it, and test it, so it
       cannot be refactored away silently.
       [`../tracks/aipex-agent-parity.md`](../../docs/parities/aipex-agent-parity.md) P4-a.
+      — _Landed 2026-09-16. **Stated** as a doc comment on `ActiveUpload` in
+      `apps/desktop/src/main/uploads/upload-service.electron.ts`: `create()` only ever `stat`s a path for
+      metadata (filename/size/mimeType/risk), then hands the raw path to `CdpDriver.setFileInputFiles`
+      (`DOM.setFileInputFiles`) — bytes travel filesystem → CDP → page, never through a Node-side read.
+      **Tested** with two regression locks the existing suite didn't have (every prior test used
+      `toMatchObject`, which proves the fields that SHOULD be present are, and says nothing about a field
+      that should NOT be): `create()` resolves to `{ id }` alone, and `list()` never carries the internal
+      `paths` field. Mutation-verified — reintroducing `paths` into `publicRecord()` failed the new test
+      immediately, confirming it actually catches the leak rather than passing vacuously._
 - [ ] **Say _why_ a call was allowed, asked about, or denied.** The kernel's verdicts already carry
       machine-readable reasons (`policy-reasons.ts`); they are not surfaced. Presentation lives in
       [S8](phase-s8-assistant-ux.md) PR7's permission-debug view — this row is the plane's obligation to keep
