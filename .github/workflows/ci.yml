@@ -58,8 +58,10 @@ jobs:
 
   e2e:
     # Playwright `_electron` smoke (Phase 1a DoD): launches the BUILT app and asserts real window
-    # behavior. Separate job because it needs the Electron-ABI native addon + a virtual display, which
-    # would conflict with `verify`'s Node-ABI install.
+    # behavior. Separate job because it needs a virtual display (Linux) and is slower/flakier than
+    # `verify` — isolating it keeps a real e2e failure from blocking the fast typecheck/lint/test/build
+    # signal. (There is no more Electron-ABI native addon to rebuild here: `node:sqlite` replaced
+    # `better-sqlite3`, and `node-llama-cpp`'s N-API prebuilds are ABI-independent — see CLAUDE.md.)
     #
     # Windows is in the matrix because package.json calls Windows 11 the PRIMARY target and it had zero
     # CI coverage: the release workflow PACKAGED a Windows installer that no job had ever launched. The

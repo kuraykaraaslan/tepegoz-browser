@@ -153,5 +153,25 @@ limit)` — a single new query beside `search` (which keeps its recency + `offse
 ### Test
 
 - [x] **Deterministic agent-eval** (recorded HAR/DOM fixtures + golden-LLM replay) _(golden-LLM replay via MockProvider canned plan → real Planner (parse/validate/unknown-tool reject) → Executor → ToolGateway (Policy Kernel + HITL approve/deny) → asserted outcomes; no network/key. Claude-level acceptance suite now adds scripted reactive runs for heading extraction, three-source/multi-tab research, form fill before submit, changed=false action recovery, and CAPTCHA/2FA handoff, with metric aggregation for success/recovery/approval/tool-error/navigation-validation/token usage. HAR/DOM page fixtures land with the CDP perception layer)_
-- [~] Playwright `_electron` E2E (fixed test profile + **mock provider**) _(real `_electron` smoke (`e2e/smoke.spec.ts`) launches the built app and asserts brand/omnibox/tab/multi-window/real page load; now a **gated CI job** (`e2e` in `ci.yml` — Electron-ABI rebuild + xvfb + Playwright system libs). Remaining: a fixed test profile + mock-provider agent-run E2E (the smoke uses a live page, not a mocked model).)_
+- [~] Playwright `_electron` E2E (fixed test profile + **mock provider**) _(real `_electron` smoke (`e2e/smoke.spec.ts`) launches the built app and asserts brand/omnibox/tab/multi-window/real page load; now a **gated CI job** (`e2e` in `ci.yml`, matrixed across ubuntu/windows/macos — xvfb on Linux, a native desktop session on the other two; the job's own comment overstated why it is separate — fixed, it never needed an Electron-ABI rebuild). Remaining: a fixed test profile + mock-provider agent-run E2E (the smoke uses a live page, not a mocked model).
+      **Investigated 2026-09-16, and it is not a coding gap either.** A real agent run needs an outbound
+      model call to succeed, and every provider adapter either uses the shared axios seam
+      (`@tepegoz/http`'s `createHttpClient` — Gemini/Kimi/Nova/DeepSeek/xAI/Groq) or the vendor SDK
+      directly (Anthropic, OpenAI). The axios seam DOES pick up `HTTPS_PROXY`/`NO_PROXY` from the
+      environment when no network-binding tunnel is in force — spike-verified: a local `CONNECT` proxy
+      launched from a throwaway script received the `CONNECT` for an axios request with no code change,
+      confirming an e2e test could redirect a provider's traffic to a local double. The vendor SDKs do
+      not have the same guarantee (their own transport, not `@tepegoz/http`), so only the axios-backed
+      providers are reachable this way. But redirecting the TCP connection is not enough: TLS still
+      terminates at whatever the client trusts, so faking a provider's response needs a real MITM
+      (a locally-issued leaf cert for the provider's hostname, trusted via `NODE_EXTRA_CA_CERTS`) — and
+      Node's own `crypto` module has no X.509 **issuance** API (`X509Certificate` only parses), so
+      generating that cert needs either the system `openssl` binary (not guaranteed present on the
+      `windows-latest`/`macos-latest` runners this job's own matrix targets) or a small new
+      devDependency (e.g. `selfsigned`). That is a real choice with a real supply-chain-review angle in
+      a repo with its own SBOM/SupplyChainGate phase ([12](phase-12-developer-platform-marketplace.md)),
+      not a default an autonomous session should make. **This line stays `[~]` pending that call** —
+      whoever makes it, the harder half (this hostname-agnostic MITM approach) is already de-risked, and
+      once a provider's response is fakeable, the reactor's native-tool-calling turn shape is the
+      remaining design question for the fixture itself.)_
 - [x] Red-team injection corpus v1; coverage gate; SQLite migration-safe tests _(red-team corpus (`apps/desktop/redteam.test.ts`, now 14 cases incl. the wired egress HITL) + the coverage gate (`vitest.coverage.config.ts` S80/B85/F86/L80 over 62 packages, plus `apps/desktop` at its own ratcheting floor) both run in CI (`ci.yml`); migrations are forward-only + versioned (`PRAGMA user_version`), applied in a transaction, with per-store `:memory:` tests. i18n parity is enforced per-dict — the 3 remaining dicts (bookmarks-ui, password-ui, ext-popup-blocker) now have their `keyPaths` parity test too.)_
