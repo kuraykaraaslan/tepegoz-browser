@@ -116,6 +116,24 @@ describe('isTrustedAppUrl', () => {
     ).toBe(false);
   });
 
+  it(
+    'rejects a host that merely CONTAINS an allow-listed name — the exact regression class ' +
+      'ShadowPrompt used (a *.claude.ai wildcard let any matching subdomain in). S6 second wave: ' +
+      '"never write an origin allow-list as a pattern".',
+    () => {
+      const opts = { isPackaged: true, chromeUrl: CHROME, internalPageHosts: ['settings', 'history'] };
+      // A superstring of the allow-listed name, both directions — the shape a `.startsWith`/`.endsWith`/
+      // `.includes` "convenience" match (instead of the array's own exact `.includes(hostname)`) would
+      // wrongly admit.
+      expect(isTrustedAppUrl('tepegoz://settings-evil.com/', opts)).toBe(false);
+      expect(isTrustedAppUrl('tepegoz://evil-settings/', opts)).toBe(false);
+      expect(isTrustedAppUrl('tepegoz://settingsevil/', opts)).toBe(false);
+      // A real DNS-style subdomain relationship, if it ever parsed as one.
+      expect(isTrustedAppUrl('tepegoz://settings.evil.com/', opts)).toBe(false);
+      expect(isTrustedAppUrl('tepegoz://evil.settings/', opts)).toBe(false);
+    },
+  );
+
   it('does not trust ANY tepegoz:// host when the caller supplies no allow-list', () => {
     expect(isTrustedAppUrl('tepegoz://settings/', { isPackaged: true, chromeUrl: CHROME })).toBe(
       false,

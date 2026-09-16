@@ -239,10 +239,23 @@ Sequencing: the claim-grade ASR sweep runs **after [S3](phase-s3-reliability-act
       the renderer is untrusted ([ADR-0013](../../docs/adr/0013-agent-orchestration-hitl.md)), and a missing confirm
       handler fails closed to deny. Record it in [`docs/threat-model.md`](../../docs/threat-model.md) as a
       named control with a shipped counter-example, not as intent.
-- [ ] **Never write an origin allow-list as a pattern.** ShadowPrompt's root cause was a `*.claude.ai` wildcard:
+- [x] **Never write an origin allow-list as a pattern.** ShadowPrompt's root cause was a `*.claude.ai` wildcard:
       any matching subdomain could send the extension a prompt and have it executed. ADR-0013's IPC discipline
       already says **exact-host allow-list**. Lock it with a test, because the regression here is a one-character
       convenience edit that reintroduces exactly this CVE.
+      — _**Verified 2026-09-16: the code was already correct, the missing piece was the test.**
+      `@tepegoz/navigation`'s `isTrustedAppUrl` ([`trusted-origin.ts`](../../packages/navigation/src/trusted-origin.ts))
+      uses exact equality / `Array.includes()` throughout — no regex, no `startsWith`/`endsWith` — for
+      the `file://` chrome-document check, the `tepegoz://` internal-page allow-list, and the localhost
+      dev-server check, which `apps/desktop`'s IPC sender guard (`assertTrustedSender` →
+      `isTrustedAppUrl`) consumes for every `invoke` channel. An existing test already locked the
+      localhost case against a string-prefix bypass, but nothing locked the `tepegoz://` allow-list
+      against the SUBDOMAIN-shaped bypass ShadowPrompt actually used — a host that merely CONTAINS an
+      allow-listed name (`settings-evil.com`, `evil.settings`) was untested. Added that test and
+      mutation-verified it against the exact "one-character convenience edit" the DoD warns about
+      (swapping the array's own `.includes(hostname)` for `.some(h => hostname.includes(h))`): the new
+      test catches it, every pre-existing test in the file still passes under the mutation — proof the
+      old suite alone would not have caught this regression._
 - [x] **A page-derived file path is never silently read.** PerplexedBrowser turned a web-delivered instruction
       into local-file exfiltration; Perplexity's fix was to block `file://` at the code level. This project's
       `file_*` tools sit in a real sandbox
