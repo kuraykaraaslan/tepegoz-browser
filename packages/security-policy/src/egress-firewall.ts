@@ -3,7 +3,10 @@
  * agent is about to send off-device (model requests carrying page data, network tool calls, form
  * submissions) and blocks/flags exfiltration:
  *  - secret tokens & private keys (provider API keys, Bearer, JWT, AWS/GitHub/Google) → BLOCK
- *  - encoded blobs: long Base64 runs / high-Shannon-entropy tokens (data smuggling) → WARN
+ *  - encoded blobs: long Base64/hex/percent-encoded runs / high-Shannon-entropy tokens → WARN by shape,
+ *    but a bounded prefix of each blob is DECODED and re-scanned against the same secret/PII rules — a
+ *    secret hidden inside an encoded blob (CometJacking's actual exfil channel) is BLOCKed, not just
+ *    flagged as "looks encoded"
  *  - PII: email / IBAN / Luhn-valid card numbers → WARN
  *
  * Detection is intrinsic to the payload (origin-aware cross-origin policy layers on top later). Over-
@@ -14,6 +17,8 @@ export const EGRESS_FINDING_KINDS = [
   'secret_token',
   'private_key',
   'base64_blob',
+  'hex_blob',
+  'percent_blob',
   'high_entropy',
   'pii_email',
   'pii_card',
@@ -84,9 +89,17 @@ const PII_RULES: readonly PatternRule[] = [
 
 const CARD_CANDIDATE = /\d(?:[ -]?\d){12,18}/g;
 const BASE64_RUN = /[A-Za-z0-9+/]{40,}={0,2}/g;
+const HEX_RUN = /\b[0-9a-fA-F]{40,}\b/g;
+const PERCENT_RUN = /(?:%[0-9A-Fa-f]{2}){10,}/g;
 const TOKEN_SPLIT = /[\s,"'`<>(){}[\]]+/;
 const MIN_ENTROPY_LEN = 24;
 const HIGH_ENTROPY_BITS = 4.0;
+/**
+ * How much of a matched blob to attempt decoding (CometJacking — S6 PR8). A secret shape is short, so it
+ * either surfaces in the first slice of a decoded blob or the blob was never encoded data worth decoding;
+ * decoding an attacker-controlled match without a bound would make the scan's cost attacker-chosen.
+ */
+const MAX_DECODE_PREFIX = 4000;
 
 /** Redact a matched secret/PII slice: keep a 4-char head, annotate length, drop the rest. */
 function redact(sample: string): string {
@@ -139,10 +152,69 @@ function scanCards(payload: string, out: EgressFinding[]): void {
   }
 }
 
+/** Best-effort Base64 decode; `null` on anything that cannot be a real Base64 payload. */
+function tryDecodeBase64(sample: string): string | null {
+  try {
+    const decoded = Buffer.from(sample, 'base64').toString('utf8');
+    return decoded.length > 0 ? decoded : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Best-effort hex decode; `null` on an odd-length or otherwise invalid run. */
+function tryDecodeHex(sample: string): string | null {
+  if (sample.length % 2 !== 0) return null;
+  try {
+    const decoded = Buffer.from(sample, 'hex').toString('utf8');
+    return decoded.length > 0 ? decoded : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Best-effort percent-decode; `null` on a malformed sequence rather than throwing. */
+function tryDecodePercent(sample: string): string | null {
+  try {
+    const decoded = decodeURIComponent(sample);
+    return decoded.length > 0 ? decoded : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Decode a matched blob and re-scan the RESULT for the same secret/PII shapes as plaintext (CometJacking
+ * — S6 PR8: the egress firewall used to match encoded blobs by SHAPE alone, so a secret hidden inside a
+ * Base64/hex/percent-encoded chunk only ever warned as "looks encoded" — never as the block-severity leak
+ * it actually was. A secret found inside a bounded decode prefix is exactly as real as one found in
+ * plaintext, so it is scanned with the same rules and inherits the same severity.
+ */
+function scanDecodedBlob(match: string, out: EgressFinding[]): void {
+  const prefix = match.slice(0, MAX_DECODE_PREFIX);
+  for (const decoded of [tryDecodeBase64(prefix), tryDecodeHex(prefix), tryDecodePercent(prefix)]) {
+    if (decoded === null) continue;
+    scanPatterns(decoded, SECRET_RULES, out);
+    scanPatterns(decoded, PII_RULES, out);
+    scanCards(decoded, out);
+  }
+}
+
 function scanBlobs(payload: string, out: EgressFinding[]): void {
   // Long contiguous Base64 runs anywhere (incl. glued to `key=` or inside URLs/JSON).
   for (const match of payload.matchAll(BASE64_RUN)) {
     out.push({ kind: 'base64_blob', severity: 'warn', sample: redact(match[0]) });
+    scanDecodedBlob(match[0], out);
+  }
+  // Long contiguous hex runs — the second encoding CometJacking used to smuggle page content.
+  for (const match of payload.matchAll(HEX_RUN)) {
+    out.push({ kind: 'hex_blob', severity: 'warn', sample: redact(match[0]) });
+    scanDecodedBlob(match[0], out);
+  }
+  // Percent-encoded runs (10+ triples back to back) — the third.
+  for (const match of payload.matchAll(PERCENT_RUN)) {
+    out.push({ kind: 'percent_blob', severity: 'warn', sample: redact(match[0]) });
+    scanDecodedBlob(match[0], out);
   }
   // High-entropy tokens NOT already covered by a Base64 run (random keys/ids/encoded data).
   for (const token of payload.split(TOKEN_SPLIT)) {

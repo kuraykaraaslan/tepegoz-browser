@@ -159,10 +159,28 @@ Sequencing: the claim-grade ASR sweep runs **after [S3](phase-s3-reliability-act
       instruction injection, a page that asks the agent to read a password-manager surface, an encoded
       exfiltration attempt, a bulk-destructive request against a connected account. A defense with no scenario
       that fails without it is an assumption, not a control.
-- [ ] **Encoded-exfiltration detection.** The egress firewall matches secret _shapes_; Base64/hex/percent-encoded
+- [~] **Encoded-exfiltration detection.** The egress firewall matches secret _shapes_; Base64/hex/percent-encoded
       page content sent to an attacker-chosen destination is the channel CometJacking actually used. Decode and
       re-scan a bounded prefix at the egress boundary, and treat "high-entropy blob to a domain the run never
       visited" as a class of its own.
+      — _**Decode-and-rescan half landed 2026-09-16.** `egress-firewall.ts` previously matched Base64 by
+      shape alone (`base64_blob` → warn) and had no hex/percent-encoding detection at all. Now: hex and
+      percent-encoded runs are their own finding kinds (`hex_blob`/`percent_blob`, symmetric with
+      `base64_blob`), and every encoded-blob match gets a bounded prefix (4000 chars — a secret shape is
+      short, so decoding an attacker-controlled match without a bound would make the scan's cost
+      attacker-chosen) decoded and re-scanned through the SAME `SECRET_RULES`/`PII_RULES`/card checks as
+      plaintext. A secret hidden inside an encoded blob now BLOCKs, exactly as if it had been sent in the
+      clear — previously it could only ever reach `warn` ("looks encoded"), which is precisely the gap
+      CometJacking's channel exploited. Mutation-verified (each of the three encodings independently
+      confirmed to regress to `warn` when the decode step is removed) and regression-locked in
+      `egress-firewall.test.ts`.
+      **Still open: the "domain the run never visited" half.** `inspectEgress` is a pure function of the
+      PAYLOAD string alone — it has no notion of which destination a request is going to, let alone which
+      origins this run has actually browsed. Wiring that in means threading the run's visited-origin set
+      and the request's destination through the `ModelGateway`/`ToolGateway` egress call sites into
+      `inspectEgress`'s signature (a new required context parameter, not a payload heuristic), which is a
+      real interface change to the ONE chokepoint every phase's egress inspection shares — left for its
+      own deliberate change rather than folded into this line._
 - [ ] **Password-manager surfaces are a locked class**, on the same footing as banking: the agent may not read,
       fill from, or drive any password-manager UI (extension, web vault, or this project's own), and cannot be
       granted that by any combination of clicks. The 1Password incident is what "the agent has the user's
