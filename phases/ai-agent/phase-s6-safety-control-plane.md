@@ -231,7 +231,7 @@ Sequencing: the claim-grade ASR sweep runs **after [S3](phase-s3-reliability-act
       surface is `extension_*` + [`@tepegoz/extension-host`](../../packages/extension-host) under
       [ADR-0021](../../docs/adr/0021-agent-controllable-extensions.md). The answer is almost certainly already
       "no" — but an unwritten "no" is an assumption. Add the scenario.
-- [ ] **A DOM-resident approval is a forgeable approval.** ClaudeBleed's escalation replayed the confirmation
+- [x] **A DOM-resident approval is a forgeable approval.** ClaudeBleed's escalation replayed the confirmation
       message and mutated UI elements to distort what the agent believed it was approving — defeating a
       documented "user confirmation required" control. **This project is structurally right here and the
       reason should be written down where it can be cited:** HITL round-trips in the **main process**
@@ -239,6 +239,15 @@ Sequencing: the claim-grade ASR sweep runs **after [S3](phase-s3-reliability-act
       the renderer is untrusted ([ADR-0013](../../docs/adr/0013-agent-orchestration-hitl.md)), and a missing confirm
       handler fails closed to deny. Record it in [`docs/threat-model.md`](../../docs/threat-model.md) as a
       named control with a shipped counter-example, not as intent.
+      — _Landed 2026-09-16 as a new [`docs/threat-model.md`](../../docs/threat-model.md#a-dom-resident-approval-is-a-forgeable-approval)
+      subsection + a new top-threats row ("Forged/replayed HITL approval"). Cites the exact mechanism by
+      file: `hitl-registry.ts`'s own docblock already names the two properties that make the correlation
+      sound (unguessable `randomUUID` ids; single-shot settling — a replayed response finds nothing), so
+      the entry quotes it directly rather than re-deriving it. Also traced the one IPC channel that can
+      settle an approval (`ipc-agent-controls.ts`'s `agentApprovalResponse`) back through the SAME
+      exact-host `assertTrustedSender` gate this session just regression-locked, and confirmed the
+      fail-closed-on-missing-handler property already asserted in `tool-gateway.test.ts`. Documentation
+      only — no code changed, because none needed to._
 - [x] **Never write an origin allow-list as a pattern.** ShadowPrompt's root cause was a `*.claude.ai` wildcard:
       any matching subdomain could send the extension a prompt and have it executed. ADR-0013's IPC discipline
       already says **exact-host allow-list**. Lock it with a test, because the regression here is a one-character

@@ -41,6 +41,7 @@ its operator, Phase 5)`
 | Data exfiltration                        | Egress Firewall (Base64/high-entropy/cross-origin PII); CSP; deny-by-default navigation                                                                                                                                                                                                                                                  |
 | Malicious 3rd-party MCP/skill            | CapabilitySandbox (separate process, least-privilege, `file://` off); signature + scope-review before marketplace                                                                                                                                                                                                                        |
 | Renderer compromise                      | contextIsolation+sandbox+nodeIntegration:false+webSecurity:true; Electron fuses; typed IPC + sender allow-list                                                                                                                                                                                                                           |
+| Forged/replayed HITL approval             | HITL state lives in **main** (a correlation map + pending promise), never as DOM state a script could mutate; unguessable `randomUUID` ids + single-shot settling; a missing confirm handler fails CLOSED to deny (see below)                                                                                                          |
 | Tampered update                          | Code-signed + signature-verified updates over HTTPS; anti-rollback (Phase 0 packaging)                                                                                                                                                                                                                                                   |
 | Inbound MCP abuse                        | Bearer auth + rate-limit + schema validation + same policy gate                                                                                                                                                                                                                                                                          |
 | Local DB exposure                        | userData ACLs; field encryption for sensitive data; synthetic test fixtures only                                                                                                                                                                                                                                                         |
@@ -124,6 +125,45 @@ needs a file chosen out of an OS dialog, which no automated run can do. So what 
 after a user picks a file is untested here, and should not be assumed either way. Note also that
 `FileOperationsHost` and the Settings "file operations" switch are scoped to the **agent's** file tools
 and were never claimed to cover this path.
+
+### A DOM-resident approval is a forgeable approval
+
+ClaudeBleed (Anthropic's Claude for Chrome, May 2026) combined two defects into one escalation: **any**
+Chrome extension could issue commands to the agent, and the confirmation UI it defeated kept its
+decision as **DOM state** — the attack replayed the confirmation message and mutated the rendered
+elements to distort what the human believed they were approving. A prompt the page (or an extension) can
+read and rewrite is not a control; it is a suggestion the attacker gets to edit.
+
+**This project is structurally right here, and the reason is written down rather than asserted:**
+
+- **HITL state never lives in the renderer.** A tool approval is a `{ runId, resolve }` entry held in a
+  `Map` in the **main** process ([`hitl-registry.ts`](../apps/desktop/src/main/agent/hitl-registry.ts)),
+  keyed by an id `ipc-agent-run.ts` mints with `randomUUID()`. The renderer receives a request to
+  *display*, and sends back a click; it never holds the thing being decided. A compromised or
+  extension-injected script mutating the DOM changes what a human SEES, not what main is waiting to
+  resolve — there is no rendered element whose state main trusts.
+- **The id is unguessable, and settling is single-shot** (same file, same docblock — quoted because it
+  is the exact counter-example, not an intent): a sequential counter "would let a renderer spray
+  responses for ids main had not created yet and win the race the moment one was registered"; single-shot
+  settling means "the entry is deleted before its promise resolves, so a replayed or duplicated response
+  finds nothing and is rejected." `settleApproval`/`settlePlan` return `false` and log rather than throw
+  on a stale or forged id — audited, not silently ignored, but never taken as consent.
+  [`ipc-agent-controls.ts`](../apps/desktop/src/main/ipc/ipc-agent-controls.ts) is the one IPC channel
+  (`agentApprovalResponse`) that can call `settleApproval` at all, and it only reaches main through the
+  same exact-host `assertTrustedSender` gate every `invoke` channel does (see the origin-allow-list entry
+  above) — an extension has no code path that reaches this correlation map to begin with, forged id or
+  not, because MV3/third-party extensions are not loadable in this project yet
+  ([Phase 3](../phases/product/phase-3-backend-cloud-extensions.md) scope).
+- **A missing confirm handler fails CLOSED, not open.** `ToolGateway.invoke` denies (`FORBIDDEN`) when no
+  handler is installed for an `ask` decision, rather than defaulting to allow — proven by
+  `tool-gateway.test.ts`'s "gates a state-changing tool on HITL confirmation" case, whose own first
+  assertion is exactly this ("No confirm handler → fail safe to denied"). An approval surface that
+  silently disappears (a crashed panel, an unwired hook) degrades to refusing the action, never to
+  approving it by omission.
+
+Net: even a fully compromised renderer — one that can paint anything, including a fake "approved"
+banner — cannot make a `state_changing`/`destructive`/`financial` call actually run, because the thing
+that decides is a promise in main correlated by an id the renderer never controls and cannot predict.
 
 ## Network-privacy tunnels (Phase 5)
 
