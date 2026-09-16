@@ -172,11 +172,21 @@ Six UI-scoped PRs, each ≤250 lines, sequenced behind their substrate phases. N
   leaking the raw enum. **Still owed for `[x]`:** "resume from step" (gated on Phase 1b checkpoints)._
 - [ ] **Resume from a step**, not only re-run from zero — the durable half is Phase 1b's checkpoint work; this
       is the surface that exposes it.
-- [ ] **Cost forecast before the run, refund after a tool-side failure.** Show an estimated token/cost range
-      alongside the plan (the cost surface already exists:
-      [`settings-ai-panels-cost.tsx`](../../apps/desktop/src/renderer/src/components/settings-ai-panels-cost.tsx)),
-      and do not charge the ledger for a run that died of a loop, a CAPTCHA wall, or an internal error. Fellou's
-      Sparks complaints and Neon's price backlash are both this: **paying for the tool's own failure.**
+- [ ] **Cost forecast before the run** — an estimated token/cost range alongside the plan (the cost surface
+      already exists: [`settings-ai-panels-cost.tsx`](../../apps/desktop/src/renderer/src/components/settings-ai-panels-cost.tsx)).
+      This half is genuinely open; per-node cost estimation was noted as pending back in Phase 1a's Planner
+      work and stays that way — a credible estimate needs a real methodology (historical per-step token
+      averages? a fixed per-tool-class guess?), not a number confident enough to look precise and wrong.
+  - [x] **The other half — "refund after a tool-side failure" — is already built, checked 2026-09-16.**
+        `REFUNDABLE_STOP_REASONS` (`apps/desktop/src/main/ipc/ipc-agent-shared.ts:82-90`) covers
+        `loop_detected`, `handoff` (the CAPTCHA-wall case), `max_steps`, and every recognized tool/model
+        failure class (`transient_error`, `navigation_timeout`, `model_malformed`, `selector_stale`,
+        `page_changed`); a THROWN exception anywhere in the run (`runThrew`, the broadest "internal
+        error") is unconditionally refundable regardless of reason. `ipc-agent-run.ts`'s teardown calls
+        `TokenStore.refundRun` whenever either condition holds, tested by
+        `ipc-agent-run.electron.test.ts` (429 pre-flight gate still refunds; a refundable stop reason
+        refunds in teardown). Fellou's Sparks complaints and Neon's price backlash are both "paying for
+        the tool's own failure" — that half doesn't happen here.
 - [ ] **A health panel for the agent's dependency chain** — provider key present/valid, model reachable, MCP
       servers up, local model loaded — each with a plain-language failure cause. The single largest complaint
       cluster against the Claude extension is "it is installed, the panel is open, and nothing happens."
