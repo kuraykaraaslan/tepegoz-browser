@@ -63,8 +63,14 @@ even with a funded key.
       single-change branch (attribution rule).
 - [ ] **Prose steer row 6** deleted in the SAME PR that proves the paired with/without sweep for the
       network family, system-prompt token count reported before/after ([PROSE-LEDGER.md](PROSE-LEDGER.md)).
-- [ ] No new UI surface; if the settle event stream gains an `unverified`/`cannot_verify` terminal shown
+- [x] No new UI surface; if the settle event stream gains an `unverified`/`cannot_verify` terminal shown
       in the panel, its label ships **EN + full TR parity in the same PR** ([ext-agent](../../extensions/ext-agent/) dict).
+      — _The condition is true and the requirement holds: `attempted_unverified` is a real completion
+      terminal (`packages/shared-types/src/completion-evidence.ts`, consumed by `orchestrator`'s
+      `planner.ts`/`completion-evidence.ts` and surfaced in `extensions/ext-agent/src/types.ts`), and its
+      label (`attempted_unverified: 'Unconfirmed'` / `'Teyit edilmedi'`) is present in both
+      `ext-agent/src/i18n/en.ts` and `tr.ts` — enforced by the package's own ADR-0016 parity test, so a
+      one-sided add would already fail `test`, not just this line._
 
 ## Tasks
 
