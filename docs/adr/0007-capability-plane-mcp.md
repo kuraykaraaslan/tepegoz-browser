@@ -25,3 +25,26 @@ MCP/skill code runs in a CapabilitySandbox (separate process; `file://` off by d
 - Adding a capability changes neither agent code, policy engine, nor UI.
 - The exposed MCP server is a new trust boundary → ADR'd as a separate process; inbound auth required.
 - Avoid reinventing SDK primitives (tool runner, MCP helpers, server-side tool-search) where they fit.
+
+### Implementation status (checked 2026-09-16, not previously recorded here)
+
+The single-gateway half of this decision is real and load-bearing — every tool, `mcp`-sourced or
+otherwise, passes through the one `ToolGateway` PEP with no source-based exception (verified: nothing
+in `security-policy`/`capability-plane` branches on `descriptor.source === 'mcp'`). Two other clauses
+did not land as written, and `docs/threat-model.md` had been citing the first as if it had:
+
+- **No component named or shaped like a "CapabilitySandbox" exists.** What was built instead: an MCP
+  server runs as an ordinary `stdio` child process with a restricted environment (the SDK's safe
+  default env subset plus the server's own declared `env`, never the full `process.env` —
+  [`transport.electron.ts`](../../apps/desktop/src/main/mcp/transport.electron.ts)) — real isolation,
+  just not the dedicated sandbox this ADR named. `file://` is not specifically switched off for MCP;
+  the actual backstop is that filesystem access for ANY tool call (`mcp`-sourced or builtin) already
+  goes through `@tepegoz/file-operations`'s real path-membership sandbox
+  ([ADR-0022](0022-file-operations-sandbox.md)), so an MCP tool gets no more filesystem reach than a
+  builtin one already has — general coverage rather than an MCP-specific control.
+- **Tepegöz as an MCP server (exposing its own tools outbound) is not built.** Everything under
+  `apps/desktop/src/main/mcp/` (`config-source.ts`, `supervisor.electron.ts`, `transport.electron.ts`)
+  is the CLIENT half — connecting to and reconciling externally-configured MCP servers. No code
+  creates an outbound-facing MCP server exposing Tepegöz's own tools; `docs/threat-model.md`'s "Inbound
+  MCP server requests" entry point is already phrased conditionally ("when Tepegöz exposes its
+  tools"), which is the accurate way to read it today.

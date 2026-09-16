@@ -27,9 +27,9 @@
 ## Trust boundaries
 
 `renderer (untrusted UI)` ⇄ `preload (typed bridge)` ⇄ `main (privileged)` · `isolated webview
-(browsed pages)` · `CapabilitySandbox (3rd-party MCP/skill)` · `AI provider` · `integration adapters`
-· `MCP server (inbound)` · `cloud backend (Phase 3)` · `VPN/Tor tunnel (local SOCKS endpoint +
-its operator, Phase 5)`
+(browsed pages)` · `MCP server subprocess (stdio, restricted env — outbound)` · `AI provider` ·
+`integration adapters` · `MCP server (inbound)` · `cloud backend (Phase 3)` · `VPN/Tor tunnel
+(local SOCKS endpoint + its operator, Phase 5)`
 
 ## Top threats → mitigations
 
@@ -39,7 +39,7 @@ its operator, Phase 5)`
 | Excessive agency (delete/send/pay)       | Policy Kernel danger-class + HITL + Windows Hello; sensitive categories off until user-granted; spend bounded by mandate (ADR-0039)                                                                                                                                                                                                      |
 | Credential/key theft                     | Keys only in main via `safeStorage`; OAuth tokens never exposed to the agent; never bundled/logged (redaction)                                                                                                                                                                                                                           |
 | Data exfiltration                        | Egress Firewall (Base64/high-entropy/cross-origin PII); CSP; deny-by-default navigation                                                                                                                                                                                                                                                  |
-| Malicious 3rd-party MCP/skill            | CapabilitySandbox (separate process, least-privilege, `file://` off); signature + scope-review before marketplace                                                                                                                                                                                                                        |
+| Malicious 3rd-party MCP/skill             | **MCP:** the server runs as a separate `stdio` child process with a restricted environment (the SDK's safe default subset + the server's own declared `env`, never the full `process.env` — [`transport.electron.ts`](../apps/desktop/src/main/mcp/transport.electron.ts)); its tools carry no elevated trust — same `dangerClass` classification and the same single ToolGateway PEP as a builtin tool, so a malicious MCP tool call is caught exactly like a malicious page-derived one. `http_sse` (a network-reachable transport) is refused until Phase 1b — `stdio` only today. **Skill:** not a process at all — a stored prompt template consulted pre-model, and S9's own invariant is that a skill can never start a run on its own. **Not yet true, named as owed rather than claimed:** a marketplace signature + scope-review gate (Phase 12's `SupplyChainGate` is a decision layer today, with no install flow or real verification wired to it) |
 | Renderer compromise                      | contextIsolation+sandbox+nodeIntegration:false+webSecurity:true; Electron fuses; typed IPC + sender allow-list                                                                                                                                                                                                                           |
 | Forged/replayed HITL approval             | HITL state lives in **main** (a correlation map + pending promise), never as DOM state a script could mutate; unguessable `randomUUID` ids + single-shot settling; a missing confirm handler fails CLOSED to deny (see below)                                                                                                          |
 | Tampered update                          | Code-signed + signature-verified updates over HTTPS; anti-rollback (Phase 0 packaging)                                                                                                                                                                                                                                                   |
