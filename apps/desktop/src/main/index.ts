@@ -22,7 +22,7 @@ import { abortActiveAgentRuns, registerIpc } from './ipc';
 import { registerBasicAuthHandler } from './auth/basic-auth-broker';
 import { registerCertificateHandler } from './auth/certificate-broker';
 import { registerClientCertificateHandler } from './auth/client-certificate-broker';
-import { initStores } from './stores.electron';
+import { initStores, passwordVault } from './stores.electron';
 import { resolveAndPinProfile } from './profiles/profile-boot';
 import { setProfilePartitionScope } from '@tepegoz/tab-engine';
 import { applyNativeThemeSource } from './lib/surface-theme';
@@ -295,8 +295,9 @@ if (!app.requestSingleInstanceLock()) {
       ConnectionPool.onStatusChange(() => {
         broadcastNetworkState();
       });
-      // 401/407 challenges need a handler or Chromium cancels the request outright.
-      registerBasicAuthHandler(app);
+      // 401/407 challenges need a handler or Chromium cancels the request outright. The vault lets it
+      // offer a saved credential the same way AutofillHost offers one for a page form.
+      registerBasicAuthHandler(app, passwordVault);
       // Without a handler Chromium rejects a bad certificate silently; explain it instead.
       registerCertificateHandler(app);
       // Without this, Electron sends the FIRST client certificate in the OS store to any site that

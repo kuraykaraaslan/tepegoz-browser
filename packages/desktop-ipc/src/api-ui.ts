@@ -7,6 +7,7 @@ import type {
   ContentBounds,
   BasicAuthRequest,
   BasicAuthResponse,
+  BasicAuthUseSaved,
   CertificateErrorRequest,
   CertificateErrorResponse,
   AgentCapabilityRow,
@@ -191,6 +192,9 @@ export interface UiApi {
   onBasicAuthRequest(callback: (request: BasicAuthRequest) => void): () => void;
   /** Renderer→main: the credentials, or a cancellation. Never stored on either side. */
   respondBasicAuth(response: BasicAuthResponse): void;
+  /** Renderer→main: use the saved credential {@link BasicAuthRequest.suggestedUsername} offered. The
+   *  password never crosses into the renderer — main re-derives and decrypts it itself. */
+  useSavedBasicAuth(payload: BasicAuthUseSaved): void;
   /** Main→renderer: a TLS certificate error needs a decision. */
   onCertificateErrorRequest(callback: (request: CertificateErrorRequest) => void): () => void;
   /** Renderer→main: proceed past it, or refuse. */

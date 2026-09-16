@@ -11,6 +11,9 @@ export const en = {
   cancel: 'Cancel',
   /** Shown instead of the site line when the challenge came from a proxy, not the page. */
   proxyWarning: 'A network proxy is asking for these credentials, not the website.',
+  /** `{username}` is the saved account name. Clicking answers the challenge directly — the password
+   *  itself is never shown or typed here. */
+  useSaved: 'Use saved password for {username}',
 };
 
 export type AuthPromptStrings = typeof en;

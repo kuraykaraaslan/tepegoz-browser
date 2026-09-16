@@ -79,6 +79,10 @@ export function AppOverlays({
             isProxy={basicAuth.request.isProxy}
             onSubmit={basicAuth.submit}
             onCancel={basicAuth.cancel}
+            onUseSaved={basicAuth.useSaved}
+            {...(basicAuth.request.suggestedUsername !== undefined
+              ? { suggestedUsername: basicAuth.request.suggestedUsername }
+              : {})}
           />
         )}
       </Modal>

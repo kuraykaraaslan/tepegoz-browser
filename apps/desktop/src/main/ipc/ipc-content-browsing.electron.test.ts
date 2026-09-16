@@ -52,7 +52,7 @@ vi.mock('../reader/reader.electron', () => ({
 }));
 vi.mock('../web-permissions/agent-matrix', () => ({ agentCapabilityMatrix: () => [] }));
 vi.mock('../private-window-opener', () => ({ openPrivateWindow: vi.fn() }));
-const basicAuth = vi.hoisted(() => ({ resolveBasicAuth: vi.fn() }));
+const basicAuth = vi.hoisted(() => ({ resolveBasicAuth: vi.fn(), useSavedBasicAuth: vi.fn() }));
 vi.mock('../auth/basic-auth-broker', () => basicAuth);
 const certBroker = vi.hoisted(() => ({ resolveCertificateError: vi.fn() }));
 vi.mock('../auth/certificate-broker', () => certBroker);
@@ -273,6 +273,11 @@ describe('responder + list channels', () => {
     expect(basicAuth.resolveBasicAuth).toHaveBeenCalledWith({ ok: true });
     expect(certBroker.resolveCertificateError).toHaveBeenCalledWith({ proceed: false });
     expect(broker.respond).toHaveBeenCalledWith({ allow: true });
+  });
+
+  it('"use saved password" forwards the requestId to the broker', () => {
+    H.actions.get('authBasicUseSaved')!({ requestId: 'auth-1' });
+    expect(basicAuth.useSavedBasicAuth).toHaveBeenCalledWith('auth-1');
   });
 
   it('client-certificate forget clears every remembered choice', () => {

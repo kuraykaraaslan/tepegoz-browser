@@ -169,6 +169,12 @@ const SENDS: Row[] = [
     { requestId: 'a', cancelled: true },
   ],
   [
+    'useSavedBasicAuth',
+    () => api.useSavedBasicAuth({ requestId: 'a' }),
+    IpcChannels.authBasicUseSaved,
+    { requestId: 'a' },
+  ],
+  [
     'respondCertificateError',
     () => api.respondCertificateError({ requestId: 'a', proceed: false }),
     IpcChannels.certificateErrorRespond,

@@ -32,7 +32,12 @@ vi.mock('./app-client-cert', () => ({ useClientCert: vi.fn() }));
 const t = notificationsUiDict.en;
 const browserT = browserDict.en;
 
-const basicAuth = { request: null as BasicAuthRequest | null, submit: vi.fn(), cancel: vi.fn() };
+const basicAuth = {
+  request: null as BasicAuthRequest | null,
+  submit: vi.fn(),
+  cancel: vi.fn(),
+  useSaved: vi.fn(),
+};
 const certWarning = {
   request: null as CertificateErrorRequest | null,
   proceed: vi.fn(),

@@ -9,4 +9,5 @@ export const tr: AuthPromptStrings = {
   submit: 'Oturum aç',
   cancel: 'İptal',
   proxyWarning: 'Bu kimlik bilgilerini web sitesi değil, bir ağ proxy’si istiyor.',
+  useSaved: '{username} için kayıtlı parolayı kullan',
 };

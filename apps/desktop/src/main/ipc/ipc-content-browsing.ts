@@ -29,6 +29,7 @@ import {
   CasRefSchema,
   NotificationIdSchema,
   BasicAuthResponseSchema,
+  BasicAuthUseSavedSchema,
   CertificateErrorResponseSchema,
   ClientCertificateResponseSchema,
   NotificationPermissionResponseSchema,
@@ -41,7 +42,7 @@ import { captureAndStore } from '../screenshots/user-screenshot.electron';
 import { readActiveTabArticle } from '../reader/reader.electron';
 import { agentCapabilityMatrix } from '../web-permissions/agent-matrix';
 import { openPrivateWindow } from '../private-window-opener';
-import { resolveBasicAuth } from '../auth/basic-auth-broker';
+import { resolveBasicAuth, useSavedBasicAuth } from '../auth/basic-auth-broker';
 import { resolveCertificateError } from '../auth/certificate-broker';
 import {
   clearClientCertificateChoices,
@@ -192,6 +193,12 @@ export function registerBrowsingIpc(): void {
   // credentials, so it is validated and forwarded — never logged, never persisted.
   onAction(IpcChannels.authBasicRespond, BasicAuthResponseSchema, (res) => {
     resolveBasicAuth(res);
+  });
+
+  // "Use saved password" (renderer → main): no credential in the payload — main re-derives and
+  // decrypts it itself, the same origin-locked shape as the answer above.
+  onAction(IpcChannels.authBasicUseSaved, BasicAuthUseSavedSchema, (res) => {
+    void useSavedBasicAuth(res.requestId);
   });
 
   // TLS certificate warning answer (renderer → main). Anything other than an explicit proceed leaves

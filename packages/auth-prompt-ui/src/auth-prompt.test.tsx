@@ -71,4 +71,21 @@ describe('AuthPrompt', () => {
     expect(props.onCancel).toHaveBeenCalledTimes(1);
     expect(props.onSubmit).not.toHaveBeenCalled();
   });
+
+  it('offers no "use saved password" affordance when there is nothing to suggest', () => {
+    renderPrompt();
+    expect(screen.queryByText(/use saved password/i)).toBeNull();
+  });
+
+  it('offers the saved credential by name and answers via onUseSaved, not onSubmit', () => {
+    const props = renderPrompt({ suggestedUsername: 'ada', onUseSaved: vi.fn() });
+    fireEvent.click(screen.getByText('Use saved password for ada'));
+    expect(props.onUseSaved).toHaveBeenCalledTimes(1);
+    expect(props.onSubmit).not.toHaveBeenCalled();
+  });
+
+  it('does not offer the affordance when a username is suggested but no handler is wired', () => {
+    renderPrompt({ suggestedUsername: 'ada' });
+    expect(screen.queryByText(/use saved password/i)).toBeNull();
+  });
 });

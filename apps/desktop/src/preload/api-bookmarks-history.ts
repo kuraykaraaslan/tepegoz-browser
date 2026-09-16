@@ -18,6 +18,7 @@ import {
   type PageInfo,
   type BasicAuthRequest,
   type BasicAuthResponse,
+  type BasicAuthUseSaved,
   type CertificateErrorRequest,
   type CertificateErrorResponse,
   type AgentCapabilityRow,
@@ -80,6 +81,7 @@ export const bookmarksHistoryApi: Pick<
   | 'onNotificationPermissionRequest'
   | 'onBasicAuthRequest'
   | 'respondBasicAuth'
+  | 'useSavedBasicAuth'
   | 'onCertificateErrorRequest'
   | 'respondCertificateError'
   | 'onClientCertificateRequest'
@@ -232,6 +234,9 @@ export const bookmarksHistoryApi: Pick<
   },
   respondBasicAuth: (response: BasicAuthResponse) => {
     ipcRenderer.send(IpcChannels.authBasicRespond, response);
+  },
+  useSavedBasicAuth: (payload: BasicAuthUseSaved) => {
+    ipcRenderer.send(IpcChannels.authBasicUseSaved, payload);
   },
   onCertificateErrorRequest: (callback: (request: CertificateErrorRequest) => void) => {
     const listener = (_event: unknown, request: CertificateErrorRequest): void => {

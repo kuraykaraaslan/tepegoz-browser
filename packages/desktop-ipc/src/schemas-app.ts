@@ -91,6 +91,12 @@ export const BasicAuthResponseSchema = z.object({
   cancelled: z.boolean(),
 });
 
+/** `auth:basic-use-saved` payload — no credential travels in this message. Main re-derives it from the
+ *  requestId's own challenge origin, the same origin-locked pattern `AutofillHost` uses for page forms. */
+export const BasicAuthUseSavedSchema = z.object({
+  requestId: z.string().max(64),
+});
+
 /** `cert:respond` payload — the user's proceed/refuse answer to a TLS certificate warning. */
 export const CertificateErrorResponseSchema = z.object({
   requestId: z.string().max(64),

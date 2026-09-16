@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { act, cleanup, renderHook } from '@testing-library/react';
-import type { BasicAuthRequest, BasicAuthResponse } from '@tepegoz/desktop-ipc';
+import type { BasicAuthRequest, BasicAuthResponse, BasicAuthUseSaved } from '@tepegoz/desktop-ipc';
 import { useBasicAuth } from './app-basic-auth';
 
 /**
@@ -12,6 +12,7 @@ import { useBasicAuth } from './app-basic-auth';
 
 let push: ((r: BasicAuthRequest | null) => void) | null;
 let responses: BasicAuthResponse[];
+let useSavedCalls: BasicAuthUseSaved[];
 
 function req(id = 'r1'): BasicAuthRequest {
   return { requestId: id, origin: 'https://example.com', realm: 'restricted', isProxy: false };
@@ -20,6 +21,7 @@ function req(id = 'r1'): BasicAuthRequest {
 beforeEach(() => {
   push = null;
   responses = [];
+  useSavedCalls = [];
   Object.defineProperty(window, 'tepegoz', {
     configurable: true,
     value: {
@@ -30,6 +32,7 @@ beforeEach(() => {
         };
       },
       respondBasicAuth: (r: BasicAuthResponse) => responses.push(r),
+      useSavedBasicAuth: (r: BasicAuthUseSaved) => useSavedCalls.push(r),
     },
   });
 });
@@ -73,5 +76,20 @@ describe('useBasicAuth', () => {
     act(() => result.current.submit('x', 'y'));
     act(() => result.current.cancel());
     expect(responses).toEqual([]);
+  });
+
+  it('useSaved tells main to answer with the saved credential and clears the prompt', () => {
+    const { result } = renderHook(() => useBasicAuth());
+    act(() => push?.(req('a')));
+    act(() => result.current.useSaved());
+    expect(useSavedCalls).toEqual([{ requestId: 'a' }]);
+    expect(responses).toEqual([]); // never sent as an ordinary credentials answer
+    expect(result.current.request).toBeNull();
+  });
+
+  it('useSaved is a no-op when nothing is pending', () => {
+    const { result } = renderHook(() => useBasicAuth());
+    act(() => result.current.useSaved());
+    expect(useSavedCalls).toEqual([]);
   });
 });

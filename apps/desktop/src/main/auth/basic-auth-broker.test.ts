@@ -19,6 +19,13 @@ vi.mock('@tepegoz/libs', () => ({
   Logger: { info: loggerInfo, warn: loggerWarn, error: vi.fn() },
 }));
 
+const findByUrl = vi.hoisted(() =>
+  vi.fn(() => Promise.resolve([] as { username: string; encryptedPassword: string }[])),
+);
+vi.mock('@tepegoz/password-core', () => ({
+  PasswordProviderRegistry: { findByUrl },
+}));
+
 type Load = typeof import('./basic-auth-broker');
 
 let mod: Load;
@@ -48,6 +55,7 @@ beforeEach(async () => {
   focusedWindow.mockReset();
   loggerInfo.mockReset();
   loggerWarn.mockReset();
+  findByUrl.mockReset().mockResolvedValue([]);
   mod = await import('./basic-auth-broker');
 });
 afterEach(() => {
@@ -58,6 +66,7 @@ afterEach(() => {
 function fireLogin(
   authInfo: { isProxy?: boolean; realm?: string; host?: string; port?: number } = {},
   url = 'https://secure.test/area',
+  vault?: { decrypt: (c: { encryptedPassword: string }) => string },
 ) {
   let loginHandler!: (...a: unknown[]) => void;
   const app = {
@@ -65,7 +74,7 @@ function fireLogin(
       if (event === 'login') loginHandler = handler;
     },
   } as unknown as Electron.App;
-  mod.registerBasicAuthHandler(app);
+  mod.registerBasicAuthHandler(app, vault as never);
 
   const callback = vi.fn();
   const event = { preventDefault: vi.fn() };
@@ -218,5 +227,86 @@ describe('proxy vs site labelling', () => {
     focusedWindow.mockReturnValue(fakeWindow());
     const { payload } = fireLogin({ isProxy: false }, 'not-a-url');
     expect(payload?.origin).toBe('not-a-url');
+  });
+});
+
+describe('password-vault autofill suggestion', () => {
+  it('sends the initial prompt synchronously, with no suggestion yet, then a follow-up once the saved username resolves', async () => {
+    focusedWindow.mockReturnValue(fakeWindow());
+    findByUrl.mockResolvedValue([{ username: 'ada', encryptedPassword: 'enc' }]);
+    fireLogin();
+    // Synchronous: the first push carries no suggestion, so the dialog never waits on the vault.
+    expect(sent).toHaveLength(1);
+    expect(sent[0]?.payload.suggestedUsername).toBeUndefined();
+
+    await flush();
+    expect(sent).toHaveLength(2);
+    expect(sent[1]?.payload.suggestedUsername).toBe('ada');
+  });
+
+  it('sends no follow-up when nothing is stored for the origin', async () => {
+    focusedWindow.mockReturnValue(fakeWindow());
+    findByUrl.mockResolvedValue([]);
+    fireLogin();
+    await flush();
+    expect(sent).toHaveLength(1);
+  });
+
+  it('sends no follow-up once the challenge already settled before the lookup resolved', async () => {
+    focusedWindow.mockReturnValue(fakeWindow());
+    let resolveLookup!: (v: { username: string; encryptedPassword: string }[]) => void;
+    findByUrl.mockReturnValue(
+      new Promise((resolve) => {
+        resolveLookup = resolve;
+      }),
+    );
+    const { payload } = fireLogin();
+    mod.resolveBasicAuth({
+      requestId: payload?.requestId as string,
+      cancelled: false,
+      username: 'ada',
+      password: 'hunter2',
+    });
+    await flush();
+    resolveLookup([{ username: 'ada', encryptedPassword: 'enc' }]);
+    await flush();
+    expect(sent).toHaveLength(1); // no stale follow-up after the challenge already settled
+  });
+});
+
+describe('useSavedBasicAuth', () => {
+  it('decrypts and answers with the saved credential, never sending the plaintext through the renderer', async () => {
+    focusedWindow.mockReturnValue(fakeWindow());
+    findByUrl.mockResolvedValue([{ username: 'ada', encryptedPassword: 'enc' }]);
+    const decrypt = vi.fn(() => 'hunter2');
+    const { callback, payload } = fireLogin({}, 'https://secure.test/area', { decrypt });
+
+    await mod.useSavedBasicAuth(payload?.requestId as string);
+    expect(decrypt).toHaveBeenCalledWith({ username: 'ada', encryptedPassword: 'enc' });
+    expect(callback).toHaveBeenCalledWith('ada', 'hunter2');
+    const logged = JSON.stringify([loggerInfo.mock.calls, loggerWarn.mock.calls]);
+    expect(logged).not.toContain('hunter2');
+  });
+
+  it('is a no-op when nothing is stored for the origin (the dialog stays open)', async () => {
+    focusedWindow.mockReturnValue(fakeWindow());
+    findByUrl.mockResolvedValue([]);
+    const { callback, payload } = fireLogin({}, 'https://secure.test/area', { decrypt: vi.fn() });
+
+    await mod.useSavedBasicAuth(payload?.requestId as string);
+    expect(callback).not.toHaveBeenCalled();
+  });
+
+  it('is a no-op when no vault was attached at registration', async () => {
+    focusedWindow.mockReturnValue(fakeWindow());
+    findByUrl.mockResolvedValue([{ username: 'ada', encryptedPassword: 'enc' }]);
+    const { callback, payload } = fireLogin(); // no vault argument
+
+    await mod.useSavedBasicAuth(payload?.requestId as string);
+    expect(callback).not.toHaveBeenCalled();
+  });
+
+  it('is a no-op for an unknown or already-settled requestId', async () => {
+    await expect(mod.useSavedBasicAuth('auth-999')).resolves.toBeUndefined();
   });
 });

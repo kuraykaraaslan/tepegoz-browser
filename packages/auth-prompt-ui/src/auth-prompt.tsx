@@ -15,6 +15,14 @@ export interface AuthPromptProps {
   isProxy: boolean;
   onSubmit: (username: string, password: string) => void;
   onCancel: () => void;
+  /**
+   * Username of a saved password-vault credential for this origin, when one exists. Display-only —
+   * the password itself never reaches this component; {@link onUseSaved} tells the host to answer the
+   * challenge directly. Absent while the vault lookup is still in flight or nothing is stored.
+   */
+  suggestedUsername?: string;
+  /** Answer the challenge with the credential named by {@link suggestedUsername}. Omit alongside it. */
+  onUseSaved?: () => void;
 }
 
 /**
@@ -28,7 +36,15 @@ export interface AuthPromptProps {
  *
  * Presentational: the values leave through `onSubmit` and are never stored here.
  */
-export function AuthPrompt({ origin, realm, isProxy, onSubmit, onCancel }: AuthPromptProps) {
+export function AuthPrompt({
+  origin,
+  realm,
+  isProxy,
+  onSubmit,
+  onCancel,
+  suggestedUsername,
+  onUseSaved,
+}: AuthPromptProps) {
   const t = useT(authPromptDict);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -52,6 +68,16 @@ export function AuthPrompt({ origin, realm, isProxy, onSubmit, onCancel }: AuthP
 
       {realm !== '' && (
         <p className="break-all text-xs text-text-secondary">{`${t.realm}: ${realm}`}</p>
+      )}
+
+      {suggestedUsername !== undefined && onUseSaved !== undefined && (
+        <button
+          type="button"
+          onClick={onUseSaved}
+          className="self-start rounded-md text-sm text-primary underline-offset-2 hover:underline"
+        >
+          {t.useSaved.replace('{username}', suggestedUsername)}
+        </button>
       )}
 
       <label className="flex flex-col gap-1 text-xs text-text-secondary">

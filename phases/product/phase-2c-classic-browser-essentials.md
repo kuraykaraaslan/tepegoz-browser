@@ -1080,7 +1080,19 @@ permissions reuse the single Policy/PermissionGuard (no parallel permission flow
       handler Chromium cancels the challenge, so 401-protected sites did not load at all. The dialog gives
       the origin its own line (phishing defence) and labels a PROXY challenge as one — relevant because
       Phase 5 routes tabs through SOCKS tunnels.
-  - [ ] Autofill from the password vault (Phase 2 work) is not wired.
+  - [x] **Autofill from the password vault: wired.** A saved credential for the challenge's origin is
+        offered the same origin-locked way `AutofillHost` fills a page form: main sends only the
+        USERNAME to the renderer as a suggestion (`BasicAuthRequest.suggestedUsername`), pushed as a
+        best-effort follow-up after the dialog already appeared — the user is never made to wait on a
+        vault lookup to see the prompt. Clicking "Use saved password for &lt;user&gt;" sends only a
+        `requestId` (`auth:basic-use-saved`); main re-derives the credential from the challenge's own
+        origin and decrypts it itself (`decryptSavedCredential`, mirroring `AutofillHost.fill`'s
+        authorization shape) — the plaintext password never crosses into the renderer, unlike the
+        manual-entry path where the user already types it there. A proxy challenge's `host:port`
+        origin never parses as a URL, so nothing is ever suggested for one — a proxy credential and a
+        website credential are not the same trust question. 10 new broker tests (suggestion timing +
+        follow-up dropped after the challenge already settled, decrypt-and-answer, no-vault/no-match
+        no-ops), 3 UI tests, 2 hook tests, 1 IPC-forwarding test. en+tr.
   - [ ] It prompts directly rather than through a `PermissionGuard` seam. Credential entry is not a
         capability grant, and forcing it through the permission engine would have meant modelling
         "username+password" as a permission — recorded as a deliberate deviation, not an oversight.

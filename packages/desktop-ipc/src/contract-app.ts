@@ -112,6 +112,21 @@ export interface BasicAuthRequest {
   realm: string;
   /** True when a network PROXY issued the challenge rather than the page being visited. */
   isProxy: boolean;
+  /**
+   * Username of a saved password-vault credential for this origin, offered as a one-click "use saved
+   * password" affordance. Display-only — the password itself never crosses into the renderer; clicking
+   * it sends {@link BasicAuthUseSaved} and main re-derives + decrypts the credential itself, the same
+   * origin-locked pattern `AutofillHost` uses for page forms. Absent when nothing is saved for this
+   * origin (or none could be, e.g. a proxy challenge, which never matches a stored website credential).
+   */
+  suggestedUsername?: string;
+}
+
+/** Renderer → main: use the credential {@link BasicAuthRequest.suggestedUsername} offered. Carries only
+ *  the requestId — main re-derives the credential from the challenge's own origin, never trusting a
+ *  renderer-supplied secret or id. */
+export interface BasicAuthUseSaved {
+  requestId: string;
 }
 
 /** Renderer → main: the user's answer to a basic-auth challenge. Credentials are passed straight to

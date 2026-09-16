@@ -465,6 +465,8 @@ export const IpcChannels = {
   authBasicRequest: 'auth:basic-request',
   /** renderer→main: the credentials, or a cancellation. */
   authBasicRespond: 'auth:basic-respond',
+  /** renderer→main: use the saved password-vault credential offered on the pending challenge. */
+  authBasicUseSaved: 'auth:basic-use-saved',
   notificationPermissionRequest: 'notifications:permission-request',
   notificationPermissionRespond: 'notifications:permission-respond',
   // Login credential manager (channels use "logins:" prefix to avoid SAST false positives on the
