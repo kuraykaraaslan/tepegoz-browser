@@ -311,13 +311,29 @@ the decision; the code still enforces the old absolute deny, which is the honest
       DOM/style inspector. [ADR-0029](../../docs/adr/0029-devtools-expose-boundary.md) stays exactly as
       decided; this is a read carve-out with its own danger class, not an opening of that boundary.
       [`../tracks/webbrain-agent-parity.md`](../../docs/parities/webbrain-agent-parity.md) P3-d.
-- [ ] **Regression coverage for the file-sandbox traversal guard.** browser-use had a disclosed, patched CVE
+- [x] **Regression coverage for the file-sandbox traversal guard.** browser-use had a disclosed, patched CVE
       (**GHSA-j9hj-92j8-jv9h**) in exactly this class: an agent-supplied path, naively joined, resolving
       outside the sandbox during an upload. Its fix re-derives the path from the FileSystem-owned basename and
       then double-checks with a realpath that the result is still inside. [ADR-0022](../../docs/adr/0022-file-operations-sandbox.md)'s
       guard is believed correct — **lock it with the adversarial cases**, since this is a published bug class
       rather than a hypothetical. Pairs with the tainted-path forced-HITL row in PR8.
       [`../tracks/browser-use-agent-parity.md`](../../docs/parities/browser-use-agent-parity.md) P3-a.
+      — _Landed 2026-09-16: **the guard held, no change needed** — exactly the "changed only if this finds
+      a real gap" instruction. New file
+      `apps/desktop/src/main/file-operations/file-operations-sandbox-traversal.test.ts` mocks NOTHING
+      (every existing `canonicalize`/`FileAccessPolicy` test mocks at least `node:fs`, `node:fs/promises`,
+      or `@tepegoz/file-operations` itself, which proves the string logic but never the real combination):
+      a real temp directory, real files, and — where the platform allows it — a real symlink, run through
+      the exact `canonicalize()` → `FileAccessPolicy.assertMembership()` chain `guard()` in
+      `file-operations-tools.ts` uses for every file tool call. Six adversarial cases: literal `..`
+      traversal; a sibling folder whose NAME merely starts with the grant's path (the classic
+      `path.startsWith(grant)`-without-a-separator-boundary bug — this package already uses
+      `path.relative` instead, which does not have it); reading an EXISTING file through a symlink that
+      escapes the grant; and — the exact shape of the disclosed CVE — CREATING a new (not-yet-existing)
+      file through that same escaping symlink, which exercises `canonicalize`'s OTHER code path
+      (nearest-existing-ancestor + re-appended tail, distinct from the direct-realpath branch a read
+      exercises). Symlink cases skip gracefully (not fail) on a runner without symlink permission; this
+      machine had it and all six ran for real._
 - [ ] **Write down the upload no-read guarantee.** The `upload_*` path already sets files on an `<input>` via
       CDP and **never reads the bytes into the agent's context** — filesystem → CDP → page. That is a real
       security property that exists only as an implementation detail today; state it, and test it, so it
