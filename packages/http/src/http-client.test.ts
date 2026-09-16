@@ -1,4 +1,5 @@
-import { afterEach, describe, it, expect } from 'vitest';
+import { afterEach, describe, it, expect, vi } from 'vitest';
+import dns from 'node:dns';
 import { Agent } from 'node:http';
 import { Agent as HttpsAgent } from 'node:https';
 import {
@@ -9,10 +10,12 @@ import {
 } from 'axios';
 import { AppError } from '@tepegoz/libs';
 import {
+  BLOCKED_HOST_CODE,
   DEFAULT_TIMEOUT_MS,
   backoffMs,
   createHttpClient,
   normalizeHttpError,
+  pinningLookup,
   retryAfterMs,
 } from './http-client';
 import { resetEgressForTests, setEgressPolicy, setTunnelAgentFactory } from './egress-route';
@@ -95,6 +98,78 @@ describe('normalizeHttpError', () => {
     const e = normalizeHttpError(new Error('weird'));
     expect(e.statusCode).toBe(503);
     expect(e.message).toBe(HttpMessages.UnknownHttpError);
+  });
+
+  it('maps the resolve-then-pin block code to the same 400 the pre-send check raises', () => {
+    const e = normalizeHttpError(axiosError({ code: BLOCKED_HOST_CODE }));
+    expect(e.statusCode).toBe(400);
+    expect(e.message).toBe(HttpMessages.BlockedNonPublicHost);
+  });
+});
+
+describe('pinningLookup — resolve-then-pin DNS-rebinding guard', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('passes through a public resolved address', async () => {
+    vi.spyOn(dns, 'lookup').mockImplementation(((_hostname, _opts, cb) => {
+      (cb as (err: null, address: string, family: number) => void)(null, '93.184.216.34', 4);
+    }) as typeof dns.lookup);
+
+    const result = await new Promise<[Error | null, string, number]>((resolve) => {
+      pinningLookup('public.example', {}, (err, address, family) =>
+        resolve([err, address, family]),
+      );
+    });
+    expect(result).toEqual([null, '93.184.216.34', 4]);
+  });
+
+  it('blocks a hostname that resolves to a private address (DNS rebinding)', async () => {
+    vi.spyOn(dns, 'lookup').mockImplementation(((_hostname, _opts, cb) => {
+      (cb as (err: null, address: string, family: number) => void)(null, '169.254.169.254', 4);
+    }) as typeof dns.lookup);
+
+    const [err] = await new Promise<[NodeJS.ErrnoException | null, string, number]>((resolve) => {
+      pinningLookup('rebinds-to-metadata.example', {}, (e, address, family) =>
+        resolve([e, address, family]),
+      );
+    });
+    expect(err?.code).toBe(BLOCKED_HOST_CODE);
+    expect(err?.message).toBe(HttpMessages.BlockedNonPublicHost);
+  });
+
+  it('forces a single-address callback shape (all: false) regardless of the caller-supplied options', async () => {
+    const seenOpts: unknown[] = [];
+    vi.spyOn(dns, 'lookup').mockImplementation(((_hostname, opts, cb) => {
+      seenOpts.push(opts);
+      (cb as (err: null, address: string, family: number) => void)(null, '93.184.216.34', 4);
+    }) as typeof dns.lookup);
+
+    await new Promise<void>((resolve) => {
+      pinningLookup('public.example', { all: true } as unknown as dns.LookupOneOptions, () =>
+        resolve(),
+      );
+    });
+    expect(seenOpts[0]).toMatchObject({ all: false });
+
+    // A numeric `options` (bare address family) is normalized into the object shape too.
+    await new Promise<void>((resolve) => {
+      pinningLookup('public.example', 4, () => resolve());
+    });
+    expect(seenOpts[1]).toMatchObject({ family: 4, all: false });
+  });
+
+  it('passes a DNS resolution failure straight through', async () => {
+    const notFound = Object.assign(new Error('getaddrinfo ENOTFOUND'), { code: 'ENOTFOUND' });
+    vi.spyOn(dns, 'lookup').mockImplementation(((_hostname, _opts, cb) => {
+      (cb as (err: Error) => void)(notFound);
+    }) as typeof dns.lookup);
+
+    const [err] = await new Promise<[NodeJS.ErrnoException | null]>((resolve) => {
+      pinningLookup('nowhere.example', {}, (e) => resolve([e]));
+    });
+    expect(err).toBe(notFound);
   });
 });
 
@@ -341,6 +416,17 @@ describe('createHttpClient — blockPrivateHosts SSRF guard', () => {
     expect(() => beforeRedirect!({ href: 'http://192.168.1.1/' })).toThrow(AppError);
   });
 
+  it('wires the resolve-then-pin lookup onto every request (covers hostnames the literal check cannot)', async () => {
+    const client = createHttpClient({ blockPrivateHosts: true });
+    let seen: InternalAxiosRequestConfig | null = null;
+    client.defaults.adapter = (config) => {
+      seen = config;
+      return ok(config);
+    };
+    await client.get('https://public.example/start');
+    expect((seen as unknown as InternalAxiosRequestConfig).lookup).toBe(pinningLookup);
+  });
+
   it('is a no-op when the option is absent — a private host passes straight through', async () => {
     const client = createHttpClient();
     let seen: InternalAxiosRequestConfig | null = null;
@@ -351,6 +437,7 @@ describe('createHttpClient — blockPrivateHosts SSRF guard', () => {
     const res = await client.get('http://127.0.0.1:9000/admin');
     expect(res.status).toBe(200);
     expect((seen as unknown as InternalAxiosRequestConfig).beforeRedirect).toBeUndefined();
+    expect((seen as unknown as InternalAxiosRequestConfig).lookup).toBeUndefined();
   });
 
   it('is a no-op when the option is explicitly false', async () => {

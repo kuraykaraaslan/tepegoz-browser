@@ -7,14 +7,18 @@
  * cloud-metadata address, or a `localhost`-family name. Obfuscated IPv4 (decimal `2130706433`,
  * octal, hex, short-form `127.1`) is handled *for free* by parsing through `new URL()` first — the
  * WHATWG parser normalizes all of those to dotted-quad, so the octet check below sees `127.0.0.1`
- * either way. It does **not** resolve DNS, so a public hostname that resolves to a private IP (DNS
- * rebinding) still passes here; closing that needs resolve-then-pin at the socket layer and is
- * tracked as a follow-up.
+ * either way. It is a literal-address check only — a public hostname that *resolves* to a private IP
+ * (DNS rebinding) passes it, because it never does DNS. That gap is closed separately, in
+ * `createHttpClient`'s resolve-then-pin `lookup` override, which calls {@link isPublicIpLiteral} on
+ * the address a real DNS lookup returns and connects to that exact address (no second, re-winnable
+ * resolution between the check and the connect).
  *
  * Consumers that want it enforced pass `blockPrivateHosts: true` to {@link createHttpClient}, which
- * installs a request interceptor (refuse before send) plus a `beforeRedirect` hook (re-check each
- * hop). `@tepegoz/web-tools` re-exports `isPublicHttpUrl` from here for its zod `.refine` on the
- * `web_get_page` URL (defense in depth + a cleaner error for the agent).
+ * installs a request interceptor (refuse before send), a `beforeRedirect` hook (re-check each hop's
+ * literal target), and the pinning `lookup` (re-check + pin what DNS actually resolves, on every hop
+ * since `follow-redirects` reuses the same request options). `@tepegoz/web-tools` re-exports
+ * `isPublicHttpUrl` from here for its zod `.refine` on the `web_get_page` URL (defense in depth + a
+ * cleaner error for the agent).
  */
 
 /** Cloud-metadata / internal hostnames that are never a legitimate outbound target. */
@@ -52,9 +56,29 @@ function isPrivateIpv6(raw: string): boolean {
   if (host.startsWith('::ffff:') || host.startsWith('::0:') || /^::\d/.test(host)) return true;
   const head = host.split(':')[0] ?? '';
   if (head.startsWith('fc') || head.startsWith('fd')) return true; // ULA fc00::/7
-  if (head.startsWith('fe8') || head.startsWith('fe9') || head.startsWith('fea') || head.startsWith('feb'))
+  if (
+    head.startsWith('fe8') ||
+    head.startsWith('fe9') ||
+    head.startsWith('fea') ||
+    head.startsWith('feb')
+  )
     return true; // link-local fe80::/10
   return false;
+}
+
+/**
+ * `true` when `host` — a bare IPv4 dotted-quad or IPv6 literal, no brackets/scheme/port — is a public
+ * address (not loopback/RFC1918/link-local/ULA/CGNAT/multicast/cloud-metadata). A string that is not a
+ * recognizable IP literal at all (an ordinary hostname) is also `true` here: this function's other
+ * caller is the resolve-then-pin DNS check in `createHttpClient`, which passes it the address a lookup
+ * actually resolved to — by construction always an IP literal there, never a bare hostname.
+ */
+export function isPublicIpLiteral(host: string): boolean {
+  const bare = host.toLowerCase().replace(/^\[/, '').replace(/\]$/, '');
+  const v4 = ipv4Parts(bare);
+  if (v4 !== null) return !isPrivateIpv4(v4);
+  if (bare.includes(':')) return !isPrivateIpv6(bare);
+  return true;
 }
 
 /**
@@ -70,15 +94,8 @@ export function isPublicHttpUrl(raw: string): boolean {
   }
   if (url.protocol !== 'http:' && url.protocol !== 'https:') return false;
   // Node returns an IPv6 hostname bracketed (`[::1]`); normalize it away for the checks.
-  const host = url.hostname
-    .toLowerCase()
-    .replace(/^\[/, '')
-    .replace(/\]$/, '')
-    .replace(/\.$/, '');
+  const host = url.hostname.toLowerCase().replace(/^\[/, '').replace(/\]$/, '').replace(/\.$/, '');
   if (host.length === 0) return false;
   if (BLOCKED_HOST_NAMES.has(host) || host.endsWith('.localhost')) return false;
-  const v4 = ipv4Parts(host);
-  if (v4 !== null) return !isPrivateIpv4(v4);
-  if (host.includes(':')) return !isPrivateIpv6(host);
-  return true;
+  return isPublicIpLiteral(host);
 }

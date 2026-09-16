@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isPublicHttpUrl } from './ssrf-guard';
+import { isPublicHttpUrl, isPublicIpLiteral } from './ssrf-guard';
 
 describe('isPublicHttpUrl', () => {
   it('allows an ordinary public http(s) URL', () => {
@@ -87,5 +87,40 @@ describe('isPublicHttpUrl', () => {
     expect(isPublicHttpUrl('ftp://example.com/')).toBe(false);
     expect(isPublicHttpUrl('not a url')).toBe(false);
     expect(isPublicHttpUrl('')).toBe(false);
+  });
+});
+
+describe('isPublicIpLiteral — the resolve-then-pin building block', () => {
+  it('accepts a bare public IPv4/IPv6 address, in either case', () => {
+    expect(isPublicIpLiteral('93.184.216.34')).toBe(true);
+    expect(isPublicIpLiteral('2606:2800:220:1::')).toBe(true);
+    expect(isPublicIpLiteral('2606:2800:220:1::'.toUpperCase())).toBe(true);
+  });
+
+  it('rejects the same private/loopback/link-local/metadata addresses isPublicHttpUrl rejects', () => {
+    for (const address of [
+      '127.0.0.1',
+      '10.0.0.1',
+      '172.16.0.1',
+      '192.168.1.1',
+      '169.254.169.254', // cloud metadata
+      '100.64.0.1', // CGNAT
+      '224.0.0.1', // multicast
+      '::1',
+      'fc00::1', // ULA
+      'fe80::1', // link-local
+      '::ffff:127.0.0.1', // IPv4-mapped loopback
+    ]) {
+      expect(isPublicIpLiteral(address), address).toBe(false);
+    }
+  });
+
+  it('accepts bracketed IPv6 (the shape a resolved-address callback may hand back)', () => {
+    expect(isPublicIpLiteral('[2606:2800:220:1::]')).toBe(true);
+    expect(isPublicIpLiteral('[::1]')).toBe(false);
+  });
+
+  it("is permissive (true) for a bare hostname — it is not this function's job to resolve one", () => {
+    expect(isPublicIpLiteral('example.com')).toBe(true);
   });
 });

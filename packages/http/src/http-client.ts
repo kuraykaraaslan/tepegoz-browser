@@ -1,3 +1,4 @@
+import dns from 'node:dns';
 import axios, {
   type AxiosInstance,
   type CreateAxiosDefaults,
@@ -6,10 +7,13 @@ import axios, {
 
 /** axios's `beforeRedirect` hook signature (options, responseDetails, requestDetails) → void. */
 type BeforeRedirect = NonNullable<InternalAxiosRequestConfig['beforeRedirect']>;
+/** axios's `lookup` hook type, narrowed to non-`undefined` so it can be assigned directly under
+ *  `exactOptionalPropertyTypes`. */
+type AxiosLookup = NonNullable<InternalAxiosRequestConfig['lookup']>;
 import { AppError, Logger } from '@tepegoz/libs';
 import { HttpMessages } from './messages';
 import { resolveEgressAgents } from './egress-route';
-import { isPublicHttpUrl } from './ssrf-guard';
+import { isPublicHttpUrl, isPublicIpLiteral } from './ssrf-guard';
 
 /**
  * The ONE outbound-HTTP seam for the whole app. Every REST integration (LLM providers, MCP HTTP
@@ -36,8 +40,10 @@ export interface HttpClientOptions {
    * http(s) address (loopback, RFC-1918, link-local, ULA, CGNAT, `localhost`-family, cloud
    * metadata) is refused with an {@link AppError} 400 BEFORE it is sent, and every redirect hop is
    * re-checked. Off by default so LLM-provider / internal clients are unaffected; the web-fetch and
-   * any future agent-directed-URL clients turn it on. Literal-address only — it does not resolve
-   * DNS, so DNS-rebinding still needs resolve-then-pin at the socket layer (tracked follow-up).
+   * any future agent-directed-URL clients turn it on. Covers both halves: the literal-address check
+   * (host at URL-parse time) AND resolve-then-pin (the address a real DNS lookup returns is what the
+   * socket connects to, so a public hostname a rebinding DNS server answers with a private address
+   * is caught too — see {@link pinningLookup}).
    */
   blockPrivateHosts?: boolean;
 }
@@ -48,6 +54,11 @@ export const DEFAULT_TIMEOUT_MS = 30_000;
 const TIMEOUT_CODES: ReadonlySet<string> = new Set(['ECONNABORTED', 'ETIMEDOUT']);
 /** Axios error `code` for an aborted request (AbortSignal / CancelToken). */
 const CANCELED_CODE = 'ERR_CANCELED';
+/** Custom error `code` {@link pinningLookup} raises when DNS resolves a host to a private address —
+ *  distinguished from an ordinary connection failure so {@link normalizeHttpError} can map it back to
+ *  the same 400 {@link HttpMessages.BlockedNonPublicHost} the pre-send literal check raises, instead
+ *  of the generic "upstream down" 503 an unrecognized `code` would otherwise get. */
+export const BLOCKED_HOST_CODE = 'ETEPEGOZBLOCKEDHOST';
 
 /** LLM/REST providers commonly shape errors as `{ error: { message } }` (OpenAI, Anthropic) or
  *  `{ error: '...' }`. Pull the human message out of whichever shape is present. */
@@ -79,6 +90,41 @@ function fullRequestUrl(url: string | undefined, baseURL: string | undefined): s
 }
 
 /**
+ * A Node `http(s)` `lookup` replacement (same signature as `dns.lookup`) that closes the gap
+ * `isPublicHttpUrl` cannot: DNS rebinding, where a hostname that looked public at URL-parse time
+ * resolves — at connect time, possibly on a TTL-0 answer chosen to land after that check — to a
+ * loopback/RFC1918/link-local/cloud-metadata address. Passing this as `lookup` means Node connects to
+ * exactly the address this callback returns; there is no second, independent resolution between the
+ * validation done here and the socket that opens, which is what makes this "pin" rather than just
+ * "check" — a caller that resolved and checked separately would still race a second lookup at connect.
+ * Forces `all: false` regardless of what the caller asked for, since only the single-address callback
+ * shape is handled below.
+ */
+export function pinningLookup(
+  hostname: string,
+  options: dns.LookupOneOptions | number,
+  callback: (err: NodeJS.ErrnoException | null, address: string, family: number) => void,
+): void {
+  const opts: dns.LookupOneOptions = {
+    ...(typeof options === 'number' ? { family: options } : options),
+    all: false,
+  };
+  dns.lookup(hostname, opts, (err, address, family) => {
+    if (err) {
+      callback(err, '', 0);
+      return;
+    }
+    if (!isPublicIpLiteral(address)) {
+      const blocked = new Error(HttpMessages.BlockedNonPublicHost) as NodeJS.ErrnoException;
+      blocked.code = BLOCKED_HOST_CODE;
+      callback(blocked, '', 0);
+      return;
+    }
+    callback(null, address, family);
+  });
+}
+
+/**
  * Map any thrown value from an axios call to an {@link AppError}. Pure (no network) so it is unit
  * tested directly. Timeouts/cancels and connection failures are "upstream down" (503); a 4xx response
  * is passed through as the caller's fault; the provider's own error message is preferred and always
@@ -87,6 +133,9 @@ function fullRequestUrl(url: string | undefined, baseURL: string | undefined): s
 export function normalizeHttpError(err: unknown): AppError {
   if (err instanceof AppError) return err;
   if (axios.isAxiosError(err)) {
+    if (err.code === BLOCKED_HOST_CODE) {
+      return new AppError(HttpMessages.BlockedNonPublicHost, 400);
+    }
     if (err.code !== undefined && TIMEOUT_CODES.has(err.code)) {
       return new AppError(HttpMessages.RequestTimedOut, 503);
     }
@@ -223,6 +272,12 @@ export function createHttpClient(options: HttpClientOptions = {}): AxiosInstance
       if (!isPublicHttpUrl(fullRequestUrl(cfg.url, cfg.baseURL))) {
         throw new AppError(HttpMessages.BlockedNonPublicHost, 400);
       }
+      // Resolve-then-pin: the literal check above cannot see what DNS actually answers, and
+      // `follow-redirects` reuses this same config object across hops, so setting `lookup` once here
+      // covers every hop's resolution too. Cast past axios's wider (Node-lookup-shaped but looser)
+      // `lookup` type — this module's own single-address callback shape is what Node's http/https
+      // `ClientRequest` actually calls it with.
+      cfg.lookup = pinningLookup as unknown as AxiosLookup;
       const priorBeforeRedirect = cfg.beforeRedirect;
       const guardedBeforeRedirect: BeforeRedirect = (...args) => {
         const rawHref = (args[0] as { href?: unknown }).href;

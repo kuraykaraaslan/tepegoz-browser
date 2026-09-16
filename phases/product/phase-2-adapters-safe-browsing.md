@@ -44,13 +44,13 @@
 - [ ] `AgentThreatShield`: **local SLM** (landed in Phase 1b) scam/phishing scoring + egress anomaly → on high risk agent-lockout + HITL; anti-blabbering
 - [ ] `PopupAndPermissionGuard`: `setWindowOpenHandler` + background open; single policy-engine (no parallel permission flow)
 - [~] 🔴 **DEFECT IN SHIPPED CODE — no destination validation on agent-driven outbound fetch.**
-      `web_get_page`/`web_search` dispatch whatever URL the model supplies (or a page supplies, through
-      indirect prompt injection — "visit this URL for more detail") through `@tepegoz/http`'s
-      `createHttpClient` with **no check that the resolved host isn't loopback, RFC1918, link-local, or
-      `169.254.169.254` cloud-metadata**, and `fetchPage` sets no redirect limit, so a redirect into a LAN
-      host is followed unchecked. An agent told to fetch `http://169.254.169.254/latest/meta-data` succeeds
-      today. **Found independently by two tracks reading two different rivals**, which is why it is written
-      here as a defect rather than a proposal.
+  `web_get_page`/`web_search` dispatch whatever URL the model supplies (or a page supplies, through
+  indirect prompt injection — "visit this URL for more detail") through `@tepegoz/http`'s
+  `createHttpClient` with **no check that the resolved host isn't loopback, RFC1918, link-local, or
+  `169.254.169.254` cloud-metadata**, and `fetchPage` sets no redirect limit, so a redirect into a LAN
+  host is followed unchecked. An agent told to fetch `http://169.254.169.254/latest/meta-data` succeeds
+  today. **Found independently by two tracks reading two different rivals**, which is why it is written
+  here as a defect rather than a proposal.
   - [x] **The literal-address half landed 2026-09-08.** `isPublicHttpUrl` (`@tepegoz/web-tools/ssrf-guard.ts`,
         24 cases) rejects loopback / RFC-1918 / link-local (`169.254/16`) / CGNAT / multicast / ULA
         (`fc00::/7`) / link-local IPv6 (`fe80::/10`) / `::1` / `::ffff:` -mapped / `localhost`-family /
@@ -71,22 +71,31 @@
         (follow-redirects' `responseUrl` off the last request) as `finalUrl`, not the requested `url`, so
         the agent's citation / `pageRef` points where the bytes actually came from; the final URL is
         re-checked through `isPublicHttpUrl` before it is returned.
-  - [ ] Still owed for `[~]`: **resolve-then-pin** at connection time (defeats DNS rebinding —
-        a public hostname resolving to a private IP still passes the literal check). Original fix list follows:
-  - [ ] One pure, obfuscation-resistant classifier next to `egress-route.ts` — canonicalize
-        decimal/octal/hex/short-form IPv4 and `::ffff:`-mapped IPv6 **before** matching, since all of those
-        are equivalent to the caller but not to a naive string-prefix check. Reject loopback / RFC1918 /
-        link-local (`169.254.0.0/16`, `fe80:`) / cloud-metadata / `::1` / `fc00::/7`.
-  - [ ] Check the **resolved IP at connection time, then connect to that literal IP** — not the hostname at
-        URL-parse time. This specific ordering is what defeats DNS rebinding; a TTL-0 answer can otherwise
-        swap the target between the check and the connect.
+  - [x] **`resolve-then-pin` at connection time landed 2026-09-17** (defeats DNS rebinding — a public
+        hostname resolving to a private IP now fails too, not just the literal-address check).
+        `pinningLookup` (`@tepegoz/http/http-client.ts`) is a Node `http(s)` `lookup` override: it runs
+        the real DNS resolution itself, rejects the result through the new `isPublicIpLiteral` (the same
+        canonicalizing IPv4/IPv6 classifier `isPublicHttpUrl` already used, extracted so both share it —
+        no second classifier file was needed, the existing one already canonicalized decimal/octal/hex
+        IPv4 and `::ffff:`-mapped IPv6 via `new URL()` first), and returns that exact address to Node —
+        which connects to it directly with **no second, re-winnable resolution** between the check and
+        the connect. Set once on `blockPrivateHosts: true` requests; `follow-redirects` reuses the same
+        options object across hops, so every redirect's DNS answer is pinned and re-checked too, not just
+        its literal host (the existing `beforeRedirect` hook). A blocked resolution surfaces as the same
+        400 `BlockedNonPublicHost` the pre-send literal check raises (mapped in `normalizeHttpError` via a
+        dedicated error code), so the agent sees one consistent failure either way. Mutation-checked
+        (disabling the private-address check in `pinningLookup` turns the new rebinding test red).
   - [x] Enforce at `createHttpClient` itself — its own docblock already calls it "the ONE outbound-HTTP seam
         for the whole app" — so `web-tools`, MCP HTTP transports and any future skill-declared endpoint are
         covered **by construction**, not one patched call site at a time. _(landed 2026-09-09 as the opt-in
-        `blockPrivateHosts` option; literal-address + per-redirect-hop only — resolve-then-pin still owed.)_
-  - [ ] Re-validate every redirect hop, cap the chain, and drop rather than follow into a private target.
-        `sitemap-reader.ts` already has the right instinct locally (`maxRedirects: 0` with a comment saying
-        why) — generalize it instead of leaving it a one-file workaround.
+        `blockPrivateHosts` option covering literal-address + per-redirect-hop; resolve-then-pin landed
+        2026-09-17, same option, same seam.)_
+  - [ ] **Still owed: cap the redirect chain length explicitly and drop rather than follow past it.**
+        Every hop is now re-validated (literal + resolved-address) and a private target is dropped at
+        whichever hop resolves to one, but the _chain length itself_ still relies on axios/follow-redirects'
+        own default cap rather than a small explicit one this repo has chosen and tested. `sitemap-reader.ts`
+        already has the right instinct locally (`maxRedirects: 0` with a comment saying why) — generalize a
+        deliberate choice instead of leaving it a one-file workaround.
   - [ ] Pairs with the Egress Firewall Rust port in [phase-1b](phase-1b-agentic-deepening.md) L7 (same seam,
         different concern: that one governs _what data leaves_, this one governs _what destination is
         reachable at all_). Sources:
