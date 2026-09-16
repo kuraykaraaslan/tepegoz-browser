@@ -37,6 +37,17 @@ export const ToolDescriptorSchema = z.object({
    * `code_exec_write` is reserved and denied by the kernel in v1.
    */
   capability: z.enum(['code_exec_read', 'code_exec_write']).optional(),
+  /**
+   * True for a tool whose READ can disclose content outside the web page it ran on — the local
+   * filesystem, today (S6 second wave: "a page-derived file path is never silently read"). Declared by
+   * the tool author on the descriptor rather than supplied per call, same reasoning as `capability`
+   * above: a caller that could name its own class could name the harmless one. `dangerClass: 'read'`
+   * ordinarily auto-allows, which is correct for reading the page the agent is already on — it is wrong
+   * for reading a LOCAL path a page's own content chose, because the leak is the local content entering
+   * the model's context on the page's instruction, not the read call itself. Absent for every ordinary
+   * tool, including every `browser_*` read.
+   */
+  localFileAccess: z.boolean().optional(),
   /** Provenance for trust/marketplace (Ed25519 signer id, etc.). */
   provenance: z.string().optional(),
   /**

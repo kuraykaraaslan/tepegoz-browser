@@ -83,6 +83,12 @@ export const tr: Resources = {
       whatYouCanDo:
         'Aşağıdaki argümanları SİZİN istediğinizle karşılaştırın. Sizden değil sayfadan gelmiş görünen bir şey varsa reddedin.',
     },
+    tainted_local_file_read: {
+      title: 'Onay — bu yerel dosyayı bir sayfa seçti',
+      why: 'Bu okuma için dosya yolu, sizden değil ajanın okuduğu sayfa içeriğinden geldi. Okuma sanal alan (sandbox) içinde kalsa da içerik yine de sayfanın kendi talimatıyla konuşmaya giriyor — cihazınızdan henüz hiçbir şey çıkmasa bile bu bir sızıntıdır.',
+      whatYouCanDo:
+        'Yalnızca bunun ajanın açmasını SİZİN beklediğiniz bir dosya olduğundan eminseniz onaylayın. Yol bir sayfanın önerdiği bir şeye benziyorsa reddedin.',
+    },
     state_change_confirm: {
       title: 'Değişikliği onaylayın',
       why: 'Bu işlem yalnızca okumuyor, bir şeyi değiştiriyor.',

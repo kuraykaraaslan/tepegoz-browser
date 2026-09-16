@@ -243,13 +243,31 @@ Sequencing: the claim-grade ASR sweep runs **after [S3](phase-s3-reliability-act
       any matching subdomain could send the extension a prompt and have it executed. ADR-0013's IPC discipline
       already says **exact-host allow-list**. Lock it with a test, because the regression here is a one-character
       convenience edit that reintroduces exactly this CVE.
-- [ ] **A page-derived file path is never silently read.** PerplexedBrowser turned a web-delivered instruction
+- [x] **A page-derived file path is never silently read.** PerplexedBrowser turned a web-delivered instruction
       into local-file exfiltration; Perplexity's fix was to block `file://` at the code level. This project's
       `file_*` tools sit in a real sandbox
       ([ADR-0022](../../docs/adr/0022-file-operations-sandbox.md)), which is the stronger position — but the
       property to verify is the **interaction**: a `file_*` call whose path argument is **tainted** (derived
       from page content) must force HITL regardless of autonomy level, never resolve silently inside the
       sandbox. Sandboxed-but-silent is still exfiltration.
+      — _**Verified 2026-09-16, and it was NOT already true.** `policy-kernel.ts`'s only taint rule
+      (`ctx.taintedArgs && SIDE_EFFECT.has(risk)`) escalates a side-effecting call, never a `read` — and
+      `dangerClass: 'read'` normally auto-allows. `file_get_content`/`file_list_items`/
+      `file_get_metadata`/`file_search_items` are ALL `dangerClass: 'read'`, so a page-planted path
+      (`file_get_content({path: "…"})`, taint-tracked because the string came from page content the
+      agent read) resolved silently: sandboxed by [ADR-0022](../../docs/adr/0022-file-operations-sandbox.md)
+      against escaping the grant, but never asked about, and never refused. Fixed by adding a new
+      descriptor-level flag (`ToolDescriptor.localFileAccess`, same discipline as the existing
+      `capability` axis — read off the registration by `ToolGateway.invoke`, never suppliable by the
+      call itself) set on exactly those four tools, plus a kernel rule: `taintedArgs && risk === 'read'
+      && localFileAccess` → `ask` (`tainted_local_file_read`, new reason code with full en+tr Permission
+      Debug text). Confirmed the existing "trust profile can only tighten" invariant already covers this
+      without a separate check: `applyTrust` refuses to widen ANY tainted-arg `ask` regardless of reason,
+      so a site marked `trusted` still cannot silence this prompt — same invariant this session's earlier
+      `sensitive_site_read`/`eu_ai_act_high_risk_read` fix relies on. Mutation-verified and
+      regression-locked across all three layers (`policy-kernel.test.ts`, `tool-gateway.test.ts` for the
+      descriptor-not-caller threading, `file-operations.test.ts` asserting the flag lands on exactly the
+      four content/path-reading tools and no others)._
 - [ ] **Do not add a schema-less "quick mode."** Recorded as a rejection with a reason, since it is a
       recurring efficiency temptation: Claude for Chrome's Quick Mode drops **tool schemas** for a compact
       single-letter command DSL plus a fresh screenshot per step. Cheaper in tokens, and it **destroys

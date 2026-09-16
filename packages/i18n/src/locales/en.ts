@@ -95,6 +95,12 @@ export const en = {
       whatYouCanDo:
         'Check the arguments below against what YOU asked for. If anything looks like it came from the page rather than from you, decline.',
     },
+    tainted_local_file_read: {
+      title: 'Confirm — a page chose this local file',
+      why: 'The file path for this read came from page content the agent read, not from you. Reading it stays inside the sandbox, but the content still enters the conversation on the page\'s own instruction — that is exfiltration even without anything leaving your device yet.',
+      whatYouCanDo:
+        'Only approve if this is a file YOU expected the agent to open. If the path looks like something a page suggested, decline.',
+    },
     state_change_confirm: {
       title: 'Confirm a change',
       why: 'This action changes something rather than just reading.',

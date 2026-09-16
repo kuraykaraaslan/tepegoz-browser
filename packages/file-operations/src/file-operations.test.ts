@@ -102,6 +102,25 @@ describe('registerFileOperations', () => {
     for (const id of ids) expect(() => ToolNameSchema.parse(id)).not.toThrow();
   });
 
+  it('marks exactly the content/path-reading tools localFileAccess (S6 second wave), and no others', () => {
+    // The Policy Kernel forces HITL on a tainted read only when this flag is set — over-applying it
+    // would be silently harmless (rule 3 already covers state-changing/destructive taint), but
+    // under-applying it on a real content-reading tool would leave the exfil gap this flag exists to
+    // close, so both directions are asserted.
+    const withPath = ['file_get_content', 'file_list_items', 'file_get_metadata', 'file_search_items'];
+    for (const id of withPath) {
+      expect(CapabilityRegistry.get(id)?.descriptor.localFileAccess, id).toBe(true);
+    }
+    // fileaccess_list_grants is 'read' but takes no args (nothing for a page to taint) — and every
+    // write/destructive tool is already covered by the taint→ask rule for side-effecting calls.
+    const withoutPath = CapabilityRegistry.list()
+      .map((d) => d.id)
+      .filter((id) => !withPath.includes(id));
+    for (const id of withoutPath) {
+      expect(CapabilityRegistry.get(id)?.descriptor.localFileAccess, id).toBeUndefined();
+    }
+  });
+
   it('is idempotent (a second call registers nothing new)', () => {
     const before = CapabilityRegistry.list().length;
     const p2 = new FileAccessPolicy();

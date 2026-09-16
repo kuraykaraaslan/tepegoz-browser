@@ -32,7 +32,11 @@ export function descriptor(
   id: string,
   dangerClass: ToolDescriptor['dangerClass'],
   description: string,
-  opts: { requiresIdempotencyKey?: boolean; aiTask?: ToolDescriptor['aiTask'] } = {},
+  opts: {
+    requiresIdempotencyKey?: boolean;
+    aiTask?: ToolDescriptor['aiTask'];
+    localFileAccess?: boolean;
+  } = {},
 ): ToolDescriptor {
   return {
     id,
@@ -43,6 +47,7 @@ export function descriptor(
     requiresIdempotencyKey: opts.requiresIdempotencyKey ?? false,
     aiTask: opts.aiTask ?? 'none',
     category: 'file',
+    ...(opts.localFileAccess === true ? { localFileAccess: true } : {}),
   };
 }
 
@@ -59,7 +64,10 @@ export function registerFileTools(deps: FileOperationsDeps): void {
 
   const enc = (e: FileEncoding | undefined): FileEncoding => e ?? 'utf8';
 
-  // --- Read tools (dangerClass 'read' → policy auto-allows; membership enforced in `guard`). ---
+  // --- Read tools (dangerClass 'read' → policy auto-allows unless taintedArgs; membership enforced in
+  //     `guard`. localFileAccess: true means a TAINTED path still forces HITL — see policy-kernel.ts's
+  //     "S6 second wave" rule — because a page-derived path silently read is exfiltration even though
+  //     the read stays inside the sandbox.) ---
 
   CapabilityRegistry.register({
     descriptor: descriptor(
@@ -67,7 +75,7 @@ export function registerFileTools(deps: FileOperationsDeps): void {
       'read',
       'Read a file inside an allowed folder. args: { path: string, encoding?: "utf8"|"base64" } — ' +
         'returns { path, encoding, content }. Use "base64" for binary files.',
-      { aiTask: 'read_understand' },
+      { aiTask: 'read_understand', localFileAccess: true },
     ),
     inputSchema: ReadFileArgs,
     handler: async (args) => {
@@ -83,6 +91,7 @@ export function registerFileTools(deps: FileOperationsDeps): void {
       'read',
       'List the entries of a directory inside an allowed folder. args: { path: string } — returns ' +
         '{ path, entries: [{ name, kind: "file"|"directory"|"other" }] }.',
+      { localFileAccess: true },
     ),
     inputSchema: ListArgs,
     handler: async (args) => {
@@ -97,6 +106,7 @@ export function registerFileTools(deps: FileOperationsDeps): void {
       'read',
       'Stat a path inside an allowed folder. args: { path: string } — returns ' +
         '{ path, exists, kind?, size?, modifiedMs?, createdMs? }.',
+      { localFileAccess: true },
     ),
     inputSchema: MetaArgs,
     handler: async (args) => {
@@ -114,6 +124,7 @@ export function registerFileTools(deps: FileOperationsDeps): void {
       'Find files under a directory inside an allowed folder by glob. args: { path: string, ' +
         'pattern: string (e.g. "**/*.md"), limit?: number (default 200, max 1000) } — returns ' +
         '{ path, matches: string[] } (absolute paths, all still inside the allowed folder).',
+      { localFileAccess: true },
     ),
     inputSchema: SearchArgs,
     handler: async (args) => {

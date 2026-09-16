@@ -35,6 +35,12 @@ export interface PolicyContext {
    * both only read.
    */
   capability?: 'code_exec_read' | 'code_exec_write';
+  /**
+   * True for a tool whose read can disclose content outside the web page it ran on — the local
+   * filesystem, today. Read off the tool's descriptor by the gateway, never suppliable by the call
+   * itself (same reasoning as `capability` above).
+   */
+  localFileAccess?: boolean;
 }
 
 export interface PolicyResult {
@@ -150,6 +156,16 @@ export default class PolicyKernel {
     // 3) Tainted (web-derived) args on a side-effecting call → always HITL (injection containment).
     if (ctx.taintedArgs && SIDE_EFFECT.has(risk)) {
       return { decision: 'ask', reason: 'tainted_side_effect', biometric: highRisk };
+    }
+
+    // 3b) Tainted args on a LOCAL-FILE read (S6 second wave: "a page-derived file path is never
+    // silently read"). Rule 3 above only escalates a side-effecting call; a file_* read whose path
+    // came from page content is real exfiltration even though the read itself stays inside the
+    // sandbox — the leak is local content entering the model's context on the page's own instruction,
+    // not the read call. An ordinary browser_* read of the page the agent is already on is unaffected:
+    // `localFileAccess` is only ever true for a tool the author declared as filesystem-reading.
+    if (ctx.taintedArgs && risk === 'read' && ctx.localFileAccess === true) {
+      return { decision: 'ask', reason: 'tainted_local_file_read', biometric: false };
     }
 
     // 4) Base decision by danger class.

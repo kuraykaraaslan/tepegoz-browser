@@ -36,6 +36,7 @@ function register(opts: {
   id: string;
   dangerClass: RiskLevel;
   requiresIdempotencyKey?: boolean;
+  localFileAccess?: boolean;
   validator?: InputValidator<unknown>;
   handler?: (args: unknown) => unknown;
   confirmSummary?: (args: unknown) => string | Promise<string>;
@@ -48,6 +49,7 @@ function register(opts: {
       source: 'builtin',
       inputSchema: {},
       requiresIdempotencyKey: opts.requiresIdempotencyKey ?? false,
+      ...(opts.localFileAccess !== undefined ? { localFileAccess: opts.localFileAccess } : {}),
     },
     inputSchema: opts.validator ?? passAny,
     handler: opts.handler ?? (() => 'ok'),
@@ -140,6 +142,31 @@ describe('ToolGateway.invoke', () => {
     expect(
       asError(await ToolGateway.invoke('browser_get_page', {}, { egressBlocked: true })).code,
     ).toBe('FORBIDDEN');
+  });
+
+  it('asks (does not silently allow) a TAINTED read on a localFileAccess tool (S6 second wave)', async () => {
+    // Read off the DESCRIPTOR, threaded by the gateway itself — not suppliable by the caller's own ctx,
+    // same discipline as `capability` (a caller that could name its own class could name the harmless
+    // one). An untainted call to the same tool is unaffected.
+    register({ id: 'file_get_content', dangerClass: 'read', localFileAccess: true });
+    expect(await ToolGateway.invoke('file_get_content', {}, { taintedArgs: false })).toBe('ok');
+    ToolGateway.setConfirmHandler(() => Promise.resolve(true));
+    expect(await ToolGateway.invoke('file_get_content', {}, { taintedArgs: true })).toBe('ok');
+    ToolGateway.setConfirmHandler(() => Promise.resolve(false));
+    expect(
+      asError(await ToolGateway.invoke('file_get_content', {}, { taintedArgs: true })).code,
+    ).toBe('FORBIDDEN');
+  });
+
+  it('a caller cannot claim localFileAccess itself — only the registered descriptor counts', async () => {
+    register({ id: 'browser_get_page', dangerClass: 'read' }); // no localFileAccess on the descriptor
+    expect(
+      await ToolGateway.invoke(
+        'browser_get_page',
+        {},
+        { taintedArgs: true, localFileAccess: true } as never,
+      ),
+    ).toBe('ok');
   });
 
   it('requires an idempotencyKey for create/upload tools', async () => {

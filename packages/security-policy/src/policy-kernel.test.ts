@@ -4,7 +4,12 @@ import PolicyKernel, { type PolicyContext } from './policy-kernel';
 
 function evaluate(
   dangerClass: RiskLevel,
-  opts: { taintedArgs?: boolean; targetUrl?: string; egressBlocked?: boolean } = {},
+  opts: {
+    taintedArgs?: boolean;
+    targetUrl?: string;
+    egressBlocked?: boolean;
+    localFileAccess?: boolean;
+  } = {},
 ) {
   const ctx: PolicyContext = {
     descriptor: { id: 'tab_get_item', dangerClass },
@@ -12,6 +17,7 @@ function evaluate(
   };
   if (opts.targetUrl !== undefined) ctx.targetUrl = opts.targetUrl;
   if (opts.egressBlocked !== undefined) ctx.egressBlocked = opts.egressBlocked;
+  if (opts.localFileAccess !== undefined) ctx.localFileAccess = opts.localFileAccess;
   return PolicyKernel.evaluate(ctx);
 }
 
@@ -59,6 +65,32 @@ describe('PolicyKernel.evaluate — taint', () => {
   });
   it('does not penalize reads for taint', () => {
     expect(evaluate('read', { taintedArgs: true }).decision).toBe('allow');
+  });
+});
+
+describe('PolicyKernel.evaluate — local-file taint (S6 second wave: "a page-derived path is never silently read")', () => {
+  it('forces HITL when a page-derived path drives a local-file read, even though the risk class is "read"', () => {
+    expect(evaluate('read', { taintedArgs: true, localFileAccess: true })).toEqual({
+      decision: 'ask',
+      reason: 'tainted_local_file_read',
+      biometric: false,
+    });
+  });
+  it('leaves an ordinary (non-file) tainted read exactly as before — the flag is what gates this, not taint alone', () => {
+    expect(evaluate('read', { taintedArgs: true, localFileAccess: false }).decision).toBe('allow');
+    expect(evaluate('read', { taintedArgs: true }).decision).toBe('allow');
+  });
+  it('does not fire on an UNTAINTED local-file read — an ordinary agent-chosen path stays silent', () => {
+    expect(evaluate('read', { taintedArgs: false, localFileAccess: true }).decision).toBe('allow');
+  });
+  it('adds nothing to a side-effecting call — rule 3 already covers it', () => {
+    // A tainted WRITE to a local-file-access tool is already 'tainted_side_effect' via rule 3; the new
+    // rule must not double-fire or change that reason.
+    expect(evaluate('state_changing', { taintedArgs: true, localFileAccess: true })).toEqual({
+      decision: 'ask',
+      reason: 'tainted_side_effect',
+      biometric: false,
+    });
   });
 });
 
@@ -248,6 +280,20 @@ describe('trust profiles, applied through the kernel', () => {
     });
     expect(r.decision).toBe('ask');
     expect(r.reason).toBe('tainted_side_effect');
+  });
+
+  it('CANNOT unlock a tainted local-file read either — a trusted site is not a trusted PAGE', () => {
+    // The same invariant as "CANNOT unlock a sensitive site" above, for the read gap this session
+    // closed: a site marked trusted must not let a page-planted path silently reach the filesystem.
+    PolicyKernel.setTrustProfiles(trusted);
+    const r = PolicyKernel.evaluate({
+      descriptor: tool('read'),
+      taintedArgs: true,
+      localFileAccess: true,
+      targetUrl: 'https://github.com/x',
+    });
+    expect(r.decision).toBe('ask');
+    expect(r.reason).toBe('tainted_local_file_read');
   });
 
   it('forces a prompt for a read on a restricted site', () => {

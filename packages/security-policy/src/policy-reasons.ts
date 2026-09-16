@@ -33,6 +33,9 @@ export const POLICY_REASONS = [
   'tab_egress_blocked',
   /** A side-effecting call whose arguments came from page content the agent read (injection risk). */
   'tainted_side_effect',
+  /** A local-filesystem READ whose path came from page content the agent read — sandboxed-but-silent
+   *  is still exfiltration, so this is confirmed first even though the risk class is 'read'. */
+  'tainted_local_file_read',
   /** An ordinary state-changing action: confirm before it happens. */
   'state_change_confirm',
   /** Destructive (delete/overwrite). Confirm, and policy asks for a biometric. */

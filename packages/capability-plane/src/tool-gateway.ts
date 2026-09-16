@@ -123,6 +123,9 @@ export default class ToolGateway {
       ...(tool.descriptor.capability !== undefined
         ? { capability: tool.descriptor.capability }
         : {}),
+      // Same reasoning, same place: a tool's local-filesystem-read class is declared by its author, not
+      // supplied per call (S6 second wave).
+      ...(tool.descriptor.localFileAccess === true ? { localFileAccess: true } : {}),
     });
     // Classified on the VALIDATED args, so the tier reflects what will actually run. This is the
     // per-class axis that replaces flat per-tool approval: `dangerClass` says what the tool author
