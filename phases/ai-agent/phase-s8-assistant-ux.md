@@ -190,6 +190,20 @@ Six UI-scoped PRs, each ≤250 lines, sequenced behind their substrate phases. N
 - [ ] **A health panel for the agent's dependency chain** — provider key present/valid, model reachable, MCP
       servers up, local model loaded — each with a plain-language failure cause. The single largest complaint
       cluster against the Claude extension is "it is installed, the panel is open, and nothing happens."
+  - [ ] **Scoped 2026-09-16, not built — two of the four signals are free, two need a real design call
+        first.** MCP server state (`idle`/`connecting`/`ready`/`error` + message) is already live-tracked
+        by `@tepegoz/mcp-client`'s supervisor (`packages/mcp-client/src/config.ts:41-50`,
+        `.status()` in `supervisor.ts:50`) and already rendered in `settings-mcp-servers.tsx` — reading
+        it costs nothing new. Local-model readiness is a zero-cost prefs+catalog read via
+        `ModelManager.resolveModel()` (`apps/desktop/src/main/model-catalog/model-manager.electron.ts:189`,
+        returns `null` when nothing is downloaded/selected). **"Provider key valid" and "model
+        reachable" are NOT free** — proving either means making a real call to the provider (spends a
+        token/quota and has rate-limit exposure), which is a product decision (how often? on every panel
+        open? cached for how long?) this file should not make unilaterally. `AIAdaptor`
+        (`packages/desktop-ipc/src/ai-adaptor-types.ts:45-54`) — the existing Settings→Adaptors inventory
+        — carries no connection-state field at all, confirming this isn't already covered under another
+        name. A version limited to the two free signals is buildable today; the other two are open
+        pending that call.
 - [ ] **Permission debug view** — for a given site and tool: what was asked, what was decided, which rule
       decided it, and why it was or was not remembered. The reasons already exist in the kernel; they are not
       yet a surface a user can open.
