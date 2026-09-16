@@ -318,6 +318,18 @@ export interface Attachment {
   content: string;
 }
 
+/**
+ * One MCP server's connection health, as the host reports it (S8 PR7 residue). Mirrors
+ * `@tepegoz/desktop-ipc`'s `McpServerStatusInfo` field-for-field on the subset this panel needs;
+ * defined independently, like every other DTO in this file, so this package stays desktop-ipc-free.
+ */
+export interface AgentMcpServerHealth {
+  id: string;
+  label: string;
+  state: 'idle' | 'connecting' | 'ready' | 'error';
+  error?: string;
+}
+
 /** What the Agent panel needs from the host — a small, typed surface (injected, not a global). */
 export interface AgentHostApi {
   runAgent(input: {
@@ -336,6 +348,13 @@ export interface AgentHostApi {
   steerAgent(runId: string, text: string): void;
   /** The active tab's committed URL (seed a converted task's target page); null when no web tab. */
   getActiveTabUrl(): Promise<string | null>;
+  /**
+   * Connection health for every configured MCP server (S8 PR7 residue — "installed, panel open,
+   * nothing happens" is the single largest rival-evidence complaint cluster). Polled, not pushed —
+   * the panel uses the same cadence Settings' own MCP status list already does. `[]` when no MCP
+   * server is configured, which must read as "nothing to report", never as "something failed".
+   */
+  getMcpStatus(): Promise<AgentMcpServerHealth[]>;
   /** Save (or update) a scheduled task — used by "Save as scheduled task" in the panel. */
   saveTask(input: TaskSaveInput): Promise<TaskDefinition>;
   /** Reset conversation memory for a specific tab-group (panel "New task"). */

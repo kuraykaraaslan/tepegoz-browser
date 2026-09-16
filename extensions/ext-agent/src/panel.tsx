@@ -5,6 +5,7 @@ import { agentDict } from './i18n';
 import type { AgentHostApi } from './types';
 import { ScheduleTaskModal } from './schedule-task-modal';
 import { buildNotices } from './panel-state';
+import { useMcpHealthNotices } from './panel-mcp-health';
 import { useAgentSession } from './panel-session';
 import { useAgentActions } from './panel-actions';
 import { useAgentAttachments } from './panel-attachments';
@@ -67,7 +68,10 @@ export function AgentPanel({ api, onClose }: AgentPanelProps) {
   const attach = useAgentAttachments({ api, a, mutateActive });
 
   // ---- Derived values --------------------------------------------------------------------------
-  const notices = buildNotices(autonomy, a.risk).filter((n) => !dismissedNotices.has(n.id));
+  const mcpHealthNotices = useMcpHealthNotices(api, a);
+  const notices = [...buildNotices(autonomy, a.risk), ...mcpHealthNotices].filter(
+    (n) => !dismissedNotices.has(n.id),
+  );
 
   const {
     turns,

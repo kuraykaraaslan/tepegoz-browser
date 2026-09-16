@@ -273,6 +273,12 @@ export const en = {
     autoTitle: 'Fully autonomous',
     autoBody: 'Takes actions on this page and the web without pausing — review the timeline.',
   },
+  // Warning notice for an MCP server the agent depends on that is currently disconnected. `{label}`
+  // is the server's own configured name; `body` is a fallback for a disconnect with no error text.
+  mcpHealth: {
+    title: 'Tool source unavailable: {label}',
+    body: 'This MCP server is not connected. Some tools may be missing until it reconnects.',
+  },
   // Graduated autonomy levels (the composer dropdown).
   autonomy: {
     ask: { title: 'Ask before acting', desc: 'Reviews the plan and each state-changing step.' },

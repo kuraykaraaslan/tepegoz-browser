@@ -187,23 +187,26 @@ Six UI-scoped PRs, each ≤250 lines, sequenced behind their substrate phases. N
         `ipc-agent-run.electron.test.ts` (429 pre-flight gate still refunds; a refundable stop reason
         refunds in teardown). Fellou's Sparks complaints and Neon's price backlash are both "paying for
         the tool's own failure" — that half doesn't happen here.
-- [ ] **A health panel for the agent's dependency chain** — provider key present/valid, model reachable, MCP
+- [~] **A health panel for the agent's dependency chain** — provider key present/valid, model reachable, MCP
       servers up, local model loaded — each with a plain-language failure cause. The single largest complaint
       cluster against the Claude extension is "it is installed, the panel is open, and nothing happens."
-  - [ ] **Scoped 2026-09-16, not built — two of the four signals are free, two need a real design call
-        first.** MCP server state (`idle`/`connecting`/`ready`/`error` + message) is already live-tracked
-        by `@tepegoz/mcp-client`'s supervisor (`packages/mcp-client/src/config.ts:41-50`,
-        `.status()` in `supervisor.ts:50`) and already rendered in `settings-mcp-servers.tsx` — reading
-        it costs nothing new. Local-model readiness is a zero-cost prefs+catalog read via
-        `ModelManager.resolveModel()` (`apps/desktop/src/main/model-catalog/model-manager.electron.ts:189`,
-        returns `null` when nothing is downloaded/selected). **"Provider key valid" and "model
-        reachable" are NOT free** — proving either means making a real call to the provider (spends a
-        token/quota and has rate-limit exposure), which is a product decision (how often? on every panel
-        open? cached for how long?) this file should not make unilaterally. `AIAdaptor`
-        (`packages/desktop-ipc/src/ai-adaptor-types.ts:45-54`) — the existing Settings→Adaptors inventory
-        — carries no connection-state field at all, confirming this isn't already covered under another
-        name. A version limited to the two free signals is buildable today; the other two are open
-        pending that call.
+  - [x] **Three of the four signals are already covered, confirmed 2026-09-16.** "Provider key present"
+        and "local model loaded" were already surfaced the whole time, just not under this name: the
+        run-target picker (`panel-run-config.tsx:81-98`) disables any choice whose `available` flag is
+        false (no key / no downloaded local model) and shows a "no keys stored" hint when NOTHING is
+        available — the exact two signals this line asks for, at the exact place a user would look.
+        **MCP server health is now surfaced too** (`panel-mcp-health.ts` + wired into `panel.tsx`'s
+        existing notices strip): a server the agent depends on going to `error` state now produces a
+        warning notice naming the server and its cause, polled every 3s — the same cadence
+        `settings-mcp-servers.tsx` already used for the identical data, just not previously shown inside
+        the console itself. 6 tests (`panel-mcp-health.test.ts`): no-MCP / all-healthy → nothing;
+        one errored server → one notice; a later DIFFERENT error on the same server gets a fresh
+        (non-dismissed) notice id; no error text → a localized generic fallback body; a 3s poll drops
+        the notice once the server recovers.
+  - [ ] **"Provider key valid" and "model reachable" remain open, deliberately not attempted.** Both mean
+        making a REAL call to the provider (spends a token/quota, has rate-limit exposure), which is a
+        product decision (how often? on every panel open? cached for how long?) this file should not make
+        unilaterally.
 - [ ] **Permission debug view** — for a given site and tool: what was asked, what was decided, which rule
       decided it, and why it was or was not remembered. The reasons already exist in the kernel; they are not
       yet a surface a user can open.

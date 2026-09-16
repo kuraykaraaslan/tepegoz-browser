@@ -97,8 +97,7 @@ export const tr: AgentStrings = {
   stopReason: {
     maxSteps:
       'Çalışma bitmeden adım sınırına ulaştı. Daha fazla adıma ihtiyaç duymuş ya da takılmış olabilir — yukarıdaki son birkaç adıma bakın.',
-    loopDetected:
-      'Çalışma, ilerleme kaydetmeden aynı eylemi tekrarladığı için durdu.',
+    loopDetected: 'Çalışma, ilerleme kaydetmeden aynı eylemi tekrarladığı için durdu.',
     toolError: 'Bir araç çağrısı başarısız olduktan ve kurtarılamadıktan sonra çalışma durdu.',
     policyDenied: 'İhtiyaç duyduğu bir eyleme izin verilmediği için çalışma durdu.',
     selectorStale:
@@ -106,7 +105,8 @@ export const tr: AgentStrings = {
     navigationTimeout: 'Çalışma, hiç yüklenmeyi bitirmeyen bir sayfayı beklerken durdu.',
     pageChanged:
       'Sayfa eylem sırasında beklenmedik şekilde değişti; çalışma, yanlış sayfada işlem yapmak yerine durdu.',
-    modelMalformed: 'Model, üzerinde işlem yapılamayacak bir yanıt döndürdükten sonra çalışma durdu.',
+    modelMalformed:
+      'Model, üzerinde işlem yapılamayacak bir yanıt döndürdükten sonra çalışma durdu.',
     transientError:
       'Çalışma, aşamadığı geçici bir hatadan sonra durdu — yeniden denemek işe yarayabilir.',
     generic: 'Çalışma beklenmedik bir nedenle durdu.',
@@ -138,7 +138,7 @@ export const tr: AgentStrings = {
     label: 'Bağlam',
     aria: 'Bağlam penceresi %{pct} dolu',
     tooltip:
-      "Modelin bu görevdeki çalışma belleği — yaklaşık {max} tokenin {used} kadarı. Doldukça ajan devam edebilmek için önceki adımları özetler; uzun bir çalışmanın aniden sıkışmasının nedeni budur. Bu, token kotanız değildir; pencere boyutu bu model için bir tahmindir.",
+      'Modelin bu görevdeki çalışma belleği — yaklaşık {max} tokenin {used} kadarı. Doldukça ajan devam edebilmek için önceki adımları özetler; uzun bir çalışmanın aniden sıkışmasının nedeni budur. Bu, token kotanız değildir; pencere boyutu bu model için bir tahmindir.',
   },
   // Agentic komut paleti (Sohbet/Yap/Üret/Görevler) — bu yüzeyin sahibi bu eklenti.
   commandPalette: {
@@ -242,6 +242,11 @@ export const tr: AgentStrings = {
     actBody: 'Rutin adımları kendi çalıştırır, ama yıkıcı veya finansal işlemler için yine durur.',
     autoTitle: 'Tam otonom',
     autoBody: 'Bu sayfada ve internette durmadan işlem yapar — zaman çizelgesini gözden geçir.',
+  },
+  // Ajanın bağımlı olduğu bir MCP sunucusu şu anda bağlı değilken gösterilen uyarı bildirimi.
+  mcpHealth: {
+    title: 'Araç kaynağı kullanılamıyor: {label}',
+    body: 'Bu MCP sunucusu bağlı değil. Yeniden bağlanana kadar bazı araçlar eksik olabilir.',
   },
   // Kademeli otonomi seviyeleri (besteci açılır menüsü).
   autonomy: {

@@ -9,4 +9,5 @@ export type {
   AgentRunResult,
   TokenUsageSnapshot,
   AgentHostApi,
+  AgentMcpServerHealth,
 } from './types';
