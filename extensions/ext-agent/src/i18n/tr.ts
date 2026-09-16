@@ -207,6 +207,16 @@ export const tr: AgentStrings = {
       'Ajan bunu yaptı ama sonucu teyit edemedi. Kendin kontrol etmen iyi olur.',
     contradicted: 'Çelişkili',
     contradictedHint: 'Sayfa, ajanın bildirdiğiyle çelişti. Buna güvenme.',
+    kind: {
+      network: 'Ağ',
+      page_validation: 'Sayfa kontrolü',
+      url_match: 'URL eşleşmesi',
+    },
+    verdict: {
+      supports: 'destekliyor',
+      contradicts: 'çelişiyor',
+      inconclusive: 'belirsiz',
+    },
   },
   historyPage: {
     title: 'Ajan geçmişi',

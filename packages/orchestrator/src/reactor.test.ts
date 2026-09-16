@@ -329,6 +329,30 @@ describe('Reactor.run', () => {
     expect(res.summary).toBe('auto-complete');
     expect(calls).toHaveLength(3); // periodic check fires after 3 actions and ends the run
   });
+
+  it('S8 PR2: carries the assembled evidence alongside the outcome it was judged against', async () => {
+    ToolGateway.setConfirmHandler(() => Promise.resolve(true));
+    CapabilityRegistry.reset();
+    CapabilityRegistry.register(fakeTool('browser_get_elements', 'read', { content: 'els' }));
+    // networkWarning is exactly the field assembleEvidence reads to produce a 'network' item.
+    CapabilityRegistry.register(
+      fakeTool('browser_update_page', 'state_changing', {
+        ok: true,
+        changed: true,
+        networkWarning: 'a 500 came back after Save',
+      }),
+    );
+    script([act('browser_update_page'), finish]);
+    const res = await Reactor.run(req(), {
+      validateCompletion: () =>
+        Promise.resolve({ done: true, outcome: 'contradicted', finalAnswer: 'done' }),
+    });
+    expect(res.completionOutcome).toBe('contradicted');
+    expect(res.evidence?.mutating).toBe(true);
+    expect(res.evidence?.items).toContainEqual(
+      expect.objectContaining({ kind: 'network', verdict: 'contradicts' }),
+    );
+  });
 });
 
 /**

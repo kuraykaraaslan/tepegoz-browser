@@ -124,10 +124,13 @@ export function useAgentActions(deps: AgentActionsDeps) {
         // a run that resolves after the user has started another must not label the wrong answer.
         if (result.completionOutcome === undefined) return;
         const outcome = result.completionOutcome;
+        const evidence = result.evidence;
         mutateGroup(groupId, (s) => ({
           ...s,
           turns: s.turns.map((turn) =>
-            turn.id === id ? { ...turn, completionOutcome: outcome } : turn,
+            turn.id === id
+              ? { ...turn, completionOutcome: outcome, ...(evidence !== undefined ? { evidence } : {}) }
+              : turn,
           ),
         }));
       })

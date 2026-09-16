@@ -22,7 +22,27 @@ Measured reality ([eval-results.md](eval-results.md)): only 5/52 scenarios are m
 - [ ] **Approvals per task** (the metric shared with [S6](phase-s6-safety-control-plane.md)) drops on the acceptance + web-patterns families once plan-grant and scoped-grant land (⏸ funded sweep); reported jointly with S6, not double-counted.
 - [x] **Zero i18n missing-key lint** across `ext-agent` EN + TR dictionaries; every new panel string exists in both in the same PR (per [ADR-0016/0017](../../docs/adr)).
 - [x] Streaming narration renders deltas incrementally in [panel-thread.tsx](../../extensions/ext-agent/src/panel-thread.tsx); with S1 disabled the panel falls back to step-completion rendering (no regression).
-- [ ] Live step feed shows per-step status (running/done/failed/skipped) and S4 evidence chips resolve to their citations ([S4](phase-s4-verified-outcomes.md)).
+- [x] Live step feed shows per-step status (running/done/failed/skipped) and S4 evidence chips resolve to their citations ([S4](phase-s4-verified-outcomes.md)).
+      — _**Verified/landed 2026-09-16, in two halves.** Per-step status: `panel-step-feed.tsx`'s
+      `KIND_DOT` already colors `step_start`/`step_ok`/`step_error`, and the last open `step_start` with
+      nothing after it pulses amber as "running now" — done since an earlier PR8 pass. "**Skipped**" does
+      not apply under the CURRENT (reactive) execution model and this line predates that pivot: a plan
+      step the user unchecked in the preview never reaches the reactive loop at all, so there is no live
+      event for it to skip — `skipIds` (`panel-state.ts`) is the plan-preview's own bookkeeping, a
+      different concept than a step-feed row. **Evidence citations: genuinely missing until now, closed
+      this session.** `CompletionEvidence.items` (stable per-record ids, kind, verdict, detail — the data
+      model already existed for exactly this) was assembled by `assembleEvidence` for the validator's own
+      reasoning but never survived past it: `ReactResult` dropped everything except the rolled-up
+      `completionOutcome` enum, so the chip could show "Contradicted" but never WHICH record contradicted
+      it. Threaded `evidence` the same path `completionOutcome` already takes — `ReactResult` →
+      `AgentRunSummary` (decoupled plain shape, same discipline as `visionEscalations`) →
+      `ipc-agent-run.ts`'s `evidenceField` (validated at the boundary, mirroring
+      `completionOutcomeField`) → `AgentRunResult` → `Turn.evidence` — and the chip's tooltip
+      (`panel-thread.tsx`) now cites each record via the new `describeEvidence` (`panel-evidence.ts`),
+      falling back to the plain category hint when there is nothing to cite (a pure read task).
+      Regression-locked at both ends (`reactor.test.ts` for the assembly/threading, `panel-evidence.test.ts`
+      + `panel-thread.test.tsx` for the render), mutation-verified on the orchestrator side. EN+TR for
+      the two new label sets (`evidence.kind`, `evidence.verdict`), parity-tested._
 - [x] Plan modal approval mints a `follow_a_plan` grant read by the S6 store (verified by a reduced per-tool prompt count on a plan-approved run).
 - [x] Approval modals show the S6 risk-tier badge and a one-tap scoped grant; the grant is honoured for subsequent same-scope tools in the run.
 - [x] Agent-active indicator visible per-tab and in the tray while a run holds the lock ([agent-run-lock.electron.ts](../../apps/desktop/src/main/agent/agent-run-lock.electron.ts)); clears on `done`/`stop`. _(Tray half already existed (`setTrayAgentRunning`, `ipc-agent-run.ts`). Per-tab half landed 2026-09-16: `agentRunByGroup` (`ipc-agent-shared.ts`) is now mutated only through `setAgentRunForGroup`, which also broadcasts the active-group-id set on every start/stop (`agent:active-groups`, main→renderer push — subscribed, not polled, same discipline as the Phase 5 route badges) and is read once on mount via `agent:active-groups-get`. The renderer merges that set onto the tab list exactly like `app-network-state.ts` merges Phase 5 routing — `app-agent-active-state.ts`'s `withAgentActiveBadge` flags every tab whose `groupId` is in the active set, drawing nothing for the common case (absence is the signal, same as the route badge). `@tepegoz/tab-strip` renders it as a small pulsing amber dot on the tab chip, the same "running now" language the Agent Console's own step feed already uses. Background (scheduled) task runs are deliberately NOT wired into this: `task-agent-runner.electron.ts` keys `agentRunByGroup` by a synthetic `task-<id>` id, a different id space from a real tab-strip `groupId`, and routing it through would either silently match nothing or require resolving `AgentTabGroup`'s internal id mapping — left as a known gap, not attempted blind. 15 new tests across `ipc-agent-shared.test.ts`, `app-agent-active-state.test.ts`, and `tab-strip.test.tsx`.)_

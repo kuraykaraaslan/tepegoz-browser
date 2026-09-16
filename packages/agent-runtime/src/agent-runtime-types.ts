@@ -121,6 +121,16 @@ export interface AgentRunSummary {
    */
   completionOutcome?: string | undefined;
   /**
+   * The evidence `completionOutcome` was actually judged against (S4 → S8 PR2: "evidence chips resolve
+   * to their citations"), so a host can show WHICH record supported the verdict instead of only the
+   * category. Plain shape, decoupled from `@tepegoz/shared-types`'s `CompletionEvidence` the same way
+   * `visionEscalations` below is decoupled from `VisionEscalation` — this is the host-facing contract,
+   * not the internal one.
+   */
+  evidence?:
+    | { items: { id: string; kind: string; verdict: string; detail: string }[]; mutating: boolean }
+    | undefined;
+  /**
    * S10: escalations this run judged (reason + what was observed). Reported so "vision fires rarely" is
    * a measured number rather than an intention. Present even when no image was ever attached — the
    * TRIGGER is what the rate is about.

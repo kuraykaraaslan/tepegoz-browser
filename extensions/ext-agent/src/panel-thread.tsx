@@ -10,6 +10,7 @@ import { MessageCopyButton } from './panel-copy-button';
 import { StepFeed } from './panel-step-feed';
 import { toolIntent } from './panel-tool-intent';
 import { humanizeStepMessage } from './panel-step-message';
+import { evidenceChipTitle } from './panel-evidence';
 import { TurnApprovals, TurnMeta } from './panel-turn-meta';
 import { PROSE_KINDS, STEP_KINDS, type Turn } from './panel-state';
 
@@ -217,7 +218,11 @@ export function PanelThread({
                 {turn.completionOutcome !== undefined && (
                   <div className="px-1 pt-1">
                     <span
-                      title={a.evidence[`${turn.completionOutcome}Hint`]}
+                      title={evidenceChipTitle(
+                        a.evidence[`${turn.completionOutcome}Hint`],
+                        turn.evidence,
+                        a,
+                      )}
                       className={cn(
                         'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px]',
                         EVIDENCE_TONE[turn.completionOutcome],

@@ -1,5 +1,5 @@
 import { AGENT_AUTONOMY_LEVELS, MAX_ATTACHMENT_CHARS } from '@tepegoz/shared-types';
-import type { CompletionOutcome } from '@tepegoz/shared-types';
+import type { CompletionEvidence, CompletionOutcome } from '@tepegoz/shared-types';
 import type {
   AgentApprovalRequest,
   AgentAutonomy,
@@ -115,6 +115,9 @@ export interface Turn {
    * things to tell someone and must not collapse into the same chip.
    */
   completionOutcome?: CompletionOutcome;
+  /** The evidence `completionOutcome` was judged against (S8 PR2), so the chip can cite it. Same
+   *  absence rule as `completionOutcome` itself. */
+  evidence?: CompletionEvidence;
 }
 
 /** Per-group state stored in the panel (keyed by groupId). */

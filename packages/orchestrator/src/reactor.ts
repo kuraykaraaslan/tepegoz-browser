@@ -3,7 +3,12 @@ import { ModelGateway, type CanonMessage } from '@tepegoz/model-gateway';
 import { ToolGateway } from '@tepegoz/capability-plane';
 import { wrapUserRequest } from '@tepegoz/tool-executor';
 import { DEFAULT_AGENT_MAX_STEPS } from '@tepegoz/shared-types';
-import type { AgentWorkingState, CompletionOutcome, VisionEscalation } from '@tepegoz/shared-types';
+import type {
+  AgentWorkingState,
+  CompletionEvidence,
+  CompletionOutcome,
+  VisionEscalation,
+} from '@tepegoz/shared-types';
 import type { StepOutcome } from './executor';
 import {
   classifyRuntimeError,
@@ -230,6 +235,8 @@ export default class Reactor {
     // S4: the last completion verdict's outcome, so a run that ended any other way still reports what
     // the evidence said the last time it was asked.
     let lastOutcome: CompletionOutcome | undefined;
+    // S8 PR2: the evidence that outcome was actually judged against, so the chip can cite it.
+    let lastEvidence: CompletionEvidence | undefined;
     // S10: every escalation this run judged, so the rate can be reported.
     const visionEscalations: VisionEscalation[] = [];
     // S9: the host whose notes have already been injected this run.
@@ -266,15 +273,17 @@ export default class Reactor {
       if (!decision.validate) return null;
       lastValidatedCount = outcomes.length;
       sigAtLastValidation = progress.worldSignature();
+      const evidence = assembleEvidence(outcomes);
       const verdict = await validate({
         goal: req.goal,
         memory: latestMemory,
         trigger: 'periodic',
         recentObservations: recentObservations(),
-        evidence: assembleEvidence(outcomes),
+        evidence,
       });
       if (!verdict.done) {
         lastOutcome = verdict.outcome;
+        lastEvidence = evidence;
         return null;
       }
       return {
@@ -282,7 +291,7 @@ export default class Reactor {
         visionEscalations,
         stoppedReason: 'completed',
         summary: verdict.finalAnswer ?? latestMemory,
-        ...(verdict.outcome !== undefined ? { completionOutcome: verdict.outcome } : {}),
+        ...(verdict.outcome !== undefined ? { completionOutcome: verdict.outcome, evidence } : {}),
       };
     };
 
@@ -297,13 +306,14 @@ export default class Reactor {
         return { outcomes, visionEscalations, stoppedReason: 'completed', summary };
       // S4: the claim is judged against what the run OBSERVED, not against what the page says about
       // itself. Assembled here because this is the only place that has every step outcome.
+      const evidence = assembleEvidence(outcomes);
       const verdict = await validate({
         goal: req.goal,
         memory: latestMemory,
         claimedSummary: summary,
         trigger: 'claim',
         recentObservations: recentObservations(),
-        evidence: assembleEvidence(outcomes),
+        evidence,
       });
       if (verdict.done) {
         return {
@@ -311,10 +321,11 @@ export default class Reactor {
           visionEscalations,
           stoppedReason: 'completed',
           summary: verdict.finalAnswer ?? summary,
-          ...(verdict.outcome !== undefined ? { completionOutcome: verdict.outcome } : {}),
+          ...(verdict.outcome !== undefined ? { completionOutcome: verdict.outcome, evidence } : {}),
         };
       }
       lastOutcome = verdict.outcome;
+      lastEvidence = evidence;
       completionRejects += 1;
       // Conceding to the actor after N rejections still carries WHY the validator kept rejecting — a
       // conceded run that the evidence never supported must not read as a clean success.
@@ -324,7 +335,7 @@ export default class Reactor {
           visionEscalations,
           stoppedReason: 'completed',
           summary,
-          ...(verdict.outcome !== undefined ? { completionOutcome: verdict.outcome } : {}),
+          ...(verdict.outcome !== undefined ? { completionOutcome: verdict.outcome, evidence } : {}),
         };
       }
       const reason =
@@ -461,7 +472,9 @@ export default class Reactor {
           outcomes,
           visionEscalations,
           stoppedReason: 'max_steps',
-          ...(lastOutcome !== undefined ? { completionOutcome: lastOutcome } : {}),
+          ...(lastOutcome !== undefined
+            ? { completionOutcome: lastOutcome, ...(lastEvidence !== undefined ? { evidence: lastEvidence } : {}) }
+            : {}),
         };
       }
 

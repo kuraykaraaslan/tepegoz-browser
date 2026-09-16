@@ -221,6 +221,14 @@ export interface ReactResult {
    * terminal category, never as a competence failure.
    */
   completionOutcome?: CompletionOutcome;
+  /**
+   * The evidence `completionOutcome` was actually judged against (S4 → S8 PR2: "evidence chips resolve
+   * to their citations"). The verdict itself only ever crossed to the UI as a bare category — a user
+   * could see "Checked" or "Contradicted" but never WHICH record made that true. Carries the exact
+   * `CompletionEvidence` fed to the validator call that produced the accepted verdict, so the chip can
+   * cite it instead of asserting it.
+   */
+  evidence?: CompletionEvidence;
   failure?: AgentFailure | undefined;
   /** The model's closing summary when it finished on its own. */
   summary?: string;

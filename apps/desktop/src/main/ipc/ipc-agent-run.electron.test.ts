@@ -49,9 +49,15 @@ const CompletionOutcomeSchema = vi.hoisted(() => ({
     v !== undefined ? { success: true as const, data: v } : { success: false as const },
   ),
 }));
+const CompletionEvidenceSchema = vi.hoisted(() => ({
+  safeParse: vi.fn((v: unknown) =>
+    v !== undefined ? { success: true as const, data: v } : { success: false as const },
+  ),
+}));
 vi.mock('@tepegoz/shared-types', () => ({
   AgentDeltaSchema,
   CompletionOutcomeSchema,
+  CompletionEvidenceSchema,
   MAX_DELTA_TEXT: 2000,
   // The real, small, stable constant — not an empty stub — so a test can actually exercise "this tier
   // is one of the ones that always prompts" without also having to fake the constant's own contents.
@@ -298,6 +304,34 @@ describe('a real run', () => {
     expect(PlanGrantStore.revoke).toHaveBeenCalled();
     expect(shared.agentRunByGroup.has('g1')).toBe(false);
     expect(send).toHaveBeenLastCalledWith(IpcChannels.tokenUsage, expect.anything());
+  });
+
+  it('carries the evidence behind the completion outcome, validated at the boundary (S8 PR2)', async () => {
+    const evidence = {
+      mutating: true,
+      items: [{ id: 'a', kind: 'network', verdict: 'contradicts', detail: '5xx after Save' }],
+    };
+    AgentService.run.mockResolvedValueOnce({
+      ok: true,
+      stoppedReason: 'complete',
+      completionOutcome: 'contradicted',
+      evidence,
+    });
+    const res = await run();
+    expect(res).toMatchObject({ completionOutcome: 'contradicted', evidence });
+  });
+
+  it('drops evidence that fails validation rather than forwarding it unchecked', async () => {
+    CompletionEvidenceSchema.safeParse.mockReturnValueOnce({ success: false });
+    AgentService.run.mockResolvedValueOnce({
+      ok: true,
+      stoppedReason: 'complete',
+      completionOutcome: 'verified',
+      evidence: { not: 'valid' },
+    });
+    const res = await run();
+    expect(res.completionOutcome).toBe('verified');
+    expect(res).not.toHaveProperty('evidence');
   });
 
   it('throws 429 at the pre-flight quota gate, still refunds and releases', async () => {

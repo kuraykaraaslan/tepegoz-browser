@@ -241,6 +241,7 @@ export async function runAgent(
     ...(result.completionOutcome !== undefined
       ? { completionOutcome: result.completionOutcome }
       : {}),
+    ...(result.evidence !== undefined ? { evidence: result.evidence } : {}),
     ...(result.visionEscalations !== undefined && result.visionEscalations.length > 0
       ? { visionEscalations: result.visionEscalations }
       : {}),

@@ -5,7 +5,7 @@
  * agent's public wire shapes; the app re-exports them from its IPC contract.
  */
 import type { AIProvider } from '@tepegoz/shared-types/providers';
-import type { CompletionOutcome, SkillRecord } from '@tepegoz/shared-types';
+import type { CompletionEvidence, CompletionOutcome, SkillRecord } from '@tepegoz/shared-types';
 import type { TaskDefinition, TaskSaveInput } from '@tepegoz/tasks';
 import type {
   AgentAttachmentMeta,
@@ -176,6 +176,11 @@ export interface AgentRunResult {
    * and it is the user’s to see. Reporting only `ok` shows them the first and calls it the second.
    */
   completionOutcome?: CompletionOutcome;
+  /**
+   * The evidence `completionOutcome` was actually judged against (S8 PR2: "evidence chips resolve to
+   * their citations"). Absent under the exact same conditions as `completionOutcome` itself.
+   */
+  evidence?: CompletionEvidence;
 }
 
 export interface TokenUsageSnapshot {

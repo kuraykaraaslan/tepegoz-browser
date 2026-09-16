@@ -21,8 +21,10 @@ import { TokenStore } from '@tepegoz/persistence';
 import {
   AgentDeltaSchema,
   MAX_DELTA_TEXT,
+  CompletionEvidenceSchema,
   CompletionOutcomeSchema,
   NEVER_AUTO_GRANTABLE_TIERS,
+  type CompletionEvidence,
   type CompletionOutcome,
   type Plan,
 } from '@tepegoz/shared-types';
@@ -107,6 +109,17 @@ function completionOutcomeField(raw: string | undefined): {
 } {
   const parsed = CompletionOutcomeSchema.safeParse(raw);
   return parsed.success ? { completionOutcome: parsed.data } : {};
+}
+
+/**
+ * The evidence a completion outcome was judged against, validated the same way (S8 PR2). The runtime
+ * carries it as a plain, decoupled shape (see `AgentRunSummary.evidence`'s own comment); this is where
+ * it is checked back against the real schema before it leaves main, same trust-boundary discipline as
+ * {@link completionOutcomeField}.
+ */
+function evidenceField(raw: unknown): { evidence?: CompletionEvidence } {
+  const parsed = CompletionEvidenceSchema.safeParse(raw);
+  return parsed.success ? { evidence: parsed.data } : {};
 }
 
 /** Fill the `{skill}` placeholder. A placeholder, not concatenation: Turkish puts the name first. */
@@ -631,6 +644,8 @@ export function registerAgentRunIpc(): void {
             // rather than defaulted when there was no verdict — "unknown" and "unverified" are different
             // claims and must not collapse into one chip.
             ...completionOutcomeField(summary.completionOutcome),
+            // S8 PR2: WHICH record supported that verdict, so the chip can cite it.
+            ...evidenceField(summary.evidence),
           };
         } catch (err) {
           runThrew = true;

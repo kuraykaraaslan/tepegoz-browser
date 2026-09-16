@@ -297,3 +297,37 @@ describe('PanelThread — Retry a failed turn (S8)', () => {
     expect(screen.queryByRole('button', { name: a.thread.retry })).toBeNull();
   });
 });
+
+describe('PanelThread — evidence chip cites its record (S4 → S8 PR2)', () => {
+  it('falls back to the plain category hint when no evidence was carried', () => {
+    renderThread([turn({ completionOutcome: 'verified' })]);
+    const chip = screen.getByText(a.evidence.verified);
+    expect(chip.title).toBe(a.evidence.verifiedHint);
+  });
+
+  it('cites the specific record(s) the verdict was judged against, alongside the hint', () => {
+    renderThread([
+      turn({
+        completionOutcome: 'contradicted',
+        evidence: {
+          mutating: true,
+          items: [
+            { id: 'a', kind: 'network', verdict: 'contradicts', detail: '5xx after the Save click' },
+          ],
+        },
+      }),
+    ]);
+    const chip = screen.getByText(a.evidence.contradicted);
+    expect(chip.title).toBe(
+      `${a.evidence.contradictedHint}\n\nNetwork: contradicts — 5xx after the Save click`,
+    );
+  });
+
+  it('falls back to the plain hint for an empty evidence bundle (a pure read task) rather than an empty citation block', () => {
+    renderThread([
+      turn({ completionOutcome: 'verified', evidence: { mutating: false, items: [] } }),
+    ]);
+    const chip = screen.getByText(a.evidence.verified);
+    expect(chip.title).toBe(a.evidence.verifiedHint);
+  });
+});

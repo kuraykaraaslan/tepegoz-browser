@@ -233,6 +233,18 @@ export const en = {
       'The agent did this but could not confirm the result. Worth checking yourself.',
     contradicted: 'Contradicted',
     contradictedHint: 'The page disagreed with what the agent reported. Do not rely on this.',
+    // S8 PR2: the chip's tooltip cites the actual record(s) the verdict was judged against, not only
+    // the category — these label each record's kind and how it bore on the claim.
+    kind: {
+      network: 'Network',
+      page_validation: 'Page check',
+      url_match: 'URL match',
+    },
+    verdict: {
+      supports: 'supports',
+      contradicts: 'contradicts',
+      inconclusive: 'inconclusive',
+    },
   },
   historyPage: {
     title: 'Agent history',
