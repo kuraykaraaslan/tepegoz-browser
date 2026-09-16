@@ -421,12 +421,15 @@ run` when those boxes were also ticked. The blocking modal is untouched. en + tr
 
 ### PR9 — Console affordances from the parity tracks
 
-- [ ] **Wire interactive Ask streaming the last mile.** `ModelGateway.generateStream` / `onDelta` and the
-      ADR-0025 streaming boundary already exist; what is missing is the **interactive Ask path in `ext-agent`
-      actually using them end to end**, so an Ask still arrives as one block. Adopt WebBrain's own scoping
-      rule as-is: stream **only** for interactive Ask — not Act/Dev, not scheduled or Continue runs — because
-      buffering tool calls while streaming text is exactly the edge case that breaks. Engine-side detail in
-      [S1](phase-s1-foundation-native-loop.md) PR5.
+- [x] **Wire interactive Ask streaming the last mile.** Was already wired: `panel-state.ts`'s
+      `appendLiveDelta` renders the streaming tail from `IpcChannels.agentDelta` in place of the static
+      "working" label for every run — the claim that `ext-agent` never consumed it was stale. The real gap was
+      the other direction: nothing scoped streaming *away* from tool-call-bearing turns, so the JSON decision
+      arm (every provider without native tool support) streamed its raw decision JSON — action, tool id,
+      args, rationale, ledger — into that same indicator. Fixed engine-side in
+      [S1](phase-s1-foundation-native-loop.md) PR5b by gating `onModelDelta` to the native decision arm, whose
+      text is empty except on a genuine finish turn. No panel change was needed once the engine stopped
+      sending JSON-arm deltas.
       [`../tracks/webbrain-agent-parity.md`](../../docs/parities/webbrain-agent-parity.md) P7-c.
 - [ ] **Slash commands — a typed command registry, not decoration.** `/compact`, `/export`, `/schedule`,
       `/watch` are capability shortcuts that avoid a round-trip through the model just to say "compact the

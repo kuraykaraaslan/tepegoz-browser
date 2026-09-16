@@ -498,8 +498,17 @@ export default class Reactor {
             : { responseFormat: 'json' as const }),
         };
         // Streaming changes only WHO SEES the output early — the settled response below is still the
-        // only thing parsed, and the sink is never read back by the loop (ADR-0025).
-        const onDelta = options.onModelDelta;
+        // only thing parsed, and the sink is never read back by the loop (ADR-0025). Gated to the
+        // native arm only: native's text is empty except on a genuine "finish" turn (S1 PR4's own
+        // comment above — "usually pure tool call with empty text"), so streaming it is harmless. The
+        // JSON arm's entire text IS the decision — action, tool id, args, rationale, the working-state
+        // ledger — for every provider without native tool support (Kimi, Nova, DeepSeek, xAI, Groq via
+        // openai-compat), so streaming it would show raw decision JSON growing character by character in
+        // the "working" indicator on every tool-calling step. That is exactly the "streaming text while
+        // buffering tool calls" failure the interactive-streaming DoD (S1 PR5b / S8 PR9) named as the
+        // case that breaks — it just breaks per-provider (native vs JSON transport) rather than per-run
+        // -kind (Ask vs Act/Dev), since only one run kind exists today (see phase docs).
+        const onDelta = decisionMode === 'native' ? options.onModelDelta : undefined;
         const response =
           onDelta === undefined
             ? await ModelGateway.complete(request)

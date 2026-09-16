@@ -79,12 +79,28 @@ The live decision path parses JSON out of free text. [reactor-decision.ts](../..
 
 ### PR5b — interactive Ask streaming, wired end to end
 
-- [ ] The streaming boundary landed with ADR-0025 and `generateStream`/`onDelta` exist, but **no interactive
-      path consumes them**, so streaming is a capability the product does not yet show. Wire the Ask path
-      through it, scoped deliberately: **interactive Ask only** — not Act/Dev, not scheduled or Continue runs,
-      not managed cloud runs — because streaming text while buffering tool calls is the exact case that
-      breaks, and Ask is the one mode with no tool calls to buffer. Panel side in
-      [S8](phase-s8-assistant-ux.md) PR9.
+- [x] Traced the claim that "no interactive path consumes them" and found it stale: `ipc-agent-run.ts`'s
+      `onModelDelta` already validates and forwards every fragment to the renderer over `IpcChannels.agentDelta`,
+      and [`panel-state.ts`](../../extensions/ext-agent/src/panel-state.ts)'s `appendLiveDelta` already renders
+      the growing tail in place of the static "working" label — end to end, today. There is also no separate
+      "interactive Ask" *execution path* to scope this to: the four-mode command palette
+      (`command-palette-core.ts`'s `chat/do/make/tasks`) is a quick-command launcher, never threaded onto a
+      submitted prompt, so every run — regardless of what inspired it — goes through the one `agent:run` /
+      `Reactor.run` loop, and `onModelDelta` was already wired into that ONE path unconditionally.
+      Unconditional was the actual bug, not the fix: `reactor.ts` calls `ModelGateway.generateStream` for every
+      reactive decision, and on the JSON decision arm (`resolveDecisionMode` — the only arm for every
+      non-native-tool-calling provider: Kimi, Nova, DeepSeek, xAI, Groq) the model's entire text output *is*
+      the decision — action, tool id, args, rationale, the working-state ledger — so unconditional streaming
+      showed raw decision JSON growing character by character in the panel's "working" indicator on every
+      tool-calling step. That is exactly "streaming text while buffering tool calls," just scoped by
+      **transport** (native vs JSON) rather than by a run-kind distinction that does not exist in code. Fixed
+      by gating `onModelDelta` to the native arm only (`reactor.ts`): native's text is empty except on a
+      genuine finish turn (already the existing comment's own characterization — "usually pure tool call with
+      empty text"), so streaming it is harmless, while the JSON arm now always settles via `complete()` before
+      the caller sees anything. Regression-locked in `reactor.test.ts` (native arm streams the finish text;
+      JSON arm — a `kimi`-id double with no `supportsNativeTools` — emits zero deltas across a full
+      act→finish run). Panel side in [S8](phase-s8-assistant-ux.md) PR9 needs no further wiring — it was
+      already there.
       [`../tracks/webbrain-agent-parity.md`](../../docs/parities/webbrain-agent-parity.md) P7-c.
 
 ### PR6 — paired native-vs-JSON sweep (⏸ funded)
