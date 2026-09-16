@@ -109,10 +109,22 @@ script hash** pre-model (ADR-0006). `code_exec_write` is reserved and **disabled
 - [x] Enforce **result-size caps** (byte + node/row count) and honest `truncated` reporting; a
       per-invocation execution timeout; reject non-serialisable returns. Caps mirror the
       `SCAN_EMIT_CAP`/element-cap discipline already in the DOM plane.
-- [ ] Route the return value through
+- [x] Route the return value through
       [content-guard.ts](../../packages/tool-executor/src/content-guard.ts) sanitisation and mark it
       tainted via [taint-tracker.ts](../../packages/security-policy/src/taint-tracker.ts) before it
       enters context — identical to any page read.
+      — _Investigated 2026-09-16: the taint HALF was already true and this line hadn't caught up —
+      `agent-runtime-loop.ts`'s `contentFromResult` reads any tool result's generic `content` field and
+      records it with `taint.record()` regardless of which tool produced it, so `browser_analyze_page`'s
+      output was already flowing into the taint tracker exactly like a `browser_get_page` read. The
+      SANITIZATION half was genuinely missing, and fixed: `browser_analyze_page`'s handler
+      (`browser-tools.ts`) now runs the extracted value through `sanitizeContent` and
+      `wrapUntrustedContent` before returning it, so a table cell or list item carrying a zero-width/
+      bidi/homoglyph injection shape is stripped exactly like any other page-derived text, and the
+      result carries the same `<untrusted_page_content>` fence + anti-injection footer the model already
+      recognizes from every other read tool. `flags` surfaced on the result, matching
+      `browser_get_page`/`browser_get_article`'s convention. New test proves both: the injection marker
+      is stripped and the fence is present._
 
 ### PR2 — curated `browser_extract_table` (F2's clickable-cell design)
 

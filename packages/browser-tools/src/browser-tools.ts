@@ -643,10 +643,18 @@ export function registerBrowserTools(deps: { host: BrowserHost }): void {
         // injection payload into the audit record.
         const raw = await runScript(accepted.script, args.tabId);
         const capped = capResult(raw);
+        // S5 DoD: the extraction's OUTPUT is page-derived data like any other read, whatever the
+        // sandbox does to the SCRIPT — a table cell or list item can carry the same zero-width/bidi/
+        // homoglyph injection shapes a page's visible text can. Sanitized + fenced exactly like
+        // browser_get_page/browser_get_article, so it feeds the same taint tracker
+        // (`contentFromResult` in agent-runtime-loop.ts reads this same `content` field) and carries
+        // the same anti-injection footer the model already recognizes from every other page read.
+        const guarded = sanitizeContent(capped.value);
         return {
           scriptHash: accepted.hash,
-          content: capped.value,
+          content: wrapUntrustedContent(guarded.text),
           truncated: capped.truncated,
+          flags: guarded.flags,
           ...(capped.items !== undefined ? { items: capped.items } : {}),
         };
       },
