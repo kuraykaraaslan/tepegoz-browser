@@ -12,20 +12,25 @@
  */
 
 /**
- * The last index that no future step will rewrite, given the two indices the Reactor may still mutate.
+ * The last index that no future step will rewrite, given the indices the Reactor may still mutate.
  *
  * Returns `null` when nothing qualifies yet — the normal state of the first step or two, not an error.
  *
  * @param lastStateIndex     index of the live (not yet collapsed) page-state message, or `null`
  * @param workingStateIndex  index of the live typed working-ledger message, or `null`
+ * @param lastImageIndex     index of the live (not yet collapsed) S10 vision-escalation image, or `null`
+ *                           (S7 context eviction — the same collapse-in-place pattern, applied to the
+ *                           single most expensive thing this loop can put in a prompt)
  */
 export function stableIndexBefore(
   lastStateIndex: number | null,
   workingStateIndex: number | null,
+  lastImageIndex: number | null = null,
 ): number | null {
   const mutable: number[] = [];
   if (lastStateIndex !== null) mutable.push(lastStateIndex);
   if (workingStateIndex !== null) mutable.push(workingStateIndex);
+  if (lastImageIndex !== null) mutable.push(lastImageIndex);
   // Nothing is mutable yet, so nothing is provably stable either: the messages present now are the ones
   // about to BECOME the collapsible pair. Claiming stability here would be the exact off-by-one this
   // module exists to prevent.

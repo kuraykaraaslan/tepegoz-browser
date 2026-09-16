@@ -12,3 +12,12 @@ export const STATE_COLLAPSE_THRESHOLD = 800;
 export const COLLAPSED_STATE_PLACEHOLDER =
   'Observation: [an earlier page snapshot was omitted here to save context — re-read ' +
   'browser_get_elements / browser_get_page if you need that page state again].';
+
+/**
+ * Replaces a superseded S10 vision-escalation image so only the LATEST screenshot stays live (S7 —
+ * "context eviction policy": screenshots are the acute case, named explicitly because a Base64 image is
+ * the single most expensive thing this loop can put in a prompt, and nothing bounded it before this).
+ */
+export const COLLAPSED_IMAGE_PLACEHOLDER =
+  '[an earlier screenshot was omitted here to save context — a fresh vision escalation would capture a ' +
+  'new one if the page is still blind].';

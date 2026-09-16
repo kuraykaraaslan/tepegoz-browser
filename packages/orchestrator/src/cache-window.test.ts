@@ -21,6 +21,12 @@ describe('stableIndexBefore', () => {
     expect(stableIndexBefore(0, null)).toBeNull();
     expect(stableIndexBefore(0, 3)).toBeNull();
   });
+
+  it('folds a third live index (S7: the vision-escalation image) into the same minimum', () => {
+    expect(stableIndexBefore(null, null, 6)).toBe(5);
+    expect(stableIndexBefore(9, 4, 2)).toBe(1);
+    expect(stableIndexBefore(9, null, 4)).toBe(3);
+  });
 });
 
 /**

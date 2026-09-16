@@ -173,6 +173,63 @@ describe('vision is fallback-only', () => {
     expect(imagesSent(provider)).toBe(0);
   });
 
+  it('S7 context eviction: a second escalation collapses the first screenshot, not accumulates it', async () => {
+    // Two DIFFERENT reasons, since the same reason twice in a row does not re-escalate. First read is
+    // canvas-dominant (a fresh browser_get_elements call); second read is blind (elements present, none
+    // named) — distinct triggers, same tool id, so the tool returns a different shape each call.
+    let calls = 0;
+    CapabilityRegistry.register({
+      descriptor: {
+        id: 'browser_get_elements',
+        description: 'fake browser_get_elements',
+        dangerClass: 'read',
+        source: 'builtin',
+        inputSchema: { type: 'object' },
+        requiresIdempotencyKey: false,
+      },
+      inputSchema: {
+        safeParse: (data: unknown) =>
+          typeof data === 'object' && data !== null
+            ? { success: true as const, data }
+            : { success: false as const, error: { issues: ['expected an object'] } },
+      },
+      handler: () => {
+        calls += 1;
+        return calls === 1
+          ? { elements: [], canvasFraction: 0.9, content: 'a page dominated by a canvas element' }
+          : {
+              elements: [],
+              canvasFraction: 0,
+              content: 'a page with plenty of readable text but nothing named to act on',
+            };
+      },
+    });
+
+    const provider = new RecordingProvider([
+      act('browser_get_elements'),
+      act('browser_get_elements'),
+      finish,
+    ]);
+    ModelGateway.register(provider);
+    const captureVision = vi.fn(() =>
+      Promise.resolve([{ type: 'image' as const, mediaType: 'image/png' as const, data: 'QUJD' }]),
+    );
+
+    const res = await Reactor.run(req(), { captureVision });
+    expect(res.stoppedReason).toBe('completed');
+    expect(res.visionEscalations?.length).toBe(2);
+    expect(captureVision).toHaveBeenCalledTimes(2);
+    // Two escalations fired, but the FINAL request the provider ever saw carries at most one live image
+    // — the first was collapsed to a text placeholder, not left sitting in context beside the second.
+    const lastReq = provider.requests.at(-1);
+    expect(lastReq).toBeDefined();
+    const imagesInLastRequest = (lastReq?.messages ?? [])
+      .filter((m) => isBlockContent(m.content))
+      .flatMap((m) => (isBlockContent(m.content) ? m.content : []))
+      .filter((b) => b.type === 'image').length;
+    expect(imagesInLastRequest).toBe(1);
+  });
+
   it('degrades rather than dying when the capture throws', async () => {
     CapabilityRegistry.register(
       fakeTool('browser_get_page', 'read', {

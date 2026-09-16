@@ -22,7 +22,11 @@ import {
   observationWithRecovery,
   stableStringify,
 } from './reactor-observation';
-import { COLLAPSED_STATE_PLACEHOLDER, STATE_COLLAPSE_THRESHOLD } from './reactor-page-state';
+import {
+  COLLAPSED_IMAGE_PLACEHOLDER,
+  COLLAPSED_STATE_PLACEHOLDER,
+  STATE_COLLAPSE_THRESHOLD,
+} from './reactor-page-state';
 import {
   COLLAPSED_WORKING_STATE_PLACEHOLDER,
   WORKING_STATE_HEADER,
@@ -345,6 +349,9 @@ export default class Reactor {
     // blob is fed back, the previous one is collapsed to a placeholder so DOM dumps never accumulate
     // across a long run — the compact decisions (with their `memory`) remain the persistent history.
     let lastStateIndex: number | null = null;
+    // S7 context eviction: same collapse-in-place pattern as page-state, applied to S10's vision-
+    // escalation images — the single most expensive thing this loop can put in a prompt.
+    let lastImageIndex: number | null = null;
     /**
      * The last message index this run promises never to rewrite — the prompt-cache breakpoint.
      *
@@ -366,7 +373,7 @@ export default class Reactor {
       }
       messages.push({ role: 'user', content });
       if (isState) lastStateIndex = messages.length - 1;
-      cacheStableIndex = stableIndexBefore(lastStateIndex, workingStateIndex);
+      cacheStableIndex = stableIndexBefore(lastStateIndex, workingStateIndex, lastImageIndex);
     };
 
     // C1: re-inject the typed working ledger as a compact persistent block at the tail, collapsing the
@@ -385,7 +392,7 @@ export default class Reactor {
         content: `${WORKING_STATE_HEADER}\n${renderWorkingState(workingState)}`,
       });
       workingStateIndex = messages.length - 1;
-      cacheStableIndex = stableIndexBefore(lastStateIndex, workingStateIndex);
+      cacheStableIndex = stableIndexBefore(lastStateIndex, workingStateIndex, lastImageIndex);
       // C1 engagement signal (diagnostic): the model actually emitted a typed `state` and it is now being
       // fed back. Logged ONCE per run so a sweep transcript can PROVE PR1 engaged (vs the model ignoring it).
       if (firstInjection)
@@ -668,8 +675,19 @@ export default class Reactor {
             Logger.warn('[s10] vision capture failed; continuing without it', { err: String(err) });
             return null;
           });
-          if (blocks !== null && blocks.length > 0)
+          if (blocks !== null && blocks.length > 0) {
+            // S7 context eviction: collapse the previous live screenshot in place before appending the
+            // new one, mirroring pushObservation's page-state collapse — only the LATEST image stays at
+            // full fidelity, so a long run's images never accumulate.
+            if (lastImageIndex !== null) {
+              const prev = messages[lastImageIndex];
+              if (prev !== undefined)
+                messages[lastImageIndex] = { ...prev, content: COLLAPSED_IMAGE_PLACEHOLDER };
+            }
             messages.push({ role: 'user', content: blocks });
+            lastImageIndex = messages.length - 1;
+            cacheStableIndex = stableIndexBefore(lastStateIndex, workingStateIndex, lastImageIndex);
+          }
         }
       }
 

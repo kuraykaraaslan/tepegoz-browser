@@ -119,10 +119,29 @@ Targets are **derived from S0's baseline** and **pre-registered in PR1 before an
 > below, and one of them is a **decision this project has not made**: which work is allowed to leave the device
 > at all.
 
-- [ ] **Context eviction policy, written down and enforced.** Keep the last one or two observations at full
+- [x] **Context eviction policy, written down and enforced.** Keep the last one or two observations at full
       fidelity and replace older ones with a short placeholder, so a long run's prompt does not grow
       monotonically. Screenshots are the acute case, but the rule is general and belongs in the runtime, not in
       [S10](phase-s10-vision-escalation.md) — vision only makes the existing defect expensive.
+      — _The general rule already existed for the other two accumulating cases (AI-3's page-state,
+      C1's typed working-ledger — both collapse-in-place, in
+      [`reactor.ts`](../../packages/orchestrator/src/reactor.ts)'s `pushObservation`/`syncWorkingState`);
+      screenshots were the one case pushed with `messages.push` and never collapsed, so every S10 vision
+      escalation in a run stacked another full Base64 image into the prompt with no bound — checked
+      2026-09-16 and confirmed live in code, not just theoretical (S10's `captureVision` has no
+      production caller yet, so this defect is currently latent rather than user-facing, but it would be
+      the first thing S10's own wiring reintroduces). Closed by extending the SAME existing mechanism
+      rather than inventing a second one:
+      [`stableIndexBefore`](../../packages/orchestrator/src/cache-window.ts) takes a third mutable index
+      (`lastImageIndex`), and the vision-escalation call site now collapses the previous live screenshot
+      to [`COLLAPSED_IMAGE_PLACEHOLDER`](../../packages/orchestrator/src/reactor-page-state.ts) before
+      appending a new one — only the LATEST screenshot ever stays at full fidelity, same invariant as the
+      other two cases. Mutation-verified (reverting the collapse reproduces exactly 2 accumulated images
+      instead of 1) and regression-locked in `vision-fallback-guard.test.ts` + `cache-window.test.ts`. No
+      ADR needed: this is the existing, already-designed pattern applied uniformly, not a new trimming
+      policy — there is no remaining accumulating content type this rule does not already cover (tool
+      observations are truncated per-message via `MAX_OBSERVATION_CHARS`, never accumulated across the
+      array)._
 - [ ] **Hybrid routing decision (needs an ADR).** Which classes of work run on the **local** model by default —
       summarize, classify, redact, extract — with the cloud reserved for planning and hard inference. The
       local-inference package already exists; what does not exist is a routing policy, and Comet's report is a
