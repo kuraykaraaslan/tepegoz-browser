@@ -150,4 +150,9 @@ export interface AgentApi {
   deleteLocalModel(id: string): Promise<void>;
   /** Subscribe to model list/state changes (download progress, install, select); returns unsubscribe. */
   onLocalModelsState(callback: (models: LocalModelInfo[]) => void): () => void;
+  /** Tab-group ids currently holding an agent run lock, for the per-tab "agent active" indicator (S8
+   *  PR7). Snapshot for a just-mounted window; live changes arrive via onAgentActiveGroups. */
+  getAgentActiveGroups(): Promise<string[]>;
+  /** Subscribe to run-lock changes (a run starting or ending on any group); returns unsubscribe. */
+  onAgentActiveGroups(callback: (groupIds: string[]) => void): () => void;
 }

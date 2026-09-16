@@ -53,8 +53,9 @@ import { mainStrings } from '../lib/i18n-main';
 import { setTrayAgentRunning } from '../tray';
 import NotificationHost from '../notifications/notification-host';
 import PreferenceStore from '@tepegoz/preferences';
-import { handleAsync, parsePayload } from './ipc-helpers';
+import { handle, handleAsync, parsePayload } from './ipc-helpers';
 import {
+  activeAgentGroups,
   agentRunByGroup,
   broadcastConversationsState,
   isHistoryKind,
@@ -65,6 +66,7 @@ import {
   REFUNDABLE_STOP_REASONS,
   requireAgentEnabled,
   safeArgsPreview,
+  setAgentRunForGroup,
   tokenUsage,
 } from './ipc-agent-shared';
 
@@ -170,7 +172,7 @@ export function registerAgentRunIpc(): void {
         'agentRunInProgress',
       );
     }
-    agentRunByGroup.set(groupId, true);
+    setAgentRunForGroup(groupId, true);
     // S8: the run is visible outside the panel from the moment it starts — see the finally block, which
     // clears it on every exit path including a crash.
     setTrayAgentRunning(true);
@@ -186,7 +188,7 @@ export function registerAgentRunIpc(): void {
       unregisterRunControl(runId);
       setTrayAgentRunning(false);
       PlanGrantStore.revoke(runId);
-      agentRunByGroup.delete(groupId);
+      setAgentRunForGroup(groupId, false);
     };
     /**
      * Run one synchronous setup step, releasing every claim if it throws.
@@ -532,8 +534,10 @@ export function registerAgentRunIpc(): void {
       // the approval grant, reused here rather than reinvented — the preview and the grant it leads to
       // should never be able to disagree about what the plan touches.
       const entryUrl = browserHost.listTabs().find((t) => t.active)?.url ?? null;
-      const scope = planGrantScope(plan, entryUrl, (toolId) =>
-        CapabilityRegistry.get(toolId)?.descriptor.dangerClass,
+      const scope = planGrantScope(
+        plan,
+        entryUrl,
+        (toolId) => CapabilityRegistry.get(toolId)?.descriptor.dangerClass,
       );
       // dangerClass is the tool's own DECLARED class (registration-time, static) — not the finer
       // RiskTier a HITL prompt shows later, which depends on this step's actual arguments and is not
@@ -667,4 +671,8 @@ export function registerAgentRunIpc(): void {
       }),
     );
   });
+
+  // S8 PR7: the snapshot a just-mounted window pulls once; live changes arrive via the
+  // `agentActiveGroups` push in `setAgentRunForGroup`/`broadcastAgentActiveGroups`.
+  handle(IpcChannels.agentActiveGroupsGet, (): string[] => activeAgentGroups());
 }

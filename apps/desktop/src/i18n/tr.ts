@@ -192,6 +192,8 @@ export const tr: AppStrings = {
     routeBlocked: 'Engellendi — {name} bağlı değil',
     routeLegVpn: 'VPN',
     routeLegTor: 'Tor',
+    // Sekme-başına "ajan burada çalışıyor" göstergesi (S8 PR7).
+    agentActive: 'Ajan bu sekmede çalışıyor',
     addToNewGroup: 'Yeni gruba ekle',
     addToGroup: 'Gruba ekle',
     removeFromGroup: 'Gruptan çıkar',

@@ -57,6 +57,8 @@ export interface BrowserChromeStrings {
     routeStatusUp: string;
     routeStatusConnecting: string;
     routeStatusDown: string;
+    /** Accessible name for the per-tab "agent is working here" indicator (S8 PR7). */
+    agentActive: string;
   };
 }
 
@@ -257,6 +259,7 @@ export function BrowserChrome({
               routeLegUp: t.browser.routeStatusUp,
               routeLegConnecting: t.browser.routeStatusConnecting,
               routeLegDown: t.browser.routeStatusDown,
+              agentActive: t.browser.agentActive,
             }}
             onSelect={onSelectTab}
             onClose={onCloseTab}

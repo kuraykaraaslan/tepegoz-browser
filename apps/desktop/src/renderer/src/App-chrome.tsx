@@ -21,6 +21,7 @@ import type { BookmarksBarResult } from './app-bookmarks';
 import type { ExtensionSurfacesResult } from './app-extension-surfaces';
 import type { OmniboxHistoryResult } from './app-omnibox-history';
 import { useNetworkState, withGroupRouteBadges, withNetworkBadges } from './app-network-state';
+import { useAgentActiveGroups, withAgentActiveBadge } from './app-agent-active-state';
 
 export interface AppChromeProps {
   locale: Locale;
@@ -73,9 +74,15 @@ export function AppChrome({
   // Phase 5 routing, pushed from main. Merged onto the tabs here so the strip stays presentational and
   // the badge cannot be computed (or mis-computed) in the untrusted renderer.
   const network = useNetworkState();
-  const visibleTabs = withNetworkBadges(
-    tabs.tabs.filter((t) => t.hidden !== true),
-    network,
+  // S8 PR7: which groups an agent run currently holds the lock on, merged in the same way — the strip
+  // stays presentational and the flag cannot be mis-computed in the untrusted renderer.
+  const agentActiveGroups = useAgentActiveGroups();
+  const visibleTabs = withAgentActiveBadge(
+    withNetworkBadges(
+      tabs.tabs.filter((t) => t.hidden !== true),
+      network,
+    ),
+    agentActiveGroups,
   );
   const hiddenCount = tabs.tabs.length - visibleTabs.length;
   const visibleGroupIds = new Set(

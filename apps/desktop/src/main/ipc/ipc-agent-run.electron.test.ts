@@ -90,7 +90,10 @@ const TokenStore = vi.hoisted(() => ({
   recordRun: vi.fn(),
   refundRun: vi.fn(),
 }));
-const EventJournal = vi.hoisted(() => ({ append: vi.fn(), tailHash: vi.fn((): string | null => null) }));
+const EventJournal = vi.hoisted(() => ({
+  append: vi.fn(),
+  tailHash: vi.fn((): string | null => null),
+}));
 vi.mock('@tepegoz/persistence', () => ({ EventJournal, TokenStore }));
 
 // randomUUID is stubbed for deterministic ids; createHash is kept real — appendChainedEvent's
@@ -170,6 +173,7 @@ const cap = vi.hoisted(
   (): { fn?: (e: unknown, p: unknown) => Promise<Record<string, unknown>> } => ({}),
 );
 vi.mock('./ipc-helpers', () => ({
+  handle: vi.fn(),
   handleAsync: vi.fn(
     (_ch: string, fn: (e: unknown, p: unknown) => Promise<Record<string, unknown>>) => {
       cap.fn = fn;
@@ -179,6 +183,7 @@ vi.mock('./ipc-helpers', () => ({
 }));
 
 const shared = vi.hoisted(() => ({
+  activeAgentGroups: vi.fn(() => [] as string[]),
   agentRunByGroup: new Map<string, boolean>(),
   broadcastConversationsState: vi.fn(),
   isHistoryKind: vi.fn<(k: string) => boolean>(() => false),
@@ -189,6 +194,10 @@ const shared = vi.hoisted(() => ({
   REFUNDABLE_STOP_REASONS: new Set(['network_lost']),
   requireAgentEnabled: vi.fn(),
   safeArgsPreview: vi.fn(() => ({})),
+  setAgentRunForGroup: vi.fn((groupId: string, running: boolean) => {
+    if (running) shared.agentRunByGroup.set(groupId, true);
+    else shared.agentRunByGroup.delete(groupId);
+  }),
   tokenUsage: vi.fn(() => ({})),
 }));
 vi.mock('./ipc-agent-shared', () => shared);
@@ -574,7 +583,12 @@ describe('the injected requestPlanApproval hook', () => {
   it('sends deduped hostnames from planGrantScope’s URLs as "sites", dropping anything unparseable', async () => {
     await run();
     planGrantScopeMock.mockReturnValueOnce({
-      urls: ['https://a.example/cart', 'https://a.example/checkout', 'https://b.example/', 'not-a-url'],
+      urls: [
+        'https://a.example/cart',
+        'https://a.example/checkout',
+        'https://b.example/',
+        'not-a-url',
+      ],
       tiers: [],
     });
     void hooksArg().requestPlanApproval(plan);

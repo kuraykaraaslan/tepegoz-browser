@@ -100,6 +100,26 @@ function TabRouteBadge({
 }
 
 /**
+ * A small pulsing dot marking a tab whose group is currently held by an agent run (S8 PR7 — "installed,
+ * panel open, nothing happens" is the complaint this closes for the tab strip's part of the UI).
+ *
+ * A dot, not a shield: the route badge answers "where does this tab's traffic go", a durable fact about
+ * the tab; this answers "is something happening here RIGHT NOW", a transient one — the same pulsing-dot
+ * language the Agent Console's own step feed already uses for "running now", so the two surfaces agree.
+ */
+function TabAgentActiveBadge({ labels }: Readonly<{ labels: TabStripLabels }>) {
+  const title = labels.agentActive ?? 'Agent is working in this tab';
+  return (
+    <span
+      className="h-2 w-2 shrink-0 animate-pulse rounded-full bg-amber-500"
+      title={title}
+      aria-label={title}
+      role="img"
+    />
+  );
+}
+
+/**
  * The favicon + (unless pinned) the title of a tab — shared by the live chip and the drag overlay.
  *
  * The title appears from a 4.5rem chip up — well below the 7rem the close button needs.
@@ -117,6 +137,7 @@ export function TabInner({
     <>
       <TabFavicon src={tab.faviconUrl} loading={tab.isLoading} />
       {tab.network !== undefined && <TabRouteBadge network={tab.network} labels={labels} />}
+      {tab.agentActive === true && <TabAgentActiveBadge labels={labels} />}
       {!pinned && (
         <span className="hidden min-w-0 flex-1 truncate @min-[4.5rem]:block">
           {tab.isLoading && !tab.title ? '…' : tab.title || labels.untitled}

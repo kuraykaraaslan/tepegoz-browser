@@ -37,6 +37,7 @@ const STRINGS: BrowserChromeStrings = {
     routeBlocked: 'Blocked — {name} is not connected',
     routeLegVpn: 'VPN',
     routeLegTor: 'Tor',
+    agentActive: 'Agent is working in this tab',
     routeStatusUp: 'connected',
     routeStatusConnecting: 'connecting',
     routeStatusDown: 'not connected',

@@ -383,6 +383,27 @@ describe('the network route badge (Phase 5)', () => {
   });
 });
 
+describe('the agent-active indicator (S8 PR7)', () => {
+  it('shows the indicator for a tab whose group holds the agent run lock', () => {
+    renderFull({
+      tabs: [tab('a', 'Alpha', { agentActive: true })],
+      activeId: 'a',
+      labels: { ...LABELS, agentActive: 'Agent is working in this tab' },
+    });
+    expect(screen.getByRole('img', { name: 'Agent is working in this tab' })).toBeDefined();
+  });
+
+  it('draws no indicator for an ordinary tab (absence is the signal)', () => {
+    renderFull({ tabs: [tab('a', 'Alpha')], activeId: 'a' });
+    expect(screen.queryByRole('img')).toBeNull();
+  });
+
+  it('falls back to a built-in English name when the host ships no string for it', () => {
+    renderFull({ tabs: [tab('a', 'Alpha', { agentActive: true })], activeId: 'a' });
+    expect(screen.getByRole('img', { name: /agent/i })).toBeDefined();
+  });
+});
+
 describe('the group header', () => {
   const withGroup = (
     g: Partial<TabGroupDescriptor>,

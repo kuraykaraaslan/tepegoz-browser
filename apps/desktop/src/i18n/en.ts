@@ -206,6 +206,8 @@ export const en = {
     routeBlocked: 'Blocked — {name} is not connected',
     routeLegVpn: 'VPN',
     routeLegTor: 'Tor',
+    // Per-tab "agent is working here" indicator (S8 PR7).
+    agentActive: 'Agent is working in this tab',
     addToNewGroup: 'Add tab to new group',
     addToGroup: 'Add tab to group',
     removeFromGroup: 'Remove from group',

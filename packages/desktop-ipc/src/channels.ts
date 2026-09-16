@@ -157,6 +157,11 @@ export const IpcChannels = {
   /** Renderer→main: open a native file picker and read selected files → AgentFileAttachment[]. */
   agentPickFiles: 'agent:pick-files',
   agentEvent: 'agent:event',
+  /** Tab-group ids currently holding an agent run lock (S8 PR7) — drives the per-tab "agent is working
+   *  here" indicator. `agent:active-groups-get` is the snapshot a just-mounted window pulls once;
+   *  `agent:active-groups` is a main→renderer push on every run start/stop, never polled. */
+  agentActiveGroupsGet: 'agent:active-groups-get',
+  agentActiveGroups: 'agent:active-groups',
   /** Main→renderer: an UNSETTLED model-output fragment while a step runs. Ephemeral, never journaled. */
   agentDelta: 'agent:delta',
   agentApprovalRequest: 'agent:approval-request',

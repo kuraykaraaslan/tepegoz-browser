@@ -18,6 +18,9 @@ export interface TabDescriptor {
   /** Network route (Phase 5). Absent for an ordinary Direct tab, which draws nothing: a badge on every
    *  tab would be noise, and "no badge" already reads as "not tunneled". */
   network?: TabNetworkBadge;
+  /** True while an agent run holds this tab's group's run lock (S8 PR7). Absent/false for an ordinary
+   *  tab, which draws nothing — same "no badge is the common case" discipline as the route badge. */
+  agentActive?: boolean;
 }
 
 /** What the strip needs to draw a tab's route: a name to show and whether traffic is currently held. */
@@ -115,6 +118,8 @@ export interface TabStripLabels {
   routeLegUp?: string;
   routeLegConnecting?: string;
   routeLegDown?: string;
+  /** Accessible name for the per-tab "agent is working here" indicator (S8 PR7). */
+  agentActive?: string;
 }
 
 export interface TabStripProps {

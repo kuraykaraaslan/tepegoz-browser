@@ -60,6 +60,8 @@ const bridge = {
   onOmniboxFocus: vi.fn<(cb: () => void) => () => void>(() => () => undefined),
   getNetworkState: vi.fn(() => Promise.resolve(undefined) as unknown as Promise<never>),
   onNetworkState: vi.fn<(cb: (s: unknown) => void) => () => void>(() => () => undefined),
+  getAgentActiveGroups: vi.fn(() => Promise.resolve([] as string[])),
+  onAgentActiveGroups: vi.fn<(cb: (ids: string[]) => void) => () => void>(() => () => undefined),
 };
 
 function tabInfo(over: Partial<TabInfo> = {}): TabInfo {

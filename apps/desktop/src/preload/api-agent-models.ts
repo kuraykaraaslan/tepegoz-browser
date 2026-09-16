@@ -82,6 +82,8 @@ export const agentModelsApi: Pick<
   | 'selectLocalModel'
   | 'deleteLocalModel'
   | 'onLocalModelsState'
+  | 'getAgentActiveGroups'
+  | 'onAgentActiveGroups'
   | 'getMcpStatus'
   | 'listAdaptors'
   | 'listAiAdaptors'
@@ -235,6 +237,16 @@ export const agentModelsApi: Pick<
     ipcRenderer.on(IpcChannels.modelsState, listener);
     return () => {
       ipcRenderer.removeListener(IpcChannels.modelsState, listener);
+    };
+  },
+  getAgentActiveGroups: () => invoke<string[]>(IpcChannels.agentActiveGroupsGet),
+  onAgentActiveGroups: (callback: (groupIds: string[]) => void) => {
+    const listener = (_event: unknown, groupIds: string[]): void => {
+      callback(groupIds);
+    };
+    ipcRenderer.on(IpcChannels.agentActiveGroups, listener);
+    return () => {
+      ipcRenderer.removeListener(IpcChannels.agentActiveGroups, listener);
     };
   },
   getMcpStatus: () => invoke<McpServerStatusInfo[]>(IpcChannels.mcpGetStatus),

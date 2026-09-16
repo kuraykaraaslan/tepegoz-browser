@@ -27,6 +27,32 @@ import type { AgentConversationsState } from '@tepegoz/desktop-ipc';
 // input-action event wiring is process-scoped. Keep execution single-run until browser tools become
 // tabId-scoped end to end.
 export const agentRunByGroup = new Map<string, boolean>();
+
+/**
+ * Set or clear the run lock for `groupId` and push the updated active-group set to every window (S8
+ * PR7 — the tab strip's per-tab "agent active" indicator). Both interactive
+ * (`ipc-agent-run.ts`) and background (`task-agent-runner.electron.ts`) runs go through this rather
+ * than mutating `agentRunByGroup` directly, so neither call site can forget the broadcast.
+ */
+export function setAgentRunForGroup(groupId: string, running: boolean): void {
+  if (running) agentRunByGroup.set(groupId, true);
+  else agentRunByGroup.delete(groupId);
+  broadcastAgentActiveGroups();
+}
+
+/** Every tab-group id currently holding a run lock — the snapshot a just-mounted window pulls once. */
+export function activeAgentGroups(): string[] {
+  return [...agentRunByGroup.keys()];
+}
+
+export function broadcastAgentActiveGroups(): void {
+  const groups = activeAgentGroups();
+  for (const win of BrowserWindow.getAllWindows()) {
+    if (!win.webContents.isDestroyed()) {
+      win.webContents.send(IpcChannels.agentActiveGroups, groups);
+    }
+  }
+}
 // The outstanding-HITL maps live in `../agent/hitl-registry` (no Electron imports, so the
 // renderer-response correlation that guards them is unit-testable). Re-exported here so the existing
 // run/controls registrars keep their single import site.

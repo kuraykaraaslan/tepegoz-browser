@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 /**
  * `ipc-agent-shared.ts` — cross-concern agent-IPC helpers. Pinned:
@@ -186,6 +186,46 @@ describe('broadcastConversationsState', () => {
     const send = vi.fn();
     getAllWindows.mockReturnValue([{ webContents: { isDestroyed: () => true, send } }]);
     mod.broadcastConversationsState();
+    expect(send).not.toHaveBeenCalled();
+  });
+});
+
+describe('setAgentRunForGroup / activeAgentGroups (S8 PR7)', () => {
+  afterEach(() => {
+    mod.agentRunByGroup.clear();
+  });
+
+  it('adds the group to the active set and pushes it to every window', () => {
+    const send = vi.fn();
+    getAllWindows.mockReturnValue([{ webContents: { isDestroyed: () => false, send } }]);
+    mod.setAgentRunForGroup('g1', true);
+    expect(mod.activeAgentGroups()).toEqual(['g1']);
+    expect(send).toHaveBeenCalledWith(expect.anything(), ['g1']);
+  });
+
+  it('removes the group and pushes the updated (possibly empty) set', () => {
+    const send = vi.fn();
+    getAllWindows.mockReturnValue([{ webContents: { isDestroyed: () => false, send } }]);
+    mod.setAgentRunForGroup('g1', true);
+    send.mockClear();
+    mod.setAgentRunForGroup('g1', false);
+    expect(mod.activeAgentGroups()).toEqual([]);
+    expect(send).toHaveBeenCalledWith(expect.anything(), []);
+  });
+
+  it('tracks multiple concurrent groups independently', () => {
+    getAllWindows.mockReturnValue([]);
+    mod.setAgentRunForGroup('g1', true);
+    mod.setAgentRunForGroup('g2', true);
+    expect(mod.activeAgentGroups().sort()).toEqual(['g1', 'g2']);
+    mod.setAgentRunForGroup('g1', false);
+    expect(mod.activeAgentGroups()).toEqual(['g2']);
+  });
+
+  it('skips a destroyed window on the active-groups push, like every other broadcast', () => {
+    const send = vi.fn();
+    getAllWindows.mockReturnValue([{ webContents: { isDestroyed: () => true, send } }]);
+    mod.setAgentRunForGroup('g1', true);
     expect(send).not.toHaveBeenCalled();
   });
 });
