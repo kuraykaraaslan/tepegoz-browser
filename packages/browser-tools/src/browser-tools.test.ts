@@ -78,6 +78,34 @@ describe('registerBrowserTools', () => {
     expect(JSON.stringify(result)).not.toContain('/');
   });
 
+  it('does NOT register browser_update_emulation when the host cannot emulate', () => {
+    registerBrowserTools({ host: fakeHost() });
+    expect(CapabilityRegistry.get('browser_update_emulation')).toBeUndefined();
+  });
+
+  it('registers browser_update_emulation as state_changing and forwards device+tabId', async () => {
+    const setDeviceEmulation = vi.fn(() => Promise.resolve());
+    registerBrowserTools({ host: fakeHost({ setDeviceEmulation }) });
+
+    const descriptor = CapabilityRegistry.list().find((d) => d.id === 'browser_update_emulation');
+    expect(descriptor?.dangerClass).toBe('state_changing');
+
+    const result = await CapabilityRegistry.get('browser_update_emulation')!.handler({
+      device: 'mobile',
+      tabId: 't1',
+    });
+    expect(setDeviceEmulation).toHaveBeenCalledWith('mobile', 't1');
+    expect(result).toEqual({ device: 'mobile' });
+  });
+
+  it('rejects a device value outside the two fixed presets', () => {
+    registerBrowserTools({ host: fakeHost({ setDeviceEmulation: () => Promise.resolve() }) });
+    const parsed = CapabilityRegistry.get('browser_update_emulation')!.inputSchema.safeParse({
+      device: 'tablet',
+    });
+    expect(parsed.success).toBe(false);
+  });
+
   it('does NOT register browser_get_console when the host cannot observe the console', () => {
     // Honest absence: a host that does not record the console gets no tool rather than one that can
     // only ever answer "nothing", which would read as "the page is error-free".

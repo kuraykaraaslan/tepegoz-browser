@@ -659,6 +659,31 @@ export function registerBrowserTools(deps: { host: BrowserHost }): void {
     });
   }
 
+  // Device emulation (S3 PR7c / browserskill parity P4). Registered ONLY when the host can actually
+  // emulate — a host without the seam gets no tool rather than a claim that nothing changed.
+  if (host.setDeviceEmulation !== undefined) {
+    const setDeviceEmulation = host.setDeviceEmulation.bind(host);
+    CapabilityRegistry.register({
+      descriptor: descriptor(
+        'browser_update_emulation',
+        // `state_changing`: it changes how the page renders/behaves on this tab, the same class as a
+        // click or a scroll in browser_update_page.
+        'state_changing',
+        'Switch a tab between its normal desktop rendering and a mobile emulation (narrow viewport + ' +
+          'mobile user agent), to check a page\'s mobile layout/behaviour. args: { device: "mobile" | ' +
+          '"desktop", tabId? } — omit tabId for the active tab; "desktop" reverts to normal. Two fixed ' +
+          'presets, not arbitrary width/height — this checks mobile responsiveness, it does not spoof ' +
+          'a specific device. Touch-event emulation is not included.',
+        { aiTask: 'none' },
+      ),
+      inputSchema: TargetTabArgs.extend({ device: z.enum(['mobile', 'desktop']) }),
+      handler: async (args) => {
+        await setDeviceEmulation(args.device, args.tabId);
+        return { device: args.device };
+      },
+    });
+  }
+
   // P3-d read-only diagnostics — the console half. Registered ONLY when the host observes the page's
   // console; a host that does not gets no tool rather than a claim that the page logged nothing. This
   // reads the page's OWN console output as it happened — it is not DevTools and not script execution

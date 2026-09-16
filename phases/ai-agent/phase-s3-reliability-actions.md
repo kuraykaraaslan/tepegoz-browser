@@ -411,9 +411,21 @@ re-snapshotting).
       not attempted, until that design question has an answer.
       [`../tracks/webbrain-agent-parity.md`](../../docs/parities/webbrain-agent-parity.md) P9-b, with type-aware
       bucketing from [`../tracks/browser-use-agent-parity.md`](../../docs/parities/browser-use-agent-parity.md) P1.
-- [ ] **Device emulation as a tool** — let the agent check a page's mobile layout/behaviour (viewport, UA,
+- [x] **Device emulation as a tool** — let the agent check a page's mobile layout/behaviour (viewport, UA,
       touch) rather than only ever seeing the desktop rendering. Narrow and additive; the emulation is scoped
-      to the driven tab and reverts with it.
+      to the driven tab and reverts with it. _(`browser_update_emulation` (`packages/browser-tools/src/browser-tools.ts`),
+      `state_changing`, registered only when the host supports it. Two fixed presets — `mobile` / `desktop`
+      — not arbitrary width/height/UA: the point is checking mobile-responsive PATH, not spoofing a
+      specific device. `apps/desktop/src/main/agent/device-emulation.electron.ts` sets BOTH the viewport
+      (`webContents.enableDeviceEmulation`, which has no UA knob of its own) and the user agent together,
+      since a page's mobile layout is decided by either signal depending on the site; `desktop` restores
+      the tab's EXACT original UA (captured once, never guessed), including when the tab is destroyed
+      mid-emulation (a `destroyed` listener drops the map entry rather than leaking the WebContents
+      reference). **Touch-event emulation is not included** — it needs a CDP call through `CdpDriver`'s
+      existing debugger session, not a plain `WebContents` method, and most responsive-design/UA checks
+      do not key off it; left as a documented gap rather than silently dropped. 3 registration tests +
+      6 host-level tests (mobile/desktop toggle, UA restore across a repeated mobile call, no-op desktop
+      on a never-emulated tab, destroyed-tab guard, destroyed-mid-emulation cleanup).)_
       [`../tracks/browserskill-agent-parity.md`](../../docs/parities/browserskill-agent-parity.md) P4.
 
 ### PR8 — exit sweep + steer deletions (⏸ funded)

@@ -13,6 +13,7 @@ import { originOf as originOfUrl } from '../downloads/download-service-fs.electr
 import { pdfFileName } from '../print/pdf-filename';
 import { isParkedToTray } from '../window-parked';
 import CdpDriver from './cdp-driver.electron';
+import { setDeviceEmulation } from './device-emulation.electron';
 import AgentTabGroup from './agent-tab-group.electron';
 import {
   showPageCursor,
@@ -768,6 +769,10 @@ export const browserHost: BrowserHost & TabHost & ScreenshotToolsHost = {
     return Promise.resolve(CdpDriver.networkRequestsSince(wc, sinceMs));
   },
   captureScreenshot,
+  setDeviceEmulation: (device, tabId) => {
+    setDeviceEmulation(requireWc(tabId), device);
+    return Promise.resolve();
+  },
   clickElement: async (ref, tabId) => {
     resetForAgentAction();
     const wc = requireWc(tabId);

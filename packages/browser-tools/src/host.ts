@@ -260,4 +260,14 @@ export interface BrowserHost {
    * never "the page made no requests".
    */
   networkRequestsSince?(sinceMs: number, tabId?: string): Promise<NetworkObservation[]>;
+  /**
+   * Switch a tab between its normal desktop rendering and a mobile emulation (narrow viewport + mobile
+   * user agent), S3 PR7c. Two fixed presets rather than arbitrary width/height/UA — the point is
+   * checking a page's mobile-responsive PATH, not becoming an arbitrary browser fingerprint.
+   * `'desktop'` reverts exactly to what the tab had before, never a guessed default.
+   *
+   * OPTIONAL: a host that cannot emulate simply omits it, and `browser_update_emulation` is not
+   * registered — never a claim that switching did something it did not.
+   */
+  setDeviceEmulation?(device: 'mobile' | 'desktop', tabId?: string): Promise<void>;
 }
