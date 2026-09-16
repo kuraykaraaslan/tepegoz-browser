@@ -1,6 +1,6 @@
 # Phase S8 — Assistant UX (W4 Control & Trust)
 
-**Status:** 🟠 Measurement-owed (PR1–PR6 landed 2026-08-19; the two ⏸ funded metrics, per-step citation chips, and the per-tab badge are open) · **Depends on:** [S1 streaming](phase-s1-foundation-native-loop.md) · [S6 grants + risk tiers](phase-s6-safety-control-plane.md) · [S4 evidence chips](phase-s4-verified-outcomes.md) · **Track:** [AI Agent Super](README.md)
+**Status:** 🟠 Measurement-owed (PR1–PR6 landed 2026-08-19; the per-tab agent-active badge landed 2026-09-16 (PR7 slice); the two ⏸ funded metrics and per-step citation chips remain open) · **Depends on:** [S1 streaming](phase-s1-foundation-native-loop.md) · [S6 grants + risk tiers](phase-s6-safety-control-plane.md) · [S4 evidence chips](phase-s4-verified-outcomes.md) · **Track:** [AI Agent Super](README.md)
 
 **Goal:** Make the agent _feel_ like a live, controllable assistant rather than a batch job that emits messages at step boundaries. Consume S1 token streaming in the sidebar panel, render a live step feed with per-step status and S4 evidence chips, turn the plan preview modal into the `follow_a_plan` grant surface, badge approvals with S6 risk tiers behind one-tap scoped grants, add a global agent-active indicator, surface backgroundable runs over the existing off-screen parking, connect scheduled tasks to completed runs, and gate commerce purchases behind the financial risk tier with biometric + explicit confirm. This is Comet-parity felt experience assembled from substrate that already exists but is not surfaced.
 
@@ -121,9 +121,6 @@ Six UI-scoped PRs, each ≤250 lines, sequenced behind their substrate phases. N
   Contradicted). Resolving a chip to a specific step’s citations needs per-step evidence threaded through
   the event stream, which does not exist yet. The run-level verdict is the part that changes what a user
   does next; the per-step version is deferred, not quietly counted as done.
-- **Per-TAB agent-active indicator.** Only the tray indicator landed. A tab-strip badge is core browser
-  chrome rather than `ext-agent`, and this DoD’s own boundary rule ("UI logic lands in
-  `extensions/ext-agent`") argues against putting it there casually.
 - **Scheduled-task-from-run carrying the grant scope.** The schedule affordance already exists
   ([schedule-task-modal.tsx](../../extensions/ext-agent/src/schedule-task-modal.tsx)). Carrying a _grant_
   into it was deliberately not built: plan grants die with their run by construction, and the durable
