@@ -328,6 +328,7 @@ export const en = {
     browser_update_history: 'Going back',
     browser_export_pdf: 'Saving as PDF',
     browser_save_pdf: 'Saving the PDF',
+    browser_update_emulation: 'Switching device view',
     browser_validate_page: 'Checking the result',
     browser_validate_form: 'Checking the form',
     browser_validate_condition: 'Checking a condition',

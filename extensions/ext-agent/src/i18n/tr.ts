@@ -298,6 +298,7 @@ export const tr: AgentStrings = {
     browser_update_history: 'Geri gidiliyor',
     browser_export_pdf: 'PDF olarak kaydediliyor',
     browser_save_pdf: 'PDF kaydediliyor',
+    browser_update_emulation: 'Cihaz görünümü değiştiriliyor',
     browser_validate_page: 'Sonuç kontrol ediliyor',
     browser_validate_form: 'Form kontrol ediliyor',
     browser_validate_condition: 'Bir koşul kontrol ediliyor',
