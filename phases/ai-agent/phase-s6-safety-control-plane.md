@@ -225,12 +225,33 @@ Sequencing: the claim-grade ASR sweep runs **after [S3](phase-s3-reliability-act
       invite and did nothing else."** Every `atk_*` fixture above assumes a user action somewhere; this family
       removes it. Press summary of ShadowPrompt, worth quoting in the threat model verbatim: _"No clicks, no
       permission prompts. Just visit a page, and an attacker completely controls your browser."_
-- [ ] **A user extension must not be able to inject into an agent run — and there must be a test.** ClaudeBleed
+- [x] **A user extension must not be able to inject into an agent run — and there must be a test.** ClaudeBleed
       (May 2026) combined two defects: **any** Chrome extension could issue commands to the agent, and trust
       was keyed to the command's **origin** rather than its **execution context**. This project's equivalent
       surface is `extension_*` + [`@tepegoz/extension-host`](../../packages/extension-host) under
       [ADR-0021](../../docs/adr/0021-agent-controllable-extensions.md). The answer is almost certainly already
       "no" — but an unwritten "no" is an assumption. Add the scenario.
+      — _**Verified 2026-09-16: "no" was already true, and the test already existed — just not labeled
+      as answering this question.** Traced every `ipc-agent-*.ts` file (`ipc-agent-run.ts`,
+      `-controls.ts`, `-config.ts`, `-conversations.ts`, `-run-receipt.ts`, `-run-report.ts`,
+      `-skills.ts`) and confirmed none imports `ipcMain` directly — every one registers its channels
+      exclusively through `ipc-helpers.ts`'s `handle`/`handleAsync`/`onAction`, which call
+      `assertTrustedSender` (exact-host, same [`isTrustedAppUrl`](../../packages/navigation/src/trusted-origin.ts)
+      this session already regression-locked against a subdomain-shaped bypass) BEFORE the handler body
+      ever runs — structurally, not as a per-channel opt-in a channel author could forget. This is
+      exactly ClaudeBleed's second defect closed by construction: trust is keyed to the sender FRAME'S
+      OWN document identity (execution context), never to a claimed origin string a command could carry.
+      The property "an untrusted frame never reaches a handler" is not a new test this line owed — it
+      already exists, exhaustively, in `ipc-helpers.electron.test.ts` (`handle`'s "never runs the handler
+      for an untrusted frame", `handleAsync`'s "still blocks an untrusted frame before awaiting
+      anything", `onAction`'s "drops an untrusted frame silently", four more for the window-scoped
+      variants), at 100% coverage per this file's own 2026-08-21 ratchet note. What genuinely does not
+      exist, and cannot yet be tested, is ClaudeBleed's FIRST defect's actual analogue: this project has
+      no MV3/third-party extension loading mechanism at all ([Phase 3](../product/phase-3-backend-cloud-extensions.md)
+      scope), so "a user-installed extension's own execution context" is not a surface that exists to
+      write an adversarial scenario against yet — the nearest true statement today is "every frame that
+      is not the trusted chrome/`tepegoz://` document is already rejected by the same universal gate,"
+      which is what the coverage above proves._
 - [x] **A DOM-resident approval is a forgeable approval.** ClaudeBleed's escalation replayed the confirmation
       message and mutated UI elements to distort what the agent believed it was approving — defeating a
       documented "user confirmation required" control. **This project is structurally right here and the
