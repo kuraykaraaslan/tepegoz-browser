@@ -8,10 +8,10 @@ import type { AgentHostApi } from './types';
 import { KIND_DOT, SparkIcon } from './panel-icons';
 import { MessageCopyButton } from './panel-copy-button';
 import { StepFeed } from './panel-step-feed';
-import { toolIntent } from './panel-tool-intent';
 import { humanizeStepMessage } from './panel-step-message';
 import { evidenceChipTitle } from './panel-evidence';
 import { TurnApprovals, TurnMeta } from './panel-turn-meta';
+import { ReasoningPanel } from './panel-reasoning';
 import { PROSE_KINDS, STEP_KINDS, type Turn } from './panel-state';
 
 /**
@@ -113,43 +113,12 @@ export function PanelThread({
 
                 <TurnMeta turn={turn} a={a} />
 
-                {reasoning.length > 0 && (
-                  <div className="rounded-md border border-border bg-surface-raised">
-                    <button
-                      type="button"
-                      onClick={() => onToggleReasoning(turn.id)}
-                      className="flex w-full items-center justify-between px-2 py-1.5 text-xs text-text-secondary hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus"
-                    >
-                      <span className="flex items-center gap-1.5">
-                        <SparkIcon className="h-3.5 w-3.5 text-indigo-400" />
-                        {a.reasoning.title} ({reasoning.length})
-                      </span>
-                      <span>{reasoningOpen ? a.reasoning.hide : a.reasoning.show}</span>
-                    </button>
-                    {reasoningOpen && (
-                      <ul className="space-y-1 border-t border-border px-3 py-2 text-xs text-text-secondary">
-                        {reasoning.map((e, i) => (
-                          <li
-                            key={`r-${String(e.ts)}-${String(i)}`}
-                            className="[overflow-wrap:anywhere]"
-                          >
-                            {/* A `decision` event's message is the bare tool id — show what the
-                                call is FOR, raw id on hover. `plan` text is left as written. */}
-                            <span
-                              className="text-text-primary"
-                              title={e.kind === 'decision' ? e.message : undefined}
-                            >
-                              {e.kind === 'decision' ? toolIntent(e.message, a) : e.message}
-                            </span>
-                            {e.detail !== undefined && e.detail.length > 0 && (
-                              <span className="ml-1">— {e.detail}</span>
-                            )}
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                  </div>
-                )}
+                <ReasoningPanel
+                  reasoning={reasoning}
+                  open={reasoningOpen}
+                  onToggle={() => onToggleReasoning(turn.id)}
+                  a={a}
+                />
 
                 <StepFeed
                   steps={steps}
