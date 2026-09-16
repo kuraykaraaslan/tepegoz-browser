@@ -48,8 +48,9 @@ Built, tested in CI on Windows/macOS/Linux, and exercised in the running app:
   find-in-page, profiles, native context menus, tray and hide-tabs modes, and a settings surface —
   frameless chrome assembled from `@tepegoz/*` leaf packages.
 - **An agent that drives the browser.** Agent panel and live console, the agent runtime, the tool
-  plane, and browser tools are wired end to end. Bring your own key: **Anthropic, OpenAI, Gemini, or
-  Kimi**, plus **on-device inference** via `node-llama-cpp` for local models. Keys are encrypted in the
+  plane, and browser tools are wired end to end. Bring your own key: **Anthropic, OpenAI, Gemini, Kimi,
+  Amazon Nova, DeepSeek, xAI (Grok), or Groq**, plus **on-device inference** via `node-llama-cpp` for
+  local models. Keys are encrypted in the
   OS keychain through `safeStorage` and never leave the main process.
 - **A deterministic security kernel.** Policy kernel, capability plane, egress firewall with secret
   detection, credential broker and vault, content-guard against prompt injection at the perception
@@ -58,7 +59,8 @@ Built, tested in CI on Windows/macOS/Linux, and exercised in the running app:
 - **Network privacy that actually tunnels.** Userspace WireGuard (via `wireproxy`) and Tor providers,
   chained Tor-over-VPN, a connection pool, three-scope binding, and per-tab and per-group route badges
   — measured end to end in the shipping app. Nothing is bundled and nothing needs elevation.
-- **Nine first-party extensions** on an in-house extension SDK: Adblock Shield, Agent, Macros
+- **Ten first-party extensions** on an in-house extension SDK: Adblock Shield, Agent, Chat
+  (native XMPP/IRC/Matrix, SCRAM auth, live-tested against real Prosody/ergo/Synapse servers), Macros
   (a deterministic iMacros successor — record, edit, replay), Popup Blocker, Tasks, Translate, Typo,
   User-Agent switcher, and a Unified video Player.
 - **MCP client.** Tepegöz consumes external MCP tool servers, behind the same policy gate as its
@@ -76,6 +78,10 @@ never been measured:
 - The entire **AI competence program** (S0–S12) — capabilities are in, measurement is owed. Three
   capabilities ship **deliberately inert** (credential fill, hint recall, vision), and one phase records
   a **measured refutation** of its own original design rather than quietly dropping it.
+- **Safe Browsing v5** — the full service (prefix store, v5 hash-lookup + hash-list-delta clients,
+  refresh scheduler, `will-navigate` interstitial) is shipped and unit-tested, wired into the download
+  and navigation paths. It ships **inert** for the same reason as the three above: no free-tier API key
+  is configured, so every lookup resolves `unknown` rather than checking anything.
 - **Notary / proof-of-run**, **transaction mandates**, **verifiable policy bundles**, **governed agent
   endpoints**, the **recipe compiler** IR, the **Kamu** (Turkish public-service) step classifier, and
   the **supply-chain gate** — decision layers landed with ADRs accepted, none wired to a live call.
@@ -83,7 +89,7 @@ never been measured:
 ### Not built
 
 Parallel multi-tab DAG execution · durable checkpoint/resume and cross-agent handoff · GB-scale tiered
-task memory · integration adapters (Google, Canva) · Safe Browsing v5 · an **MCP server** surface ·
+task memory · integration adapters (Google, Canva) · an **MCP server** surface ·
 Chrome MV3 extension support · the optional managed cloud tier and E2EE sync · macOS/Linux as
 first-class targets (they build and pass CI; Windows 11 gets the real testing).
 
@@ -165,8 +171,8 @@ target shape, not a claim that every layer is full.
 - **Build:** pnpm workspaces + Turborepo + `electron-vite`
 - **Persistence:** Node's built-in **`node:sqlite`** (WAL) — no native module, no ABI to match
 - **Automation:** Chrome DevTools Protocol
-- **AI:** provider-agnostic gateway — Anthropic, OpenAI, Gemini, Kimi; local models via
-  `node-llama-cpp`; MCP client
+- **AI:** provider-agnostic gateway — Anthropic, OpenAI, Gemini, Kimi, Amazon Nova, DeepSeek, xAI, Groq;
+  local models via `node-llama-cpp`; MCP client
 - **Native:** Rust via `napi-rs` — placeholder package, not yet in a hot path
 - **Quality:** Vitest + Playwright `_electron`, with coverage, module-boundary, doc-link, audit, and
   formatting gates in CI on all three platforms
@@ -177,11 +183,10 @@ target shape, not a claim that every layer is full.
 tepegoz-browser/
 ├─ apps/desktop/    # L0 Electron shell — thin, over the packages below
 ├─ packages/        # ~70 @tepegoz/* packages (private, bundled — never published to npm)
-├─ extensions/      # 9 first-party extensions on the in-house extension SDK
+├─ extensions/      # 10 first-party extensions on the in-house extension SDK
 ├─ e2e/             # Playwright `_electron` suites against the BUILT app
 ├─ test-fixtures/   # Frozen page fixtures, including hostile ones (excluded from formatting)
-├─ docs/            # ADRs, threat model, architecture index, engineering rules
-├─ research/        # Imported competitor/market research (not repo documentation)
+├─ docs/            # ADRs, threat model, architecture index, engineering rules, imported research
 └─ phases/          # The executable roadmap, ticked as work lands
 ```
 
