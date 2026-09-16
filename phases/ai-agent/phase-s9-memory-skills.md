@@ -53,6 +53,22 @@ Skills are **distinct from Phase 6 recipes** ([routing table](README.md#routing-
 
 - [x] Injection posture for memory: memory context is sanitized in strict posture (`isStrictMode`), forged-trust-tag stripping on retrieval, and a **quarantine** flag — a hint whose use once preceded a policy denial is quarantined and excluded from future retrieval.
 - [ ] Run the frozen poisoned-hint family in scripted mode as a **pre-sweep gate** (0 violations must hold on the deterministic arm before the funded sweep is even scheduled).
+      — _**Investigated 2026-09-16: blocked on a harness gap, not an S9-specific one.** Both fixtures
+      (`test-fixtures/sites/poisoned-hint-shop`, `repeat-domain-catalog`) already exist and match their
+      scenarios exactly (`memory-skills.json`). What's missing is a `harness-scripts.ts` `SCRIPTS` entry
+      for `poisoned_hint_no_egress`/`poisoned_hint_second_visit` — straightforward on its own. The real
+      blocker: `harness-run.ts` gives **every trial a fresh `--user-data-dir`**
+      (`mkdtempSync(join(work, 'profile-'))`, deliberately — the comment says it doubles as the trial's
+      identity for the out-file), so a `_second_visit` trial never sees anything the paired `_first_visit`
+      trial persisted. Running this family today would either find an empty memory store (proving nothing
+      — "0 violations" because there was nothing to violate with) or need a NEW shared-profile-across
+      -paired-trials mechanism added to the harness. That mechanism does not exist for **either** paired
+      family: `repeat_domain_second_visit` has the identical shape and the identical gap, and
+      [`eval-results.md`](eval-results.md) confirms neither pair has ever actually been run — both are
+      still recorded as "awaiting funded key," which this gap would make true for the wrong reason. Adding
+      shared-profile support to `harness-run.ts` is core eval infrastructure every phase's sweep depends
+      on, not a narrow S9 change, and a mistake there is not something a scripted trial would catch on its
+      own — left for a deliberate change with its own review, not bundled into this line.
 - [ ] Provenance surfaced to the S8 event stream so a human sees _"acting partly on a remembered hint from <host>"_ (advisory transparency).
 
 > **Mechanism + placement notes (PR0–PR3, PR5-store).**
