@@ -90,12 +90,14 @@
         covered **by construction**, not one patched call site at a time. _(landed 2026-09-09 as the opt-in
         `blockPrivateHosts` option covering literal-address + per-redirect-hop; resolve-then-pin landed
         2026-09-17, same option, same seam.)_
-  - [ ] **Still owed: cap the redirect chain length explicitly and drop rather than follow past it.**
-        Every hop is now re-validated (literal + resolved-address) and a private target is dropped at
-        whichever hop resolves to one, but the _chain length itself_ still relies on axios/follow-redirects'
-        own default cap rather than a small explicit one this repo has chosen and tested. `sitemap-reader.ts`
-        already has the right instinct locally (`maxRedirects: 0` with a comment saying why) — generalize a
-        deliberate choice instead of leaving it a one-file workaround.
+  - [x] **Redirect-chain cap landed 2026-09-17.** `blockPrivateHosts` now sets `maxRedirects: 5`
+        (`MAX_REDIRECTS_WHEN_BLOCKING_PRIVATE_HOSTS`) whenever the caller hasn't already chosen one —
+        a small, explicit, tested number instead of axios/follow-redirects' own default of 21, on top
+        of (not instead of) the existing per-hop re-validation. A caller that already sets its own
+        (`sitemap-reader.ts`'s `maxRedirects: 0`, kept as its own one-file discipline) is respected, not
+        overridden. Mutation-checked. **Every destination-validation item under the 🔴 header is now
+        `[x]`** — the one remaining `[ ]` below is a cross-reference to Phase 1b's separate, unbuilt
+        Egress Firewall Rust port, not part of this defect's own scope.
   - [ ] Pairs with the Egress Firewall Rust port in [phase-1b](phase-1b-agentic-deepening.md) L7 (same seam,
         different concern: that one governs _what data leaves_, this one governs _what destination is
         reachable at all_). Sources:

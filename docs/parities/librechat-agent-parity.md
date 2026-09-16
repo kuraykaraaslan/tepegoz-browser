@@ -219,12 +219,12 @@ own two call sites did.
 > shares it (2026-09-09), and connection-time resolved-IP validation via a custom Node `lookup`
 > (`pinningLookup`) that defeats DNS rebinding exactly as this section specifies — resolve, check the
 > resolved IP, connect to that literal address, no second lookup in between (2026-09-17). `web_get_page`
-> and `web_search` both route through it. **Two DoD items below remain open**: the redirect chain still
-> relies on axios/follow-redirects' own default length cap rather than an explicit, tested one (each hop
-> IS re-validated and dropped if private — just not chain-length-capped), and there is no explicit
-> allowlist parameter — a local-model HTTP endpoint stays reachable simply because its own client never
-> turns `blockPrivateHosts` on, which is adequate today but is a different mechanism than the "explicit
-> allowlist" this section asked for. Full record: `phases/product/phase-2-adapters-safe-browsing.md` L10.
+> and `web_search` both route through it. The redirect chain is now also capped explicitly at 5 hops
+> (`MAX_REDIRECTS_WHEN_BLOCKING_PRIVATE_HOSTS`, 2026-09-17) rather than relying on axios/follow-redirects'
+> own default. **One DoD item below remains open**: there is no explicit allowlist parameter — a
+> local-model HTTP endpoint stays reachable simply because its own client never turns `blockPrivateHosts`
+> on, which is adequate today but is a different mechanism than the "explicit allowlist" this section
+> asked for. Full record: `phases/product/phase-2-adapters-safe-browsing.md` L10.
 > P1's MCP transports have no `createHttpClient` caller yet (transport itself unbuilt), so nothing to wire
 > there until P1 lands.
 >

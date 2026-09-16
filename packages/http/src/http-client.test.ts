@@ -427,6 +427,30 @@ describe('createHttpClient — blockPrivateHosts SSRF guard', () => {
     expect((seen as unknown as InternalAxiosRequestConfig).lookup).toBe(pinningLookup);
   });
 
+  it('caps the redirect chain when the caller left maxRedirects unset', async () => {
+    const client = createHttpClient({ blockPrivateHosts: true });
+    let seen: InternalAxiosRequestConfig | null = null;
+    client.defaults.adapter = (config) => {
+      seen = config;
+      return ok(config);
+    };
+    await client.get('https://public.example/start');
+    expect((seen as unknown as InternalAxiosRequestConfig).maxRedirects).toBe(5);
+  });
+
+  it('respects a caller-supplied maxRedirects instead of overriding it', async () => {
+    const client = createHttpClient({ blockPrivateHosts: true });
+    let seen: InternalAxiosRequestConfig | null = null;
+    client.defaults.adapter = (config) => {
+      seen = config;
+      return ok(config);
+    };
+    // Mirrors sitemap-reader.ts's own `maxRedirects: 0` discipline — a caller that already made a
+    // choice here is not second-guessed.
+    await client.get('https://public.example/start', { maxRedirects: 0 });
+    expect((seen as unknown as InternalAxiosRequestConfig).maxRedirects).toBe(0);
+  });
+
   it('is a no-op when the option is absent — a private host passes straight through', async () => {
     const client = createHttpClient();
     let seen: InternalAxiosRequestConfig | null = null;
@@ -438,6 +462,7 @@ describe('createHttpClient — blockPrivateHosts SSRF guard', () => {
     expect(res.status).toBe(200);
     expect((seen as unknown as InternalAxiosRequestConfig).beforeRedirect).toBeUndefined();
     expect((seen as unknown as InternalAxiosRequestConfig).lookup).toBeUndefined();
+    expect((seen as unknown as InternalAxiosRequestConfig).maxRedirects).toBeUndefined();
   });
 
   it('is a no-op when the option is explicitly false', async () => {

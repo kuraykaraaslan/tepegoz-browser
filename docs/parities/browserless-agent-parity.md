@@ -93,9 +93,11 @@ source exists to read.
 > connection-time resolved-IP validation via a custom Node `lookup` (`pinningLookup`) that defeats DNS
 > rebinding — resolve, validate the resolved IP, connect to that exact address, no second lookup in
 > between (2026-09-17). `web_get_page`/`web_search` both route through it. The DoD's redirect-hop
-> re-check is done (every hop, both literal and resolved-address); an explicit chain-length cap and a
-> caller-supplied allowlist parameter (as opposed to simply not enabling the guard on the local-model
-> client) remain open. Full record: `phases/product/phase-2-adapters-safe-browsing.md` L10.
+> re-check is done (every hop, both literal and resolved-address), and the chain is now capped
+> explicitly at 5 (`MAX_REDIRECTS_WHEN_BLOCKING_PRIVATE_HOSTS`, 2026-09-17) instead of trusting
+> axios/follow-redirects' own default. A caller-supplied allowlist parameter (as opposed to simply not
+> enabling the guard on the local-model client) remains open. Full record:
+> `phases/product/phase-2-adapters-safe-browsing.md` L10.
 >
 > Original proposal kept below for context.
 

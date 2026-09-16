@@ -43,7 +43,8 @@ export interface HttpClientOptions {
    * any future agent-directed-URL clients turn it on. Covers both halves: the literal-address check
    * (host at URL-parse time) AND resolve-then-pin (the address a real DNS lookup returns is what the
    * socket connects to, so a public hostname a rebinding DNS server answers with a private address
-   * is caught too — see {@link pinningLookup}).
+   * is caught too — see {@link pinningLookup}). Also caps the redirect chain at
+   * {@link MAX_REDIRECTS_WHEN_BLOCKING_PRIVATE_HOSTS} unless the caller set its own `maxRedirects`.
    */
   blockPrivateHosts?: boolean;
 }
@@ -54,6 +55,14 @@ export const DEFAULT_TIMEOUT_MS = 30_000;
 const TIMEOUT_CODES: ReadonlySet<string> = new Set(['ECONNABORTED', 'ETIMEDOUT']);
 /** Axios error `code` for an aborted request (AbortSignal / CancelToken). */
 const CANCELED_CODE = 'ERR_CANCELED';
+/** Redirect-chain cap applied when `blockPrivateHosts` is on and the caller hasn't set its own
+ *  `maxRedirects` — a deliberate, tested small number instead of axios/follow-redirects' own default
+ *  (21), so a chain of legitimate-looking hops can't be used to exhaust time/connections even though
+ *  every hop is already individually re-validated (literal + resolved address). 5 covers the ordinary
+ *  cases (http→https, a www. redirect, one URL-shortener hop) with room to spare; a caller that wants
+ *  zero redirects (like `sitemap-reader.ts`'s own `maxRedirects: 0`) sets that itself and is respected —
+ *  this only fills in when the caller left it unset. */
+const MAX_REDIRECTS_WHEN_BLOCKING_PRIVATE_HOSTS = 5;
 /** Custom error `code` {@link pinningLookup} raises when DNS resolves a host to a private address —
  *  distinguished from an ordinary connection failure so {@link normalizeHttpError} can map it back to
  *  the same 400 {@link HttpMessages.BlockedNonPublicHost} the pre-send literal check raises, instead
@@ -278,6 +287,12 @@ export function createHttpClient(options: HttpClientOptions = {}): AxiosInstance
       // `lookup` type — this module's own single-address callback shape is what Node's http/https
       // `ClientRequest` actually calls it with.
       cfg.lookup = pinningLookup as unknown as AxiosLookup;
+      // Cap the chain length too — every hop is individually re-validated above, but an unbounded
+      // (or default-21) chain of otherwise-valid hops is still an unbounded amount of work for one
+      // agent-directed fetch. A caller that already set its own (e.g. `maxRedirects: 0`) is respected.
+      if (cfg.maxRedirects === undefined) {
+        cfg.maxRedirects = MAX_REDIRECTS_WHEN_BLOCKING_PRIVATE_HOSTS;
+      }
       const priorBeforeRedirect = cfg.beforeRedirect;
       const guardedBeforeRedirect: BeforeRedirect = (...args) => {
         const rawHref = (args[0] as { href?: unknown }).href;
