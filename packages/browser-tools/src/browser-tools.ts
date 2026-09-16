@@ -696,6 +696,33 @@ export function registerBrowserTools(deps: { host: BrowserHost }): void {
     });
   }
 
+  // S2: "find the pricing page" used to mean a blind multi-click crawl even though the site's own
+  // sitemap already names it. Registered ONLY when the host has a sitemap reader wired — a host without
+  // one gets no tool rather than a claim that a site publishes no other pages.
+  if (host.discoverSitemap !== undefined) {
+    const discoverSitemap = host.discoverSitemap.bind(host);
+    CapabilityRegistry.register({
+      descriptor: descriptor(
+        'browser_list_pages',
+        'read',
+        "List other pages the CURRENT tab's site publishes, via its robots.txt/sitemap.xml — cheaper " +
+          'and more reliable than guessing a URL or crawling links to find e.g. a pricing or contact ' +
+          'page. args: { tabId? } — omit tabId for the active tab. Returns { url, pages }: `pages` is ' +
+          'every same-origin URL the sitemap declares (bounded, deduplicated), or `[]` when the site ' +
+          "publishes no sitemap or none could be reached — that is NOT proof the page doesn't exist, " +
+          'only that it is not sitemap-discoverable; fall back to on-page links or browser_get_elements. ' +
+          'Can only ever return URLs on the SAME origin as the current tab.',
+        { aiTask: 'read_understand' },
+      ),
+      inputSchema: TargetTabArgs,
+      handler: async (args) => {
+        const page = await host.readPage(args.tabId);
+        const pages = await discoverSitemap(page.url);
+        return { url: page.url, pages };
+      },
+    });
+  }
+
   // P3-d read-only diagnostics — the console half. Registered ONLY when the host observes the page's
   // console; a host that does not gets no tool rather than a claim that the page logged nothing. This
   // reads the page's OWN console output as it happened — it is not DevTools and not script execution

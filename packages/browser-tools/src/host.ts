@@ -280,4 +280,15 @@ export interface BrowserHost {
    * registered — never a claim that switching did something it did not.
    */
   setDeviceEmulation?(device: 'mobile' | 'desktop', tabId?: string): Promise<void>;
+  /**
+   * Same-origin page URLs the tab's site publishes via `robots.txt` → `sitemap.xml` (S2, AI-7's
+   * `createSitemapReader`) — so "find the pricing page" is a lookup instead of a blind multi-click
+   * crawl. `url` anchors discovery (the reader probes that URL's origin AND its own directory); the
+   * result can never leave the same origin by construction, so this is a `read`-risk tool even though
+   * it costs a real network round trip.
+   *
+   * OPTIONAL: a host with no sitemap reader wired simply omits it, and `browser_list_pages` is not
+   * registered — never a claim of an empty sitemap when discovery was never attempted.
+   */
+  discoverSitemap?(url: string): Promise<readonly string[]>;
 }

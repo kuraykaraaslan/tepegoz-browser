@@ -14,6 +14,7 @@ import { pdfFileName } from '../print/pdf-filename';
 import { isParkedToTray } from '../window-parked';
 import CdpDriver from './cdp-driver.electron';
 import { setDeviceEmulation } from './device-emulation.electron';
+import { discoverSitemap } from '../web/web-tools-host.electron';
 import AgentTabGroup from './agent-tab-group.electron';
 import {
   showPageCursor,
@@ -773,6 +774,7 @@ export const browserHost: BrowserHost & TabHost & ScreenshotToolsHost = {
     setDeviceEmulation(requireWc(tabId), device);
     return Promise.resolve();
   },
+  discoverSitemap,
   clickElement: async (ref, tabId) => {
     resetForAgentAction();
     const wc = requireWc(tabId);

@@ -107,6 +107,31 @@ describe('registerBrowserTools', () => {
     expect(parsed.success).toBe(false);
   });
 
+  it('does NOT register browser_list_pages when the host has no sitemap reader', () => {
+    // Honest absence: a host with no reader wired gets no tool rather than one that can only ever
+    // answer "this site publishes nothing", which would read as a real finding.
+    registerBrowserTools({ host: fakeHost() });
+    expect(CapabilityRegistry.get('browser_list_pages')).toBeUndefined();
+  });
+
+  it('registers browser_list_pages as read, anchored on the current page URL', async () => {
+    const discoverSitemap = vi.fn(() => Promise.resolve(['https://x/pricing', 'https://x/contact']));
+    registerBrowserTools({ host: fakeHost({ discoverSitemap }) });
+
+    const descriptor = CapabilityRegistry.list().find((d) => d.id === 'browser_list_pages');
+    expect(descriptor?.dangerClass).toBe('read');
+
+    const result = await CapabilityRegistry.get('browser_list_pages')!.handler({ tabId: 't1' });
+    expect(discoverSitemap).toHaveBeenCalledWith('https://x');
+    expect(result).toEqual({ url: 'https://x', pages: ['https://x/pricing', 'https://x/contact'] });
+  });
+
+  it('reports an empty list plainly, not as an error, when a site publishes no sitemap', async () => {
+    registerBrowserTools({ host: fakeHost({ discoverSitemap: () => Promise.resolve([]) }) });
+    const result = await CapabilityRegistry.get('browser_list_pages')!.handler({});
+    expect(result).toEqual({ url: 'https://x', pages: [] });
+  });
+
   it('does NOT register browser_get_console when the host cannot observe the console', () => {
     // Honest absence: a host that does not record the console gets no tool rather than one that can
     // only ever answer "nothing", which would read as "the page is error-free".

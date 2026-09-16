@@ -1,6 +1,6 @@
 # Phase S2 — Perception v2 (W2 Perception / token-economy engine for W3 Speed)
 
-**Status:** 🟠 Measurement-owed (PR0–PR4 landed 2026-08-18; PR5 ⏸ funded) · **Depends on:** [S0 Truth & Repair](phase-s0-truth-and-repair.md) · **Track:** [AI Agent Super](README.md)
+**Status:** 🟠 Measurement-owed (PR0–PR4 landed 2026-08-18; PR5 ⏸ funded; `browser_list_pages` landed 2026-09-16, exposing the already-wired sitemap reader as an agent tool) · **Depends on:** [S0 Truth & Repair](phase-s0-truth-and-repair.md) · **Track:** [AI Agent Super](README.md)
 
 **Goal:** Give the model a stable, deduplicated, diff-based view of the page so it stops re-reading the whole world every step. Element references become identity-stable content hashes that survive snapshots within a run, unchanged regions are elided, and form-field labels are resolved during the scan so fields are named correctly. This is the clearest single perception delta against Claude for Chrome (its persistent cross-turn ref IDs) and it is simultaneously the token-economy engine that W3 Speed draws on.
 
@@ -186,7 +186,7 @@ Prior art gives us the shape of the win without the claim: browser-use's TSV ser
       Sits on the extraction sandbox contract in [S5](phase-s5-code-execution.md), which owns the scaffold half
       ([`../tracks/agentql-agent-parity.md`](../../docs/parities/agentql-agent-parity.md) P1, gated behind S5 reaching
       ✅). [`../tracks/notte-agent-parity.md`](../../docs/parities/notte-agent-parity.md) P1.
-- [ ] **Let the agent ask what pages a site publishes.** `createSitemapReader` is already built and already
+- [x] **Let the agent ask what pages a site publishes.** `createSitemapReader` is already built and already
       wired — and the safety-relevant work is already done: **same-origin by construction** (so it can never
       pivot to a private-IP or cloud-metadata host), byte-capped, entry-capped, one index level deep, and
       per-origin cached. But it is only consulted internally as a navigation-grounding check
@@ -194,6 +194,15 @@ Prior art gives us the shape of the win without the claim: browser-use's TSV ser
       blind multi-click crawl. Expose it as a `dangerClass: 'read'` tool over the **existing** reader,
       registered through the same CapabilityRegistry/PEP. Almost entirely a wiring job on shipped, already-safe
       code. [`../tracks/firecrawl-agent-parity.md`](../../docs/parities/firecrawl-agent-parity.md) P2.
+      — _Landed 2026-09-16 as `browser_list_pages` (`packages/browser-tools/src/browser-tools.ts`), tab
+      -scoped like `browser_get_page` rather than taking an arbitrary URL like `web_get_page` — it answers
+      "what else does the site I'm ON publish", anchored on the active tab's current URL. Wired through a
+      new optional `BrowserHost.discoverSitemap`, bound in `browser-host.electron.ts` to the SAME
+      `discoverSitemap` function `agent-service.electron.ts` already used internally for navigation
+      grounding — one function, two callers, no new safety surface. Registered only when the host has a
+      reader wired (the established optional-capability pattern, e.g. `browser_update_emulation`), and an
+      empty result is worded explicitly as "not sitemap-discoverable," never as proof the page is absent.
+      5 new tests across `browser-tools.test.ts`; en+tr toolIntent labels added._
 - [ ] **One content extractor, not two weak ones.** `browser_get_article` and `web_get_page` run two separate,
       weaker passes today while [`@tepegoz/reader`](../../packages/reader)'s density heuristic — paragraph
       density discounted by link density, penalised on boilerplate class/id names, already shipped and tested
