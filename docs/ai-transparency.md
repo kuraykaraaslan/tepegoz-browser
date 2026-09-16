@@ -87,9 +87,16 @@ model per provider — adding a provider is a data change plus one adapter, not 
 - **High-risk actions are gated by the user, never by the agent.** State-changing / destructive tool calls
   require explicit human approval (HITL). Sensitive categories (bank / crypto / health / password-manager /
   government) are hard-blocked until the user creates a per-category grant, which ships absent and which no
-  autonomy level and no agent tool can create (ADR-0039). Financial calls are authorized either by HITL or by
-  a user-written wallet mandate with a ceiling, payee set and expiry. CAPTCHA/2FA are cleared automatically —
-  two-factor codes are completed by the Credential Broker and never reach the model.
+  autonomy level and no agent tool can create (ADR-0039).
+  **Corrected 2026-09-16, two clauses that described design intent as current behavior:**
+  - Financial calls are authorized by HITL **only**, today. The wallet-mandate mechanism
+    (`mandateCovers`/`consumeMandate` in `mandate-kernel.ts`, ADR-0033) is a tested decision layer with
+    no live caller yet — "nothing here is called by a real run" per its own phase doc (Phase 9, frozen).
+  - **CAPTCHA/2FA are NOT cleared automatically.** The Credential Broker (PR6) refuses every fill —
+    `requireOsAuth` fails closed with no OS-auth/biometric gate installed on any platform yet, stated in
+    its own phase doc rather than left implicit. What actually happens today: the Human Handoff
+    Controller detects a CAPTCHA/2FA challenge and hands control to the user (no auto-solve, credit
+    preserved) — a real, shipped mechanism, just a different one than this line named.
 - **Prohibited-practice check.** No subliminal manipulation, no exploitation of vulnerabilities, no
   real-time remote biometric identification. Not applicable by design.
 
@@ -145,10 +152,13 @@ model per provider — adding a provider is a data change plus one adapter, not 
 - **Raw model output is never rendered as HTML** — chat renders safe markdown/plain text only.
 - **Side-effecting actions are surfaced and gated** — the HITL modal shows the tool + a truncated,
   redacted argument preview before the user approves.
-- **Granted capabilities are visible and revocable** — every active sensitive-category grant and wallet
-  mandate is listed with its scope and expiry, and can be revoked at any time; revocation takes effect on the
-  next classification. A CAPTCHA the browser cannot clear still raises a localized handoff notification
-  (center + toast + native) and stops the run.
+- **Granted capabilities.** **Corrected 2026-09-16:** sensitive-category grants and wallet mandates are
+  not live objects yet (see §3 and §4's Human Oversight — PR9/ADR-0039 and the mandate kernel/ADR-0033 are
+  both unwired), so there is nothing of either kind to list or revoke today. What IS real: S9's
+  skill-scoped remembered grants, consulted pre-model on every classification — but even these have no
+  dedicated browsing/revoke UI; a grant is released only as a side effect of deleting the skill that
+  holds it (`revokeGrantsForScope`). A CAPTCHA the browser cannot clear still raises a localized handoff
+  notification (center + toast + native) and stops the run — this part is accurate as written.
 - **Cost transparency** — the live token/quota indicator and the 80% warning are shown in the Console;
   the quota is user-configurable in Settings.
 - All disclosures are localized (English source + Turkish parity), per the day-0 i18n rule.
