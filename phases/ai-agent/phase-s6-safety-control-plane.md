@@ -167,6 +167,16 @@ Sequencing: the claim-grade ASR sweep runs **after [S3](phase-s3-reliability-act
       fill from, or drive any password-manager UI (extension, web vault, or this project's own), and cannot be
       granted that by any combination of clicks. The 1Password incident is what "the agent has the user's
       session" costs when this is not enumerated.
+      `password-manager` is already one of the categories in `SENSITIVE_CATEGORIES`
+      (`packages/security-policy/src/sensitive-site.ts`), enforced identically to banking by the sensitive-site
+      lockout in `policy-kernel.ts` — a state-changing action deny is final and un-liftable by any trust
+      profile (`trust-profile.ts`'s `applyTrust`, tested as a level×risk×taint matrix). What was NOT true until
+      this session: the **read** side (`sensitive_site_read`, an `ask`) fell through `applyTrust`'s guards
+      uncaught on a `trusted` profile — `NEVER_AUTO` only covers `destructive`/`financial`, so an ordinary read
+      on a marked-trusted password-manager site silently auto-approved. Fixed by checking `policy.reason` (which
+      the function received but never read) before the final `allow`; `eu_ai_act_high_risk_read` gets the same
+      treatment for the same reason. Still open here: the `atk_*` fixture itself ("a page that asks the agent to
+      read a password-manager surface") and the rest of PR8's incident-scenario sweep.
 - [ ] **Bulk-destructive ceiling.** A destructive action affecting more than a small N enumerates the items in
       the confirmation ("delete these 15, listed") and cannot be approved as a single opaque step, in any
       autonomy mode. The zero-click Drive wiper is a state-changing call that passed as one cheap approval.

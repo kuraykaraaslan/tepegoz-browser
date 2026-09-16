@@ -91,6 +91,16 @@ export function applyTrust(
   if (NEVER_AUTO.has(ctx.risk)) return { decision: 'ask' };
   // Trust was placed in the site, not in what the site's own content told the agent to do.
   if (ctx.taintedArgs) return { decision: 'ask' };
+  // A read on a sensitive site (banking/crypto/password-manager/health), or on an EU AI Act high-risk
+  // surface (biometric categorization, social scoring, legal/credit eligibility), keeps its prompt too,
+  // on the SAME footing as the state-changing lockout above — the S6 constitution names password-manager
+  // surfaces explicitly as "not grantable by any combination of clicks", and a trust profile is exactly
+  // such a combination. Before this check, these reasons were just another `ask` reason and `applyTrust`
+  // widened them like any other on a trusted site, which is precisely the click this line forbids: mark
+  // a password-manager site "trusted" once, and every subsequent read auto-approves.
+  if (policy.reason === 'sensitive_site_read' || policy.reason === 'eu_ai_act_high_risk_read') {
+    return { decision: 'ask' };
+  }
 
   return { decision: 'allow', changedBy: 'trusted' };
 }

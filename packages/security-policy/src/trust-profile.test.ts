@@ -78,6 +78,31 @@ describe('a trust profile can only ever TIGHTEN', () => {
     }
   });
 
+  it('keeps the prompt for a read on a sensitive site, even on a TRUSTED site', () => {
+    // sensitive_site_read is a `read`-risk `ask`, so it is NOT caught by NEVER_AUTO (which only covers
+    // destructive/financial) and args are untainted — before this reason check existed, this fell
+    // through to the final `return { decision: 'allow' }` and a trusted profile silently auto-approved
+    // reads on banking/crypto/password-manager/health sites. S6 names password-manager surfaces as "not
+    // grantable by any combination of clicks"; a trust profile is exactly such a combination.
+    const out = applyTrust({ decision: 'ask', reason: 'sensitive_site_read' }, 'trusted', {
+      risk: 'read',
+      taintedArgs: false,
+    });
+    expect(out.decision).toBe('ask');
+    expect(out.changedBy).toBeUndefined();
+  });
+
+  it('keeps the prompt for an EU AI Act high-risk read, even on a TRUSTED site', () => {
+    // Same shape as sensitive_site_read (read-risk ask, untainted) and the same rationale: a standing
+    // "trusted" profile must not be able to silently clear a biometric/social-scoring/eligibility gate.
+    const out = applyTrust({ decision: 'ask', reason: 'eu_ai_act_high_risk_read' }, 'trusted', {
+      risk: 'read',
+      taintedArgs: false,
+    });
+    expect(out.decision).toBe('ask');
+    expect(out.changedBy).toBeUndefined();
+  });
+
   it('keeps the prompt when the arguments came from the page, even on a trusted site', () => {
     // The trust was placed in the SITE. Taint means the values came from the site's own content, which
     // is precisely what the trust was not extended to.
