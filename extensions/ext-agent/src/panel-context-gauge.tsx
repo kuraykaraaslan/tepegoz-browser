@@ -36,7 +36,9 @@ const CONTEXT_WINDOW_TOKENS: Record<string, number> = {
   'gemini-3-flash-lite': 1_000_000,
   'kimi-k2.6': 256_000,
   'moonshot-v1-8k': 8_000,
-  'nova-2-lite-v1': 300_000,
+  // Corrected 2026-09-16: AWS's Bedrock model card gives Nova 2 Lite a 1M-token context window (64K
+  // is its max OUTPUT, a different number — the 300k this table shipped with had conflated the two).
+  'nova-2-lite-v1': 1_000_000,
   'nova-micro-v1': 128_000,
   'deepseek-reasoner': 128_000,
   'deepseek-chat': 128_000,

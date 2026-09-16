@@ -73,7 +73,9 @@ export type KimiModelId = (typeof KIMI_MODEL)[keyof typeof KIMI_MODEL];
  * Amazon Nova model IDs per tier — same three roles as {@link ANTHROPIC_MODEL} so the router picks a
  * provider's map by the SAME `plan | exec | classify` key. These target Amazon's OpenAI-compatible
  * *consumer* API (`api.nova.amazon.com/v1`, a plain Bearer key — NOT AWS Bedrock, no region, no SigV4).
- * `nova-2-lite-v1` (Nova 2 Lite — 64k context, tools + vision + reasoning) drives planning AND the
+ * `nova-2-lite-v1` (Nova 2 Lite — 1M context / 64K max OUTPUT — corrected 2026-09-16, an earlier
+ * revision of this comment conflated the two and said "64k context"; verified against AWS's own
+ * Bedrock model card, tools + vision + reasoning) drives planning AND the
  * reactive exec loop, and the cheaper text-only `nova-micro-v1` handles classify. Plain chat models,
  * so no Anthropic-style effort field is sent. Edit here to retune (e.g. point plan at `nova-pro-v1`) —
  * the routing LOGIC is provider-agnostic and does not change.

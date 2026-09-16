@@ -185,15 +185,27 @@ Targets are **derived from S0's baseline** and **pre-registered in PR1 before an
       a verified input-token ceiling; an unlisted model is a deliberate no-op, not a guessed limit,
       because a wrong ceiling in either direction is worse than none (too low silently fails a call that
       would have succeeded; too high never catches the real overflow). Only Anthropic's entries are
-      freshly verified (against the vendor's own current model-overview page, 2026-09-16); Kimi/Nova
-      carry forward figures `models.ts`'s own comments already asserted as fact. **Scoped down from
-      "trimmed locally"** to "fails locally with a clear reason" — actual trimming needs the separate,
-      still-open "Context eviction policy" line above, which needs its own design (an ADR-worthy call
-      on WHAT to trim), not a side effect of a size check. **Side finding, not fixed here:** researching
-      this surfaced that the OpenAI (`gpt-5`) and Gemini (`gemini-3-pro`/`gemini-3-flash-lite`) model ids
-      this project has configured no longer appear on either vendor's current model-lineup page — real
-      catalog drift, left for a deliberate retune rather than a silent fix bundled into this line. 6 new
-      tests (`context-window.test.ts`, `gateway.test.ts`)._
+      freshly verified (against the vendor's own current model-overview page, 2026-09-16). **Scoped down
+      from "trimmed locally"** to "fails locally with a clear reason" — actual trimming needs the
+      separate, still-open "Context eviction policy" line above, which needs its own design (an
+      ADR-worthy call on WHAT to trim), not a side effect of a size check. **Side finding, not fixed
+      here:** researching this surfaced that the OpenAI (`gpt-5`) and Gemini
+      (`gemini-3-pro`/`gemini-3-flash-lite`) model ids this project has configured no longer appear on
+      either vendor's current model-lineup page — real catalog drift, left for a deliberate retune
+      rather than a silent fix bundled into this line. 6 new tests (`context-window.test.ts`,
+      `gateway.test.ts`).
+      — _**Self-correction, same day.** This table's first cut trusted `models.ts`'s own doc comment for
+      Nova ("64k context") instead of an independent source, and shipped `nova-2-lite-v1` at 64,000 — a
+      ceiling that would have wrongly rejected any real request over roughly that size. AWS's own
+      Bedrock model card (verified via WebFetch) gives Nova 2 Lite a 1M-token context window; 64K is its
+      max OUTPUT, a different number the comment had conflated. Fixed the same day this shipped, plus
+      the root-cause comment in `models.ts` and an identical wrong number (300k, also corrected to 1M)
+      in `ext-agent`'s separate `panel-context-gauge.tsx` context-window table — a UI display estimate
+      for a different consumer, independently maintained, that had the same conflation. Kimi's carried
+      -forward figures were re-verified independently this time (262,144 real vs 256,000 here, the safe
+      conservative-round-down direction) rather than re-trusting the in-repo comment on faith a second
+      time. Regression-locked in both packages' test suites. The lesson, stated so it does not repeat:
+      an in-repo comment is not automatically a verified source, even when it reads confidently._
 - [ ] **Intra-run action-result cache, model-in-the-loop on a miss.** Distinct from both existing mechanisms:
       not Phase 6's model-free recipe replay, and not prompt caching — a within-run memo of "this observation
       for this element on this page" so a repeated look-up inside one run does not re-perceive. On a miss the

@@ -23,6 +23,12 @@ describe('contextWindowFor', () => {
     expect(contextWindowFor(undefined, undefined)).toBe(128_000);
     expect(contextWindowFor('anthropic', 'some-future-model')).toBe(200_000);
   });
+
+  it('Nova 2 Lite is 1M context, not the max-OUTPUT figure this table once shipped with', () => {
+    // Regression lock: this table shipped nova-2-lite-v1 at 300k, conflated from a stale in-repo
+    // comment. AWS's own Bedrock model card says 1M context / 64K max output — corrected 2026-09-16.
+    expect(contextWindowFor('nova', 'nova-2-lite-v1')).toBe(1_000_000);
+  });
 });
 
 describe('ContextGauge', () => {
