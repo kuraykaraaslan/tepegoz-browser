@@ -18,6 +18,7 @@ const dom = vi.hoisted(() => ({
     Promise.resolve({ x: 3, y: 4, label: 'Tuesday' }),
   ),
   isFocused: vi.fn(() => Promise.resolve(true)),
+  isNativeDraggable: vi.fn(() => Promise.resolve(false)),
   objectIdFor: vi.fn(() => Promise.resolve('obj-1')),
   probeClickPoint: vi.fn(() => Promise.resolve({ blocker: null as string | null, x: 5, y: 6 })),
   widgetKindOf: vi.fn((): Promise<string | null> => Promise.resolve(null)),
@@ -49,6 +50,7 @@ const {
   setFileInputFiles,
   clickElement,
   hoverElement,
+  dragElement,
   fillElement,
   selectOption,
   sendKeys,
@@ -56,7 +58,13 @@ const {
   scrollPage,
 } = await import('./cdp-driver-input.electron');
 
-let wc: { debugger: { sendCommand: ReturnType<typeof vi.fn> } };
+let wc: {
+  debugger: {
+    sendCommand: ReturnType<typeof vi.fn>;
+    on: ReturnType<typeof vi.fn>;
+    removeListener: ReturnType<typeof vi.fn>;
+  };
+};
 let core: {
   ensure: ReturnType<typeof vi.fn>;
   assertSameOrigin: ReturnType<typeof vi.fn>;
@@ -71,7 +79,11 @@ const calls = (cmd: string): unknown[] =>
 beforeEach(() => {
   vi.clearAllMocks();
   wc = {
-    debugger: { sendCommand: vi.fn(() => Promise.resolve({})) },
+    debugger: {
+      sendCommand: vi.fn(() => Promise.resolve({})),
+      on: vi.fn(),
+      removeListener: vi.fn(),
+    },
   };
   core = {
     ensure: vi.fn(() => Promise.resolve()),
@@ -84,6 +96,7 @@ beforeEach(() => {
   dom.probeClickPoint.mockResolvedValue({ blocker: null, x: 5, y: 6 });
   dom.widgetKindOf.mockResolvedValue(null);
   dom.isFocused.mockResolvedValue(true);
+  dom.isNativeDraggable.mockResolvedValue(false);
 });
 
 const cast = <T>(v: unknown): T => v as T;
@@ -151,6 +164,62 @@ describe('hoverElement', () => {
       y: 20,
     });
     expect(core.settle).not.toHaveBeenCalled();
+  });
+});
+
+describe('dragElement (S3 PR6 spike)', () => {
+  it('pointer mode: holds the button through waypoints from source to target, then settles', async () => {
+    dom.isNativeDraggable.mockResolvedValue(false);
+    dom.centerOf.mockResolvedValueOnce({ x: 0, y: 0 }).mockResolvedValueOnce({ x: 100, y: 0 });
+    const result = await dragElement(cast(wc), 1, 2, undefined, cast(core));
+    expect(result).toEqual({ mode: 'pointer' });
+    const mouse = calls('Input.dispatchMouseEvent');
+    expect(mouse[0]).toMatchObject({ type: 'mousePressed', x: 0, y: 0 });
+    expect(mouse[mouse.length - 1]).toMatchObject({ type: 'mouseReleased', x: 100, y: 0 });
+    // Every move in between holds the button — a page gating its handler on `buttons` must see it held.
+    for (const m of mouse.slice(1, -1)) {
+      expect(m).toMatchObject({ type: 'mouseMoved', buttons: 1 });
+    }
+    expect(core.resolveRef).toHaveBeenCalledWith(wc, 1);
+    expect(core.resolveRef).toHaveBeenCalledWith(wc, 2);
+    expect(core.settle).toHaveBeenCalled();
+    // Never touches the native-only drag protocol.
+    expect(calls('Input.setInterceptDrags')).toEqual([]);
+  });
+
+  it('native mode: intercepts the drag and completes it with the reported data', async () => {
+    dom.isNativeDraggable.mockResolvedValue(true);
+    dom.centerOf.mockResolvedValueOnce({ x: 0, y: 0 }).mockResolvedValueOnce({ x: 100, y: 0 });
+    const dragData = { items: [{ mimeType: 'text/plain', data: 'hello' }] };
+    wc.debugger.on.mockImplementation((event: string, listener: (...a: unknown[]) => void) => {
+      if (event === 'message') {
+        setTimeout(() => listener({}, 'Input.dragIntercepted', { data: dragData }), 0);
+      }
+    });
+    const result = await dragElement(cast(wc), 1, 2, undefined, cast(core));
+    expect(result).toEqual({ mode: 'native' });
+    expect(calls('Input.setInterceptDrags')).toEqual([{ enabled: true }, { enabled: false }]);
+    const dragEvents = calls('Input.dispatchDragEvent') as { type: string; data: unknown }[];
+    expect(dragEvents.map((e) => e.type)).toEqual(['dragEnter', 'dragOver', 'drop']);
+    for (const e of dragEvents) expect(e.data).toBe(dragData);
+    expect(wc.debugger.removeListener).toHaveBeenCalled();
+    expect(core.settle).toHaveBeenCalled();
+  });
+
+  it('native mode: disables the intercept even when the drag never starts (fail-safe)', async () => {
+    vi.useFakeTimers();
+    try {
+      dom.isNativeDraggable.mockResolvedValue(true);
+      // wc.debugger.on never fires 'message' — the drag times out.
+      const pending = dragElement(cast(wc), 1, 2, undefined, cast(core));
+      const assertion = expect(pending).rejects.toThrow('Element did not start a native drag');
+      await vi.runAllTimersAsync();
+      await assertion;
+      expect(calls('Input.setInterceptDrags')).toEqual([{ enabled: true }, { enabled: false }]);
+      expect(core.settle).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
 

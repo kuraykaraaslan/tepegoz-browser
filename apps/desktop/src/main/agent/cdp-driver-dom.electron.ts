@@ -13,6 +13,7 @@ import {
   CallResultSchema,
   ClickPointSchema,
   DescribeNodeSchema,
+  DraggableSchema,
   EvalHandleSchema,
   ResolveSchema,
   WidgetKindSchema,
@@ -257,6 +258,32 @@ export async function widgetKindOf(
   const parsed = WidgetKindSchema.safeParse(raw);
   // A failed probe must not block a fill that would work: unknown reads as "an ordinary field".
   return parsed.success ? parsed.data.result.value.kind : null;
+}
+
+/**
+ * Is this element natively HTML5-draggable (S3 PR6 drag spike)?
+ *
+ * Reads the DOM `draggable` IDL property rather than the raw attribute: the property is `true` by spec
+ * default for `<a href>` and `<img>` with no attribute present at all, and `false` for everything else
+ * unless `draggable="true"` is set explicitly. Getting this wrong in either direction breaks the mode
+ * choice it feeds: a native element driven with plain mouse events never fires `dragstart` (nothing
+ * moves), and a non-native element driven through the CDP drag-intercept path never gets a
+ * `dragIntercepted` event to answer it (the drag hangs at mouse-down).
+ */
+export async function isNativeDraggable(wc: WebContents, node: NodeArg): Promise<boolean> {
+  const objectId = await objectIdFor(wc, node).catch(() => null);
+  if (objectId === null) return false;
+  const raw: unknown = await wc.debugger
+    .sendCommand('Runtime.callFunctionOn', {
+      objectId,
+      returnByValue: true,
+      functionDeclaration: 'function () { return { draggable: this.draggable === true }; }',
+    })
+    .catch(() => null);
+  const parsed = DraggableSchema.safeParse(raw);
+  // A failed probe defaults to the plain-mouse path — the more common case on the open web, and one
+  // that degrades to "nothing moved" rather than hanging a debugger-level drag intercept open.
+  return parsed.success && parsed.data.result.value.draggable;
 }
 
 /**

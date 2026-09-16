@@ -17,6 +17,7 @@ function fakeHost(overrides?: Partial<BrowserHost>): BrowserHost {
     snapshotElements: () => Promise.resolve({ url: 'https://x', title: 'X', elements: [] }),
     clickElement: () => Promise.resolve({ occludedBy: null }),
     hoverElement: () => Promise.resolve(),
+    dragElement: () => Promise.resolve({ mode: 'pointer' }),
     listOpenTabs: () => [{ id: 't1', url: 'https://x', title: 'X' }],
     fillElement: (_ref: number, text: string) => {
       lastFilled = text;
@@ -931,6 +932,39 @@ describe('hover (S3 PR6)', () => {
     expect(result['ok']).toBe(true);
     expect(result['changed']).toBe(false);
     expect(String(result['note'])).toContain('try clicking it instead');
+  });
+});
+
+describe('drag (S3 PR6 spike)', () => {
+  beforeEach(() => CapabilityRegistry.reset());
+
+  const drag = async (host: BrowserHost): Promise<Record<string, unknown>> => {
+    registerBrowserTools({ host });
+    const tool = CapabilityRegistry.get('browser_update_page');
+    const parsed = tool?.inputSchema.safeParse({ action: 'drag', ref: 2, targetRef: 5 });
+    if (parsed?.success !== true) throw new Error('args rejected');
+    return (await tool?.handler(parsed.data)) as Record<string, unknown>;
+  };
+
+  it('passes both refs through to the host', async () => {
+    const dragElement = vi.fn(() => Promise.resolve({ mode: 'pointer' as const }));
+    await drag(fakeHost({ dragElement }));
+    expect(dragElement).toHaveBeenCalledWith(2, 5, undefined);
+  });
+
+  it('reports which drag mechanism ran, for both modes', async () => {
+    const native = await drag(fakeHost({ dragElement: () => Promise.resolve({ mode: 'native' }) }));
+    expect(native['dragMode']).toBe('native');
+    CapabilityRegistry.reset();
+    const pointer = await drag(fakeHost({ dragElement: () => Promise.resolve({ mode: 'pointer' }) }));
+    expect(pointer['dragMode']).toBe('pointer');
+  });
+
+  it('rejects args missing targetRef — a drag with only a source is not a valid call', () => {
+    registerBrowserTools({ host: fakeHost() });
+    const tool = CapabilityRegistry.get('browser_update_page');
+    const parsed = tool?.inputSchema.safeParse({ action: 'drag', ref: 2 });
+    expect(parsed?.success).toBe(false);
   });
 });
 

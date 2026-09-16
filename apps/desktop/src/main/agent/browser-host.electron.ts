@@ -785,6 +785,13 @@ export const browserHost: BrowserHost & TabHost & ScreenshotToolsHost = {
     const wc = requireWc(tabId);
     await CdpDriver.hoverElement(wc, ref, adapterFor(wc));
   },
+  dragElement: async (ref, targetRef, tabId) => {
+    resetForAgentAction();
+    const wc = requireWc(tabId);
+    const result = await CdpDriver.dragElement(wc, ref, targetRef, adapterFor(wc));
+    onCursorHide(wc);
+    return result;
+  },
   fillElement: async (ref, text, tabId) => {
     resetForAgentAction();
     const wc = requireWc(tabId);

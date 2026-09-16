@@ -1,6 +1,6 @@
 # Phase S3 — Reliability Actions (W1 Reliability)
 
-**Status:** 🟠 Measurement-owed (PR0–PR2, PR5, PR6-hover landed 2026-08-18; PR3 + PR4 + PR7 fully landed 2026-08-20 — PR3: spawn detection + policy-checked auto-follow + return-to-origin + EN/TR; PR4: live-spiked dialog/beforeunload auto-decline, overturning the phase's own DevTools-conflict assumption; PR7: widget-driven refusal (08-18) + the datepicker/combobox fill strategies (08-20); the PR6 drag spike NOT started, PR8 ⏸ funded) · **Depends on:** [S0](phase-s0-truth-and-repair.md); [S2](phase-s2-perception-v2.md) (identity refs for the locator cascade) · **Track:** [AI Agent Super](README.md)
+**Status:** 🟠 Measurement-owed (PR0–PR2, PR5, PR6-hover landed 2026-08-18; PR3 + PR4 + PR7 fully landed 2026-08-20 — PR3: spawn detection + policy-checked auto-follow + return-to-origin + EN/TR; PR4: live-spiked dialog/beforeunload auto-decline, overturning the phase's own DevTools-conflict assumption; PR7: widget-driven refusal (08-18) + the datepicker/combobox fill strategies (08-20); PR6-drag spike landed 2026-09-16 (CDP `Input.dispatchDragEvent` verified reliable, HITL-only fallback not needed); PR8 ⏸ funded) · **Depends on:** [S0](phase-s0-truth-and-repair.md); [S2](phase-s2-perception-v2.md) (identity refs for the locator cascade) · **Track:** [AI Agent Super](README.md)
 
 **Goal:** Close the missing action vocabulary and the two structural interaction gaps — snapshot-only
 occlusion and one-locator-per-ref — that make the agent fail on real sites. This targets the **measured**
@@ -306,16 +306,31 @@ re-snapshotting).
 
 - [x] `hover` variant reusing the [human-input](../../packages/human-input) Catmull-Rom mouse path;
       `hover-menu-nav` asserts a hover-revealed menu link is then clickable.
-- [ ] **Spike:** `drag` via CDP `Input.dispatchDragEvent`; if the debugger/HTML5-DnD interaction is
-      unreliable, ship HITL-only and **exclude `drag-reorder` from the DoD pooled aggregate** (stated in
-      Risks).
+- [x] **Spike:** `drag` via CDP `Input.dispatchDragEvent` — **it works.** Verified 2026-09-16 against a
+      real `draggable="true"` element in a live `BrowserWindow` (`Input.setInterceptDrags(true)` →
+      mousedown+mousemove trigger a genuine `dragstart` → Chromium reports it via `Input.dragIntercepted`
+      → `dragEnter`/`dragOver`/`drop` dispatched with that SAME reported `data` completed a real `drop`
+      handler's `dataTransfer` read). Shipped as `dragElement` (`cdp-driver-input.electron.ts`), wired
+      into `browser_update_page`'s `{ action: "drag", ref, targetRef }`. Two mechanisms exist because two
+      incompatible drag protocols exist on the web: native HTML5 (`draggable="true"`, no `dragstart`
+      without Chromium's own drag session — plain mouse events cannot fake it) and pointer-driven
+      (sortable-list/kanban widgets built from ordinary mousedown/mousemove/mouseup, including this app's
+      own `@dnd-kit` tab-group reorder, which has no `dragstart` at all). `isNativeDraggable`
+      (`cdp-driver-dom.electron.ts`) reads the element's `draggable` IDL property — not the raw attribute,
+      so `<a>`/`<img>`'s spec-default draggable-true still routes correctly with no attribute present —
+      and picks the mechanism; the caller never has to know which one ran (`dragMode` in the result is
+      informational, for a human debugging a drag that didn't work). The native path fails closed: a timed
+      -out intercept (`dragstart` prevented, or the element was not really draggable) disables
+      `Input.setInterceptDrags` in a `finally` rather than leaving a future real drag silently swallowed.
+      35 new unit tests (`cdp-driver-input.electron.test.ts`, `cdp-driver-dom.electron.test.ts`,
+      `browser-tools.test.ts`).
 
-> **PR6 status.** `hover` landed. **`drag` did not**, and is not silently pending: the phase marks it
-> spike-first and explicitly **not a DoD gate**, and `drag_reorder` carries a `not-a-gate` tag in the
-> registry so no pooled aggregate can absorb it. Shipping a drag verb whose reliability had not been
-> spiked would be worse than not having one — the agent would believe it could reorder lists it cannot.
-> The CDP `Input.dispatchDragEvent` spike, and the HITL-only fallback if it proves unreliable, remain
-> open work for this phase.
+> **PR6 status.** Both `hover` and `drag` landed. **What the spike answered, and what it did not**: it
+> proves the mechanism is real and correct against one hand-built fixture — not that it holds up across
+> the N≥10 real sites `drag-reorder` needs. That measurement is the same funded-sweep gate every other S3
+> scenario is behind, and `drag_reorder` keeps its `not-a-gate` tag in the registry
+> (`packages/agent-eval/scenarios/reliability-actions.json`) and stays excluded from the pooled aggregate
+> — this closes "can the browser physically perform a drag", not "is it reliable enough to gate on".
 >
 > `hover` deliberately does **not** settle the page afterwards: a hover-revealed menu is a structural
 > change the caller observes by re-reading, and waiting for quiet after a pointer move would charge every
@@ -505,7 +520,9 @@ synchronous one, not a new member of the existing union.
   conflicts with `webContents.debugger`. **Mitigation:** dialog (PR4) and drag (PR6) are **spike-first**
   with a documented **HITL fallback** — dialogs surface as a blocking pause event; drag ships HITL-only
   if the spike is unreliable, and `drag-reorder` is then **excluded from the DoD pooled aggregate**
-  (drag is explicitly **not** a gate).
+  (drag is explicitly **not** a gate). **Resolved 2026-09-16:** the spike came back reliable (see PR6
+  above), so the HITL-only fallback was not needed — the verb shipped. `drag-reorder` keeps its
+  `not-a-gate` tag regardless: the spike proved the mechanism, not the N≥10-site reliability number.
 - **Page-principal override temptation.** A `window.confirm`/`window.alert` override in the page world
   would let untrusted script drive the agent. **Mitigation:** interception is main-process only, via the
   debugger/native events — never injected into the page principal (a security-plane invariant asserted in

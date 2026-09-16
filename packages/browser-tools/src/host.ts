@@ -141,6 +141,16 @@ export interface BrowserHost {
    */
   hoverElement(ref: number, tabId?: string): Promise<void>;
   /**
+   * Drag the element identified by `ref` onto the element identified by `targetRef` (S3 PR6 spike).
+   *
+   * `mode` reports which of the two incompatible drag mechanisms actually ran: `'native'` for HTML5
+   * `draggable="true"` elements (driven through CDP's drag-intercept protocol, since plain mouse events
+   * never fire `dragstart`), `'pointer'` for everything else (a held mousedown moved through the target
+   * and released — what sortable-list/kanban widgets, including this app's own `@dnd-kit` tab groups,
+   * actually listen for). The caller picks neither; the element's own `draggable` IDL property decides.
+   */
+  dragElement(ref: number, targetRef: number, tabId?: string): Promise<{ mode: 'native' | 'pointer' }>;
+  /**
    * Focus the input identified by `ref` and replace its value with `text`.
    *
    * `widget` is non-null when the field takes its value from its own widget (a `readonly` datepicker, an

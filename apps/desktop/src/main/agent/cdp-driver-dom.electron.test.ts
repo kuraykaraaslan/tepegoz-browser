@@ -19,6 +19,7 @@ const S = vi.hoisted(() => ({
   ResolveSchema: { safeParse: vi.fn() },
   WidgetKindSchema: { safeParse: vi.fn() },
   WidgetOptionSchema: { safeParse: vi.fn() },
+  DraggableSchema: { safeParse: vi.fn() },
 }));
 vi.mock('./cdp-driver-schemas.electron.js', () => ({
   ...S,
@@ -222,6 +223,28 @@ describe('widgetKindOf', () => {
 
     S.WidgetKindSchema.safeParse.mockReturnValueOnce(bad);
     expect(await dom.widgetKindOf(cast(wc()), cast({ backendNodeId: 1 }))).toBeNull();
+  });
+});
+
+describe('isNativeDraggable (S3 PR6 spike)', () => {
+  it('reads the draggable IDL property, not the raw attribute', async () => {
+    S.ResolveSchema.safeParse.mockReturnValue(ok({ object: { objectId: 'o' } }));
+    S.DraggableSchema.safeParse.mockReturnValueOnce(ok({ result: { value: { draggable: true } } }));
+    expect(await dom.isNativeDraggable(cast(wc()), cast({ backendNodeId: 1 }))).toBe(true);
+
+    S.DraggableSchema.safeParse.mockReturnValueOnce(ok({ result: { value: { draggable: false } } }));
+    expect(await dom.isNativeDraggable(cast(wc()), cast({ backendNodeId: 1 }))).toBe(false);
+  });
+
+  it('defaults to false (the plain-mouse path) when the probe cannot be parsed', async () => {
+    S.ResolveSchema.safeParse.mockReturnValue(ok({ object: { objectId: 'o' } }));
+    S.DraggableSchema.safeParse.mockReturnValueOnce(bad);
+    expect(await dom.isNativeDraggable(cast(wc()), cast({ backendNodeId: 1 }))).toBe(false);
+  });
+
+  it('defaults to false when the object id itself cannot be resolved', async () => {
+    S.ResolveSchema.safeParse.mockReturnValue(bad);
+    expect(await dom.isNativeDraggable(cast(wc()), cast({ backendNodeId: 1 }))).toBe(false);
   });
 });
 

@@ -53,6 +53,7 @@ const Ref = z.coerce.number().int().positive().max(10_000);
 const UpdatePageArgs = z.discriminatedUnion('action', [
   TargetTabArgs.extend({ action: z.literal('click'), ref: Ref }),
   TargetTabArgs.extend({ action: z.literal('hover'), ref: Ref }),
+  TargetTabArgs.extend({ action: z.literal('drag'), ref: Ref, targetRef: Ref }),
   TargetTabArgs.extend({ action: z.literal('fill'), ref: Ref, text: z.string().max(10_000) }),
   TargetTabArgs.extend({ action: z.literal('press'), key: z.string().min(1).max(40) }),
   TargetTabArgs.extend({ action: z.literal('send_keys'), keys: z.string().min(1).max(200) }),
@@ -197,6 +198,9 @@ interface InteractionResult {
   /** AI-8B: set only when a request sent during this interaction failed. Absent means "nothing was
    *  observed", never "everything succeeded". */
   networkWarning?: string;
+  /** `drag` only: which mechanism actually ran — `'native'` (HTML5 `draggable`) or `'pointer'` (a held
+   *  mousedown moved and released, what sortable-list/kanban widgets listen for). S3 PR6 spike. */
+  dragMode?: 'native' | 'pointer';
 }
 
 /** Longest field value quoted back to the model, and the sanitizing pass every page-controlled string
@@ -234,6 +238,8 @@ interface InteractionContext {
   spawnedTabs?: { id: string; url: string; title: string }[] | undefined;
   /** `fill` only: the widget kind that refused the typed value (S3 PR7). */
   fillWidget?: 'readonly' | 'disabled' | 'combobox' | null | undefined;
+  /** `drag` only: which mechanism actually ran (S3 PR6 spike). */
+  dragMode?: 'native' | 'pointer' | undefined;
 }
 
 /**
@@ -364,7 +370,13 @@ function interactionResult(
   args: z.infer<typeof UpdatePageArgs>,
   ctx: InteractionContext,
 ): InteractionResult {
-  return withSpawnedTabs(interactionResultBody(args, ctx), ctx.spawnedTabs ?? []);
+  const body = withSpawnedTabs(interactionResultBody(args, ctx), ctx.spawnedTabs ?? []);
+  // `drag`'s mechanism is reported regardless of which change/no-change branch answered below — the
+  // model gains nothing from knowing it, but a human debugging "the drag didn't work" needs to see which
+  // of the two incompatible mechanisms actually ran before guessing why.
+  return args.action === 'drag' && ctx.dragMode !== undefined
+    ? { ...body, dragMode: ctx.dragMode }
+    : body;
 }
 
 /**
@@ -943,7 +955,12 @@ export function registerBrowserTools(deps: { host: BrowserHost }): void {
       'Perform ONE interaction on a page, using a `ref` from browser_get_elements on the same tab. args: ' +
         'one of { action: "click", ref, tabId? } · { action: "hover", ref, tabId? } (the ONLY way to ' +
         'open a menu that appears on :hover — it has no click handler, so its links are not listed ' +
-        'until the pointer is over the trigger) · { action: "fill", ref, text, tabId? } · ' +
+        'until the pointer is over the trigger) · ' +
+        '{ action: "drag", ref, targetRef, tabId? } to drag the element at `ref` onto the element at ' +
+        '`targetRef` (both from browser_get_elements) — for reordering a list, moving a card between ' +
+        'columns, or a slider/handle; returns which of two drag mechanisms ran in `dragMode` ' +
+        '("native"|"pointer"), which you can ignore unless the drag visibly did not work · ' +
+        '{ action: "fill", ref, text, tabId? } · ' +
         '{ action: "press", key, tabId? } (e.g. "Enter", "Tab", "Escape", "ArrowDown") · ' +
         '{ action: "send_keys", keys, tabId? } for a chord or a sequence ("Ctrl+A", "Shift+Tab", ' +
         '"Ctrl+A Delete") — an unsendable keystroke comes back in `unsupportedKeys` rather than failing ' +
@@ -985,12 +1002,16 @@ export function registerBrowserTools(deps: { host: BrowserHost }): void {
       let unsupportedKeys: string[] | undefined;
       let occludedBy: string | null | undefined;
       let fillWidget: 'readonly' | 'disabled' | 'combobox' | null | undefined;
+      let dragMode: 'native' | 'pointer' | undefined;
       switch (args.action) {
         case 'click':
           ({ occludedBy } = await host.clickElement(args.ref, args.tabId));
           break;
         case 'hover':
           await host.hoverElement(args.ref, args.tabId);
+          break;
+        case 'drag':
+          ({ mode: dragMode } = await host.dragElement(args.ref, args.targetRef, args.tabId));
           break;
         case 'fill':
           ({ widget: fillWidget } = await host.fillElement(args.ref, args.text, args.tabId));
@@ -1045,6 +1066,7 @@ export function registerBrowserTools(deps: { host: BrowserHost }): void {
         occludedBy,
         spawnedTabs,
         fillWidget,
+        dragMode,
       });
       const withWarning = warning === undefined ? result : { ...result, networkWarning: warning };
       return dialogNote === undefined

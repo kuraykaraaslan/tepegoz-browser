@@ -28,6 +28,7 @@ import { waitForPageSettled } from './cdp-driver-session.electron.js';
 import { snapshotElements as snapshotElementsImpl } from './cdp-driver-snapshot.electron.js';
 import {
   clickElement as clickElementImpl,
+  dragElement as dragElementImpl,
   fillElement as fillElementImpl,
   hoverElement as hoverElementImpl,
   pressKey as pressKeyImpl,
@@ -264,6 +265,17 @@ export default class CdpDriver {
     adapter?: HumanInputAdapter,
   ): Promise<{ occludedBy: string | null }> {
     return clickElementImpl(wc, ref, adapter, CdpDriver.core());
+  }
+
+  /** Drag from `ref` to `targetRef` (S3 PR6 spike) — native HTML5 dnd or plain pointer drag, chosen per
+   *  element. See {@link dragElementImpl} for why the two paths cannot share one mechanism. */
+  static async dragElement(
+    wc: WebContents,
+    ref: number,
+    targetRef: number,
+    adapter?: HumanInputAdapter,
+  ): Promise<{ mode: 'native' | 'pointer' }> {
+    return dragElementImpl(wc, ref, targetRef, adapter, CdpDriver.core());
   }
 
   static async fillElement(

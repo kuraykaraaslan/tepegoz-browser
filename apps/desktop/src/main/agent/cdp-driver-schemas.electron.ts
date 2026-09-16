@@ -179,6 +179,12 @@ export const WidgetOptionSchema = z.object({
   }),
 });
 
+/** Whether an element is natively draggable — the DOM `draggable` IDL property, not the raw attribute,
+ *  so `<a href>`/`<img>`'s spec-default draggable-true is picked up even with no attribute set (S3 PR6). */
+export const DraggableSchema = z.object({
+  result: z.object({ value: z.object({ draggable: z.boolean() }) }),
+});
+
 /** CDP key-event fields for one named key. */
 export type KeySpec = { key: string; code: string; keyCode: number; text?: string };
 
