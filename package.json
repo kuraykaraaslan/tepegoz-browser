@@ -64,9 +64,11 @@
       "tar": ">=7.5.21",
       "js-yaml": ">=4.3.1",
       "ip-address": ">=10.3.1",
-      "fast-uri": ">=3.1.4",
+      "fast-uri": ">=4.1.3",
       "vite": "^7.3.6",
-      "esbuild": ">=0.25.0"
+      "esbuild": ">=0.25.0",
+      "browserslist": ">=4.28.7",
+      "@xmldom/xmldom": ">=0.9.12"
     }
   },
   "//devDependencies": "`@tepegoz/i18n` is a devDependency of the ROOT so the Playwright suite can import the real `IME_MATRIX` instead of keeping a second copy of it. A runner that carries its own cases stops testing the matrix the moment the matrix changes. `@tepegoz/chat-adapters` + `@tepegoz/chat-transport-node` are ROOT devDependencies for the same reason: a live chat e2e spec needs a real, second XMPP client (bob) driven from Node directly, not through the app under test — that requires the actual adapter, not a hand-rolled protocol stub."
