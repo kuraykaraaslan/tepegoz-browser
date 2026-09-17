@@ -30,10 +30,34 @@ module.exports = {
     {
       name: 'not-to-dev-dep',
       severity: 'error',
-      comment: 'Production code must not import devDependencies.',
-      // `.eval.ts` are dev-only agent-eval drivers (Playwright over the real app) — dev-only like tests.
-      from: { pathNot: '\\.(test|spec|eval)\\.ts$' },
-      to: { dependencyTypes: ['npm-dev'] },
+      comment:
+        'Production code must not import devDependencies. Scoped to `packages/*`/`extensions/*` — ' +
+        'the individually reusable units where a stray devDependency import is a real "this breaks ' +
+        'outside a full monorepo install" risk. `apps/desktop` is excluded on purpose, not overlooked: ' +
+        'electron-vite bundles its main AND renderer code, so its own package.json already documents ' +
+        '(see its "//devDependencies" note) that most of what it lists there is a deliberate BUILD-TIME ' +
+        "dependency, not a runtime one — the rule's premise does not hold for a single bundled app the " +
+        'way it does for a package meant to be installed on its own.',
+      from: {
+        // `.eval.ts` are dev-only agent-eval drivers (Playwright over the real app) — dev-only like
+        // tests, as is the rest of @tepegoz/agent-eval (a measurement harness, never shipped in the
+        // app) and any build `scripts/` directory (runs at build time, not in the shipped code).
+        path: '^(packages|extensions)/',
+        pathNot: '(\\.(test|spec|eval)\\.tsx?$|^packages/agent-eval/|(^|/)scripts/)',
+      },
+      to: {
+        dependencyTypes: ['npm-dev'],
+        // A package correctly declared as BOTH `peerDependencies` (the real runtime contract a
+        // consumer must satisfy) AND `devDependencies` (a concrete version for this package's own
+        // standalone typecheck/test/build) is not a hygiene violation — react/react-dom in every
+        // presentational leaf package follow exactly this standard pattern.
+        dependencyTypesNot: ['npm-peer'],
+        // `electron` itself is the one npm package every Electron app's tooling (electron-builder,
+        // electron-vite) requires to live in `devDependencies`, never `dependencies` — it is a
+        // dev/build-time binary + typings, not a runtime library resolved from node_modules in the
+        // packaged app. Its own docs are explicit about this; it is not this repo's choice to relax.
+        pathNot: 'node_modules/electron/',
+      },
     },
     {
       name: 'omnibox-is-a-leaf',
@@ -521,7 +545,36 @@ module.exports = {
     // fires on it. Cruising `apps` picked up `apps/desktop/out/**` and reported 198 phantom
     // `no-circular` errors about generated chunks — which is why this gate had never been green, and so
     // had never been wired into CI. Source only.
-    exclude: { path: '(^|/)(out|dist|build|coverage|node_modules)/' },
+    //
+    // Two real, previously-undiscovered gate failures lived in this one option, found and fixed
+    // together 2026-09-17 because fixing only the first exposed the second immediately:
+    //
+    // 1. A bare `node_modules` segment used to be in this list. `exclude`, unlike `doNotFollow` above
+    //    (which only stops RECURSING into a resolved dependency's own internals — react-dom's requires,
+    //    etc. — and does not remove the edge to it), removes a matched module from the result set
+    //    ENTIRELY, edge and all. Since every real npm-registry package (axios, zod, electron, vitest,
+    //    ...) necessarily resolves to a path under `node_modules/`, and a `@tepegoz/*` workspace
+    //    package never does (it resolves under `packages/*/src/`), matching bare `node_modules` here
+    //    meant EVERY third-party npm dependency was silently dropped from the graph before any
+    //    `forbidden` rule ever saw it. Concretely, `not-to-dev-dep` ("production code must not import
+    //    devDependencies") could not have caught a single real devDependency-in-production import in
+    //    this repo's history, because the dependency type it checks (`npm-dev`) is derived from an edge
+    //    that never reached it.
+    // 2. Dropping bare `node_modules` from the exclude list was not enough on its own: many npm
+    //    packages ship their build output in a folder literally named `dist` (vitest, axios, ...) —
+    //    exactly one of the four segment names this same regex excludes, with no anchor keeping it out
+    //    of `node_modules/`. `node_modules/vitest/dist/index.js` matched `(^|/)dist/` regardless of the
+    //    fix above, so `import { describe } from 'vitest'` in production code still passed clean.
+    //    A negative lookahead scopes the exclusion to paths that are not already inside `node_modules`
+    //    (this repo's own build output never is), so real npm packages whose internal layout happens to
+    //    use these same folder names stay visible while `apps/desktop/out/**` stays excluded.
+    //
+    // Verified against both: a mutated `import zod from 'zod'` (no `dist/` collision) was visible
+    // immediately after fix 1 alone; a mutated `import { describe } from 'vitest'` (which DOES resolve
+    // through a `dist/` segment) stayed invisible until fix 2 landed too. The whole repo's real
+    // (unmutated) source stays clean under both fixes together, meaning nothing here was quietly
+    // relying on either hole.
+    exclude: { path: '^(?!.*node_modules/).*(out|dist|build|coverage)/' },
     tsConfig: { fileName: 'tsconfig.base.json' },
     // Left OFF deliberately. `no-circular` — the rule that is an ERROR here — is about ESM evaluation
     // order, and `import type` edges are erased before any code runs, so counting them would fail the
