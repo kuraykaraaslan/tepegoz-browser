@@ -503,6 +503,17 @@ module.exports = {
       from: { path: '^packages/agent-runtime/' },
       to: { path: ['^apps/', 'node_modules/electron'] },
     },
+    {
+      name: 'http-no-app-no-electron',
+      severity: 'error',
+      comment:
+        '@tepegoz/http is the ONE outbound-HTTP seam (own docblock) and must stay pure Node/browser: ' +
+        'no Electron, no app imports. The desktop hosts (web-tools-host.electron.ts, ' +
+        'download-tools-host.electron.ts, …) and the model-gateway providers are the only callers. ' +
+        'See docs/package-map.md.',
+      from: { path: '^packages/http/' },
+      to: { path: ['^apps/', 'node_modules/electron'] },
+    },
   ],
   options: {
     doNotFollow: { path: 'node_modules' },
