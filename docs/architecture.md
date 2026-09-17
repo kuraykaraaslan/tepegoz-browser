@@ -29,8 +29,9 @@ direct cross-layer imports are forbidden and **enforced in CI** by
 |           **L9 — Browser UI** | Command Palette, Live Agent Console, browser shell, settings                 | [`package-map.md`](package-map.md)                                                                                                    |
 |       **L10 — Safe Browsing** | Adblock, Safe Browsing, AgentThreatShield, popup/permission guard            | [Phase 2](../phases/product/phase-2-adapters-safe-browsing.md)                                                                        |
 
-> An ADR is cited only where one exists; the index of record is [`adr/`](adr/) (ADR-0024 is the current
-> head — new records continue from 0025).
+> An ADR is cited only where one exists; the index of record is [`adr/README.md`](adr/README.md)'s own
+> ordered table — this page does not restate a "current head" number, because the one it stated before
+> (0024, "new records continue from 0025") went stale and sat uncorrected while the repo moved on to 0049.
 
 ## Where each question is answered
 
