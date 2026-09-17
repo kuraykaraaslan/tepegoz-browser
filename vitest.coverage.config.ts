@@ -9,8 +9,7 @@ import { defineConfig } from 'vitest/config';
  * root config would hijack every package-local `vitest run` (their cwd-relative include would match
  * nothing → "No test files found"). Only `pnpm coverage` loads this file, via --config.
  *
- * SCOPE: every `packages/*` that ships unit tests — 63 of them (62 + `process-ui`, the
- * tepegoz://process Task Manager surface, added 2026-08-28 at S95.6 / B95.45 / F90 / L95.6). It used
+ * SCOPE: every `packages/*` that ships unit tests — 76 of them. It used
  * to list 28, which is the
  * failure mode a coverage gate is most prone to: the boundary drawn around the code that already
  * passes. Left out were `credential-vault` (the key crypto), `human-input`, `notary`, `macro-engine`,
@@ -23,6 +22,19 @@ import { defineConfig } from 'vitest/config';
  * running green under `turbo run test` the whole time and simply were not being measured. Adding them
  * RAISED statements (79.75 → 80.14), which is the tell that the exclusion was never protecting a
  * number — it was just stale.
+ *
+ * Six more rejoined 2026-09-17, found the same way: `desktop-ipc` (12 test files — including the one
+ * this docblock's own history, two ratchets up, already claimed had "gone from ZERO test files to a
+ * full schema suite," which was true of the tests but never made it into this array), `profiles`,
+ * `profiles-ui`, `reader`, `shortcuts`, `window-controls` — each a real package with real, currently-
+ * green tests under `turbo run test`, silently unmeasured here because nobody added its glob when its
+ * tests landed. Verified mechanically: every package whose `src/` contains a `*.test.{ts,tsx}` file
+ * now has a matching `include` entry below, except the one deliberate exclusion (`ui`) and `native-rs`
+ * (no TS tests — a Rust placeholder). Re-measuring `packages/**` with these six included moved the
+ * real floor from S97.58/B91.93/F95.29/L97.58 to S97.58/B91.66/F94.84/L97.58 — branches and functions
+ * dipped slightly (new packages, their own coverage profile) but both stayed comfortably above the
+ * existing 89/93 thresholds, so no ratchet was needed or made; this was a scope fix, not a coverage
+ * change.
  *
  * One PACKAGE exclusion remains, and it is not discretionary:
  *  - `packages/ui` — vendored kui-react fork (see packages/ui/_FORK.md), explicitly not repo code.
@@ -223,6 +235,7 @@ export default defineConfig({
         'packages/chat-ui/src/**',
         'packages/clipboard/src/**',
         'packages/credential-vault/src/**',
+        'packages/desktop-ipc/src/**',
         'packages/downloads/src/**',
         'packages/downloads-ui/src/**',
         'packages/extension-catalog/src/**',
@@ -262,12 +275,16 @@ export default defineConfig({
         'packages/persistence/src/**',
         'packages/preferences/src/**',
         'packages/process-ui/src/**',
+        'packages/profiles/src/**',
+        'packages/profiles-ui/src/**',
+        'packages/reader/src/**',
         'packages/recipe-compiler/src/**',
         'packages/screenshots/src/**',
         'packages/security-policy/src/**',
         'packages/socks5/src/**',
         'packages/settings-ui/src/**',
         'packages/shared-types/src/**',
+        'packages/shortcuts/src/**',
         'packages/tab-engine/src/**',
         'packages/tab-strip/src/**',
         'packages/tasks/src/**',
@@ -275,6 +292,7 @@ export default defineConfig({
         'packages/uploads/src/**',
         'packages/uploads-ui/src/**',
         'packages/web-tools/src/**',
+        'packages/window-controls/src/**',
       ],
       // `*.eval.ts` joins `*.test.{ts,tsx}` here on the SAME ground, not as a rescue: it is a test
       // spec, not product code. `harness.eval.ts` imports `test` from `@playwright/test` and is
