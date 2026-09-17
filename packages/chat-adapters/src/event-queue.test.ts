@@ -55,7 +55,9 @@ describe('boundEventQueue', () => {
     // no gap sentinel is stored in the queue
     expect(q.every((e) => e.type === 'message')).toBe(true);
     // the survivors are the newest run
-    const bodies = q.map((e) => Number((e as Extract<ChatEvent, { type: 'message' }>).message.body));
+    const bodies = q.map((e) =>
+      Number((e as Extract<ChatEvent, { type: 'message' }>).message.body),
+    );
     expect(Math.min(...bodies)).toBe(5);
   });
 
@@ -97,6 +99,10 @@ describe('boundEventQueue', () => {
 
   it('the default cap is 4096 and the sentinel validates as an account error', () => {
     expect(MAX_QUEUED_EVENTS).toBe(4_096);
-    expect(overflowGapEvent()).toMatchObject({ type: 'error', scope: 'account', conversationId: null });
+    expect(overflowGapEvent()).toMatchObject({
+      type: 'error',
+      scope: 'account',
+      conversationId: null,
+    });
   });
 });

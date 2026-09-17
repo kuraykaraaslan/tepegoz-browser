@@ -7,7 +7,9 @@ import { MatrixAdapter, MatrixSession } from './adapter';
 type Route = (init: ChatFetchInit, url: string) => { status?: number; body: unknown } | 'hang';
 
 function bodyOf(c: { init: ChatFetchInit } | undefined): Record<string, unknown> {
-  return c?.init.body !== undefined ? (JSON.parse(String(c.init.body)) as Record<string, unknown>) : {};
+  return c?.init.body !== undefined
+    ? (JSON.parse(String(c.init.body)) as Record<string, unknown>)
+    : {};
 }
 
 class FakeTransport implements ChatTransport {
@@ -22,7 +24,10 @@ class FakeTransport implements ChatTransport {
   fetch(url: string, init: ChatFetchInit): Promise<ChatFetchResponse> {
     this.calls.push({ url, init });
     const route = this.routes.find((r) => r.test.test(url));
-    const out = route?.fn(init, url) ?? { status: 404, body: { errcode: 'M_NOT_FOUND', error: 'no route' } };
+    const out = route?.fn(init, url) ?? {
+      status: 404,
+      body: { errcode: 'M_NOT_FOUND', error: 'no route' },
+    };
     if (out === 'hang') return new Promise<ChatFetchResponse>(() => undefined);
     return Promise.resolve({
       status: out.status ?? 200,
@@ -66,7 +71,13 @@ function baseTransport(): FakeTransport {
                 '!r:m.example': {
                   timeline: {
                     events: [
-                      { type: 'm.room.message', sender: '@bob:m.example', event_id: '$1', origin_server_ts: 5, content: { msgtype: 'm.text', body: 'hi' } },
+                      {
+                        type: 'm.room.message',
+                        sender: '@bob:m.example',
+                        event_id: '$1',
+                        origin_server_ts: 5,
+                        content: { msgtype: 'm.text', body: 'hi' },
+                      },
                     ],
                   },
                   state: { events: [] },
@@ -126,8 +137,20 @@ describe('MatrixAdapter — connect', () => {
                 '!space:m.example': {
                   timeline: {
                     events: [
-                      { type: 'm.room.create', sender: '@ada:m.example', event_id: '$c', origin_server_ts: 1, content: { type: 'm.space' } },
-                      { type: 'm.room.message', sender: '@ada:m.example', event_id: '$s', origin_server_ts: 2, content: { msgtype: 'm.text', body: 'space noise' } },
+                      {
+                        type: 'm.room.create',
+                        sender: '@ada:m.example',
+                        event_id: '$c',
+                        origin_server_ts: 1,
+                        content: { type: 'm.space' },
+                      },
+                      {
+                        type: 'm.room.message',
+                        sender: '@ada:m.example',
+                        event_id: '$s',
+                        origin_server_ts: 2,
+                        content: { msgtype: 'm.text', body: 'space noise' },
+                      },
                     ],
                   },
                   state: { events: [] },
@@ -135,7 +158,13 @@ describe('MatrixAdapter — connect', () => {
                 '!room:m.example': {
                   timeline: {
                     events: [
-                      { type: 'm.room.message', sender: '@bob:m.example', event_id: '$1', origin_server_ts: 5, content: { msgtype: 'm.text', body: 'hi' } },
+                      {
+                        type: 'm.room.message',
+                        sender: '@bob:m.example',
+                        event_id: '$1',
+                        origin_server_ts: 5,
+                        content: { msgtype: 'm.text', body: 'hi' },
+                      },
                     ],
                   },
                   state: { events: [] },
@@ -148,7 +177,10 @@ describe('MatrixAdapter — connect', () => {
     const adapter = new MatrixAdapter();
     const session = (await adapter.connect(creds(), t)) as MatrixSession;
     const it = adapter.events(session)[Symbol.asyncIterator]();
-    expect((await it.next()).value).toMatchObject({ type: 'room-membership', conversationId: '!room:m.example' });
+    expect((await it.next()).value).toMatchObject({
+      type: 'room-membership',
+      conversationId: '!room:m.example',
+    });
     expect((await it.next()).value).toMatchObject({ type: 'message', message: { body: 'hi' } });
     await adapter.disconnect(session);
   });
@@ -156,14 +188,21 @@ describe('MatrixAdapter — connect', () => {
   it('rejects a non-matrix account', async () => {
     await expect(
       new MatrixAdapter().connect(
-        { accountId: 'a', secret: 'x', server: { protocol: 'irc', server: 's', port: 6697, tls: true, nick: 'n', sasl: false } },
+        {
+          accountId: 'a',
+          secret: 'x',
+          server: { protocol: 'irc', server: 's', port: 6697, tls: true, nick: 'n', sasl: false },
+        },
         baseTransport(),
       ),
     ).rejects.toThrow(/not a matrix account/);
   });
 
   it('surfaces a 4xx as a thrown MatrixApiError during connect', async () => {
-    const t = new FakeTransport().on(/\/login$/, () => ({ status: 403, body: { errcode: 'M_FORBIDDEN', error: 'bad password' } }));
+    const t = new FakeTransport().on(/\/login$/, () => ({
+      status: 403,
+      body: { errcode: 'M_FORBIDDEN', error: 'bad password' },
+    }));
     await expect(new MatrixAdapter().connect(creds(), t)).rejects.toThrow(/bad password/);
   });
 });
@@ -177,8 +216,20 @@ describe('MatrixAdapter — actions', () => {
         body: {
           end: 'p2',
           chunk: [
-            { type: 'm.room.message', sender: '@bob:m.example', event_id: '$h2', origin_server_ts: 20, content: { msgtype: 'm.text', body: 'newer' } },
-            { type: 'm.room.message', sender: '@bob:m.example', event_id: '$h1', origin_server_ts: 10, content: { msgtype: 'm.text', body: 'older' } },
+            {
+              type: 'm.room.message',
+              sender: '@bob:m.example',
+              event_id: '$h2',
+              origin_server_ts: 20,
+              content: { msgtype: 'm.text', body: 'newer' },
+            },
+            {
+              type: 'm.room.message',
+              sender: '@bob:m.example',
+              event_id: '$h1',
+              origin_server_ts: 10,
+              content: { msgtype: 'm.text', body: 'older' },
+            },
           ],
         },
       }))
@@ -210,7 +261,11 @@ describe('MatrixAdapter — actions', () => {
 
   it('editMessage / react build the right relations', async () => {
     const { adapter, session, t } = await connected();
-    await adapter.editMessage(session, '!r:m.example', '$1', { body: 'fixed', replyToId: null, mediaPath: null });
+    await adapter.editMessage(session, '!r:m.example', '$1', {
+      body: 'fixed',
+      replyToId: null,
+      mediaPath: null,
+    });
     await adapter.react(session, '!r:m.example', '$1', '👍', true);
     expect(await adapter.react(session, '!r:m.example', '$1', '👍', false)).toBeUndefined(); // removal is a no-op
 
@@ -275,7 +330,9 @@ describe('MatrixAdapter — actions', () => {
   });
 
   it('uploadMedia POSTs the bytes and returns the content_uri', async () => {
-    const t = baseTransport().on(/\/media\/v3\/upload\?/, () => ({ body: { content_uri: 'mxc://m.example/newpic' } }));
+    const t = baseTransport().on(/\/media\/v3\/upload\?/, () => ({
+      body: { content_uri: 'mxc://m.example/newpic' },
+    }));
     const adapter = new MatrixAdapter();
     const session = (await adapter.connect(creds(), t)) as MatrixSession;
     const bytes = new Uint8Array([1, 2, 3, 4]);
@@ -289,7 +346,10 @@ describe('MatrixAdapter — actions', () => {
   });
 
   it('uploadMedia throws a MatrixApiError when the server has no content_uri', async () => {
-    const t = baseTransport().on(/\/media\/v3\/upload\?/, () => ({ status: 413, body: { errcode: 'M_TOO_LARGE', error: 'too big' } }));
+    const t = baseTransport().on(/\/media\/v3\/upload\?/, () => ({
+      status: 413,
+      body: { errcode: 'M_TOO_LARGE', error: 'too big' },
+    }));
     const adapter = new MatrixAdapter();
     const session = (await adapter.connect(creds(), t)) as MatrixSession;
     await expect(
@@ -302,19 +362,32 @@ describe('MatrixAdapter — actions', () => {
 type ChatEventLike = { type: string; message?: { body: string } };
 
 describe('MatrixSession — /sync backpressure (X-chat.10 memory bound)', () => {
-  const msg = (i: number) =>
-    ({
-      type: 'message' as const,
-      message: {
-        id: `id-${String(i)}`, conversationId: 'c', accountId: 'acc', protocolId: `p${String(i)}`,
-        senderAddress: '@bob:x', senderName: 'Bob', kind: 'text' as const, body: String(i),
-        mediaRef: null, replyToId: null, reactions: [], editedAt: null, redacted: false,
-        originTs: i, receivedAt: i, deliveryState: 'delivered' as const,
-      },
-    });
+  const msg = (i: number) => ({
+    type: 'message' as const,
+    message: {
+      id: `id-${String(i)}`,
+      conversationId: 'c',
+      accountId: 'acc',
+      protocolId: `p${String(i)}`,
+      senderAddress: '@bob:x',
+      senderName: 'Bob',
+      kind: 'text' as const,
+      body: String(i),
+      mediaRef: null,
+      replyToId: null,
+      reactions: [],
+      editedAt: null,
+      redacted: false,
+      originTs: i,
+      receivedAt: i,
+      deliveryState: 'delivered' as const,
+    },
+  });
 
-  const queueLen = (s: MatrixSession): number => (s as unknown as { queue: unknown[] }).queue.length;
-  const gap = (s: MatrixSession): string => (s as unknown as { qstate: { gap: string } }).qstate.gap;
+  const queueLen = (s: MatrixSession): number =>
+    (s as unknown as { queue: unknown[] }).queue.length;
+  const gap = (s: MatrixSession): string =>
+    (s as unknown as { qstate: { gap: string } }).qstate.gap;
 
   it('never exceeds the cap when the consumer never drains, dropping the oldest', async () => {
     const s = new MatrixSession('acc', 'https://x', {} as never);

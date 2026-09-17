@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_PREFERENCES } from './preferences.model';
-import { PREFERENCE_METADATA, preferenceMeta, type PreferenceStability } from './developer-registry';
+import {
+  PREFERENCE_METADATA,
+  preferenceMeta,
+  type PreferenceStability,
+} from './developer-registry';
 
 /**
  * `DEFAULT_PREFERENCES` is a complete `Preferences` (typed as one), so it is the honest key list to
@@ -29,7 +33,11 @@ describe('developer preference registry', () => {
       .sort();
     // These are the three the schema itself documents as startup-only. If this list changes, the
     // change is deliberate and the schema comment on that key should say so too.
-    expect(restart).toEqual(['chromiumFlags', 'crashReportingEnabled', 'hardwareAccelerationEnabled']);
+    expect(restart).toEqual([
+      'chromiumFlags',
+      'crashReportingEnabled',
+      'hardwareAccelerationEnabled',
+    ]);
   });
 
   it('every restart-required key is a real preference', () => {

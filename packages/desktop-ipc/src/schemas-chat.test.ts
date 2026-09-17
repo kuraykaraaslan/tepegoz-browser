@@ -46,9 +46,12 @@ describe('ChatAddAccountSchema', () => {
 
   it('rejects a missing / over-long secret and a bad account', () => {
     expect(ChatAddAccountSchema.safeParse({ account }).success).toBe(false);
-    expect(ChatAddAccountSchema.safeParse({ account, secret: 'x'.repeat(4097) }).success).toBe(false);
+    expect(ChatAddAccountSchema.safeParse({ account, secret: 'x'.repeat(4097) }).success).toBe(
+      false,
+    );
     expect(
-      ChatAddAccountSchema.safeParse({ account: { ...account, id: 'Not A Slug' }, secret: 'p' }).success,
+      ChatAddAccountSchema.safeParse({ account: { ...account, id: 'Not A Slug' }, secret: 'p' })
+        .success,
     ).toBe(false);
   });
 });
@@ -90,8 +93,11 @@ describe('ChatSetPresenceSchema', () => {
       false,
     );
     expect(
-      ChatSetPresenceSchema.safeParse({ accountId: 'a', presence: 'dnd', statusText: 'x'.repeat(513) })
-        .success,
+      ChatSetPresenceSchema.safeParse({
+        accountId: 'a',
+        presence: 'dnd',
+        statusText: 'x'.repeat(513),
+      }).success,
     ).toBe(false);
   });
 });
@@ -127,13 +133,13 @@ describe('ChatEditMessageSchema', () => {
 
 describe('roster channels', () => {
   it('ChatAddContactSchema needs a non-empty account id and address', () => {
-    expect(ChatAddContactSchema.safeParse({ accountId: 'a', address: 'bob@example.com' }).success).toBe(
-      true,
-    );
+    expect(
+      ChatAddContactSchema.safeParse({ accountId: 'a', address: 'bob@example.com' }).success,
+    ).toBe(true);
     expect(ChatAddContactSchema.safeParse({ accountId: 'a', address: '' }).success).toBe(false);
-    expect(ChatAddContactSchema.safeParse({ accountId: '', address: 'bob@example.com' }).success).toBe(
-      false,
-    );
+    expect(
+      ChatAddContactSchema.safeParse({ accountId: '', address: 'bob@example.com' }).success,
+    ).toBe(false);
   });
 
   it('ChatRemoveContactSchema needs a non-empty account id and address', () => {
@@ -146,11 +152,12 @@ describe('roster channels', () => {
 
 describe('id / conversation arg guards', () => {
   it('bound the account id and conversation id', () => {
-    expect(ChatConversationArgSchema.safeParse({ accountId: 'a', conversationId: 'c' }).success).toBe(
-      true,
-    );
     expect(
-      ChatConversationArgSchema.safeParse({ accountId: 'x'.repeat(65), conversationId: 'c' }).success,
+      ChatConversationArgSchema.safeParse({ accountId: 'a', conversationId: 'c' }).success,
+    ).toBe(true);
+    expect(
+      ChatConversationArgSchema.safeParse({ accountId: 'x'.repeat(65), conversationId: 'c' })
+        .success,
     ).toBe(false);
     expect(
       ChatMarkReadSchema.safeParse({ accountId: 'a', conversationId: 'c', protocolId: '' }).success,
@@ -160,7 +167,9 @@ describe('id / conversation arg guards', () => {
 
 describe('room channels', () => {
   it('ChatDiscoverRoomsSchema bounds the account id + service host', () => {
-    expect(ChatDiscoverRoomsSchema.safeParse({ accountId: 'a', service: 'conf.example' }).success).toBe(true);
+    expect(
+      ChatDiscoverRoomsSchema.safeParse({ accountId: 'a', service: 'conf.example' }).success,
+    ).toBe(true);
     expect(ChatDiscoverRoomsSchema.safeParse({ accountId: 'a', service: '' }).success).toBe(false);
     expect(
       ChatDiscoverRoomsSchema.safeParse({ accountId: 'a', service: 'x'.repeat(256) }).success,
@@ -168,18 +177,22 @@ describe('room channels', () => {
   });
 
   it('ChatJoinRoomSchema needs a plausible room JID', () => {
-    expect(ChatJoinRoomSchema.safeParse({ accountId: 'a', roomJid: 'room@conf.example' }).success).toBe(true);
+    expect(
+      ChatJoinRoomSchema.safeParse({ accountId: 'a', roomJid: 'room@conf.example' }).success,
+    ).toBe(true);
     expect(ChatJoinRoomSchema.safeParse({ accountId: 'a', roomJid: 'x' }).success).toBe(false);
   });
 
   it('ChatSetRoomNotifyLevelSchema accepts only the three levels', () => {
     for (const level of ['all', 'mentions', 'none']) {
       expect(
-        ChatSetRoomNotifyLevelSchema.safeParse({ accountId: 'a', conversationId: 'c', level }).success,
+        ChatSetRoomNotifyLevelSchema.safeParse({ accountId: 'a', conversationId: 'c', level })
+          .success,
       ).toBe(true);
     }
     expect(
-      ChatSetRoomNotifyLevelSchema.safeParse({ accountId: 'a', conversationId: 'c', level: 'loud' }).success,
+      ChatSetRoomNotifyLevelSchema.safeParse({ accountId: 'a', conversationId: 'c', level: 'loud' })
+        .success,
     ).toBe(false);
   });
 
@@ -198,7 +211,8 @@ describe('room channels', () => {
         .success,
     ).toBe(true);
     expect(
-      ChatMuteForSchema.safeParse({ accountId: 'a', conversationId: 'c', durationMs: null }).success,
+      ChatMuteForSchema.safeParse({ accountId: 'a', conversationId: 'c', durationMs: null })
+        .success,
     ).toBe(true);
     expect(
       ChatMuteForSchema.safeParse({ accountId: 'a', conversationId: 'c', durationMs: 0 }).success,
@@ -217,7 +231,8 @@ describe('room channels', () => {
 
   it('ChatBlockContactSchema requires a non-empty address and a boolean blocked flag', () => {
     expect(
-      ChatBlockContactSchema.safeParse({ accountId: 'a', address: 'bob@x.com', blocked: true }).success,
+      ChatBlockContactSchema.safeParse({ accountId: 'a', address: 'bob@x.com', blocked: true })
+        .success,
     ).toBe(true);
     expect(
       ChatBlockContactSchema.safeParse({ accountId: 'a', address: '', blocked: true }).success,
@@ -226,10 +241,12 @@ describe('room channels', () => {
 
   it('ChatSetArchivedSchema requires a boolean archived flag', () => {
     expect(
-      ChatSetArchivedSchema.safeParse({ accountId: 'a', conversationId: 'c', archived: true }).success,
+      ChatSetArchivedSchema.safeParse({ accountId: 'a', conversationId: 'c', archived: true })
+        .success,
     ).toBe(true);
     expect(
-      ChatSetArchivedSchema.safeParse({ accountId: 'a', conversationId: 'c', archived: 'yes' }).success,
+      ChatSetArchivedSchema.safeParse({ accountId: 'a', conversationId: 'c', archived: 'yes' })
+        .success,
     ).toBe(false);
   });
 
@@ -238,8 +255,11 @@ describe('room channels', () => {
       ChatSetRoomTopicSchema.safeParse({ accountId: 'a', conversationId: 'c', topic: '' }).success,
     ).toBe(true);
     expect(
-      ChatSetRoomTopicSchema.safeParse({ accountId: 'a', conversationId: 'c', topic: 'x'.repeat(4097) })
-        .success,
+      ChatSetRoomTopicSchema.safeParse({
+        accountId: 'a',
+        conversationId: 'c',
+        topic: 'x'.repeat(4097),
+      }).success,
     ).toBe(false);
   });
 });

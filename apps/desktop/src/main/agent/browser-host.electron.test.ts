@@ -492,11 +492,17 @@ describe('waitForCondition', () => {
       richWc({ executeJavaScript: () => Promise.resolve({ satisfied: true, waitedMs: 1 }) }),
     );
 
-    await browserHost.waitForCondition({ kind: 'text', value: 'Merhaba', timeoutMs: 1000 }, 'tab-1');
+    await browserHost.waitForCondition(
+      { kind: 'text', value: 'Merhaba', timeoutMs: 1000 },
+      'tab-1',
+    );
     expect(h.ensureUntranslatedForAgent).toHaveBeenCalledTimes(1);
 
     h.ensureUntranslatedForAgent.mockClear();
-    await browserHost.waitForCondition({ kind: 'selector', value: '#ok', timeoutMs: 1000 }, 'tab-1');
+    await browserHost.waitForCondition(
+      { kind: 'selector', value: '#ok', timeoutMs: 1000 },
+      'tab-1',
+    );
     await browserHost.waitForCondition({ kind: 'network_idle', timeoutMs: 1000 }, 'tab-1');
     expect(h.ensureUntranslatedForAgent).not.toHaveBeenCalled();
   });

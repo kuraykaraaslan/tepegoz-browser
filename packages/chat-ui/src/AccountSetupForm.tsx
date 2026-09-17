@@ -221,7 +221,9 @@ export function AccountSetupForm({
                 <select
                   id={fieldId('security')}
                   value={form.security}
-                  onChange={(e) => set('security', e.target.value === 'starttls' ? 'starttls' : 'tls')}
+                  onChange={(e) =>
+                    set('security', e.target.value === 'starttls' ? 'starttls' : 'tls')
+                  }
                 >
                   <option value="tls">{s.setup.securityTls}</option>
                   <option value="starttls">{s.setup.securityStarttls}</option>
@@ -315,7 +317,9 @@ export function AccountSetupForm({
               inputMode="url"
               placeholder={s.setup.homeserverUrlHint}
               onChange={(e) => set('homeserverUrl', e.target.value)}
-              aria-describedby={errors.homeserverUrl !== undefined ? errId('homeserverUrl') : undefined}
+              aria-describedby={
+                errors.homeserverUrl !== undefined ? errId('homeserverUrl') : undefined
+              }
             />,
           )}
           {field(

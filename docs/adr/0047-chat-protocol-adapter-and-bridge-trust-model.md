@@ -26,8 +26,8 @@ to closed networks where the practical "adapter" is a third-party daemon or an u
 
 Two facts drive the model:
 
-1. **Chat is the hardest untrusted-input surface in the product.** Unlike a web page or an email, *a
-   stranger can initiate*: an unsolicited DM lands directly in a conversation the agent may be asked
+1. **Chat is the hardest untrusted-input surface in the product.** Unlike a web page or an email, _a
+   stranger can initiate_: an unsolicited DM lands directly in a conversation the agent may be asked
    to read. Every message body, sender display name, room topic and reaction is attacker-controlled
    text.
 2. **A bridge to a closed network is code we do not control.** A `mautrix`-style daemon or an
@@ -49,7 +49,7 @@ descriptor (receipts, typing, edits, reactions, threads, e2ee, media, presence, 
 - **Native adapters** — XMPP, IRC, Matrix — run **in-process** in the desktop `ChatService`, the
   ADR-0021 injected-host pattern. We implement and audit the wire protocol.
 - **Bridge adapters** — Telegram, Slack, Discord, WhatsApp — run **out-of-process**, the ADR-0018
-  subprocess shape, implementing the *same* `ChatAdapter` interface over a typed RPC. The
+  subprocess shape, implementing the _same_ `ChatAdapter` interface over a typed RPC. The
   `ChatService` supervises the child and treats it like a native adapter for the UI and the agent.
 
 ### 2. The transport is injected and egress-bound
@@ -57,7 +57,7 @@ descriptor (receipts, typing, edits, reactions, threads, e2ee, media, presence, 
 `@tepegoz/chat-adapters` is Electron-, app- **and** Node-free. The `ChatService` supplies a concrete
 `ChatTransport` (`openTCP` / `openWebSocket` / `fetch` / `openEventStream`) whose every stream is
 placed on the active profile's network binding ([ADR-0011](0011-vpn-network-privacy.md)). A native
-adapter and a bridge subprocess alike get their sockets *only* through this port — neither can open a
+adapter and a bridge subprocess alike get their sockets _only_ through this port — neither can open a
 connection that dodges the kill-switch. A kill-switched profile → the account shows "blocked", no
 socket opens, and the agent's `chat_*` tools return a policy denial.
 
@@ -68,10 +68,10 @@ trust boundary:
 
 1. **Validate** — `safeParse` against the one `ChatEventSchema` (bounded strings, capped arrays). A
    malformed / hostile event is dropped, never thrown past here.
-2. **Capability-gate** — an event describing a feature the protocol's caps do not have is *dropped,
-   not faked*: an `edit` from an IRC adapter would otherwise land as a spurious new message; a
+2. **Capability-gate** — an event describing a feature the protocol's caps do not have is _dropped,
+   not faked_: an `edit` from an IRC adapter would otherwise land as a spurious new message; a
    `receipt` from a protocol without them is noise. Rich fields (reactions, media, threads, edits)
-   are *stripped* from a `message` when the caps say so, rather than the whole message being lost.
+   are _stripped_ from a `message` when the caps say so, rather than the whole message being lost.
 
 `negotiateCaps` narrows a protocol preset only — a connection can turn a capability **off** (a server
 without MAM loses `historySync`) but never **on** beyond the preset, so a buggy or hostile server
@@ -89,8 +89,8 @@ A bridge child process gets:
 - **No filesystem access** beyond its own `Bridges/<id>/state/` directory.
 - **Its own egress binding** — a bridge cannot bypass the profile's kill-switch.
 - **No host RPC** beyond the `ChatAdapter` methods.
-- **A wall-clock + memory budget**, and **crash isolation** — a bridge crash surfaces as *that
-  account* going `error`; nothing else is affected, no other account is reachable.
+- **A wall-clock + memory budget**, and **crash isolation** — a bridge crash surfaces as _that
+  account_ going `error`; nothing else is affected, no other account is reachable.
 - **A signed package** ([Phase 3](../../phases/product/phase-3-backend-cloud-extensions.md)
   supply-chain gate). Bridges are never bundled with the app.
 
@@ -125,7 +125,7 @@ On top of the PEP:
 Passwords, SASL secrets, Matrix access tokens + device keys, and OMEMO / Olm identity keys live in
 `@tepegoz/credential-vault` / `safeStorage`. The `ChatStore` holds `secret_ref` (a vault key) and
 `chat_e2ee_sessions.wrapped_blob` (`safeStorage`-wrapped), never plaintext. The Event Journal records
-*that* a message was sent (conversation-id hash, account, timestamp), never its content. E2EE
+_that_ a message was sent (conversation-id hash, account, timestamp), never its content. E2EE
 decryption happens in the host; keys never leave the vault (X-chat.7).
 
 ### 7. Per-profile isolation

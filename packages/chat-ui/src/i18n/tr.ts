@@ -34,7 +34,8 @@ export const tr: ChatUiStrings = {
     membersOnly: 'Yalnızca üyeler',
     empty: 'Oda bulunamadı',
     loading: 'Odalar yükleniyor…',
-    noBrowse: 'Bu protokolün gözatılabilecek bir oda dizini yok — aşağıdan kanala/odaya adresiyle katılabilirsiniz.',
+    noBrowse:
+      'Bu protokolün gözatılabilecek bir oda dizini yok — aşağıdan kanala/odaya adresiyle katılabilirsiniz.',
     joinError: 'Katılınamadı — adresi ve hesabın bağlı olduğunu kontrol edin.',
   },
   room: {
@@ -119,7 +120,8 @@ export const tr: ChatUiStrings = {
     searchRooms: 'Odalarınızda ara',
     noRooms: 'Henüz hiçbir odaya katılmadınız.',
     discoverRooms: 'Genel odaları keşfet',
-    discoverUnavailable: 'Buradaki hiçbir hesap oda dizini tarayamıyor — bunun yerine adresiyle katılın.',
+    discoverUnavailable:
+      'Buradaki hiçbir hesap oda dizini tarayamıyor — bunun yerine adresiyle katılın.',
     discoverAccount: 'Hesap',
     addressAccount: 'Hesap',
     addressLabel: 'Adres',

@@ -127,11 +127,15 @@ describe('parseMucPresence', () => {
   });
 
   it('returns null for a plain presence, a non-presence stanza, or a from with no nick', () => {
-    expect(parseMucPresence(el(`<presence from="bob@example.org/x"><show>away</show></presence>`))).toBeNull();
+    expect(
+      parseMucPresence(el(`<presence from="bob@example.org/x"><show>away</show></presence>`)),
+    ).toBeNull();
     expect(parseMucPresence(el(`<message from="room@conf.example/Ada"/>`))).toBeNull();
     expect(
       parseMucPresence(
-        el(`<presence from="room@conf.example"><x xmlns="http://jabber.org/protocol/muc#user"/></presence>`),
+        el(
+          `<presence from="room@conf.example"><x xmlns="http://jabber.org/protocol/muc#user"/></presence>`,
+        ),
       ),
     ).toBeNull();
   });
@@ -151,8 +155,17 @@ describe('parseMucPresence', () => {
 
 describe('mucRemovalText', () => {
   const occ = (over: Partial<MucOccupant>): MucOccupant => ({
-    roomJid: 'r@c', nick: 'Bob', realJid: null, affiliation: 'none', role: 'none',
-    presence: 'offline', statusText: '', self: false, statusCodes: [], actor: null, reason: null,
+    roomJid: 'r@c',
+    nick: 'Bob',
+    realJid: null,
+    affiliation: 'none',
+    role: 'none',
+    presence: 'offline',
+    statusText: '',
+    self: false,
+    statusCodes: [],
+    actor: null,
+    reason: null,
     ...over,
   });
 
@@ -180,7 +193,9 @@ describe('parseMucSubject', () => {
   it('reads a topic change, ignores a message that also has a body', () => {
     expect(
       parseMucSubject(
-        el(`<message type="groupchat" from="room@conf.example/Ada"><subject>New topic</subject></message>`),
+        el(
+          `<message type="groupchat" from="room@conf.example/Ada"><subject>New topic</subject></message>`,
+        ),
       ),
     ).toEqual({ roomJid: 'room@conf.example', nick: 'Ada', subject: 'New topic' });
 
@@ -214,11 +229,18 @@ describe('parseMucError', () => {
 
   it('returns null for a non-error stanza or an error with no from', () => {
     expect(parseMucError(el(`<presence from="room@conf.example/ada"/>`))).toBeNull();
-    expect(parseMucError(el(`<presence type="error"><error type="cancel"/></presence>`))).toBeNull();
+    expect(
+      parseMucError(el(`<presence type="error"><error type="cancel"/></presence>`)),
+    ).toBeNull();
   });
 
   it('classifies each known condition', () => {
-    for (const cond of ['forbidden', 'conflict', 'registration-required', 'item-not-found'] as const) {
+    for (const cond of [
+      'forbidden',
+      'conflict',
+      'registration-required',
+      'item-not-found',
+    ] as const) {
       const parsed = parseMucError(
         el(
           `<message type="error" from="room@conf.example"><error><${cond} xmlns="urn:ietf:params:xml:ns:xmpp-stanzas"/></error></message>`,
@@ -231,8 +253,16 @@ describe('parseMucError', () => {
 
 describe('parseMucSubject edge cases', () => {
   it('ignores a non-groupchat message or one with no subject / no from', () => {
-    expect(parseMucSubject(el(`<message from="room@conf.example/Ada"><subject>x</subject></message>`))).toBeNull();
-    expect(parseMucSubject(el(`<message type="groupchat" from="room@conf.example/Ada"><body>hi</body></message>`))).toBeNull();
-    expect(parseMucSubject(el(`<message type="groupchat"><subject>x</subject></message>`))).toBeNull();
+    expect(
+      parseMucSubject(el(`<message from="room@conf.example/Ada"><subject>x</subject></message>`)),
+    ).toBeNull();
+    expect(
+      parseMucSubject(
+        el(`<message type="groupchat" from="room@conf.example/Ada"><body>hi</body></message>`),
+      ),
+    ).toBeNull();
+    expect(
+      parseMucSubject(el(`<message type="groupchat"><subject>x</subject></message>`)),
+    ).toBeNull();
   });
 });

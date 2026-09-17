@@ -39,8 +39,7 @@ export function filterRoster(contacts: readonly ChatContact[], query: string): C
   const needle = foldForSearch(query.trim());
   if (needle === '') return [...contacts];
   return contacts.filter(
-    (c) =>
-      foldForSearch(c.name).includes(needle) || foldForSearch(c.address).includes(needle),
+    (c) => foldForSearch(c.name).includes(needle) || foldForSearch(c.address).includes(needle),
   );
 }
 

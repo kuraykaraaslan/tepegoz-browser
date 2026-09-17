@@ -9,13 +9,7 @@
  */
 
 export type ChatConnState =
-  | 'idle'
-  | 'connecting'
-  | 'online'
-  | 'reconnecting'
-  | 'blocked'
-  | 'error'
-  | 'stopped';
+  'idle' | 'connecting' | 'online' | 'reconnecting' | 'blocked' | 'error' | 'stopped';
 
 /** The adapter surface the manager needs — a structural subset of `ChatAdapter`. */
 export interface ManagedAdapter {

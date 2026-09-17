@@ -20,7 +20,9 @@ describe('buildMamQuery', () => {
   it('builds a with-scoped, most-recent-page query', () => {
     const q = buildMamQuery({ queryId: 'q1', withJid: 'bob@x.com', max: 25 });
     expect(q).toContain('<query xmlns="urn:xmpp:mam:2" queryid="q1">');
-    expect(q).toContain('<field var="FORM_TYPE" type="hidden"><value>urn:xmpp:mam:2</value></field>');
+    expect(q).toContain(
+      '<field var="FORM_TYPE" type="hidden"><value>urn:xmpp:mam:2</value></field>',
+    );
     expect(q).toContain('<field var="with"><value>bob@x.com</value></field>');
     expect(q).toContain('<max>25</max>');
     expect(q).toContain('<before/>');
@@ -59,7 +61,7 @@ describe('parseMamResult', () => {
     });
   });
 
-  it('prefers the stanza\'s own id over the archive id, so a live delivery and its MAM catch-up dedup', () => {
+  it("prefers the stanza's own id over the archive id, so a live delivery and its MAM catch-up dedup", () => {
     // Regression: the same message arrives with a DIFFERENT id depending on the path — its own `id`
     // attribute (or XEP-0359 stanza-id) live, vs the MAM archive envelope's `<result id=…>` id if
     // that used to win. Dedup in the store and the renderer is keyed on protocolId, so the two paths
@@ -85,7 +87,9 @@ describe('parseMamResult', () => {
     expect(
       parseMamResult(el(wrap(`<presence from="b@x.com/p"><show>away</show></presence>`)), ctx),
     ).toBeNull();
-    expect(parseMamResult(el(`<message><result xmlns="urn:xmpp:mam:2"/></message>`), ctx)).toBeNull();
+    expect(
+      parseMamResult(el(`<message><result xmlns="urn:xmpp:mam:2"/></message>`), ctx),
+    ).toBeNull();
     expect(parseMamResult(el(`<message/>`), ctx)).toBeNull();
   });
 

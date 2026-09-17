@@ -1,6 +1,11 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { openDatabase, migrate, type Db } from '@tepegoz/persistence';
-import type { ChatAccount, ChatContact, ChatConversation, ChatMessage } from '@tepegoz/shared-types';
+import type {
+  ChatAccount,
+  ChatContact,
+  ChatConversation,
+  ChatMessage,
+} from '@tepegoz/shared-types';
 import {
   deleteAccount,
   getAccountForEdit,
@@ -22,7 +27,14 @@ const account: ChatAccount = {
   id: 'work',
   label: 'Work',
   displayName: 'Ada',
-  server: { protocol: 'xmpp', jid: 'ada@x.com', host: null, port: null, security: 'tls', wsUrl: null },
+  server: {
+    protocol: 'xmpp',
+    jid: 'ada@x.com',
+    host: null,
+    port: null,
+    security: 'tls',
+    wsUrl: null,
+  },
   secretRef: 'chat:work',
   color: '#112233',
   order: 2,
@@ -92,7 +104,14 @@ describe('chat-store-adapter — account projections', () => {
       id: 'work',
       label: 'Work',
       displayName: 'Ada',
-      server: { protocol: 'xmpp', jid: 'ada@x.com', host: null, port: null, security: 'tls', wsUrl: null },
+      server: {
+        protocol: 'xmpp',
+        jid: 'ada@x.com',
+        host: null,
+        port: null,
+        security: 'tls',
+        wsUrl: null,
+      },
       color: '#112233',
       order: 2,
       updatedAt: 0,
@@ -157,7 +176,7 @@ describe('chat-store-adapter — makeRunnerStore', () => {
     expect(listContacts(db, 'work')[0]?.blocked).toBe(true);
   });
 
-  it('listReadMarkers reports every conversation\'s persisted lastReadId, scoped to the account', () => {
+  it("listReadMarkers reports every conversation's persisted lastReadId, scoped to the account", () => {
     const store = makeRunnerStore(db);
     store.upsertConversation({ ...conversation('bob@x.com'), lastReadId: 'm2' });
     store.upsertConversation({ ...conversation('carol@x.com'), lastReadId: null });

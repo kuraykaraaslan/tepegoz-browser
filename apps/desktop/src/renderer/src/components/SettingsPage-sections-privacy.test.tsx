@@ -223,9 +223,7 @@ describe('privacyAndAdvancedSections — the Back up settings card', () => {
     const file = { text: () => Promise.resolve('{"theme":"dark"}') } as File;
     fireEvent.change(input, { target: { files: [file] } });
 
-    await waitFor(() =>
-      expect(bridge.importPreferences).toHaveBeenCalledWith('{"theme":"dark"}'),
-    );
+    await waitFor(() => expect(bridge.importPreferences).toHaveBeenCalledWith('{"theme":"dark"}'));
     await screen.findByText(/Imported 3/);
     expect(screen.getByText(/Skipped 1/)).toBeTruthy();
   });

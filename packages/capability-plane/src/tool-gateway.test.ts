@@ -161,11 +161,10 @@ describe('ToolGateway.invoke', () => {
   it('a caller cannot claim localFileAccess itself — only the registered descriptor counts', async () => {
     register({ id: 'browser_get_page', dangerClass: 'read' }); // no localFileAccess on the descriptor
     expect(
-      await ToolGateway.invoke(
-        'browser_get_page',
-        {},
-        { taintedArgs: true, localFileAccess: true } as never,
-      ),
+      await ToolGateway.invoke('browser_get_page', {}, {
+        taintedArgs: true,
+        localFileAccess: true,
+      } as never),
     ).toBe('ok');
   });
 

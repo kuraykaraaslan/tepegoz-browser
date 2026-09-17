@@ -54,7 +54,12 @@ export interface SubprocessChatAdapterConfig {
   stateDirFor: (accountId: string) => string;
   supervisorOptions?: Pick<
     ProcessSupervisorConfig,
-    'callTimeoutMs' | 'heartbeatIntervalMs' | 'heartbeatTimeoutMs' | 'maxLifetimeMs' | 'backoffMs' | 'maxRestarts'
+    | 'callTimeoutMs'
+    | 'heartbeatIntervalMs'
+    | 'heartbeatTimeoutMs'
+    | 'maxLifetimeMs'
+    | 'backoffMs'
+    | 'maxRestarts'
   >;
 }
 

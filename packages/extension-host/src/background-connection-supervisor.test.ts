@@ -1,5 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
-import { BackgroundConnectionSupervisor, type BackgroundConnectionProvider } from './background-connection-supervisor';
+import {
+  BackgroundConnectionSupervisor,
+  type BackgroundConnectionProvider,
+} from './background-connection-supervisor';
 
 function provider(over: Partial<BackgroundConnectionProvider> = {}): BackgroundConnectionProvider {
   return {
@@ -58,7 +61,10 @@ describe('BackgroundConnectionSupervisor', () => {
 
     await expect(sup.init()).resolves.toBeUndefined(); // never rejects/throws past the caller
     expect(chat.init).toHaveBeenCalledTimes(1); // ran anyway
-    expect(log).toHaveBeenCalledWith('background-connection init failed', expect.objectContaining({ ext: 'com.tepegoz.mail' }));
+    expect(log).toHaveBeenCalledWith(
+      'background-connection init failed',
+      expect.objectContaining({ ext: 'com.tepegoz.mail' }),
+    );
     const [, meta] = log.mock.calls[0] as [string, { err: string }];
     expect(meta.err).toContain('mail socket exploded');
   });
@@ -95,7 +101,10 @@ describe('BackgroundConnectionSupervisor', () => {
     sup.provide(mail);
 
     await sup.stop();
-    expect(log).toHaveBeenCalledWith('background-connection stop failed', expect.objectContaining({ ext: 'com.tepegoz.mail' }));
+    expect(log).toHaveBeenCalledWith(
+      'background-connection stop failed',
+      expect.objectContaining({ ext: 'com.tepegoz.mail' }),
+    );
 
     await sup.reconcile();
     expect(log).toHaveBeenCalledWith(

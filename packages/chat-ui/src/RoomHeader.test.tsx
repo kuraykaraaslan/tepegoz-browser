@@ -3,7 +3,12 @@ import type { ReactElement } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { I18nProvider } from '@tepegoz/i18n/react';
-import { applyOccupant, applySubject, emptyRoom, type RoomOccupantUpdate } from '@tepegoz/chat-core';
+import {
+  applyOccupant,
+  applySubject,
+  emptyRoom,
+  type RoomOccupantUpdate,
+} from '@tepegoz/chat-core';
 import { RoomHeader } from './RoomHeader';
 
 afterEach(cleanup);
@@ -180,7 +185,12 @@ describe('RoomHeader', () => {
   it('invites a contact: reveal the field, commit on Enter, hide on Escape', () => {
     const onInvite = vi.fn();
     wrap(
-      <RoomHeader name="general" membersOpen={false} onToggleMembers={vi.fn()} onInvite={onInvite} />,
+      <RoomHeader
+        name="general"
+        membersOpen={false}
+        onToggleMembers={vi.fn()}
+        onInvite={onInvite}
+      />,
     );
     fireEvent.click(screen.getByRole('button', { name: 'Invite' }));
     const field = screen.getByLabelText('Invite');

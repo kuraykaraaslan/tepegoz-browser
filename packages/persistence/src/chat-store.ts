@@ -193,8 +193,7 @@ export class ChatStore {
 
   static getAccount(db: Db, id: string): ChatAccount | null {
     const row = db.prepare('SELECT * FROM chat_accounts WHERE id = ?').get(id) as
-      | ChatAccountRow
-      | undefined;
+      ChatAccountRow | undefined;
     return row === undefined ? null : rowToAccount(row);
   }
 
@@ -282,9 +281,11 @@ export class ChatStore {
    *  upsert must never touch `blocked` (nothing about it carries block state), so folding it into the
    *  same write would silently un-block a contact the moment their presence/roster row next changes. */
   static setContactBlocked(db: Db, accountId: string, address: string, blocked: boolean): void {
-    db.prepare(
-      'UPDATE chat_contacts SET blocked = ? WHERE account_id = ? AND address = ?',
-    ).run(blocked ? 1 : 0, accountId, address);
+    db.prepare('UPDATE chat_contacts SET blocked = ? WHERE account_id = ? AND address = ?').run(
+      blocked ? 1 : 0,
+      accountId,
+      address,
+    );
   }
 
   static deleteContact(db: Db, accountId: string, address: string): void {
@@ -312,8 +313,7 @@ export class ChatStore {
 
   static getConversation(db: Db, id: string): ChatConversation | null {
     const row = db.prepare('SELECT * FROM chat_conversations WHERE id = ?').get(id) as
-      | ChatConversationRow
-      | undefined;
+      ChatConversationRow | undefined;
     return row === undefined ? null : rowToConversation(row);
   }
 
@@ -424,9 +424,7 @@ export class ChatStore {
   ): ChatMessage[] {
     const tokens = foldForSearch(opts.text).match(/[\p{L}\p{N}]+/gu) ?? [];
     if (tokens.length === 0) return [];
-    const match = tokens
-      .map((t, i) => (i === tokens.length - 1 ? `"${t}"*` : `"${t}"`))
-      .join(' ');
+    const match = tokens.map((t, i) => (i === tokens.length - 1 ? `"${t}"*` : `"${t}"`)).join(' ');
     const n = Math.max(1, Math.min(Math.trunc(opts.limit ?? 50), 200));
     const where = ['chat_search MATCH ?'];
     const params: unknown[] = [match];

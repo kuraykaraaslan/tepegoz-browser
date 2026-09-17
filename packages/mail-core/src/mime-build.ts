@@ -263,10 +263,7 @@ function wrapFlowed(text: string, limit = 72): string {
 // parts
 // ---------------------------------------------------------------------------
 
-function encodedTextBody(
-  raw: string,
-  encoding: '7bit' | 'quoted-printable' | 'base64',
-): string {
+function encodedTextBody(raw: string, encoding: '7bit' | 'quoted-printable' | 'base64'): string {
   if (encoding === 'base64') return chunk(base64Encode(utf8Bytes(raw)), 76);
   if (encoding === 'quoted-printable') return encodeQuotedPrintable(raw);
   return raw.replace(/\r\n/g, '\n').replace(/\n/g, CRLF);
@@ -279,7 +276,8 @@ function buildPlainPart(text: string, flowed: boolean): Entity {
   const longLine = bodyText.split(/\r?\n/).some((l) => l.length > 950);
   let encoding: '7bit' | 'quoted-printable' | 'base64';
   if (ascii && !longLine) encoding = '7bit';
-  else if (flowed) encoding = 'base64'; // base64 preserves the literal trailing soft-break spaces
+  else if (flowed)
+    encoding = 'base64'; // base64 preserves the literal trailing soft-break spaces
   else encoding = 'quoted-printable';
   const ct = `text/plain; charset=utf-8${flowed ? '; format=flowed' : ''}`;
   return {
@@ -306,9 +304,7 @@ function buildAttachmentPart(att: BuildAttachment): Entity {
   const filename = sanitize(att.filename) || 'attachment';
   const type = sanitize(att.contentType ?? '') || 'application/octet-stream';
   const disposition = att.inline ? 'inline' : 'attachment';
-  const nameParam = isAscii(filename)
-    ? `; name="${filename.replace(/"/g, '')}"`
-    : '';
+  const nameParam = isAscii(filename) ? `; name="${filename.replace(/"/g, '')}"` : '';
   const fileParam = isAscii(filename)
     ? `; filename="${filename.replace(/"/g, '')}"`
     : `; filename*=utf-8''${encodeURIComponent(filename)}`;
@@ -395,22 +391,17 @@ export function buildMime(input: BuildMessageInput): string {
   }
 
   if (inlineAtts.length > 0) {
-    content = buildMultipart(
-      'related',
-      [content, ...inlineAtts.map(buildAttachmentPart)],
-      gen,
-    );
+    content = buildMultipart('related', [content, ...inlineAtts.map(buildAttachmentPart)], gen);
   }
   if (regularAtts.length > 0) {
-    content = buildMultipart(
-      'mixed',
-      [content, ...regularAtts.map(buildAttachmentPart)],
-      gen,
-    );
+    content = buildMultipart('mixed', [content, ...regularAtts.map(buildAttachmentPart)], gen);
   }
 
   // --- message headers ----------------------------------------------
-  const headers: HeaderPair[] = [['Date', formatDate(now)], ['From', formatAddress(input.from)]];
+  const headers: HeaderPair[] = [
+    ['Date', formatDate(now)],
+    ['From', formatAddress(input.from)],
+  ];
   if (input.to && input.to.length > 0) headers.push(['To', formatAddressList(input.to)]);
   if (input.cc && input.cc.length > 0) headers.push(['Cc', formatAddressList(input.cc)]);
   if (input.replyTo && input.replyTo.length > 0) {
@@ -437,7 +428,11 @@ export function buildMime(input: BuildMessageInput): string {
   for (const [rawName, rawValue] of input.headers ?? []) {
     const name = sanitize(rawName).replace(/[^A-Za-z0-9!#$%&'*+.^_`|~-]/g, '');
     if (name.length === 0) continue;
-    if (/^(date|from|to|cc|bcc|subject|message-id|in-reply-to|references|mime-version|content-.*)$/i.test(name)) {
+    if (
+      /^(date|from|to|cc|bcc|subject|message-id|in-reply-to|references|mime-version|content-.*)$/i.test(
+        name,
+      )
+    ) {
       continue; // do not let a custom header override a structural one
     }
     headers.push([name, encodeHeaderText(rawValue)]);

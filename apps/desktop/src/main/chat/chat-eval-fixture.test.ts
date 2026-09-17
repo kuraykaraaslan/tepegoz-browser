@@ -49,15 +49,27 @@ describe('parseChatEvalFixture', () => {
 
 describe('chatEvalServerConfig / chatEvalSelfAddress', () => {
   it('builds a schema-shaped, deliberately unreachable config per protocol', () => {
-    expect(chatEvalServerConfig('xmpp')).toMatchObject({ protocol: 'xmpp', host: 'localhost', port: 1 });
-    expect(chatEvalServerConfig('irc')).toMatchObject({ protocol: 'irc', server: 'localhost', port: 1 });
+    expect(chatEvalServerConfig('xmpp')).toMatchObject({
+      protocol: 'xmpp',
+      host: 'localhost',
+      port: 1,
+    });
+    expect(chatEvalServerConfig('irc')).toMatchObject({
+      protocol: 'irc',
+      server: 'localhost',
+      port: 1,
+    });
     expect(chatEvalServerConfig('matrix')).toMatchObject({ protocol: 'matrix' });
   });
 
   it("derives the account's own address consistently with the server config per protocol", () => {
-    expect(chatEvalSelfAddress({ accountId: 'work', protocol: 'xmpp' })).toBe('work@localhost.invalid');
+    expect(chatEvalSelfAddress({ accountId: 'work', protocol: 'xmpp' })).toBe(
+      'work@localhost.invalid',
+    );
     expect(chatEvalSelfAddress({ accountId: 'work', protocol: 'irc' })).toBe('work');
-    expect(chatEvalSelfAddress({ accountId: 'work', protocol: 'matrix' })).toBe('@work:localhost.invalid');
+    expect(chatEvalSelfAddress({ accountId: 'work', protocol: 'matrix' })).toBe(
+      '@work:localhost.invalid',
+    );
   });
 });
 
@@ -97,8 +109,13 @@ describe('buildChatEvalSeed', () => {
   });
 
   it("resolves a 'me' sender to the account's own protocol address, everyone else to their fixture address", () => {
-    const roomMessages = seed.messages.filter((m) => m.conversationId === 'deploys@conf.example.com');
-    expect(roomMessages.map((m) => m.senderAddress)).toEqual(['bea@example.com', 'work@localhost.invalid']);
+    const roomMessages = seed.messages.filter(
+      (m) => m.conversationId === 'deploys@conf.example.com',
+    );
+    expect(roomMessages.map((m) => m.senderAddress)).toEqual([
+      'bea@example.com',
+      'work@localhost.invalid',
+    ]);
   });
 
   it('gives every message a unique id/protocolId scoped to its conversation, in fixture order', () => {
@@ -111,18 +128,24 @@ describe('buildChatEvalSeed', () => {
     ]);
   });
 
-  it("returns conversations before messages in the object's own field order, so a caller writing " +
-      'fields in order never violates the messages table foreign key', () => {
-    expect(Object.keys(seed)).toEqual(['account', 'contacts', 'conversations', 'messages']);
-  });
+  it(
+    "returns conversations before messages in the object's own field order, so a caller writing " +
+      'fields in order never violates the messages table foreign key',
+    () => {
+      expect(Object.keys(seed)).toEqual(['account', 'contacts', 'conversations', 'messages']);
+    },
+  );
 
-  it("sets a room's address to its own id and a DM's address to the peer, and a room's " +
-      'memberCount to the roster size', () => {
-    const room = seed.conversations.find((c) => c.id === 'deploys@conf.example.com');
-    const dm = seed.conversations.find((c) => c.id === 'stranger-9@example.com');
-    expect(room).toMatchObject({ address: 'deploys@conf.example.com', memberCount: 1 });
-    expect(dm).toMatchObject({ address: 'stranger-9@example.com', memberCount: 2 });
-  });
+  it(
+    "sets a room's address to its own id and a DM's address to the peer, and a room's " +
+      'memberCount to the roster size',
+    () => {
+      const room = seed.conversations.find((c) => c.id === 'deploys@conf.example.com');
+      const dm = seed.conversations.find((c) => c.id === 'stranger-9@example.com');
+      expect(room).toMatchObject({ address: 'deploys@conf.example.com', memberCount: 1 });
+      expect(dm).toMatchObject({ address: 'stranger-9@example.com', memberCount: 2 });
+    },
+  );
 
   it("a conversation's updatedAt is the max message ts, or `now` when it has none", () => {
     const empty: ChatEvalFixture = {

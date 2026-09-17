@@ -192,7 +192,10 @@ function parseHeaders(headerBlock: string): MimeHeader[] {
     if (colon <= 0) continue; // a continuation that did not fold, or garbage — skip
     const name = line.slice(0, colon).trim().toLowerCase();
     if (!/^[!-9;-~]+$/.test(name)) continue; // RFC 5322 field-name chars
-    const value = line.slice(colon + 1).replace(/^[ \t]/, '').replace(/[ \t]+$/, '');
+    const value = line
+      .slice(colon + 1)
+      .replace(/^[ \t]/, '')
+      .replace(/[ \t]+$/, '');
     headers.push({ name, value });
   }
   return headers;
@@ -343,7 +346,10 @@ function parseContentType(value: string | null): { ct: MimeContentType; diagnost
   };
 }
 
-function parseEncoding(value: string | null): { encoding: MimeEncoding; diagnostic: string | null } {
+function parseEncoding(value: string | null): {
+  encoding: MimeEncoding;
+  diagnostic: string | null;
+} {
   const v = (value ?? '7bit').trim().toLowerCase();
   if (
     v === '7bit' ||
@@ -354,12 +360,16 @@ function parseEncoding(value: string | null): { encoding: MimeEncoding; diagnost
   ) {
     return { encoding: v, diagnostic: null };
   }
-  return { encoding: '7bit', diagnostic: `unknown Content-Transfer-Encoding "${v}" — treated as 7bit` };
+  return {
+    encoding: '7bit',
+    diagnostic: `unknown Content-Transfer-Encoding "${v}" — treated as 7bit`,
+  };
 }
 
-function parseDisposition(
-  value: string | null,
-): { disposition: MimeDisposition | null; params: Record<string, string> } {
+function parseDisposition(value: string | null): {
+  disposition: MimeDisposition | null;
+  params: Record<string, string>;
+} {
   if (value === null) return { disposition: null, params: {} };
   const semi = value.indexOf(';');
   const kind = (semi < 0 ? value : value.slice(0, semi)).trim().toLowerCase();
@@ -375,9 +385,7 @@ function parseDisposition(
 function decodeWord(charset: string, enc: string, text: string): string {
   const cs = charset.trim().toLowerCase();
   const bytes =
-    enc.toLowerCase() === 'b'
-      ? decodeBase64(text)
-      : decodeQuotedPrintable(text.replace(/_/g, ' '));
+    enc.toLowerCase() === 'b' ? decodeBase64(text) : decodeQuotedPrintable(text.replace(/_/g, ' '));
   return decodeCharset(bytes, cs);
 }
 
@@ -481,10 +489,7 @@ function degradedLeaf(
   };
 }
 
-function splitMultipart(
-  body: string,
-  boundary: string,
-): { parts: string[]; found: boolean } {
+function splitMultipart(body: string, boundary: string): { parts: string[]; found: boolean } {
   const dash = `--${boundary}`;
   const close = `${dash}--`;
   const parts: string[] = [];
@@ -546,8 +551,7 @@ function parseNode(message: string, depth: number, ctx: ParseCtx): ParsedMime {
       inner = normaliseNewlines(toLatin1(decodeQuotedPrintable(body)));
     }
     ctx.partBudget -= 1;
-    const encapsulated =
-      ctx.partBudget < 0 ? null : parseNode(inner, depth + 1, ctx);
+    const encapsulated = ctx.partBudget < 0 ? null : parseNode(inner, depth + 1, ctx);
     if (encapsulated === null) diagnostics.push(`part budget (${MAX_PARTS}) exhausted`);
     return {
       kind: 'rfc822',

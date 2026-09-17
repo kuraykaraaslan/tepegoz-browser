@@ -29,22 +29,22 @@ Everything below lives under the app's **user-data directory**:
 
 ## What you can export today
 
-| Data               | How                                    | Format                                                          |
-| ------------------ | -------------------------------------- | --------------------------------------------------------------- |
-| Bookmarks          | `tepegoz://bookmarks` → **Export**     | Netscape bookmarks HTML — every other browser imports it        |
-| Stored logins      | Settings → Passwords → Export          | Google-compatible CSV                                           |
-| Browsing history   | `tepegoz://history` → **Export**       | CSV (`url,title,last_visited,visit_count`) — opens in any spreadsheet |
-| Downloads list     | `tepegoz://downloads` → **Export**     | CSV (`filename,url,source_origin,total_bytes,status,risk,created_at,completed_at`) — opens in any spreadsheet |
-| Preferences        | Settings → Reset → **Export settings** | JSON — re-importable (Settings → **Import settings**)           |
-| Macros             | `tepegoz://com.tepegoz.macros` → **Export** | JSON — re-importable (**Import** on the same page)          |
-| One agent chat     | Agent panel → export conversation      | Plain text                                                      |
-| One agent session  | Agent panel header → diagnostic bundle | Folder: transcript, per-tab DOM + screenshots, redacted journal |
+| Data              | How                                         | Format                                                                                                        |
+| ----------------- | ------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| Bookmarks         | `tepegoz://bookmarks` → **Export**          | Netscape bookmarks HTML — every other browser imports it                                                      |
+| Stored logins     | Settings → Passwords → Export               | Google-compatible CSV                                                                                         |
+| Browsing history  | `tepegoz://history` → **Export**            | CSV (`url,title,last_visited,visit_count`) — opens in any spreadsheet                                         |
+| Downloads list    | `tepegoz://downloads` → **Export**          | CSV (`filename,url,source_origin,total_bytes,status,risk,created_at,completed_at`) — opens in any spreadsheet |
+| Preferences       | Settings → Reset → **Export settings**      | JSON — re-importable (Settings → **Import settings**)                                                         |
+| Macros            | `tepegoz://com.tepegoz.macros` → **Export** | JSON — re-importable (**Import** on the same page)                                                            |
+| One agent chat    | Agent panel → export conversation           | Plain text                                                                                                    |
+| One agent session | Agent panel header → diagnostic bundle      | Folder: transcript, per-tab DOM + screenshots, redacted journal                                               |
 
 Bookmark and login exports use the format the other browsers read, on purpose. A JSON dump only this
 application can restore is a backup shaped like lock-in. History and the downloads list have no
-portable *interchange* format the way bookmarks do, so their export is CSV for inspection and
-archival — there is no history or downloads *import*. The downloads CSV deliberately omits the
-on-disk file paths, the content hash, and the quarantine/trust internals: it is a record of *what*
+portable _interchange_ format the way bookmarks do, so their export is CSV for inspection and
+archival — there is no history or downloads _import_. The downloads CSV deliberately omits the
+on-disk file paths, the content hash, and the quarantine/trust internals: it is a record of _what_
 was downloaded, not a map of where the bytes landed on this machine. Preferences and macros are the
 cases where a JSON dump is the right answer — there is no cross-browser preferences format or
 cross-tool macro format to target, but both round-trip: **Import** re-applies the file item by item,

@@ -160,9 +160,9 @@ describe('extension manifest schema', () => {
       expect(
         validateManifest({ ...VALID, adapterSubprocess: { command: 'my-bridge' } }).success,
       ).toBe(false); // no protocol
-      expect(
-        validateManifest({ ...VALID, adapterSubprocess: { protocol: 'chat' } }).success,
-      ).toBe(false); // no command
+      expect(validateManifest({ ...VALID, adapterSubprocess: { protocol: 'chat' } }).success).toBe(
+        false,
+      ); // no command
       expect(
         validateManifest({ ...VALID, adapterSubprocess: { protocol: 'chat', command: '' } })
           .success,

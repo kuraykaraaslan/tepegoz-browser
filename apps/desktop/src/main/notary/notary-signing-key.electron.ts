@@ -51,9 +51,7 @@ function isSigningKeyPair(v: unknown): v is SigningKeyPair {
  * signed under the old one.
  */
 type StoredKeyResult =
-  | { status: 'missing' }
-  | { status: 'corrupt' }
-  | { status: 'ok'; pair: SigningKeyPair };
+  { status: 'missing' } | { status: 'corrupt' } | { status: 'ok'; pair: SigningKeyPair };
 
 function readStored(): StoredKeyResult {
   let blob: Buffer;

@@ -42,15 +42,19 @@ const h = vi.hoisted(() => {
     })),
     conversationMemory: vi.fn<() => unknown[]>(() => [{ role: 'user', content: 'hi' }]),
     currentConversation: vi.fn<() => unknown>(() => null),
-    readRecent: vi.fn<(db: unknown, limit: number, runId?: string) => unknown[]>(() => [{ id: 'e1' }]),
+    readRecent: vi.fn<(db: unknown, limit: number, runId?: string) => unknown[]>(() => [
+      { id: 'e1' },
+    ]),
     hasActiveAgentRun: vi.fn<() => boolean>(() => false),
     deviceId: vi.fn<() => string>(() => 'device-1'),
     buildRunReport: vi.fn((input: { runId: string; goal: string }) => ({ ...input })),
     renderRunReportMarkdown: vi.fn<() => string>(() => '# report'),
-    buildRunReceipt: vi.fn<() => { ok: true; receipt: unknown } | { ok: false; reason: string }>(() => ({
-      ok: true,
-      receipt: { correlationId: 'run-1' },
-    })),
+    buildRunReceipt: vi.fn<() => { ok: true; receipt: unknown } | { ok: false; reason: string }>(
+      () => ({
+        ok: true,
+        receipt: { correlationId: 'run-1' },
+      }),
+    ),
     getOrCreateKey: vi.fn<() => { privateKeyPem: string; publicKeyPem: string }>(() => ({
       privateKeyPem: 'P',
       publicKeyPem: 'Q',
@@ -251,7 +255,10 @@ describe('collectAgentExportBundleFiles', () => {
       expect(paths(files)).not.toContain('runs/run-1.receipt.json');
       const runs = manifestOf(files).runs as RunEntry[];
       expect(runs[0]?.report.status).toBe('ok');
-      expect(runs[0]?.receipt).toEqual({ status: 'skipped', reason: expect.stringContaining('keychain locked') as string });
+      expect(runs[0]?.receipt).toEqual({
+        status: 'skipped',
+        reason: expect.stringContaining('keychain locked') as string,
+      });
     });
 
     it('skips just the receipt, keeping the report, when buildRunReceipt itself refuses', async () => {

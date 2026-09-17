@@ -36,7 +36,9 @@ export const WEB_CONTENT_DEFAULTS = [
 export type WebContentDefaultKey = (typeof WEB_CONTENT_DEFAULTS)[number]['key'];
 
 /** The keys that can never be exposed as a toggle, in table order. */
-export const LOCKED_WEB_CONTENT_KEYS = WEB_CONTENT_DEFAULTS.filter((d) => d.locked).map((d) => d.key);
+export const LOCKED_WEB_CONTENT_KEYS = WEB_CONTENT_DEFAULTS.filter((d) => d.locked).map(
+  (d) => d.key,
+);
 
 /** The keys a user may adjust from the Developer surface (ADR-0041 Tier C), in table order. */
 export const EDITABLE_WEB_CONTENT_KEYS = WEB_CONTENT_DEFAULTS.filter((d) => !d.locked).map(

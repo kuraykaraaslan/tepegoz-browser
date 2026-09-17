@@ -72,11 +72,7 @@ export {
   type OutgoingChatMessage,
 } from './xmpp/stanzas';
 
-export {
-  parseStreamFeatures,
-  pickSaslMechanism,
-  type StreamFeatures,
-} from './xmpp/features';
+export { parseStreamFeatures, pickSaslMechanism, type StreamFeatures } from './xmpp/features';
 
 export {
   XmppNegotiator,
@@ -186,12 +182,7 @@ export {
   type MatrixContext,
 } from './matrix/events';
 
-export {
-  parseSyncResponse,
-  type SyncResult,
-  type SyncRoom,
-  type SyncInvite,
-} from './matrix/sync';
+export { parseSyncResponse, type SyncResult, type SyncRoom, type SyncInvite } from './matrix/sync';
 
 export { MatrixAdapter, MatrixSession, MATRIX_ADAPTER_CAPS } from './matrix/adapter';
 
@@ -217,4 +208,7 @@ export {
   type ScramFinalResult,
 } from './xmpp/sasl';
 
-export { SubprocessChatAdapter, type SubprocessChatAdapterConfig } from './bridge/subprocess-adapter';
+export {
+  SubprocessChatAdapter,
+  type SubprocessChatAdapterConfig,
+} from './bridge/subprocess-adapter';

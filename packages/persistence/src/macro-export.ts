@@ -56,10 +56,16 @@ export function parseMacrosImport(json: string): { macros: Macro[]; skipped: num
   let list: unknown;
   if (Array.isArray(raw)) {
     list = raw;
-  } else if (typeof raw === 'object' && raw !== null && Array.isArray((raw as MacrosExportFile).macros)) {
+  } else if (
+    typeof raw === 'object' &&
+    raw !== null &&
+    Array.isArray((raw as MacrosExportFile).macros)
+  ) {
     list = (raw as MacrosExportFile).macros;
   } else {
-    throw new SyntaxError('Macros import must be a JSON array or an export file with a "macros" array.');
+    throw new SyntaxError(
+      'Macros import must be a JSON array or an export file with a "macros" array.',
+    );
   }
 
   const macros: Macro[] = [];

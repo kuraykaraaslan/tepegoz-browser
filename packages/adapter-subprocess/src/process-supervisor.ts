@@ -1,5 +1,12 @@
 import { z } from 'zod';
-import { LineBuffer, decodeFrame, encodeFrame, isRpcEvent, isRpcResponseOk, type RpcInbound } from './rpc-envelope';
+import {
+  LineBuffer,
+  decodeFrame,
+  encodeFrame,
+  isRpcEvent,
+  isRpcResponseOk,
+  type RpcInbound,
+} from './rpc-envelope';
 import type { ChildProcessLike, SpawnFn } from './types';
 
 export type SupervisorState = 'stopped' | 'starting' | 'running' | 'restarting' | 'crashed';
@@ -149,7 +156,11 @@ export class ProcessSupervisor {
    * itself and deriving `z.infer<S>` keeps the schema concrete through the whole call, so the output
    * type comes out exactly as `ChatContactSchema` (etc.) already define it.
    */
-  call<S extends z.ZodTypeAny>(method: string, params: unknown, resultSchema: S): Promise<z.infer<S>> {
+  call<S extends z.ZodTypeAny>(
+    method: string,
+    params: unknown,
+    resultSchema: S,
+  ): Promise<z.infer<S>> {
     if (this.child === null || this.state !== 'running') {
       return Promise.reject(new Error(`adapter subprocess is not running (state: ${this.state})`));
     }

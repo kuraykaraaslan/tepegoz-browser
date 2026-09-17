@@ -27,7 +27,7 @@ one from opening any other path or dialing any other host. This ADR was written 
 rest of the codebase for anything that already closes this gap, and confirming nothing does:
 
 - **`ADR-0022`'s file-operations sandbox** is `assertMembership(realPath)` — a path-prefix check
-  inside this app's *own* IPC handlers. It constrains code that goes through that handler; it is
+  inside this app's _own_ IPC handlers. It constrains code that goes through that handler; it is
   meaningless against a process with its own direct filesystem syscalls, which a spawned child always
   has.
 - **The Phase-5 egress binding** (`packages/socks5`, ADR-0011) is `session.setProxy(...)` on
@@ -98,7 +98,7 @@ Parallel reasoning, parallel mechanism family:
 - **Windows:** the same AppContainer additionally scopes filesystem access — an AppContainer process
   can read/write only its own per-package storage folder and any path explicitly ACL'd to its capability
   SID. The state dir is created with that ACL; nothing else is.
-- **Linux:** the same unprivileged mount namespace bind-mounts *only* the state dir into the child's
+- **Linux:** the same unprivileged mount namespace bind-mounts _only_ the state dir into the child's
   view (a `pivot_root`/private-`/`-tree pattern, the mechanism `bwrap`/Flatpak's sandboxing already
   uses in the wild — this ADR proposes the same primitive, not a new one, whether or not this project
   ends up shelling out to an existing tool like `bwrap` versus calling the syscalls directly is an

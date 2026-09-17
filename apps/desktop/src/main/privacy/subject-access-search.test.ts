@@ -122,9 +122,9 @@ describe('searchEventsForSubject', () => {
 
 describe('searchDownloadsForSubject', () => {
   it('matches on filename or URL', () => {
-    expect(searchDownloadsForSubject([download({ filename: 'kaya-report.pdf' })], 'kaya')).toHaveLength(
-      1,
-    );
+    expect(
+      searchDownloadsForSubject([download({ filename: 'kaya-report.pdf' })], 'kaya'),
+    ).toHaveLength(1);
     expect(
       searchDownloadsForSubject([download({ url: 'https://kaya.example/x' })], 'kaya'),
     ).toHaveLength(1);
@@ -162,7 +162,9 @@ describe('renderSubjectAccessMarkdown', () => {
       matchedEvents: [event()],
       matchedTurns: [turn({ responseSummary: 'Sent.' })],
       matchedHistory: [historyEntry({ title: 'Kaya — Example', url: 'https://example.com/kaya' })],
-      matchedBookmarks: [bookmarkEntry({ title: 'Kaya (bookmarked)', url: 'https://example.com/b' })],
+      matchedBookmarks: [
+        bookmarkEntry({ title: 'Kaya (bookmarked)', url: 'https://example.com/b' }),
+      ],
       matchedDownloads: [download({ filename: 'kaya-report.pdf', url: 'https://example.com/d' })],
     });
     const md = renderSubjectAccessMarkdown(report);

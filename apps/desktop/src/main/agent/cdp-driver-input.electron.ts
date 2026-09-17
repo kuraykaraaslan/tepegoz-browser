@@ -346,9 +346,24 @@ export async function dragElement(
       button: 'left',
     });
     const data = await intercepted;
-    await wc.debugger.sendCommand('Input.dispatchDragEvent', { type: 'dragEnter', x: mid.x, y: mid.y, data });
-    await wc.debugger.sendCommand('Input.dispatchDragEvent', { type: 'dragOver', x: dst.x, y: dst.y, data });
-    await wc.debugger.sendCommand('Input.dispatchDragEvent', { type: 'drop', x: dst.x, y: dst.y, data });
+    await wc.debugger.sendCommand('Input.dispatchDragEvent', {
+      type: 'dragEnter',
+      x: mid.x,
+      y: mid.y,
+      data,
+    });
+    await wc.debugger.sendCommand('Input.dispatchDragEvent', {
+      type: 'dragOver',
+      x: dst.x,
+      y: dst.y,
+      data,
+    });
+    await wc.debugger.sendCommand('Input.dispatchDragEvent', {
+      type: 'drop',
+      x: dst.x,
+      y: dst.y,
+      data,
+    });
     await wc.debugger.sendCommand('Input.dispatchMouseEvent', {
       type: 'mouseReleased',
       x: dst.x,
@@ -358,7 +373,9 @@ export async function dragElement(
   } finally {
     // Left enabled, every future drag gesture on this tab — including a real one from the user — would
     // be silently swallowed waiting for a dispatchDragEvent nobody sends.
-    await wc.debugger.sendCommand('Input.setInterceptDrags', { enabled: false }).catch(() => undefined);
+    await wc.debugger
+      .sendCommand('Input.setInterceptDrags', { enabled: false })
+      .catch(() => undefined);
   }
   await core.settle(wc);
   return { mode: 'native' };

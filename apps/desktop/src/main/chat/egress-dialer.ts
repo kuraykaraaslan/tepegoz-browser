@@ -26,10 +26,9 @@ export interface ChatDialerDeps {
 
 const SOCKS_TIMEOUT_MS = 15_000;
 
-export function createChatDialer(deps: ChatDialerDeps = {}): (opts: {
-  host: string;
-  port: number;
-}) => Promise<RawDuplex> {
+export function createChatDialer(
+  deps: ChatDialerDeps = {},
+): (opts: { host: string; port: number }) => Promise<RawDuplex> {
   const route = deps.route ?? currentEgressRoute;
   const connectTcp = deps.connectTcp ?? defaultConnectTcp;
   const socksTimeoutMs = deps.socksTimeoutMs ?? SOCKS_TIMEOUT_MS;
@@ -52,7 +51,10 @@ export function createChatDialer(deps: ChatDialerDeps = {}): (opts: {
     } catch (err) {
       proxy.destroy();
       const reason = err instanceof Error ? err.message : String(err);
-      throw new AppError(`Chat egress refused: SOCKS5 to the bound connection failed (${reason})`, 503);
+      throw new AppError(
+        `Chat egress refused: SOCKS5 to the bound connection failed (${reason})`,
+        503,
+      );
     }
     return proxy;
   };

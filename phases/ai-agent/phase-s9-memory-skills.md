@@ -68,9 +68,9 @@ Skills are **distinct from Phase 6 recipes** ([routing table](README.md#routing-
      verified-completion, tying it to [S4](phase-s4-verified-outcomes.md)?). Guessing an answer here to
      close a checkbox would bake in a policy nobody has actually decided, on the exact feature this phase's
      own "Why" section calls a live poisoning attack surface — the wrong place to guess.
-  Left open for a session with either an owner call on (2), or a narrower PR that does (1) alone and leaves
-  write-side at zero (so recall could read real historical hints seeded by hand/tests, without yet deciding
-  the auto-write policy).
+     Left open for a session with either an owner call on (2), or a narrower PR that does (1) alone and leaves
+     write-side at zero (so recall could read real historical hints seeded by hand/tests, without yet deciding
+     the auto-write policy).
 
 ### PR3 — poisoned-hint defenses + fixtures
 

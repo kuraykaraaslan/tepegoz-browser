@@ -34,14 +34,26 @@ describe('createChatEvalTransport', () => {
 
   it('fetch() rejects any URL that is not the eval-media: scheme — no real network during a trial', async () => {
     const transport = createChatEvalTransport();
-    await expect(transport.fetch('https://example.com/real-media')).rejects.toThrow(/no real fetch/);
+    await expect(transport.fetch('https://example.com/real-media')).rejects.toThrow(
+      /no real fetch/,
+    );
   });
 
   it('every other transport method rejects — none should ever be called during an eval trial', async () => {
     const transport = createChatEvalTransport();
-    await expect(transport.openTCP({ host: 'x', port: 1, tls: false })).rejects.toThrow(/no real TCP/);
+    await expect(transport.openTCP({ host: 'x', port: 1, tls: false })).rejects.toThrow(
+      /no real TCP/,
+    );
     await expect(
-      transport.upgradeTLS({ write: () => undefined, onData: () => undefined, onClose: () => undefined, close: () => undefined }, { host: 'x' }),
+      transport.upgradeTLS(
+        {
+          write: () => undefined,
+          onData: () => undefined,
+          onClose: () => undefined,
+          close: () => undefined,
+        },
+        { host: 'x' },
+      ),
     ).rejects.toThrow(/no real TLS upgrade/);
     await expect(transport.openWebSocket('wss://x')).rejects.toThrow(/no real WebSocket/);
     await expect(transport.openEventStream('https://x')).rejects.toThrow(/no real event stream/);

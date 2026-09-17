@@ -20,12 +20,9 @@ export function serializeHistoryCsv(rows: readonly Omit<HistoryEntry, 'favicon'>
   for (const row of rows) {
     const lastVisited = Number.isFinite(row.ts) ? new Date(row.ts).toISOString() : '';
     lines.push(
-      [
-        csvField(row.url),
-        csvField(row.title),
-        csvField(lastVisited),
-        String(row.visitCount),
-      ].join(','),
+      [csvField(row.url), csvField(row.title), csvField(lastVisited), String(row.visitCount)].join(
+        ',',
+      ),
     );
   }
   // Trailing newline — most CSV readers and POSIX tools expect a final line terminator.

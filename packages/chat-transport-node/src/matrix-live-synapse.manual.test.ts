@@ -38,7 +38,10 @@ describe.skipIf(process.env.TEPEGOZ_LIVE_MATRIX !== '1')('MatrixAdapter — live
     };
   }
 
-  async function connect(user: string, secret: string): Promise<{ adapter: MatrixAdapter; session: ChatSession }> {
+  async function connect(
+    user: string,
+    secret: string,
+  ): Promise<{ adapter: MatrixAdapter; session: ChatSession }> {
     const adapter = new MatrixAdapter();
     const session = await adapter.connect(creds(user, secret), new NodeChatTransport());
     return { adapter, session };
@@ -81,7 +84,10 @@ describe.skipIf(process.env.TEPEGOZ_LIVE_MATRIX !== '1')('MatrixAdapter — live
     const deadline = Date.now() + timeoutMs;
     for (;;) {
       const remaining = deadline - Date.now();
-      if (remaining <= 0) throw new Error(`timed out after ${String(timeoutMs)}ms waiting for message body "${body}"`);
+      if (remaining <= 0)
+        throw new Error(
+          `timed out after ${String(timeoutMs)}ms waiting for message body "${body}"`,
+        );
       const timeout = new Promise<never>((_resolve, reject) => {
         setTimeout(() => reject(new Error('per-event timeout')), remaining);
       });
@@ -103,7 +109,11 @@ describe.skipIf(process.env.TEPEGOZ_LIVE_MATRIX !== '1')('MatrixAdapter — live
     await new Promise((r) => setTimeout(r, 1000));
 
     const body = `hello from a live test ${String(Date.now())}`;
-    await alice.adapter.sendMessage(alice.session, roomId, { body, replyToId: null, mediaPath: null });
+    await alice.adapter.sendMessage(alice.session, roomId, {
+      body,
+      replyToId: null,
+      mediaPath: null,
+    });
 
     const received = await waitForMessageBody(bob.adapter, bob.session, body);
     expect(received).toMatchObject({ type: 'message', message: { body } });

@@ -16,12 +16,7 @@ describe('IrcRegistration — no SASL', () => {
     const lines = reg({ password: 'sekret' })
       .start()
       .map((a) => (a.kind === 'send' ? a.line : a));
-    expect(lines).toEqual([
-      'CAP LS 302',
-      'PASS sekret',
-      'NICK ada',
-      'USER ada 0 * ada',
-    ]);
+    expect(lines).toEqual(['CAP LS 302', 'PASS sekret', 'NICK ada', 'USER ada 0 * ada']);
   });
 
   it('requests the offered subset, ends CAP on ACK, registers on 001', () => {
@@ -48,9 +43,7 @@ describe('IrcRegistration — no SASL', () => {
 
     const finalised = reg();
     finalised.start();
-    expect(feed(finalised, 'CAP * LS :chathistory batch')).toEqual([
-      'CAP REQ :batch chathistory',
-    ]);
+    expect(feed(finalised, 'CAP * LS :chathistory batch')).toEqual(['CAP REQ :batch chathistory']);
   });
 
   it('ignores an unknown CAP subcommand and a duplicate CAP END trigger', () => {

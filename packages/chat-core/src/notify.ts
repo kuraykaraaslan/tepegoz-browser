@@ -45,7 +45,7 @@ export function decideNotification(ctx: NotifyContext): NotifyDecision {
   const directMention = isDirectMention(ctx.body, ctx.selfNames);
   if (directMention) return { notify: true, reason: 'mention' };
 
-  const level: RoomNotifyLevel = ctx.isRoom ? ctx.level ?? 'all' : 'all';
+  const level: RoomNotifyLevel = ctx.isRoom ? (ctx.level ?? 'all') : 'all';
   const roomPing = scanMentions(ctx.body).roomPing;
 
   if (roomPing) {

@@ -35,7 +35,10 @@ export function seedConversations(
   return { ...state, conversations: byId(conversations) };
 }
 
-export function seedRoster(state: ChatClientState, contacts: readonly ChatContact[]): ChatClientState {
+export function seedRoster(
+  state: ChatClientState,
+  contacts: readonly ChatContact[],
+): ChatClientState {
   return { ...state, roster: byId(contacts) };
 }
 
@@ -123,10 +126,7 @@ export function seedHistory(
   };
 }
 
-function upsertMessage(
-  list: readonly ChatMessage[],
-  message: ChatMessage,
-): readonly ChatMessage[] {
+function upsertMessage(list: readonly ChatMessage[], message: ChatMessage): readonly ChatMessage[] {
   const idx = list.findIndex((m) => m.protocolId === message.protocolId);
   if (idx >= 0) {
     const next = [...list];
@@ -143,7 +143,13 @@ export function applyChatChange(state: ChatClientState, change: ChatStateChange)
       // Only track messages for a conversation the panel has opened (its window is seeded).
       if (list === undefined) return bumpConversation(state, change.conversationId, change.message);
       return bumpConversation(
-        { ...state, messages: { ...state.messages, [change.conversationId]: upsertMessage(list, change.message) } },
+        {
+          ...state,
+          messages: {
+            ...state.messages,
+            [change.conversationId]: upsertMessage(list, change.message),
+          },
+        },
         change.conversationId,
         change.message,
       );
@@ -253,7 +259,8 @@ function bumpConversation(
   conversationId: string,
   message: ChatMessage,
 ): ChatClientState {
-  const existing = state.conversations[conversationId] ?? stubConversation(conversationId, message.accountId);
+  const existing =
+    state.conversations[conversationId] ?? stubConversation(conversationId, message.accountId);
   const at = message.receivedAt || message.originTs;
   if (at <= existing.updatedAt) return state;
   return {

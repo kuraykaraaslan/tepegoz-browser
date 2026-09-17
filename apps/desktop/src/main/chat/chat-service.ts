@@ -1,6 +1,12 @@
 import type { ChatAccount, ChatContact, ChatMessage } from '@tepegoz/shared-types';
 import type { ChatAdapter, ChatTransport, RoomSummary } from '@tepegoz/chat-adapters';
-import { BRIDGE_DEFAULT_CAPS, IrcAdapter, MatrixAdapter, SubprocessChatAdapter, XmppAdapter } from '@tepegoz/chat-adapters';
+import {
+  BRIDGE_DEFAULT_CAPS,
+  IrcAdapter,
+  MatrixAdapter,
+  SubprocessChatAdapter,
+  XmppAdapter,
+} from '@tepegoz/chat-adapters';
 import type { SpawnFn } from '@tepegoz/adapter-subprocess';
 import type { ChatConnState } from '@tepegoz/chat-core';
 import { AppError } from '@tepegoz/libs';
@@ -126,7 +132,8 @@ export class ChatService {
     if (account.server.protocol === 'xmpp') return new XmppAdapter();
     if (account.server.protocol === 'irc') return new IrcAdapter();
     if (account.server.protocol === 'matrix') return new MatrixAdapter();
-    if (account.server.protocol === 'bridge') return this.makeBridgeAdapter(account.server.bridgeId);
+    if (account.server.protocol === 'bridge')
+      return this.makeBridgeAdapter(account.server.bridgeId);
     // Exhaustiveness guard: every `ChatServerConfig` variant is handled above, so `account.server` is
     // `never` here — a future 5th protocol variant fails this assignment at compile time instead of
     // silently falling through to a vague runtime error.
@@ -136,7 +143,11 @@ export class ChatService {
 
   private makeBridgeAdapter(bridgeId: string): ChatAdapter {
     const spec = this.deps.resolveBridge?.(bridgeId) ?? null;
-    if (spec === null || this.deps.spawnBridge === undefined || this.deps.bridgeStateDirFor === undefined) {
+    if (
+      spec === null ||
+      this.deps.spawnBridge === undefined ||
+      this.deps.bridgeStateDirFor === undefined
+    ) {
       throw new AppError(`Chat: no bridge registered for "${bridgeId}"`, 501);
     }
     return new SubprocessChatAdapter({
@@ -222,7 +233,8 @@ export class ChatService {
 
   private require(accountId: string): ChatAccountRunner {
     const runner = this.runners.get(accountId);
-    if (runner === undefined) throw new AppError(`Chat account "${accountId}" is not connected`, 409);
+    if (runner === undefined)
+      throw new AppError(`Chat account "${accountId}" is not connected`, 409);
     return runner;
   }
 
@@ -282,7 +294,11 @@ export class ChatService {
     return this.require(accountId).setMuted(conversationId, muted);
   }
 
-  async muteFor(accountId: string, conversationId: string, durationMs: number | null): Promise<void> {
+  async muteFor(
+    accountId: string,
+    conversationId: string,
+    durationMs: number | null,
+  ): Promise<void> {
     return this.require(accountId).muteFor(conversationId, durationMs);
   }
 
@@ -329,10 +345,7 @@ export class ChatService {
     return this.require(accountId).editMessage(conversationId, messageId, body);
   }
 
-  async resolveMedia(
-    accountId: string,
-    mediaRef: string,
-  ): Promise<{ dataUrl: string } | null> {
+  async resolveMedia(accountId: string, mediaRef: string): Promise<{ dataUrl: string } | null> {
     return this.require(accountId).resolveMedia(mediaRef);
   }
 }

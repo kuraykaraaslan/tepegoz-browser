@@ -3,7 +3,10 @@ import { MATRIX_MEDIA_UPLOAD_PATH, mxcDownloadUrl, mxcThumbnailUrl, parseMxc } f
 
 describe('parseMxc', () => {
   it('splits a well-formed mxc uri into server + media id', () => {
-    expect(parseMxc('mxc://matrix.org/abc123')).toEqual({ serverName: 'matrix.org', mediaId: 'abc123' });
+    expect(parseMxc('mxc://matrix.org/abc123')).toEqual({
+      serverName: 'matrix.org',
+      mediaId: 'abc123',
+    });
   });
 
   it('keeps a port on the server name', () => {
@@ -41,21 +44,29 @@ describe('mxcDownloadUrl', () => {
 
 describe('mxcThumbnailUrl', () => {
   it('adds width / height / method query params, defaulting to scale', () => {
-    expect(mxcThumbnailUrl('https://m.example', 'mxc://m.example/xyz', { width: 96, height: 96 })).toBe(
+    expect(
+      mxcThumbnailUrl('https://m.example', 'mxc://m.example/xyz', { width: 96, height: 96 }),
+    ).toBe(
       'https://m.example/_matrix/client/v1/media/thumbnail/m.example/xyz?width=96&height=96&method=scale',
     );
   });
 
   it('floors fractional sizes and clamps to at least 1, and honours crop', () => {
     expect(
-      mxcThumbnailUrl('https://m.example', 'mxc://m.example/xyz', { width: 0, height: 33.7, method: 'crop' }),
+      mxcThumbnailUrl('https://m.example', 'mxc://m.example/xyz', {
+        width: 0,
+        height: 33.7,
+        method: 'crop',
+      }),
     ).toBe(
       'https://m.example/_matrix/client/v1/media/thumbnail/m.example/xyz?width=1&height=33&method=crop',
     );
   });
 
   it('returns null for a malformed ref', () => {
-    expect(mxcThumbnailUrl('https://m.example', 'mxc://m.example', { width: 1, height: 1 })).toBeNull();
+    expect(
+      mxcThumbnailUrl('https://m.example', 'mxc://m.example', { width: 1, height: 1 }),
+    ).toBeNull();
   });
 });
 

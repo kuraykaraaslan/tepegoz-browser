@@ -107,9 +107,9 @@ export function validatePreferenceValue(
   key: EditablePreferenceKey,
   value: unknown,
 ): { ok: true } | { ok: false; error: string } {
-  const field: z.ZodTypeAny | undefined = (
-    PreferencesSchema.shape as Record<string, z.ZodTypeAny>
-  )[key];
+  const field: z.ZodTypeAny | undefined = (PreferencesSchema.shape as Record<string, z.ZodTypeAny>)[
+    key
+  ];
   if (field === undefined) return { ok: true };
   const result = field.safeParse(value);
   if (result.success) return { ok: true };

@@ -60,20 +60,30 @@ describe('MailAccountSchema', () => {
 
   it('requires at least one identity and a well-formed email', () => {
     expect(MailAccountSchema.safeParse({ ...baseAccount, identities: [] }).success).toBe(false);
-    expect(MailAccountSchema.safeParse({ ...baseAccount, email: 'not-an-email' }).success).toBe(false);
+    expect(MailAccountSchema.safeParse({ ...baseAccount, email: 'not-an-email' }).success).toBe(
+      false,
+    );
   });
 });
 
 describe('MailServerConfigSchema', () => {
   it('discriminates by kind', () => {
     expect(
-      MailServerConfigSchema.safeParse({ kind: 'jmap', sessionUrl: 'https://api.fastmail.com/jmap/session', username: 'ada' })
-        .success,
+      MailServerConfigSchema.safeParse({
+        kind: 'jmap',
+        sessionUrl: 'https://api.fastmail.com/jmap/session',
+        username: 'ada',
+      }).success,
     ).toBe(true);
     expect(MailServerConfigSchema.safeParse({ kind: 'gmail' }).success).toBe(true);
     // an imap-smtp row missing the SMTP half is not representable
     expect(
-      MailServerConfigSchema.safeParse({ kind: 'imap-smtp', imapHost: 'h', imapPort: 993, username: 'a' }).success,
+      MailServerConfigSchema.safeParse({
+        kind: 'imap-smtp',
+        imapHost: 'h',
+        imapPort: 993,
+        username: 'a',
+      }).success,
     ).toBe(false);
     // cleartext is not a security option
     expect(
@@ -101,7 +111,8 @@ describe('MailFolderSchema', () => {
 
   it('rejects an unknown role', () => {
     expect(
-      MailFolderSchema.safeParse({ id: 'x', accountId: 'work', path: 'X', name: 'X', role: 'spam' }).success,
+      MailFolderSchema.safeParse({ id: 'x', accountId: 'work', path: 'X', name: 'X', role: 'spam' })
+        .success,
     ).toBe(false);
   });
 });
@@ -156,7 +167,12 @@ describe('MailFilterSchema', () => {
     if (ok.success) expect(ok.data.accountId).toBe(null);
 
     expect(
-      MailFilterSchema.safeParse({ id: 'f2', name: 'x', conditions: [], actions: [{ kind: 'delete' }] }).success,
+      MailFilterSchema.safeParse({
+        id: 'f2',
+        name: 'x',
+        conditions: [],
+        actions: [{ kind: 'delete' }],
+      }).success,
     ).toBe(false);
   });
 

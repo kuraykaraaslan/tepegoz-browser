@@ -21,10 +21,7 @@ export function typingName(address: string): string {
 }
 
 /** A localized "X is typing…" line for a room, or `null` when nobody is. */
-export function roomTypingLabel(
-  addresses: readonly string[],
-  s: TypingStrings,
-): string | null {
+export function roomTypingLabel(addresses: readonly string[], s: TypingStrings): string | null {
   const names = addresses.map(typingName);
   if (names.length === 0) return null;
   if (names.length === 1) return `${names[0]} ${s.typingOne}`;

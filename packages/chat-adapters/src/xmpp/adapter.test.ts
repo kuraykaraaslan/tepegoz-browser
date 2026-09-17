@@ -92,26 +92,36 @@ const FEAT_AUTH = `<stream:features><mechanisms xmlns="urn:ietf:params:xml:ns:xm
 const FEAT_BIND = `<stream:features><bind xmlns="urn:ietf:params:xml:ns:xmpp-bind"/><sm xmlns="urn:xmpp:sm:3"/></stream:features>`;
 
 /** Run the scripted handshake against a fresh adapter+server, returning both. */
-async function connected(): Promise<{ adapter: XmppAdapter; server: FakeServer; session: XmppSession }> {
+async function connected(): Promise<{
+  adapter: XmppAdapter;
+  server: FakeServer;
+  session: XmppSession;
+}> {
   const server = new FakeServer();
   const adapter = new XmppAdapter();
   const connectP = adapter.connect(creds(), server);
 
   // client -> <stream:stream>
   await tick();
-  server.send(`<stream:stream xmlns="jabber:client" xmlns:stream="http://etherx.jabber.org/streams" id="s1">`);
+  server.send(
+    `<stream:stream xmlns="jabber:client" xmlns:stream="http://etherx.jabber.org/streams" id="s1">`,
+  );
   server.send(FEAT_AUTH);
   await tick();
   expect(server.lastWritten()).toContain('mechanism="PLAIN"');
 
   server.send(`<success xmlns="urn:ietf:params:xml:ns:xmpp-sasl"/>`);
   await tick();
-  server.send(`<stream:stream xmlns="jabber:client" xmlns:stream="http://etherx.jabber.org/streams" id="s2">`);
+  server.send(
+    `<stream:stream xmlns="jabber:client" xmlns:stream="http://etherx.jabber.org/streams" id="s2">`,
+  );
   server.send(FEAT_BIND);
   await tick();
   expect(server.lastWritten()).toContain('<bind xmlns="urn:ietf:params:xml:ns:xmpp-bind">');
 
-  server.send(`<iq type="result" id="bind-1"><bind xmlns="urn:ietf:params:xml:ns:xmpp-bind"><jid>ada@example.com/tepegoz</jid></bind></iq>`);
+  server.send(
+    `<iq type="result" id="bind-1"><bind xmlns="urn:ietf:params:xml:ns:xmpp-bind"><jid>ada@example.com/tepegoz</jid></bind></iq>`,
+  );
   server.send(`<enabled xmlns="urn:xmpp:sm:3" id="sm-1" resume="true"/>`);
 
   const session = (await connectP) as XmppSession;
@@ -133,23 +143,33 @@ describe('XmppAdapter — connect', () => {
     const adapter = new XmppAdapter();
     const p = adapter.connect(creds({ security: 'starttls' }), server);
     await tick();
-    server.send(`<stream:stream xmlns="jabber:client" xmlns:stream="http://etherx.jabber.org/streams">`);
-    server.send(`<stream:features><starttls xmlns="urn:ietf:params:xml:ns:xmpp-tls"><required/></starttls></stream:features>`);
+    server.send(
+      `<stream:stream xmlns="jabber:client" xmlns:stream="http://etherx.jabber.org/streams">`,
+    );
+    server.send(
+      `<stream:features><starttls xmlns="urn:ietf:params:xml:ns:xmpp-tls"><required/></starttls></stream:features>`,
+    );
     await tick();
     expect(server.lastWritten()).toBe('<starttls xmlns="urn:ietf:params:xml:ns:xmpp-tls"/>');
     server.send(`<proceed xmlns="urn:ietf:params:xml:ns:xmpp-tls"/>`);
     await tick();
     expect(server.tlsUpgraded).toBe(true);
     // after TLS the client restarts the stream
-    server.send(`<stream:stream xmlns="jabber:client" xmlns:stream="http://etherx.jabber.org/streams">`);
+    server.send(
+      `<stream:stream xmlns="jabber:client" xmlns:stream="http://etherx.jabber.org/streams">`,
+    );
     server.send(FEAT_AUTH);
     await tick();
     server.send(`<success xmlns="urn:ietf:params:xml:ns:xmpp-sasl"/>`);
     await tick();
     server.send(`<stream:stream xmlns="jabber:client">`);
-    server.send(`<stream:features><bind xmlns="urn:ietf:params:xml:ns:xmpp-bind"/></stream:features>`);
+    server.send(
+      `<stream:features><bind xmlns="urn:ietf:params:xml:ns:xmpp-bind"/></stream:features>`,
+    );
     await tick();
-    server.send(`<iq type="result" id="bind-1"><bind xmlns="urn:ietf:params:xml:ns:xmpp-bind"><jid>ada@example.com/x</jid></bind></iq>`);
+    server.send(
+      `<iq type="result" id="bind-1"><bind xmlns="urn:ietf:params:xml:ns:xmpp-bind"><jid>ada@example.com/x</jid></bind></iq>`,
+    );
     await expect(p).resolves.toBeDefined();
   });
 
@@ -158,7 +178,9 @@ describe('XmppAdapter — connect', () => {
     const p = new XmppAdapter().connect(creds({ security: 'tls' }), server);
     await tick();
     server.send(`<stream:stream xmlns="jabber:client">`);
-    server.send(`<stream:features><mechanisms xmlns="urn:ietf:params:xml:ns:xmpp-sasl"><mechanism>ANONYMOUS</mechanism></mechanisms></stream:features>`);
+    server.send(
+      `<stream:features><mechanisms xmlns="urn:ietf:params:xml:ns:xmpp-sasl"><mechanism>ANONYMOUS</mechanism></mechanisms></stream:features>`,
+    );
     await expect(p).rejects.toThrow(/no acceptable SASL/);
   });
 
@@ -168,7 +190,9 @@ describe('XmppAdapter — connect', () => {
     const p = new XmppAdapter().connect(creds({ security: 'starttls' }), server);
     await tick();
     server.send(`<stream:stream xmlns="jabber:client">`);
-    server.send(`<stream:features><starttls xmlns="urn:ietf:params:xml:ns:xmpp-tls"><required/></starttls></stream:features>`);
+    server.send(
+      `<stream:features><starttls xmlns="urn:ietf:params:xml:ns:xmpp-tls"><required/></starttls></stream:features>`,
+    );
     await tick();
     server.send(`<proceed xmlns="urn:ietf:params:xml:ns:xmpp-tls"/>`);
     await expect(p).rejects.toThrow(/cert rejected/);
@@ -177,7 +201,11 @@ describe('XmppAdapter — connect', () => {
   it('rejects a non-xmpp account', async () => {
     await expect(
       new XmppAdapter().connect(
-        { accountId: 'a', secret: 's', server: { protocol: 'irc', server: 'x', port: 1, tls: true, nick: 'n', sasl: false } },
+        {
+          accountId: 'a',
+          secret: 's',
+          server: { protocol: 'irc', server: 'x', port: 1, tls: true, nick: 'n', sasl: false },
+        },
         new FakeServer(),
       ),
     ).rejects.toThrow(/not an xmpp/);
@@ -189,9 +217,14 @@ describe('XmppAdapter — live traffic', () => {
     const { server, adapter, session } = await connected();
     const it = adapter.events(session)[Symbol.asyncIterator]();
 
-    server.send(`<message from="bob@example.com/p" type="chat" id="m1"><body>selam</body></message>`);
+    server.send(
+      `<message from="bob@example.com/p" type="chat" id="m1"><body>selam</body></message>`,
+    );
     const first = await it.next();
-    expect(first.value).toMatchObject({ type: 'message', message: { body: 'selam', protocolId: 'm1' } });
+    expect(first.value).toMatchObject({
+      type: 'message',
+      message: { body: 'selam', protocolId: 'm1' },
+    });
 
     server.send(`<r xmlns="urn:xmpp:sm:3"/>`);
     await tick();
@@ -200,7 +233,11 @@ describe('XmppAdapter — live traffic', () => {
 
   it('sendMessage writes a tracked <message> and returns a receipt', async () => {
     const { server, adapter, session } = await connected();
-    const receipt = await adapter.sendMessage(session, 'bob@example.com', { body: 'hi <there>', replyToId: null, mediaPath: null });
+    const receipt = await adapter.sendMessage(session, 'bob@example.com', {
+      body: 'hi <there>',
+      replyToId: null,
+      mediaPath: null,
+    });
     expect(receipt.protocolId).toMatch(/^t-/);
     expect(server.lastWritten()).toContain('<body>hi &lt;there&gt;</body>');
     expect(server.lastWritten()).toContain('type="chat"');
@@ -308,7 +345,10 @@ describe('XmppAdapter — live traffic', () => {
    *  live server only pushes a roster-change back to a resource that has requested its roster at
    *  least once — before sending their own roster set. Answers that implicit `roster` get so both
    *  tests below can go straight to asserting the add/remove-specific stanza. */
-  async function ackImplicitRosterGet(server: { lastWritten: () => string; send: (s: string) => void }): Promise<void> {
+  async function ackImplicitRosterGet(server: {
+    lastWritten: () => string;
+    send: (s: string) => void;
+  }): Promise<void> {
     await tick();
     const id = /id="(roster-\d+)"/.exec(server.lastWritten())?.[1] ?? '';
     server.send(`<iq type="result" id="${id}"><query xmlns="jabber:iq:roster"/></iq>`);
@@ -340,9 +380,11 @@ describe('XmppAdapter — live traffic', () => {
     );
     server.send(`<iq type="result" id="${id}"/>`);
     await p;
-    expect(server.written.some((l) => l.includes('type="subscribe"') || l.includes('type="unsubscribe"'))).toBe(
-      false,
-    );
+    expect(
+      server.written.some(
+        (l) => l.includes('type="subscribe"') || l.includes('type="unsubscribe"'),
+      ),
+    ).toBe(false);
   });
 
   it('blockContact / unblockContact send XEP-0191 iqs, with no roster-interest requirement', async () => {
@@ -450,9 +492,18 @@ describe('XmppAdapter — live traffic', () => {
     it('caches the discovered upload service — a second upload skips disco entirely', async () => {
       const { server, adapter, session } = await connected();
       server.fetchImpl = () =>
-        Promise.resolve({ status: 200, headers: {}, text: () => Promise.resolve(''), bytes: () => Promise.resolve(new Uint8Array()) });
+        Promise.resolve({
+          status: 200,
+          headers: {},
+          text: () => Promise.resolve(''),
+          bytes: () => Promise.resolve(new Uint8Array()),
+        });
 
-      const first = adapter.uploadMedia(session, { bytes: new Uint8Array(), mime: 'text/plain', filename: 'a.txt' });
+      const first = adapter.uploadMedia(session, {
+        bytes: new Uint8Array(),
+        mime: 'text/plain',
+        filename: 'a.txt',
+      });
       await tick();
       const itemsId = lastIqId(server);
       server.send(
@@ -472,7 +523,11 @@ describe('XmppAdapter — live traffic', () => {
       await first;
 
       const writtenSoFar = server.written.length;
-      const second = adapter.uploadMedia(session, { bytes: new Uint8Array(), mime: 'text/plain', filename: 'b.txt' });
+      const second = adapter.uploadMedia(session, {
+        bytes: new Uint8Array(),
+        mime: 'text/plain',
+        filename: 'b.txt',
+      });
       await tick();
       // Only ONE new iq (the slot request) — no repeat disco#items/disco#info.
       expect(server.written.length).toBe(writtenSoFar + 1);
@@ -486,18 +541,33 @@ describe('XmppAdapter — live traffic', () => {
 
     it('rejects when no disco item advertises the upload feature', async () => {
       const { server, adapter, session } = await connected();
-      const p = adapter.uploadMedia(session, { bytes: new Uint8Array(), mime: 'text/plain', filename: 'a.txt' });
+      const p = adapter.uploadMedia(session, {
+        bytes: new Uint8Array(),
+        mime: 'text/plain',
+        filename: 'a.txt',
+      });
       await tick();
       const itemsId = lastIqId(server);
-      server.send(`<iq type="result" id="${itemsId}"><query xmlns="http://jabber.org/protocol/disco#items"/></iq>`);
+      server.send(
+        `<iq type="result" id="${itemsId}"><query xmlns="http://jabber.org/protocol/disco#items"/></iq>`,
+      );
       await expect(p).rejects.toThrow(/no XEP-0363 HTTP Upload service/);
     });
 
     it('rejects when the PUT itself fails (HTTP >= 400)', async () => {
       const { server, adapter, session } = await connected();
       server.fetchImpl = () =>
-        Promise.resolve({ status: 403, headers: {}, text: () => Promise.resolve(''), bytes: () => Promise.resolve(new Uint8Array()) });
-      const p = adapter.uploadMedia(session, { bytes: new Uint8Array(), mime: 'text/plain', filename: 'a.txt' });
+        Promise.resolve({
+          status: 403,
+          headers: {},
+          text: () => Promise.resolve(''),
+          bytes: () => Promise.resolve(new Uint8Array()),
+        });
+      const p = adapter.uploadMedia(session, {
+        bytes: new Uint8Array(),
+        mime: 'text/plain',
+        filename: 'a.txt',
+      });
       await tick();
       server.send(
         `<iq type="result" id="${lastIqId(server)}"><query xmlns="http://jabber.org/protocol/disco#items">` +
@@ -659,7 +729,11 @@ describe('XmppAdapter — live traffic', () => {
     expect((await it.next()).value).toMatchObject({ type: 'room-membership', joined: false });
     expect((await it.next()).value).toMatchObject({
       type: 'message',
-      message: { conversationId: 'general@conf.example.com', kind: 'system', body: 'Bea was kicked by Ada: spam' },
+      message: {
+        conversationId: 'general@conf.example.com',
+        kind: 'system',
+        body: 'Bea was kicked by Ada: spam',
+      },
     });
   });
 
@@ -712,7 +786,10 @@ describe('XmppAdapter — live traffic', () => {
     const { server, adapter, session } = await connected();
     const it = adapter.events(session)[Symbol.asyncIterator]();
     server.send(`<presence from="bob@example.com/phone"><show>away</show></presence>`);
-    expect((await it.next()).value).toMatchObject({ type: 'presence', address: 'bob@example.com/phone' });
+    expect((await it.next()).value).toMatchObject({
+      type: 'presence',
+      address: 'bob@example.com/phone',
+    });
   });
 
   it('discoverRooms lists a service then enriches each room from disco#info', async () => {
@@ -790,7 +867,11 @@ describe('XmppAdapter — live traffic', () => {
       `<iq type="result" id="${infoId}"><query xmlns="http://jabber.org/protocol/disco#info">` +
         `<identity category="gateway" type="xmpp"/></query></iq>`,
     );
-    expect((await p)[0]).toMatchObject({ jid: 'gateway@conf.example.com', occupants: null, membersOnly: false });
+    expect((await p)[0]).toMatchObject({
+      jid: 'gateway@conf.example.com',
+      occupants: null,
+      membersOnly: false,
+    });
   });
 
   it('discoverRooms keeps a room whose disco#info errors, with defaults', async () => {
@@ -957,7 +1038,11 @@ describe('XmppAdapter — live traffic', () => {
     server.send(`<iq type="result" id="x"/>`); // modelled as nothing
     server.send(`<presence from="bob@example.com/p"><show>away</show></presence>`);
     const evt = await it.next();
-    expect(evt.value).toMatchObject({ type: 'presence', presence: 'away', address: 'bob@example.com/p' });
+    expect(evt.value).toMatchObject({
+      type: 'presence',
+      presence: 'away',
+      address: 'bob@example.com/p',
+    });
     // a server <a/> is consumed silently
     server.send(`<a xmlns="urn:xmpp:sm:3" h="0"/>`);
     await tick();
@@ -972,16 +1057,22 @@ describe('XmppAdapter — transport variants', () => {
       server,
     );
     await tick();
-    server.send(`<stream:stream xmlns="jabber:client" xmlns:stream="http://etherx.jabber.org/streams">`);
+    server.send(
+      `<stream:stream xmlns="jabber:client" xmlns:stream="http://etherx.jabber.org/streams">`,
+    );
     server.send(FEAT_AUTH); // PLAIN accepted — a WS is TLS
     await tick();
     expect(server.lastWritten()).toContain('mechanism="PLAIN"');
     server.send(`<success xmlns="urn:ietf:params:xml:ns:xmpp-sasl"/>`);
     await tick();
     server.send(`<stream:stream xmlns="jabber:client">`);
-    server.send(`<stream:features><bind xmlns="urn:ietf:params:xml:ns:xmpp-bind"/></stream:features>`);
+    server.send(
+      `<stream:features><bind xmlns="urn:ietf:params:xml:ns:xmpp-bind"/></stream:features>`,
+    );
     await tick();
-    server.send(`<iq type="result" id="bind-1"><bind xmlns="urn:ietf:params:xml:ns:xmpp-bind"><jid>ada@example.com/w</jid></bind></iq>`);
+    server.send(
+      `<iq type="result" id="bind-1"><bind xmlns="urn:ietf:params:xml:ns:xmpp-bind"><jid>ada@example.com/w</jid></bind></iq>`,
+    );
     await expect(p).resolves.toBeDefined();
   });
 
@@ -992,9 +1083,16 @@ describe('XmppAdapter — transport variants', () => {
       server,
     );
     await tick();
-    expect(server.tcpOpts).toMatchObject({ host: 'chat.example.com', port: 15222, tls: true, serverName: 'example.com' });
+    expect(server.tcpOpts).toMatchObject({
+      host: 'chat.example.com',
+      port: 15222,
+      tls: true,
+      serverName: 'example.com',
+    });
     server.send(`<stream:stream xmlns="jabber:client">`);
-    server.send(`<stream:features><mechanisms xmlns="urn:ietf:params:xml:ns:xmpp-sasl"><mechanism>NOPE</mechanism></mechanisms></stream:features>`);
+    server.send(
+      `<stream:features><mechanisms xmlns="urn:ietf:params:xml:ns:xmpp-sasl"><mechanism>NOPE</mechanism></mechanisms></stream:features>`,
+    );
     await expect(p).rejects.toThrow();
   });
 

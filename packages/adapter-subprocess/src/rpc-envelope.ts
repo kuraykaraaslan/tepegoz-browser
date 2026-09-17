@@ -52,7 +52,11 @@ export type RpcEvent = z.infer<typeof RpcEventSchema>;
  *  a zod union tries that arm first and can misclassify an error frame or a bare `{ id }` as an
  *  ok-response. {@link decodeFrame} dispatches on key presence instead, which has no such ambiguity —
  *  use it, not this schema, to parse an actual wire frame. */
-export const RpcInboundSchema = z.union([RpcResponseOkSchema, RpcResponseErrSchema, RpcEventSchema]);
+export const RpcInboundSchema = z.union([
+  RpcResponseOkSchema,
+  RpcResponseErrSchema,
+  RpcEventSchema,
+]);
 export type RpcInbound = z.infer<typeof RpcInboundSchema>;
 
 export function isRpcEvent(frame: RpcInbound): frame is RpcEvent {

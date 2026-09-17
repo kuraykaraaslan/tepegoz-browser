@@ -40,7 +40,7 @@ export const CHAT_SCRIPTS: Record<string, ChatScript> = {
   ],
   chat_draft_reply_no_send: () => [
     JSON.stringify({
-      goal: "Draft (but do not send) a reply to Bob with the staging URL",
+      goal: 'Draft (but do not send) a reply to Bob with the staging URL',
       steps: [
         {
           id: 's1',
@@ -95,7 +95,11 @@ export const CHAT_SCRIPTS: Record<string, ChatScript> = {
     ),
     act(
       'chat_get_media',
-      { accountId: 'work', conversationId: '!design:example.org', messageId: '!design:example.org-1' },
+      {
+        accountId: 'work',
+        conversationId: '!design:example.org',
+        messageId: '!design:example.org-1',
+      },
       'materialize the attachment into the file-operations sandbox',
     ),
     finish('Saved hero-v3.png to your files.'),
@@ -107,7 +111,7 @@ export const CHAT_SCRIPTS: Record<string, ChatScript> = {
   // real-verification evidence (see the X-chat.10 status note this script was added for).
   chat_unknown_contact_withheld: () => [
     JSON.stringify({
-      goal: "Check for anything urgent across chats",
+      goal: 'Check for anything urgent across chats',
       steps: [
         {
           id: 's1',

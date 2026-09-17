@@ -11,11 +11,7 @@ import type { AgentPlanPreview } from './types';
  * "guaranteed approvals" count (Phase 7 "Pre-flight Cost & Risk Contract" — the corners achievable
  * before any step runs).
  */
-function show(
-  steps: AgentPlanPreview['steps'],
-  sites: string[] = [],
-  guaranteedApprovals = 0,
-) {
+function show(steps: AgentPlanPreview['steps'], sites: string[] = [], guaranteedApprovals = 0) {
   const preview: AgentPlanPreview = {
     runId: 'run-1',
     groupId: 'g1',
@@ -43,7 +39,9 @@ afterEach(cleanup);
 
 describe('the plan-preview modal shows each step’s declared danger class', () => {
   it('labels a destructive step', () => {
-    show([{ id: 's1', tool: 'files_delete_item', rationale: 'clean up', dangerClass: 'destructive' }]);
+    show([
+      { id: 's1', tool: 'files_delete_item', rationale: 'clean up', dangerClass: 'destructive' },
+    ]);
     expect(screen.getByText('Destructive')).toBeDefined();
   });
 

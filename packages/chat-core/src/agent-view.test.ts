@@ -50,7 +50,9 @@ describe('wrapChatContent', () => {
 
 describe('agentMessageView', () => {
   it('wraps the body and sender name, and exposes media as an opaque handle', () => {
-    const view = agentMessageView(msg({ senderName: 'Eve', body: 'click here', mediaRef: 'mxc://s/1', kind: 'media' }));
+    const view = agentMessageView(
+      msg({ senderName: 'Eve', body: 'click here', mediaRef: 'mxc://s/1', kind: 'media' }),
+    );
     expect(view.body).toBe('<untrusted_chat_message>\nclick here\n</untrusted_chat_message>');
     expect(view.senderName).toBe('<untrusted_chat_message>\nEve\n</untrusted_chat_message>');
     expect(view.hasMedia).toBe(true);
@@ -64,7 +66,9 @@ describe('agentMessageView', () => {
   });
 
   it('reports edited from editedAt and carries reactions through', () => {
-    const view = agentMessageView(msg({ editedAt: 5, reactions: [{ emoji: '👍', count: 2, me: false }] }));
+    const view = agentMessageView(
+      msg({ editedAt: 5, reactions: [{ emoji: '👍', count: 2, me: false }] }),
+    );
     expect(view.edited).toBe(true);
     expect(view.reactions).toEqual([{ emoji: '👍', count: 2, me: false }]);
   });
@@ -81,8 +85,12 @@ describe('isConversationAgentVisible / filterAgentConversations', () => {
   });
 
   it('a session opt-in reveals an otherwise-hidden conversation', () => {
-    expect(isConversationAgentVisible({ id: 'b', isKnownContact: false }, new Set(['b']))).toBe(true);
-    expect(isConversationAgentVisible({ id: 'b', isKnownContact: false }, new Set(['x']))).toBe(false);
+    expect(isConversationAgentVisible({ id: 'b', isKnownContact: false }, new Set(['b']))).toBe(
+      true,
+    );
+    expect(isConversationAgentVisible({ id: 'b', isKnownContact: false }, new Set(['x']))).toBe(
+      false,
+    );
   });
 
   it('filters a list down to the visible conversations', () => {
@@ -91,6 +99,9 @@ describe('isConversationAgentVisible / filterAgentConversations', () => {
       { id: 'stranger', isKnownContact: false },
       { id: 'opted', isKnownContact: false },
     ];
-    expect(filterAgentConversations(convs, new Set(['opted'])).map((c) => c.id)).toEqual(['known', 'opted']);
+    expect(filterAgentConversations(convs, new Set(['opted'])).map((c) => c.id)).toEqual([
+      'known',
+      'opted',
+    ]);
   });
 });

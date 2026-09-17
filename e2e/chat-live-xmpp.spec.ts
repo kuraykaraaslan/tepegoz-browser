@@ -1,7 +1,13 @@
 import { resolve, join } from 'node:path';
 import { mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { connect as tlsConnect, type TLSSocket } from 'node:tls';
-import { test, expect, _electron as electron, type ElectronApplication, type Page } from '@playwright/test';
+import {
+  test,
+  expect,
+  _electron as electron,
+  type ElectronApplication,
+  type Page,
+} from '@playwright/test';
 import { XmppAdapter, type ChatAccountCreds, type ChatSession } from '@tepegoz/chat-adapters';
 import { NodeChatTransport, type RawDuplex } from '@tepegoz/chat-transport-node';
 
@@ -26,7 +32,10 @@ import { NodeChatTransport, type RawDuplex } from '@tepegoz/chat-transport-node'
  * "even muted, even 'none'" override the phase doc claims) — and bumps the room's real `mentions`
  * badge. Then a real two-click room leave.
  */
-test.skip(process.env.TEPEGOZ_LIVE_XMPP !== '1', 'needs a live local Prosody — see the file header');
+test.skip(
+  process.env.TEPEGOZ_LIVE_XMPP !== '1',
+  'needs a live local Prosody — see the file header',
+);
 
 const appDir = resolve(process.cwd(), 'apps/desktop');
 
@@ -81,7 +90,14 @@ async function connectBob(): Promise<{ adapter: XmppAdapter; session: ChatSessio
   const creds: ChatAccountCreds = {
     accountId: 'bob',
     secret: 'bobpw123',
-    server: { protocol: 'xmpp', jid: 'bob@localhost', host: 'localhost', port: 5222, security: 'starttls', wsUrl: null },
+    server: {
+      protocol: 'xmpp',
+      jid: 'bob@localhost',
+      host: 'localhost',
+      port: 5222,
+      security: 'starttls',
+      wsUrl: null,
+    },
   };
   const session = await adapter.connect(creds, insecureTransport());
   await adapter.setPresence(session, 'online');
@@ -136,7 +152,9 @@ test('adds a live XMPP account, joins a MUC room, sends a message, reacts to it,
       .poll(
         () =>
           window.evaluate(async () => {
-            type ChatBridge = { listChatAccounts: () => Promise<{ states: Record<string, string> }> };
+            type ChatBridge = {
+              listChatAccounts: () => Promise<{ states: Record<string, string> }>;
+            };
             const bridge = (window as unknown as { tepegoz: ChatBridge }).tepegoz;
             const snapshot = await bridge.listChatAccounts();
             return Object.values(snapshot.states);
@@ -216,10 +234,16 @@ test('adds a live XMPP account, joins a MUC room, sends a message, reacts to it,
     await bob.adapter.joinRoom(bob.session, roomAddress);
     await new Promise((r) => setTimeout(r, 1000));
     const plainBody = `plain room message ${String(Date.now())}`;
-    await bob.adapter.sendMessage(bob.session, roomAddress, { body: plainBody, replyToId: null, mediaPath: null });
+    await bob.adapter.sendMessage(bob.session, roomAddress, {
+      body: plainBody,
+      replyToId: null,
+      mediaPath: null,
+    });
     await expect(window.getByText(plainBody)).toBeVisible({ timeout: 15_000 });
 
-    type NotificationsBridge = { listNotifications: () => Promise<{ items: { source: string; body: string }[] }> };
+    type NotificationsBridge = {
+      listNotifications: () => Promise<{ items: { source: string; body: string }[] }>;
+    };
     const chatNotificationBodies = async (): Promise<string[]> =>
       window.evaluate(async () => {
         const bridge = (window as unknown as { tepegoz: NotificationsBridge }).tepegoz;
@@ -234,10 +258,16 @@ test('adds a live XMPP account, joins a MUC room, sends a message, reacts to it,
     // Still muted — a message containing alice's own MUC nick (her JID's local part) must notify
     // anyway, proving the direct-mention override.
     const mentionBody = `alice: ping ${String(Date.now())}`;
-    await bob.adapter.sendMessage(bob.session, roomAddress, { body: mentionBody, replyToId: null, mediaPath: null });
+    await bob.adapter.sendMessage(bob.session, roomAddress, {
+      body: mentionBody,
+      replyToId: null,
+      mediaPath: null,
+    });
     await expect(window.getByText(mentionBody)).toBeVisible({ timeout: 15_000 });
     await expect
-      .poll(async () => (await chatNotificationBodies()).some((b) => b.includes(mentionBody)), { timeout: 10_000 })
+      .poll(async () => (await chatNotificationBodies()).some((b) => b.includes(mentionBody)), {
+        timeout: 10_000,
+      })
       .toBe(true);
 
     // Leave the room — two-click confirm, same button, name changes between clicks.

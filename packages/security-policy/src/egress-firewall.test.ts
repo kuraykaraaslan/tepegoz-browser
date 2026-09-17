@@ -80,7 +80,8 @@ describe('inspectEgress — encoded blobs (warn)', () => {
   });
 
   it('flags a long hex run', () => {
-    const hex = '736b2d616e742d61706930332d4142434445464748494a4b4c4d4e4f505152535455565758595a303132333435';
+    const hex =
+      '736b2d616e742d61706930332d4142434445464748494a4b4c4d4e4f505152535455565758595a303132333435';
     expect(kinds(`payload=${hex}`)).toContain('hex_blob');
   });
 

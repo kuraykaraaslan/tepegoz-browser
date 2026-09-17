@@ -856,7 +856,7 @@ export function registerBrowserTools(deps: { host: BrowserHost }): void {
         `capped at ${String(MAX_SEARCH_MATCHES)}; a narrower query finds the rest. An empty result means ` +
         'no ACTIONABLE element matched — it is not proof the page lacks the text: plain prose (a ' +
         'paragraph, a price with no control around it) is not in this set at all, and ' +
-        'browser_validate_page\'s `containsText` answers that question instead. Use each match\'s `ref` ' +
+        "browser_validate_page's `containsText` answers that question instead. Use each match's `ref` " +
         'with browser_update_page exactly like a browser_get_elements ref — re-read (either tool) after ' +
         'any navigation or page change.',
       { aiTask: 'read_understand' },

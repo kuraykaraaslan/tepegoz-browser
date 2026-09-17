@@ -152,7 +152,8 @@ export class XmppNegotiator {
     if (el.local !== 'features') return [];
     const f = parseStreamFeatures(el);
     const mech = pickSaslMechanism(f.mechanisms, { tlsActive: this.tlsActive });
-    if (mech === null) return this.fail(`no acceptable SASL mechanism in [${f.mechanisms.join(', ')}]`);
+    if (mech === null)
+      return this.fail(`no acceptable SASL mechanism in [${f.mechanisms.join(', ')}]`);
 
     this.phase = 'await-sasl';
     const bare = parseJid(this.cfg.jid);
@@ -160,7 +161,9 @@ export class XmppNegotiator {
 
     if (mech === 'PLAIN') {
       const payload = saslPlain(localpart, this.cfg.password);
-      return [{ kind: 'send', xml: `<auth xmlns="${NS_SASL}" mechanism="PLAIN">${payload}</auth>` }];
+      return [
+        { kind: 'send', xml: `<auth xmlns="${NS_SASL}" mechanism="PLAIN">${payload}</auth>` },
+      ];
     }
     const state =
       this.cfg.scramNonce !== undefined
@@ -213,8 +216,7 @@ export class XmppNegotiator {
     return [
       {
         kind: 'send',
-        xml:
-          `<iq type="set" id="${this.bindId}"><bind xmlns="${NS_BIND}">${res}</bind></iq>`,
+        xml: `<iq type="set" id="${this.bindId}"><bind xmlns="${NS_BIND}">${res}</bind></iq>`,
       },
     ];
   }

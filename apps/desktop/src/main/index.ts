@@ -36,10 +36,7 @@ import {
   onSystemPause,
   onSystemResume,
 } from './power-lifecycle';
-import {
-  pauseAllRunsForSleep,
-  resumeAllRunsAfterSleep,
-} from './agent/agent-run-lock.electron';
+import { pauseAllRunsForSleep, resumeAllRunsAfterSleep } from './agent/agent-run-lock.electron';
 import PreferenceStore from '@tepegoz/preferences';
 import { closeDatabase, getDb } from './db/database.electron';
 import { clearOnExitNow, settleClearOnExit } from './privacy/clear-on-exit.electron';

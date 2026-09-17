@@ -1,5 +1,9 @@
 import { z } from 'zod';
-import { capability, defineCapabilities, type ExtensionCapabilitySet } from '@tepegoz/extension-sdk';
+import {
+  capability,
+  defineCapabilities,
+  type ExtensionCapabilitySet,
+} from '@tepegoz/extension-sdk';
 import { CHAT_PRESENCE } from '@tepegoz/shared-types';
 import type { ChatCapabilityHost } from './types';
 import { chatManifest } from './manifest';

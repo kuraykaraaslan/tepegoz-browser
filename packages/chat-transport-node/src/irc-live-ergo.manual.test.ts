@@ -50,13 +50,18 @@ describe.skipIf(process.env.TEPEGOZ_LIVE_IRC !== '1')('IrcAdapter — live ergo'
     const deadline = Date.now() + timeoutMs;
     for (;;) {
       const remaining = deadline - Date.now();
-      if (remaining <= 0) throw new Error(`timed out after ${String(timeoutMs)}ms waiting for a message event`);
+      if (remaining <= 0)
+        throw new Error(`timed out after ${String(timeoutMs)}ms waiting for a message event`);
       const timeout = new Promise<never>((_resolve, reject) => {
         setTimeout(() => reject(new Error('per-event timeout')), remaining);
       });
       const result: IteratorResult<unknown> = await Promise.race([it.next(), timeout]);
       const value: unknown = result.value;
-      if (typeof value === 'object' && value !== null && (value as { type?: unknown }).type === 'message') {
+      if (
+        typeof value === 'object' &&
+        value !== null &&
+        (value as { type?: unknown }).type === 'message'
+      ) {
         return value;
       }
     }
@@ -79,7 +84,10 @@ describe.skipIf(process.env.TEPEGOZ_LIVE_IRC !== '1')('IrcAdapter — live ergo'
     });
 
     const received = await nextMessageEvent(bob.adapter, bob.session);
-    expect(received).toMatchObject({ type: 'message', message: { body: 'hello from a live test' } });
+    expect(received).toMatchObject({
+      type: 'message',
+      message: { body: 'hello from a live test' },
+    });
 
     // Reconnect + auto-rejoin: drop alice's connection (simulating a network blip) while bob stays
     // joined — an unregistered channel on a real ircd is destroyed, history and all, the moment it

@@ -23,7 +23,9 @@ describe('parseConnectionHealth', () => {
   });
 
   it('accepts null timestamps (a connection that has never come up / never failed)', () => {
-    expect(parseConnectionHealth({ ...ok, lastHandshakeAt: null, lastErrorAt: null })).not.toBeNull();
+    expect(
+      parseConnectionHealth({ ...ok, lastHandshakeAt: null, lastErrorAt: null }),
+    ).not.toBeNull();
   });
 
   it.each([

@@ -148,9 +148,7 @@ function applyReaction(
   if (existing === undefined) return reactions;
   const count = existing.count - 1;
   if (count <= 0) return reactions.filter((r) => r.emoji !== emoji);
-  return reactions.map((r) =>
-    r.emoji === emoji ? { emoji, count, me: mine ? false : r.me } : r,
-  );
+  return reactions.map((r) => (r.emoji === emoji ? { emoji, count, me: mine ? false : r.me } : r));
 }
 
 export function foldEvents(

@@ -5,7 +5,9 @@ import { deriveSeedAccountId, parseChatSeed, seedChatAccountsFromEnv } from './c
 describe('deriveSeedAccountId', () => {
   it('slugifies a JID to a valid account id', () => {
     expect(deriveSeedAccountId('kklama@xmpp.jp')).toBe('kklama-xmpp-jp');
-    expect(deriveSeedAccountId('Ada.Lovelace@Jabber.Hot-Chilli.net')).toBe('ada-lovelace-jabber-hot-chilli-net');
+    expect(deriveSeedAccountId('Ada.Lovelace@Jabber.Hot-Chilli.net')).toBe(
+      'ada-lovelace-jabber-hot-chilli-net',
+    );
   });
 });
 

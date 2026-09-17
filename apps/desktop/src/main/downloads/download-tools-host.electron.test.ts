@@ -113,7 +113,11 @@ describe('probeMedia', () => {
     http.head.mockResolvedValue({ status: 501, headers: {}, request: {} });
     http.get.mockResolvedValue({
       status: 200,
-      headers: { 'content-type': 'image/jpeg', 'content-range': 'bytes */*', 'content-length': '10' },
+      headers: {
+        'content-type': 'image/jpeg',
+        'content-range': 'bytes */*',
+        'content-length': '10',
+      },
       request: {},
     });
     const result = await downloadToolsHost.probeMedia('https://cdn.example.com/no-range.jpg');

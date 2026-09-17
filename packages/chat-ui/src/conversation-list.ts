@@ -29,7 +29,9 @@ export function conversationTitle(conv: Pick<ChatConversation, 'name' | 'address
 export function sortConversations<T extends Pick<ChatConversation, 'updatedAt' | 'id'>>(
   conversations: readonly T[],
 ): T[] {
-  return [...conversations].sort((a, b) => b.updatedAt - a.updatedAt || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+  return [...conversations].sort(
+    (a, b) => b.updatedAt - a.updatedAt || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0),
+  );
 }
 
 /** Fold-aware filter over a conversation's title/address — used by `<NewChatDialog>`'s "your rooms"
@@ -49,6 +51,8 @@ export function totalUnread(conversations: readonly Pick<ChatConversation, 'unre
   return conversations.reduce((sum, c) => sum + c.unread, 0);
 }
 
-export function totalMentions(conversations: readonly Pick<ChatConversation, 'mentions'>[]): number {
+export function totalMentions(
+  conversations: readonly Pick<ChatConversation, 'mentions'>[],
+): number {
   return conversations.reduce((sum, c) => sum + c.mentions, 0);
 }

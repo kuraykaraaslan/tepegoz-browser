@@ -23,7 +23,9 @@ vi.mock('electron', () => ({
 
 const TRUSTED = 'app://tepegoz/chrome.html';
 vi.mock('../lib/trusted-origin', () => ({ isTrustedAppUrl: (u: string) => u === TRUSTED }));
-vi.mock('../lib/i18n-main', () => ({ mainStrings: () => ({ errors: { forbidden: 'forbidden' } }) }));
+vi.mock('../lib/i18n-main', () => ({
+  mainStrings: () => ({ errors: { forbidden: 'forbidden' } }),
+}));
 
 const state = vi.hoisted(() => ({
   profiles: [

@@ -221,7 +221,7 @@ describe('stopReasonForFailure + recoveryAdviceFor cover every AgentFailureKind'
     expect(recoveryAdviceFor(failure).whoRetries).toBe(WHO_RETRIES[kind]);
   });
 
-  it('every non-retryable kind is the USER\'s to retry (nothing stops silently retryable)', () => {
+  it("every non-retryable kind is the USER's to retry (nothing stops silently retryable)", () => {
     for (const kind of ALL_KINDS) {
       const advice = recoveryAdviceFor({ kind, message: 'm' } as Parameters<
         typeof stopReasonForFailure

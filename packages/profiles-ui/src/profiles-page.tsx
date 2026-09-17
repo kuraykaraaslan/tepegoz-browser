@@ -35,7 +35,14 @@ export interface ProfilesPageProps {
   switchTo: (id: string) => Promise<void>;
 }
 
-export function ProfilesPage({ list, getActive, create, rename, remove, switchTo }: Readonly<ProfilesPageProps>) {
+export function ProfilesPage({
+  list,
+  getActive,
+  create,
+  rename,
+  remove,
+  switchTo,
+}: Readonly<ProfilesPageProps>) {
   const t = useT(profilesDict);
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -76,7 +83,9 @@ export function ProfilesPage({ list, getActive, create, rename, remove, switchTo
 
   const handleRename = useCallback(
     (id: string, name: string) => {
-      void rename({ id, name }).then(refresh).catch(() => undefined);
+      void rename({ id, name })
+        .then(refresh)
+        .catch(() => undefined);
     },
     [rename, refresh],
   );

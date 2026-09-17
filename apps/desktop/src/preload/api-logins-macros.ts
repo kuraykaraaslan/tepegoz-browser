@@ -80,8 +80,7 @@ export const loginsMacrosApi: Pick<
   saveMacro: (macro: Macro) => invoke<MacroSummary>(IpcChannels.macrosSave, macro),
   deleteMacro: (id: string) => invoke<void>(IpcChannels.macrosDelete, id),
   exportMacros: () => invoke<string>(IpcChannels.macrosExport),
-  importMacros: (json: string) =>
-    invoke<MacrosImportResult>(IpcChannels.macrosImport, json),
+  importMacros: (json: string) => invoke<MacrosImportResult>(IpcChannels.macrosImport, json),
   attachMacroCsv: (content: string) => invoke<string>(IpcChannels.macrosAttachCsv, { content }),
   runMacro: (input: MacroRunInput) => invoke<{ runId: string }>(IpcChannels.macrosRun, input),
   runDraftMacro: (input: MacroRunDraftInput) =>

@@ -35,7 +35,7 @@ process** serving every profile, with `PreferenceStore` / `CredentialVault` / th
 internal `Map<profileId, Core>` behind an unchanged static facade routing every read / write to "the
 active profile". That shipped on the branch and then failed in use: changing the theme in one profile's
 window changed it in the other's, because `prefs:get` / `prefs:set` resolved the process-wide active
-profile rather than the calling window's. That is the *class* of bug the design invites — correctness
+profile rather than the calling window's. That is the _class_ of bug the design invites — correctness
 depended on ~50 call sites each re-asserting which profile they meant. The branch's final commit
 replaced it with one process per profile. This ADR adopts that end state directly (per the track: "read
 the branch for intent, rebuild for today's tree"), against a `main` that is ~945 commits further along.
@@ -95,7 +95,7 @@ Consequences of the process boundary, all for free:
   profile.
 
 Cost, accepted: a full Electron runtime per open profile (~200–300 MB — the reason Chrome itself does
-*not* do this). Deleting a profile whose process is running is refused with an actionable message (its
+_not_ do this). Deleting a profile whose process is running is refused with an actionable message (its
 files are locked); deleting the profile you are currently in is refused outright.
 
 ### 3. `@tepegoz/profiles` — the registry
@@ -127,7 +127,7 @@ accessor functions (`directBrowsingPartition()` / `appPartition()` / `chromeWebP
 scoped name resolves at call time.
 
 **This is defense-in-depth, and an explicit owner decision.** Under process-per-profile the partition
-directories are already isolated by `userData`, so profile-scoped *names* prevent no failure mode the
+directories are already isolated by `userData`, so profile-scoped _names_ prevent no failure mode the
 process boundary does not already prevent. The cost — threading the scope through `window.ts`, the tab
 layer, the Phase 5 network layer (`browsing-sessions`, and by composition `binding-service` /
 `connection-pool` / `tunnel-session`), the download service, the site-data IPC, and ~10 test mocks —
@@ -173,7 +173,7 @@ manage, new window. Passwords / account / sync stay disabled (out of scope); Gue
 - A profile is one self-contained, copyable folder — full Chrome parity, and profile deletion is a
   single recursive directory remove.
 - A profile switch cannot leak the previous profile's in-memory secrets into the new process, because
-  it is a fresh process — a security argument *for* this design.
+  it is a fresh process — a security argument _for_ this design.
 - `passwordVault` (`@tepegoz/password-vault`) was already a plain singleton instance opened over
   `getDb()`, which is now the profile's own DB — so it is per-profile for free, like the rest.
 - The `--user-data-dir` opt-out path exists precisely so the eval harness and E2E specs do not write
@@ -188,7 +188,7 @@ manage, new window. Passwords / account / sync stay disabled (out of scope); Gue
 - **Cloud sync** of any profile data (a later phase).
 - The **MV3 `ExtensionHost` execution engine** itself (still unbuilt) — this ADR only guarantees that
   whenever it lands, each profile already has its own isolated `Extensions/` install directory. The
-  bundled built-in extension *catalog* (`resources/extensions.catalog.json`) stays a single read-only
+  bundled built-in extension _catalog_ (`resources/extensions.catalog.json`) stays a single read-only
   app resource; only installed / enabled state is per-profile.
 - **Guest / private-ephemeral mode** (phase-2c) — unrelated and unbuilt; its menu placeholder stays
   disabled.

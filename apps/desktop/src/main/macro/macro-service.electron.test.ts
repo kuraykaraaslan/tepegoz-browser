@@ -46,8 +46,14 @@ const store = vi.hoisted(() => ({
   delete: vi.fn(),
   exportAll: vi.fn((): unknown[] => [{ id: 'm1' }, { id: 'm2' }]),
 }));
-const serializeMacrosJson = vi.hoisted(() => vi.fn((macros: unknown[]) => `json:${String(macros.length)}`));
-vi.mock('@tepegoz/persistence', () => ({ BlobStore: blob, MacroStore: store, serializeMacrosJson }));
+const serializeMacrosJson = vi.hoisted(() =>
+  vi.fn((macros: unknown[]) => `json:${String(macros.length)}`),
+);
+vi.mock('@tepegoz/persistence', () => ({
+  BlobStore: blob,
+  MacroStore: store,
+  serializeMacrosJson,
+}));
 
 const db = vi.hoisted((): { value: unknown } => ({ value: { __db: true } }));
 vi.mock('../db/database.electron', () => ({ getDb: () => db.value }));

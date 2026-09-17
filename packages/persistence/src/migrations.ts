@@ -790,7 +790,9 @@ const MIGRATIONS: Migration[] = [
       // Per-room notification level (ext-chat X-chat.3): `all` (default) | `mentions` | `none`.
       // A direct nick mention still notifies at `mentions`; only `none` fully silences — the routing
       // rule lives in `@tepegoz/chat-core` `decideNotification`. DMs keep using `muted`.
-      db.exec("ALTER TABLE chat_conversations ADD COLUMN notify_level TEXT NOT NULL DEFAULT 'all';");
+      db.exec(
+        "ALTER TABLE chat_conversations ADD COLUMN notify_level TEXT NOT NULL DEFAULT 'all';",
+      );
     },
   },
   {
@@ -836,7 +838,7 @@ const MIGRATIONS: Migration[] = [
       // ext-chat: blocking a contact (XEP-0191, …). Write-through from a successful
       // blockContact/unblockContact call — neither protocol's block state arrives as a normal
       // roster-push, so there is no live event to fold it from.
-      db.exec("ALTER TABLE chat_contacts ADD COLUMN blocked INTEGER NOT NULL DEFAULT 0;");
+      db.exec('ALTER TABLE chat_contacts ADD COLUMN blocked INTEGER NOT NULL DEFAULT 0;');
     },
   },
   {

@@ -1,18 +1,21 @@
 import { describe, it, expect, vi } from 'vitest';
-import type { ChatAccount, ChatContact, ChatConversation, ChatMessage } from '@tepegoz/shared-types';
+import type {
+  ChatAccount,
+  ChatContact,
+  ChatConversation,
+  ChatMessage,
+} from '@tepegoz/shared-types';
 import { XMPP_CAPS } from '@tepegoz/chat-adapters';
-import {
-  ChatService,
-  type ChatSecretStore,
-  type ChatServiceDeps,
-} from './chat-service';
+import { ChatService, type ChatSecretStore, type ChatServiceDeps } from './chat-service';
 import type { ChatRunnerStore } from './account-runner';
 
 const tick = (): Promise<void> => new Promise((r) => setTimeout(r, 0));
 
 /** An event stream that never yields — the runner's pump just parks on it. */
 const emptyChannel = (): AsyncIterable<unknown> => ({
-  [Symbol.asyncIterator]: () => ({ next: () => new Promise<IteratorResult<unknown>>(() => undefined) }),
+  [Symbol.asyncIterator]: () => ({
+    next: () => new Promise<IteratorResult<unknown>>(() => undefined),
+  }),
 });
 
 class FakeAdapter {
@@ -29,8 +32,20 @@ class FakeAdapter {
   discoverRooms = vi.fn(() => Promise.resolve([]));
   joinRoom = vi.fn(() =>
     Promise.resolve({
-      id: 'r@conf', accountId: 'a', kind: 'room' as const, address: 'r@conf', name: 'r', topic: '',
-      memberCount: 0, unread: 0, mentions: 0, lastReadId: null, muted: false, notifyLevel: 'all' as const, isKnownContact: true, updatedAt: 1,
+      id: 'r@conf',
+      accountId: 'a',
+      kind: 'room' as const,
+      address: 'r@conf',
+      name: 'r',
+      topic: '',
+      memberCount: 0,
+      unread: 0,
+      mentions: 0,
+      lastReadId: null,
+      muted: false,
+      notifyLevel: 'all' as const,
+      isKnownContact: true,
+      updatedAt: 1,
     }),
   );
   inviteToRoom = vi.fn(() => Promise.resolve());
@@ -58,7 +73,9 @@ class FakeStore implements ChatRunnerStore {
   }
 }
 
-function fakeSecrets(initial: Record<string, string> = {}): ChatSecretStore & { store: Map<string, string> } {
+function fakeSecrets(
+  initial: Record<string, string> = {},
+): ChatSecretStore & { store: Map<string, string> } {
   const store = new Map(Object.entries(initial));
   return {
     store,
@@ -80,7 +97,14 @@ const account = (id: string, protocol: 'xmpp' | 'irc' = 'xmpp'): ChatAccount => 
   displayName: id,
   server:
     protocol === 'xmpp'
-      ? { protocol: 'xmpp', jid: `${id}@x.com`, host: null, port: null, security: 'tls', wsUrl: null }
+      ? {
+          protocol: 'xmpp',
+          jid: `${id}@x.com`,
+          host: null,
+          port: null,
+          security: 'tls',
+          wsUrl: null,
+        }
       : { protocol: 'irc', server: 'irc.x', port: 6697, tls: true, nick: id, sasl: false },
   secretRef: `chat:${id}`,
   color: null,
@@ -116,7 +140,14 @@ function harness(over: Partial<ChatServiceDeps> = {}) {
     isEnabled: () => true,
     ...over,
   };
-  return { service: new ChatService(deps), adapter, secrets, emit, audit, setAccounts: (a: ChatAccount[]) => (accounts = a) };
+  return {
+    service: new ChatService(deps),
+    adapter,
+    secrets,
+    emit,
+    audit,
+    setAccounts: (a: ChatAccount[]) => (accounts = a),
+  };
 }
 
 describe('ChatService — lifecycle', () => {
@@ -142,7 +173,11 @@ describe('ChatService — lifecycle', () => {
     await service.start();
     expect(adapter.connect).not.toHaveBeenCalled();
     expect(emit).toHaveBeenCalledWith(
-      expect.objectContaining({ accountId: 'nosecret', state: 'error', detail: 'no stored credential' }),
+      expect.objectContaining({
+        accountId: 'nosecret',
+        state: 'error',
+        detail: 'no stored credential',
+      }),
     );
   });
 
@@ -288,7 +323,11 @@ describe('ChatService — delegation', () => {
     await service.joinRoom('a', 'general@conf.example');
     await service.setRoomNotifyLevel('a', 'room@conf', 'none');
     await service.inviteToRoom('a', 'general@conf.example', 'carol@x.com');
-    expect(adapter.inviteToRoom).toHaveBeenCalledWith(expect.anything(), 'general@conf.example', 'carol@x.com');
+    expect(adapter.inviteToRoom).toHaveBeenCalledWith(
+      expect.anything(),
+      'general@conf.example',
+      'carol@x.com',
+    );
     await service.addContact('a', 'bob@x.com');
     expect(adapter.addContact).toHaveBeenCalledWith(expect.anything(), 'bob@x.com');
     await service.removeContact('a', 'bob@x.com');
@@ -404,13 +443,19 @@ describe('ChatService — default adapter selection', () => {
       clearTimer: (h) => clearTimeout(h as ReturnType<typeof setTimeout>),
       emit: vi.fn(),
       isEnabled: () => true,
-      resolveBridge: (bridgeId) => (bridgeId === 'echo' ? { command: 'node', args: ['echo-bridge.js'] } : null),
+      resolveBridge: (bridgeId) =>
+        bridgeId === 'echo' ? { command: 'node', args: ['echo-bridge.js'] } : null,
       spawnBridge,
       bridgeStateDirFor: (accountId) => `/state/${accountId}`,
     });
     await service.start();
     await tick();
-    expect(spawnBridge).toHaveBeenCalledWith('node', ['echo-bridge.js'], expect.any(Object), '/state/br-acc');
+    expect(spawnBridge).toHaveBeenCalledWith(
+      'node',
+      ['echo-bridge.js'],
+      expect.any(Object),
+      '/state/br-acc',
+    );
     expect(service.accountStates()).toHaveProperty('br-acc');
     expect(service.accountStates()['br-acc']).not.toBe('error');
   });

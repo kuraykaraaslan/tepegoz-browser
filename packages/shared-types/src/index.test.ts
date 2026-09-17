@@ -110,7 +110,9 @@ describe('eval scenario contract (AI-1)', () => {
   it('accepts a chatFixture target (X-chat.6)', () => {
     const res = EvalScenarioSchema.safeParse({ ...base, target: { chatFixture: 'room-backlog' } });
     expect(res.success).toBe(true);
-    expect(EvalScenarioSchema.safeParse({ ...base, target: { chatFixture: '' } }).success).toBe(false);
+    expect(EvalScenarioSchema.safeParse({ ...base, target: { chatFixture: '' } }).success).toBe(
+      false,
+    );
   });
 });
 
@@ -135,10 +137,16 @@ describe('chat-eval fixture seed contract (X-chat.6)', () => {
     expect(
       ChatEvalFixtureSchema.safeParse({
         accountId: 'work',
-        conversations: Array.from({ length: 51 }, (_, i) => ({ id: `c${String(i)}`, kind: 'room', title: 't' })),
+        conversations: Array.from({ length: 51 }, (_, i) => ({
+          id: `c${String(i)}`,
+          kind: 'room',
+          title: 't',
+        })),
       }).success,
     ).toBe(false);
-    expect(ChatEvalFixtureSchema.safeParse({ accountId: 'work', protocol: 'slack' }).success).toBe(false);
+    expect(ChatEvalFixtureSchema.safeParse({ accountId: 'work', protocol: 'slack' }).success).toBe(
+      false,
+    );
     expect(ChatEvalFixtureSchema.safeParse({ accountId: '' }).success).toBe(false);
   });
 });

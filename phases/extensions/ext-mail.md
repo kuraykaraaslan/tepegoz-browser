@@ -47,14 +47,14 @@ none of which is optional for "full-featured".
 Follows the modular rule (new features are a `@tepegoz/*` package, Electron-free where possible; the
 main process injects the host seam) and the `ext-translate` / `ext-macros` shape.
 
-| Package | Layer | Electron? | Owns |
-| --- | --- | --- | --- |
-| `@tepegoz/ext-mail` (`extensions/ext-mail`) | extension | no | Manifest (surfaces), `capabilities.ts` (agent tools), the reader/compose view models. UI-only + capability decls. |
-| `@tepegoz/mail-core` | domain lib | **no** | Account/folder/message/thread model; **MIME parse + build** (RFC 5322 / 2045–2047, `multipart`, `format=flowed`); conversation threading (JWZ / `References`); the deterministic **filter engine**; the **sync state machine** (per-folder UID state, `CONDSTORE`/`QRESYNC` cursors); Turkish-aware local search fold. Pure functions + injected ports. |
-| `@tepegoz/mail-adapters` | domain lib | **no** | The `MailAdapter` contract + first-party adapters. Adapters take an injected transport (`connectTLS`, `fetch`) so the package stays Electron-free and testable against recorded fixtures. |
-| desktop `MailService` (`apps/desktop/src/main/mail/`) | L0 host | yes | The concrete host: opens sockets (bound to the profile egress), resolves credentials from `@tepegoz/credential-vault`, drives adapters, writes the DB, emits redacted Journal events, runs the `background-connection` supervisor. The `MailCapabilityHost` the extension's tools call. |
-| `@tepegoz/mail-ui` | feature-ui | no (renderer) | Presentational three-pane reader, message view, compose modal, account settings. Self-localizes via `useT`. |
-| `@tepegoz/persistence` (extend) | L1 | no | `MailStore` + a migration (schema sketch in the appendix). |
+| Package                                               | Layer      | Electron?     | Owns                                                                                                                                                                                                                                                                                                                                                    |
+| ----------------------------------------------------- | ---------- | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `@tepegoz/ext-mail` (`extensions/ext-mail`)           | extension  | no            | Manifest (surfaces), `capabilities.ts` (agent tools), the reader/compose view models. UI-only + capability decls.                                                                                                                                                                                                                                       |
+| `@tepegoz/mail-core`                                  | domain lib | **no**        | Account/folder/message/thread model; **MIME parse + build** (RFC 5322 / 2045–2047, `multipart`, `format=flowed`); conversation threading (JWZ / `References`); the deterministic **filter engine**; the **sync state machine** (per-folder UID state, `CONDSTORE`/`QRESYNC` cursors); Turkish-aware local search fold. Pure functions + injected ports. |
+| `@tepegoz/mail-adapters`                              | domain lib | **no**        | The `MailAdapter` contract + first-party adapters. Adapters take an injected transport (`connectTLS`, `fetch`) so the package stays Electron-free and testable against recorded fixtures.                                                                                                                                                               |
+| desktop `MailService` (`apps/desktop/src/main/mail/`) | L0 host    | yes           | The concrete host: opens sockets (bound to the profile egress), resolves credentials from `@tepegoz/credential-vault`, drives adapters, writes the DB, emits redacted Journal events, runs the `background-connection` supervisor. The `MailCapabilityHost` the extension's tools call.                                                                 |
+| `@tepegoz/mail-ui`                                    | feature-ui | no (renderer) | Presentational three-pane reader, message view, compose modal, account settings. Self-localizes via `useT`.                                                                                                                                                                                                                                             |
+| `@tepegoz/persistence` (extend)                       | L1         | no            | `MailStore` + a migration (schema sketch in the appendix).                                                                                                                                                                                                                                                                                              |
 
 ## The adapter contract
 
@@ -64,8 +64,8 @@ before anything downstream trusts them.
 
 ```ts
 interface MailAdapter {
-  readonly id: string;                       // 'imap-smtp' | 'jmap' | 'gmail' | 'graph' | ...
-  readonly capabilities: MailAdapterCaps;     // push? server-search? labels-vs-folders? threads? quota? idle?
+  readonly id: string; // 'imap-smtp' | 'jmap' | 'gmail' | 'graph' | ...
+  readonly capabilities: MailAdapterCaps; // push? server-search? labels-vs-folders? threads? quota? idle?
   connect(account: MailAccountCreds, transport: MailTransport): Promise<MailSession>;
   listFolders(s: MailSession): Promise<MailFolder[]>;
   sync(s: MailSession, folder: FolderId, cursor: SyncCursor | null): AsyncIterable<MailSyncDelta>;
@@ -81,34 +81,34 @@ interface MailAdapter {
 }
 ```
 
-| Adapter | Protocol | Sub-phase | Notes |
-| --- | --- | --- | --- |
-| `imap-smtp` | IMAP4rev1 (+ `IDLE`, `CONDSTORE`, `QRESYNC`, `MOVE`, `SPECIAL-USE`), SMTP submission | X-mail.1 | The baseline. Fastmail, Migadu, self-hosted Dovecot/Postfix, most corporate mail. App-password or plain password in the vault. |
-| `jmap` | JMAP Core + Mail ([RFC 8620/8621](https://jmap.io)) | X-mail.6 | One HTTP/JSON adapter, real push (`EventSource`), efficient partial sync. Fastmail and Stalwart natively. |
-| `gmail` | Gmail API v1 over the Phase 3 OAuth broker | X-mail.7 | Labels (not folders) — the adapter caps flag maps `MailFolder` ⇄ label. No password ever touches Tepegöz. |
-| `graph` | Microsoft Graph `/me/messages` over the OAuth broker | X-mail.7 | Office 365 / Outlook.com. |
-| `ews` | Exchange Web Services | later / demand-gated | On-prem Exchange without Graph. Own auth (NTLM/Kerberos). |
-| `local-import` | Maildir / mbox / `.eml` read-only | X-mail.8 (or later) | Migration from Thunderbird / `offlineimap`; no network. |
-| *third-party* | any | after the ADR-0018 generalisation | Ships as an **out-of-process adapter**: no host access, its own egress binding, results re-validated. |
+| Adapter        | Protocol                                                                             | Sub-phase                         | Notes                                                                                                                          |
+| -------------- | ------------------------------------------------------------------------------------ | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| `imap-smtp`    | IMAP4rev1 (+ `IDLE`, `CONDSTORE`, `QRESYNC`, `MOVE`, `SPECIAL-USE`), SMTP submission | X-mail.1                          | The baseline. Fastmail, Migadu, self-hosted Dovecot/Postfix, most corporate mail. App-password or plain password in the vault. |
+| `jmap`         | JMAP Core + Mail ([RFC 8620/8621](https://jmap.io))                                  | X-mail.6                          | One HTTP/JSON adapter, real push (`EventSource`), efficient partial sync. Fastmail and Stalwart natively.                      |
+| `gmail`        | Gmail API v1 over the Phase 3 OAuth broker                                           | X-mail.7                          | Labels (not folders) — the adapter caps flag maps `MailFolder` ⇄ label. No password ever touches Tepegöz.                      |
+| `graph`        | Microsoft Graph `/me/messages` over the OAuth broker                                 | X-mail.7                          | Office 365 / Outlook.com.                                                                                                      |
+| `ews`          | Exchange Web Services                                                                | later / demand-gated              | On-prem Exchange without Graph. Own auth (NTLM/Kerberos).                                                                      |
+| `local-import` | Maildir / mbox / `.eml` read-only                                                    | X-mail.8 (or later)               | Migration from Thunderbird / `offlineimap`; no network.                                                                        |
+| _third-party_  | any                                                                                  | after the ADR-0018 generalisation | Ships as an **out-of-process adapter**: no host access, its own egress binding, results re-validated.                          |
 
 ## Agent capabilities (behind the one PEP) — delivered in X-mail.5
 
 Verb-compliant with `ToolNameSchema`'s closed set (`run`/`send` aren't approved → "create a send").
 Declared in `capabilities.ts` via `defineCapabilities`, exactly like `macros_*`.
 
-| Tool | Danger class | Notes |
-| --- | --- | --- |
-| `mail_list_items` | `read` | List messages in a folder/label — headers + flags + thread id, paginated. No bodies. |
-| `mail_get_item` | `read` | One message: headers + **sanitized** plain-text body + attachment manifest (names/sizes/types, not bytes). Body is `wrapUntrustedContent`. |
-| `mail_get_thread` | `read` | A whole conversation, oldest-first, each body sanitized + wrapped. |
-| `mail_search_items` | `read` | Structured query (`from`/`to`/`subject`/`since`/`hasAttachment`/`folder`/full-text). Server-search when the adapter caps allow, else local FTS. |
-| `mail_create_draft` | `state_changing` · idempotency key | Compose a draft. **Saved as a draft only — never queued to send.** Returns a draft id. |
-| `mail_update_draft` | `state_changing` | Edit an existing draft. |
-| `mail_create_reply` | `state_changing` · idempotency key | Draft a reply/forward with quoting + headers set. Draft only. |
-| `mail_create_send` | `state_changing` → **always HITL** · idempotency key | Send a draft. The confirm surface shows the **final rendered recipients + subject + body**; the agent cannot suppress it, and a newly-added recipient not present when the draft was created re-triggers it. |
-| `mail_update_item` | `state_changing` | Flags (read/flagged), move to folder, add/remove label, mark spam. |
-| `mail_delete_item` | `destructive` | Move to Trash (soft) or expunge (hard, extra confirm). |
-| `mail_get_attachment` | `read` → gated | Materialize an attachment **into the file-operations sandbox** (ADR-0022) after passing quarantine (ADR-0040). Returns a sandbox path, never bytes inline. |
+| Tool                  | Danger class                                         | Notes                                                                                                                                                                                                        |
+| --------------------- | ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `mail_list_items`     | `read`                                               | List messages in a folder/label — headers + flags + thread id, paginated. No bodies.                                                                                                                         |
+| `mail_get_item`       | `read`                                               | One message: headers + **sanitized** plain-text body + attachment manifest (names/sizes/types, not bytes). Body is `wrapUntrustedContent`.                                                                   |
+| `mail_get_thread`     | `read`                                               | A whole conversation, oldest-first, each body sanitized + wrapped.                                                                                                                                           |
+| `mail_search_items`   | `read`                                               | Structured query (`from`/`to`/`subject`/`since`/`hasAttachment`/`folder`/full-text). Server-search when the adapter caps allow, else local FTS.                                                              |
+| `mail_create_draft`   | `state_changing` · idempotency key                   | Compose a draft. **Saved as a draft only — never queued to send.** Returns a draft id.                                                                                                                       |
+| `mail_update_draft`   | `state_changing`                                     | Edit an existing draft.                                                                                                                                                                                      |
+| `mail_create_reply`   | `state_changing` · idempotency key                   | Draft a reply/forward with quoting + headers set. Draft only.                                                                                                                                                |
+| `mail_create_send`    | `state_changing` → **always HITL** · idempotency key | Send a draft. The confirm surface shows the **final rendered recipients + subject + body**; the agent cannot suppress it, and a newly-added recipient not present when the draft was created re-triggers it. |
+| `mail_update_item`    | `state_changing`                                     | Flags (read/flagged), move to folder, add/remove label, mark spam.                                                                                                                                           |
+| `mail_delete_item`    | `destructive`                                        | Move to Trash (soft) or expunge (hard, extra confirm).                                                                                                                                                       |
+| `mail_get_attachment` | `read` → gated                                       | Materialize an attachment **into the file-operations sandbox** (ADR-0022) after passing quarantine (ADR-0040). Returns a sandbox path, never bytes inline.                                                   |
 
 ### Rules specific to the agent surface
 
@@ -137,7 +137,7 @@ Declared in `capabilities.ts` via `defineCapabilities`, exactly like `macros_*`.
   ([Phase 5](../product/phase-5-vpn-network-privacy.md)); `BindingService.mayEgress` false → the
   account shows "blocked", does not connect, and the agent's mail tools return a policy denial.
 - **Credentials only in `@tepegoz/credential-vault` / `safeStorage`.** Passwords, app-passwords, OAuth
-  refresh tokens. Redacted out of the Event Journal and logs. The Journal records *that* a message was
+  refresh tokens. Redacted out of the Event Journal and logs. The Journal records _that_ a message was
   sent (envelope hash, account, timestamp), never its body.
 - **Zod `safeParse` at every boundary:** IPC (renderer ⇄ main), **adapter wire payloads** (an IMAP
   `FETCH`/`ENVELOPE`, a JMAP response, a Graph JSON body are all remote and hostile), agent tool-call
@@ -234,6 +234,7 @@ total. Still owed: filter engine, search fold, snippet, fixture corpus. · **Dep
 **Risk:** low-medium — MIME is fiddly; contained by a fixture corpus.
 
 ### Deliverables
+
 - [x] **Domain schemas** in `@tepegoz/shared-types` (`mail.ts`, appendix sketch): `MailAccount`
       (multi-account, per-adapter `MailServerConfig` discriminated union, `identities[]`, `sync`
       prefs, `secretRef` — never the secret), `MailFolder` (+ `MAIL_FOLDER_ROLES`), `MailMessage`
@@ -281,6 +282,7 @@ total. Still owed: filter engine, search fold, snippet, fixture corpus. · **Dep
       calendar invites, DSNs, oversized headers, a spam sample with a tracking pixel.
 
 ### Functional DoD
+
 - [ ] The fixture corpus round-trips: parse → model → (for a subset) build → re-parse yields the same
       semantic content; malformed inputs never throw and always produce a usable body.
 - [ ] Threading matches a hand-checked golden for a 30-message tangled thread (mixed clients,
@@ -299,6 +301,7 @@ total. Still owed: filter engine, search fold, snippet, fixture corpus. · **Dep
 **Risk:** high — the IMAP client + the sync state machine are the core risk of the whole extension.
 
 ### Deliverables
+
 - [ ] **`extensions/ext-mail` scaffold** — manifest (`com.tepegoz.mail`, surfaces `sidebar`+`page`,
       permissions `accounts`/`background-connection`/`notifications`), `src/i18n/`, `index.ts`,
       catalog pickup (folder scan already does this), renderer surface-loader thunk entry.
@@ -336,6 +339,7 @@ total. Still owed: filter engine, search fold, snippet, fixture corpus. · **Dep
       DNS/HTTP.
 
 ### Functional DoD
+
 - [ ] A user adds **two** IMAP/SMTP accounts (e.g. one Dovecot, one Fastmail); both connect,
       discover folders with roles, and sync headers offline within the window.
 - [ ] Killing the network and restoring it: sessions reconnect, `IDLE` resumes, an offline flag
@@ -354,6 +358,7 @@ total. Still owed: filter engine, search fold, snippet, fixture corpus. · **Dep
 **Risk:** medium — the locked-down HTML frame is the security-load-bearing piece.
 
 ### Deliverables
+
 - [ ] **`@tepegoz/mail-ui`** — three-pane layout (folder tree · virtualized message list · message
       view), account grouping + per-account colour, unread badges, keyboard model
       (`j`/`k`/`Enter`/`r`/`a`/`#`), density toggle. Presentational; data + commands injected.
@@ -373,6 +378,7 @@ total. Still owed: filter engine, search fold, snippet, fixture corpus. · **Dep
       account list + live state.
 
 ### Functional DoD
+
 - [ ] A human reads real mail from both accounts, threaded, offline; opens an HTML newsletter with
       **no** network request until they opt in; a tracking pixel does not fire on open (asserted).
 - [ ] The unified inbox merges correctly and marking read updates the source account.
@@ -387,6 +393,7 @@ total. Still owed: filter engine, search fold, snippet, fixture corpus. · **Dep
 **Risk:** medium — correctness of reply headers + the offline outbox.
 
 ### Deliverables
+
 - [ ] **Compose modal** — to/cc/bcc with contact autocomplete (from message history), subject, body
       (plain + optional rich → `multipart/alternative`), inline image paste, attachments from the
       file-operations sandbox, identity picker (per account), signature insertion, draft autosave to
@@ -402,6 +409,7 @@ total. Still owed: filter engine, search fold, snippet, fixture corpus. · **Dep
       warning on reply-all beyond a threshold (config), undo-send window (configurable hold).
 
 ### Functional DoD
+
 - [ ] Compose → send → the message appears in Sent and the recipient's server; reply threads
       correctly in the reader.
 - [ ] Offline: a send queues, then delivers exactly once on reconnect; a 5xx stops with a readable
@@ -417,6 +425,7 @@ total. Still owed: filter engine, search fold, snippet, fixture corpus. · **Dep
 **Risk:** low-medium.
 
 ### Deliverables
+
 - [ ] **Search** — a unified `MailQuery` model; server `UID SEARCH` when the caps allow (charset
       `UTF-8`, fallback to `US-ASCII` + local filter), else local FTS5 over the folded index;
       structured chips (from/to/subject/has:attachment/is:unread/since) + free text; saved searches.
@@ -434,6 +443,7 @@ total. Still owed: filter engine, search fold, snippet, fixture corpus. · **Dep
       auto-disables with a user-visible reason + notification (same pattern Macros' scheduler owes).
 
 ### Functional DoD
+
 - [ ] Search returns correct results server-side and offline; Turkish subject search works (the
       migration-v16 class of bug is regression-tested).
 - [ ] A filter set runs deterministically on delivery and on "run now"; dry-run matches actual.
@@ -448,6 +458,7 @@ total. Still owed: filter engine, search fold, snippet, fixture corpus. · **Dep
 **Branch:** `feat/ext-mail-agent-caps` · **Risk:** medium — the untrusted-content + OTP guards.
 
 ### Deliverables
+
 - [ ] **`capabilities.ts`** — the tool table above on `defineCapabilities`, ids passing
       `ToolNameSchema`, `dangerClass` per the table, `requiresIdempotencyKey` on create/send,
       `aiTask` set (`summarize`/`extract`/`classify` where relevant → the "run locally" list picks
@@ -471,6 +482,7 @@ total. Still owed: filter engine, search fold, snippet, fixture corpus. · **Dep
       email does not change agent behaviour**; (g) OTP in an email is not auto-used.
 
 ### Functional DoD
+
 - [ ] The agent can list / read / search / summarize / draft across accounts; **cannot send without
       the unsuppressible HITL confirm**; every body it sees is wrapped untrusted content.
 - [ ] The injection and OTP eval scenarios pass (agent resists).
@@ -485,6 +497,7 @@ total. Still owed: filter engine, search fold, snippet, fixture corpus. · **Dep
 parallel-able with X-mail.2–.4 · **Branch:** `feat/ext-mail-jmap` · **Risk:** low-medium.
 
 ### Deliverables
+
 - [ ] **JMAP client** — Session resource discovery, `Mailbox/get` + `Mailbox/changes`,
       `Email/query` + `Email/queryChanges` + `Email/get` (partial props, `bodyValues`),
       `Email/set` (flags/keywords/mailboxIds), `EmailSubmission/set` (send), blob upload/download,
@@ -495,6 +508,7 @@ parallel-able with X-mail.2–.4 · **Branch:** `feat/ext-mail-jmap` · **Risk:*
 - [ ] Adapter fixture suite from recorded JMAP exchanges (Fastmail / Stalwart shapes).
 
 ### Functional DoD
+
 - [ ] A JMAP account reaches full reader + compose + search + filter parity with the IMAP path,
       with live push (new mail appears without a poll).
 - [ ] Sub-phase DoD template ✔.
@@ -505,9 +519,11 @@ parallel-able with X-mail.2–.4 · **Branch:** `feat/ext-mail-jmap` · **Risk:*
 
 **Status:** ⏸ Blocked on [Phase 3](../product/phase-3-backend-cloud-extensions.md) (OAuth broker) ·
 **Depends on:** X-mail.1 · **Branch:** `feat/ext-mail-oauth-adapters` · **Risk:** medium — auth flow
-+ label semantics.
+
+- label semantics.
 
 ### Deliverables
+
 - [ ] **Gmail adapter** — `users.messages.list`/`get` (format `metadata` then `raw`),
       `users.messages.modify` (labels), `users.messages.send`, `users.history.list` for incremental
       sync, `users.labels`. Label ⇄ `MailFolder` mapping through the caps (a message is in many
@@ -517,10 +533,11 @@ parallel-able with X-mail.2–.4 · **Branch:** `feat/ext-mail-jmap` · **Risk:*
 - [ ] Both authenticate **only** through the Phase 3 OAuth broker — Tepegöz never sees a
       Google/Microsoft password; the broker owns token refresh; `secretRef` points at the broker
       grant.
-- [ ] `XOAUTH2` also wired into the IMAP/SMTP adapter (so a user *may* use Gmail via IMAP+OAuth
+- [ ] `XOAUTH2` also wired into the IMAP/SMTP adapter (so a user _may_ use Gmail via IMAP+OAuth
       instead of the API adapter).
 
 ### Functional DoD
+
 - [ ] A Gmail account and a Graph account add via the broker, sync (delta), read, compose, send;
       labels behave sanely in the folder tree.
 - [ ] No Google/Microsoft credential is ever stored by Tepegöz outside the broker.
@@ -534,6 +551,7 @@ parallel-able with X-mail.2–.4 · **Branch:** `feat/ext-mail-jmap` · **Risk:*
 **Risk:** low — mostly tests + a contained crypto option.
 
 ### Deliverables
+
 - [ ] **STARTTLS-downgrade refusal** — an active-attacker test (MITM strips `STARTTLS` from the
       capability list) fails the connection; a cert mismatch fails; optional per-account SPKI pin.
 - [ ] **At-rest encryption (opt-in)** — a `safeStorage`-wrapped data key encrypts cached
@@ -553,6 +571,7 @@ parallel-able with X-mail.2–.4 · **Branch:** `feat/ext-mail-jmap` · **Risk:*
       ceiling.
 
 ### Functional DoD
+
 - [ ] Every trust claim in "Trust & security" above has a test that would fail if the property
       regressed.
 - [ ] Both e2e flows green in CI.

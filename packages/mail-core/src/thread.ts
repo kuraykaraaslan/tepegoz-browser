@@ -342,8 +342,9 @@ export function threadMessages(messages: readonly ThreadableMessage[]): ThreadRe
     self.message = m;
 
     // JWZ step 1.B — walk the reference chain, linking parent→child.
-    const chain = (m.references.length > 0 ? [...m.references] : m.inReplyTo ? [m.inReplyTo] : [])
-      .filter((r) => typeof r === 'string' && r.length > 0 && r !== m.messageId);
+    const chain = (
+      m.references.length > 0 ? [...m.references] : m.inReplyTo ? [m.inReplyTo] : []
+    ).filter((r) => typeof r === 'string' && r.length > 0 && r !== m.messageId);
     let prev: Container | null = null;
     for (const ref of chain) {
       const cur = getById(ref);

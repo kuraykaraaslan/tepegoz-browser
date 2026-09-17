@@ -1,7 +1,13 @@
 import { resolve, join } from 'node:path';
 import { mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { createServer } from 'node:net';
-import { test, expect, _electron as electron, type ElectronApplication, type Page } from '@playwright/test';
+import {
+  test,
+  expect,
+  _electron as electron,
+  type ElectronApplication,
+  type Page,
+} from '@playwright/test';
 
 /**
  * X-chat.1's other live-server Functional DoD line ("Kill-switched profile: accounts show
@@ -22,7 +28,10 @@ import { test, expect, _electron as electron, type ElectronApplication, type Pag
  * nothing listens on, so it never reaches `up` in the first place — no need to bring a tunnel up
  * and then kill it, just to prove a *never-up* one blocks correctly.
  */
-test.skip(process.env.TEPEGOZ_LIVE_XMPP !== '1', 'needs a live local Prosody — see chat-live-xmpp.spec.ts');
+test.skip(
+  process.env.TEPEGOZ_LIVE_XMPP !== '1',
+  'needs a live local Prosody — see chat-live-xmpp.spec.ts',
+);
 
 const appDir = resolve(process.cwd(), 'apps/desktop');
 
@@ -91,7 +100,12 @@ test('a kill-switched profile blocks a chat account before it ever dials out', a
     const port = await deadPort();
     await window.evaluate(async (p: number) => {
       const net = (window as unknown as { tepegoz: NetworkBridge }).tepegoz;
-      await net.addNetworkConnection({ kind: 'byo-socks', label: 'Dead', note: 'e2e', socksPort: p });
+      await net.addNetworkConnection({
+        kind: 'byo-socks',
+        label: 'Dead',
+        note: 'e2e',
+        socksPort: p,
+      });
     }, port);
 
     const connectionId = await window.evaluate(async () => {

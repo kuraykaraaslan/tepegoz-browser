@@ -10,7 +10,15 @@ afterEach(cleanup);
 const wrap = (ui: React.ReactElement) => render(<I18nProvider locale="en">{ui}</I18nProvider>);
 
 function account(over: Partial<ChatAccountSummary> = {}): ChatAccountSummary {
-  return { id: 'work', label: 'Work', displayName: '', protocol: 'xmpp', color: null, order: 0, ...over };
+  return {
+    id: 'work',
+    label: 'Work',
+    displayName: '',
+    protocol: 'xmpp',
+    color: null,
+    order: 0,
+    ...over,
+  };
 }
 
 describe('AccountsManager', () => {
@@ -31,14 +39,21 @@ describe('AccountsManager', () => {
   it('badges each account row with its protocol', () => {
     wrap(
       <AccountsManager
-        accounts={[account({ id: 'work', protocol: 'xmpp' }), account({ id: 'home', label: 'Home', protocol: 'matrix' })]}
+        accounts={[
+          account({ id: 'work', protocol: 'xmpp' }),
+          account({ id: 'home', label: 'Home', protocol: 'matrix' }),
+        ]}
         connectionStates={{}}
         onClose={vi.fn()}
       />,
     );
     const rows = screen.getAllByRole('listitem');
-    expect(rows[0]?.querySelector('.chat-protocol-badge')?.getAttribute('data-protocol')).toBe('xmpp');
-    expect(rows[1]?.querySelector('.chat-protocol-badge')?.getAttribute('data-protocol')).toBe('matrix');
+    expect(rows[0]?.querySelector('.chat-protocol-badge')?.getAttribute('data-protocol')).toBe(
+      'xmpp',
+    );
+    expect(rows[1]?.querySelector('.chat-protocol-badge')?.getAttribute('data-protocol')).toBe(
+      'matrix',
+    );
   });
 
   it('shows an empty state with no accounts', () => {
@@ -83,7 +98,10 @@ describe('AccountsManager', () => {
     const onEdit = vi.fn();
     wrap(
       <AccountsManager
-        accounts={[account({ id: 'work' }), account({ id: 'gateway', label: 'Gateway', protocol: 'bridge' })]}
+        accounts={[
+          account({ id: 'work' }),
+          account({ id: 'gateway', label: 'Gateway', protocol: 'bridge' }),
+        ]}
         connectionStates={{}}
         onClose={vi.fn()}
         onEdit={onEdit}

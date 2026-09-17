@@ -111,14 +111,12 @@ function UserMenuBody() {
     { kind: 'separator' },
     { kind: 'label', id: 'other', text: t.otherProfiles },
     // One row per other registered profile — switching focuses its window, or opens one for it.
-    ...others.map(
-      (p): MenuItem => ({
-        id: `profile-${p.id}`,
-        label: p.name,
-        icon: <UserAvatar name={p.name} className="h-5 w-5 text-[11px]" />,
-        onSelect: () => act(() => void window.tepegoz.switchProfile(p.id)),
-      }),
-    ),
+    ...others.map((p): MenuItem => ({
+      id: `profile-${p.id}`,
+      label: p.name,
+      icon: <UserAvatar name={p.name} className="h-5 w-5 text-[11px]" />,
+      onSelect: () => act(() => void window.tepegoz.switchProfile(p.id)),
+    })),
     {
       id: 'add-profile',
       label: t.addProfile,
@@ -145,7 +143,10 @@ function UserMenuBody() {
     <div>
       {/* Profile card (aesthetic header) — a raised card with a ringed avatar and the profile name. */}
       <div className="mx-2 mb-1 mt-2 flex flex-col items-center gap-2.5 rounded-xl border border-border bg-surface-raised px-4 pb-4 pt-5">
-        <UserAvatar name={displayName} className="h-16 w-16 text-2xl shadow-sm ring-2 ring-border/70" />
+        <UserAvatar
+          name={displayName}
+          className="h-16 w-16 text-2xl shadow-sm ring-2 ring-border/70"
+        />
         <div className="flex flex-col items-center">
           <span className="text-sm font-semibold text-text-primary">{displayName}</span>
         </div>

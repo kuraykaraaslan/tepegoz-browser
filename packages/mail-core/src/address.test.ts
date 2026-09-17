@@ -19,9 +19,7 @@ describe('parseAddressList', () => {
   });
 
   it('splits a list and does not break on a comma inside quotes or angle brackets', () => {
-    expect(
-      parseAddressList('"Doe, John" <john@x.org>, ada@y.org, "Carol" <carol@z.org>'),
-    ).toEqual([
+    expect(parseAddressList('"Doe, John" <john@x.org>, ada@y.org, "Carol" <carol@z.org>')).toEqual([
       { name: 'Doe, John', address: 'john@x.org' },
       { name: '', address: 'ada@y.org' },
       { name: 'Carol', address: 'carol@z.org' },

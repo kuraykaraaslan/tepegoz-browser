@@ -272,10 +272,7 @@ describe('PopupWindowManager', () => {
 
   it('loadSurface delegates to the one loadChrome resolver with the surface query', () => {
     PopupWindowManager.open(openOpts('main-menu'));
-    expect(loadChrome).toHaveBeenCalledWith(
-      win0(),
-      expect.objectContaining({ surface: 'menu' }),
-    );
+    expect(loadChrome).toHaveBeenCalledWith(win0(), expect.objectContaining({ surface: 'menu' }));
   });
 
   it('loadSurface logs a warning when loadChrome rejects', async () => {

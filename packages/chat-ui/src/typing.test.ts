@@ -1,7 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { roomTypingLabel, typingName } from './typing';
 
-const s = { typingOne: 'is typing…', typingMany: 'are typing…', typingSeveral: 'Several people are typing…' };
+const s = {
+  typingOne: 'is typing…',
+  typingMany: 'are typing…',
+  typingSeveral: 'Several people are typing…',
+};
 
 describe('typingName', () => {
   it('takes the last path segment, falling back to the whole address', () => {

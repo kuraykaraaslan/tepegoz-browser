@@ -1,6 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
-import { ProcessSupervisor, type ProcessSupervisorConfig, type ProcessSupervisorDeps } from './process-supervisor';
+import {
+  ProcessSupervisor,
+  type ProcessSupervisorConfig,
+  type ProcessSupervisorDeps,
+} from './process-supervisor';
 import type { ChildProcessLike, SpawnFn } from './types';
 
 type Handler<T extends unknown[]> = (...args: T) => void;
@@ -179,7 +183,10 @@ describe('ProcessSupervisor', () => {
     sup.start();
     const child = children[0]!;
     expect(() => child.emitStdout('{not json\n')).not.toThrow();
-    expect(log).toHaveBeenCalledWith('adapter subprocess sent a malformed frame — ignored', expect.anything());
+    expect(log).toHaveBeenCalledWith(
+      'adapter subprocess sent a malformed frame — ignored',
+      expect.anything(),
+    );
   });
 
   it('stderr output is logged, not thrown', () => {

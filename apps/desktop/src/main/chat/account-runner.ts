@@ -68,7 +68,13 @@ export interface ChatNotification {
  * thread across events), the account id, the protocol message id, the protocol name and a timestamp.
  */
 export type ChatAuditEvent =
-  | { kind: 'message-sent'; accountId: string; conversationHash: string; protocolId: string; ts: number }
+  | {
+      kind: 'message-sent';
+      accountId: string;
+      conversationHash: string;
+      protocolId: string;
+      ts: number;
+    }
   | { kind: 'account-added'; accountId: string; protocol: string; ts: number };
 
 /** Truncated SHA-256 of a conversation id — a stable correlation key that reveals no JID / channel. */
@@ -96,7 +102,9 @@ export interface AccountRunnerDeps {
    *  → `uploadMedia` → `mediaRef` step. Optional — a `mediaPath` on a deps-less runner (or a
    *  protocol whose adapter has no `uploadMedia`) throws rather than silently dropping the
    *  attachment; see `sendMessage`. */
-  readMediaBytes?: (sandboxPath: string) => Promise<{ bytes: Uint8Array; mime: string; filename: string }>;
+  readMediaBytes?: (
+    sandboxPath: string,
+  ) => Promise<{ bytes: Uint8Array; mime: string; filename: string }>;
 }
 
 const NOTIFY_BODY_MAX = 180;
@@ -324,7 +332,9 @@ export class ChatAccountRunner {
     const conversation = this.deps.store.getConversation(message.conversationId);
     const decision = decideNotification({
       isRoom: conversation?.kind === 'room',
-      ...(conversation !== null ? { level: conversation.notifyLevel, muted: conversation.muted } : {}),
+      ...(conversation !== null
+        ? { level: conversation.notifyLevel, muted: conversation.muted }
+        : {}),
       fromSelf: this.isFromSelf(message),
       selfNames: this.selfNames,
       body: message.body,
@@ -333,7 +343,8 @@ export class ChatAccountRunner {
     this.deps.notify({
       accountId: this.accountId,
       conversationId: message.conversationId,
-      title: message.senderName.trim() || (conversation?.name ?? '').trim() || message.senderAddress,
+      title:
+        message.senderName.trim() || (conversation?.name ?? '').trim() || message.senderAddress,
       body: message.body.slice(0, NOTIFY_BODY_MAX),
     });
   }
@@ -410,7 +421,12 @@ export class ChatAccountRunner {
       replyToId: body.replyToId ?? null,
       mediaPath: body.mediaPath ?? null,
     });
-    const settled: ChatMessage = { ...temp, id: receipt.protocolId, protocolId: receipt.protocolId, deliveryState: 'sent' };
+    const settled: ChatMessage = {
+      ...temp,
+      id: receipt.protocolId,
+      protocolId: receipt.protocolId,
+      deliveryState: 'sent',
+    };
     for (const change of this.state.reconcileSend(conversationId, tempId, settled)) {
       this.applyChange(change);
     }
@@ -518,7 +534,8 @@ export class ChatAccountRunner {
     if (this.deps.adapter.leaveRoom !== undefined) {
       await this.deps.adapter.leaveRoom(this.requireSession(), conversationId);
     }
-    if (conv !== null) this.deps.store.upsertConversation({ ...conv, isKnownContact: false, unread: 0 });
+    if (conv !== null)
+      this.deps.store.upsertConversation({ ...conv, isKnownContact: false, unread: 0 });
   }
 
   setRoomNotifyLevel(conversationId: string, level: 'all' | 'mentions' | 'none'): Promise<void> {
@@ -595,7 +612,10 @@ export class ChatAccountRunner {
    *  protocol's block state arrives as a normal roster-push the fold path already handles, so there
    *  is no live event to derive it from instead. */
   async blockContact(address: string, blocked: boolean): Promise<void> {
-    if (this.deps.adapter.blockContact === undefined || this.deps.adapter.unblockContact === undefined) {
+    if (
+      this.deps.adapter.blockContact === undefined ||
+      this.deps.adapter.unblockContact === undefined
+    ) {
       throw new AppError('this protocol has no server-side blocking concept', 501);
     }
     if (blocked) {
@@ -606,7 +626,12 @@ export class ChatAccountRunner {
     this.deps.store.setContactBlocked(this.accountId, address, blocked);
   }
 
-  async react(conversationId: string, messageId: string, emoji: string, on: boolean): Promise<void> {
+  async react(
+    conversationId: string,
+    messageId: string,
+    emoji: string,
+    on: boolean,
+  ): Promise<void> {
     if (this.deps.adapter.react === undefined) {
       throw new AppError('this protocol does not support reactions', 501);
     }
@@ -637,7 +662,8 @@ export class ChatAccountRunner {
     if (this.deps.adapter.resolveMedia === undefined) return null;
     const locator = this.deps.adapter.resolveMedia(this.requireSession(), mediaRef);
     if (locator === null) return null;
-    if (!this.deps.mayEgress()) throw new AppError('chat egress is blocked by the kill-switch', 403);
+    if (!this.deps.mayEgress())
+      throw new AppError('chat egress is blocked by the kill-switch', 403);
 
     const res = await this.deps.transport.fetch(locator.url, {
       method: 'GET',

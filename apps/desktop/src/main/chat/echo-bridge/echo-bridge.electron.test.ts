@@ -5,7 +5,11 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { normalizeEvent } from '@tepegoz/chat-core';
-import { BRIDGE_DEFAULT_CAPS, SubprocessChatAdapter, type ChatAccountCreds } from '@tepegoz/chat-adapters';
+import {
+  BRIDGE_DEFAULT_CAPS,
+  SubprocessChatAdapter,
+  type ChatAccountCreds,
+} from '@tepegoz/chat-adapters';
 
 /**
  * The X-chat.8 Functional DoD, proven against a REAL `node` child process (not `FakeChild`) — the one
@@ -89,7 +93,11 @@ describe('echo-bridge (real process) — X-chat.8 Functional DoD', () => {
   }
 
   function creds(accountId: string): ChatAccountCreds {
-    return { accountId, server: { protocol: 'bridge', bridgeId: 'echo', config: {} }, secret: 's3cr3t' };
+    return {
+      accountId,
+      server: { protocol: 'bridge', bridgeId: 'echo', config: {} },
+      secret: 's3cr3t',
+    };
   }
 
   it('spawns a real child, connects over real stdio, and passes the account state dir as cwd', async () => {
@@ -114,7 +122,8 @@ describe('echo-bridge (real process) — X-chat.8 Functional DoD', () => {
 
     const { event, dropped } = normalizeEvent(rawEvent, session.caps);
     expect(dropped).toBeNull();
-    if (event?.type !== 'message') throw new Error(`expected a message event, got ${String(event?.type)}`);
+    if (event?.type !== 'message')
+      throw new Error(`expected a message event, got ${String(event?.type)}`);
     expect(event.message.body).toBe('hello from a real test');
     expect(event.message.conversationId).toBe('conv-1');
 
@@ -133,9 +142,14 @@ describe('echo-bridge (real process) — X-chat.8 Functional DoD', () => {
     childrenByAccount.get('acc-a')!.kill('SIGKILL');
     await new Promise((resolve) => setTimeout(resolve, 200));
 
-    await expect(adapter.sendMessage(sessionA, 'conv-1', { kind: 'text', text: 'x' })).rejects.toThrow();
+    await expect(
+      adapter.sendMessage(sessionA, 'conv-1', { kind: 'text', text: 'x' }),
+    ).rejects.toThrow();
 
-    const receipt = await adapter.sendMessage(sessionB, 'conv-1', { kind: 'text', text: 'still alive' });
+    const receipt = await adapter.sendMessage(sessionB, 'conv-1', {
+      kind: 'text',
+      text: 'still alive',
+    });
     expect(receipt.protocolId).toMatch(/^echo-/);
 
     await adapter.disconnect(sessionB);

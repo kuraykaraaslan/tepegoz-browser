@@ -60,7 +60,10 @@ describe('XmppNegotiator — STARTTLS + SCRAM-SHA-1 + bind + SM', () => {
     );
     expect(
       kinds(
-        await n.feed({ t: 'element', el: el(`<proceed xmlns="urn:ietf:params:xml:ns:xmpp-tls"/>`) }),
+        await n.feed({
+          t: 'element',
+          el: el(`<proceed xmlns="urn:ietf:params:xml:ns:xmpp-tls"/>`),
+        }),
       ),
     ).toEqual(['starttls']);
     expect(kinds(await n.feed({ t: 'tls-established' }))).toEqual(['restart-stream']);
@@ -128,9 +131,13 @@ describe('XmppNegotiator — direct TLS + PLAIN', () => {
     expect(sent(bind)[0]).toContain('<resource>laptop</resource>');
     const ready = await n.feed({
       t: 'element',
-      el: el(`<iq type="result" id="bind-1"><bind xmlns="urn:ietf:params:xml:ns:xmpp-bind"><jid>ada@x.com/laptop</jid></bind></iq>`),
+      el: el(
+        `<iq type="result" id="bind-1"><bind xmlns="urn:ietf:params:xml:ns:xmpp-bind"><jid>ada@x.com/laptop</jid></bind></iq>`,
+      ),
     });
-    expect(ready).toEqual([{ kind: 'ready', fullJid: 'ada@x.com/laptop', streamManagement: false }]);
+    expect(ready).toEqual([
+      { kind: 'ready', fullJid: 'ada@x.com/laptop', streamManagement: false },
+    ]);
   });
 
   it('proceeds straight to SASL when no STARTTLS is offered (SCRAM ok without TLS)', async () => {
@@ -162,7 +169,10 @@ describe('XmppNegotiator — failure paths', () => {
     const n = new XmppNegotiator({ jid: 'a@x.com', password: 'p', tlsActive: false });
     n.start();
     await n.feed({ t: 'element', el: el(FEATURES_TLS_REQ) });
-    const r = await n.feed({ t: 'element', el: el('<failure xmlns="urn:ietf:params:xml:ns:xmpp-tls"/>') });
+    const r = await n.feed({
+      t: 'element',
+      el: el('<failure xmlns="urn:ietf:params:xml:ns:xmpp-tls"/>'),
+    });
     expect(failReason(r)).toContain('proceed');
   });
 
@@ -246,7 +256,10 @@ describe('XmppNegotiator — failure paths', () => {
 
   it('stream error → failed, then inert', async () => {
     const n = toPlainBind();
-    const r = await n.feed({ t: 'element', el: el(`<stream:error><host-unknown/></stream:error>`) });
+    const r = await n.feed({
+      t: 'element',
+      el: el(`<stream:error><host-unknown/></stream:error>`),
+    });
     expect(r[0]?.kind).toBe('failed');
     expect(await n.feed({ t: 'element', el: el('<message/>') })).toEqual([]);
   });
@@ -265,9 +278,7 @@ describe('XmppNegotiator — failure paths', () => {
     await withErr.feed({ t: 'element', el: el(SASL_SUCCESS) });
     await withErr.feed({ t: 'element', el: el(featuresBind(false)) });
     expect(
-      failReason(
-        await withErr.feed({ t: 'element', el: el(`<iq type="error" id="bind-1"/>`) }),
-      ),
+      failReason(await withErr.feed({ t: 'element', el: el(`<iq type="error" id="bind-1"/>`) })),
     ).toContain('rejected');
 
     const noJid = toPlainBind();
@@ -278,7 +289,9 @@ describe('XmppNegotiator — failure paths', () => {
       failReason(
         await noJid.feed({
           t: 'element',
-          el: el(`<iq type="result" id="bind-1"><bind xmlns="urn:ietf:params:xml:ns:xmpp-bind"/></iq>`),
+          el: el(
+            `<iq type="result" id="bind-1"><bind xmlns="urn:ietf:params:xml:ns:xmpp-bind"/></iq>`,
+          ),
         }),
       ),
     ).toContain('no JID');
@@ -296,7 +309,9 @@ describe('XmppNegotiator — failure paths', () => {
     await n.feed({ t: 'element', el: el(featuresBind(true)) });
     const ready = await n.feed({
       t: 'element',
-      el: el(`<iq type="result" id="bind-1"><bind xmlns="urn:ietf:params:xml:ns:xmpp-bind"><jid>user@example.com/x</jid></bind></iq>`),
+      el: el(
+        `<iq type="result" id="bind-1"><bind xmlns="urn:ietf:params:xml:ns:xmpp-bind"><jid>user@example.com/x</jid></bind></iq>`,
+      ),
     });
     expect(ready.some((a) => a.kind === 'ready')).toBe(true);
     await n.feed({ t: 'element', el: el(`<failed xmlns="urn:xmpp:sm:3"/>`) });

@@ -49,14 +49,14 @@ prevent for the in-process half of this same problem. This ADR is that document 
 states the reusable shape so `ext-mail` (or anyone) can build against a contract instead of a chat
 essay.
 
-**What ADR-0018 already gives this for free:** the subprocess isolation *mechanics* — a supervised
+**What ADR-0018 already gives this for free:** the subprocess isolation _mechanics_ — a supervised
 child process, a `Transport` seam, boundary re-validation with zod, exact-pinned dependencies,
 reconnect-with-backoff, `CapabilityRegistry.unregister` on disconnect. **What ADR-0018 does not
 give**: ADR-0018 is specifically an **MCP client** — the wire shape is MCP's own `tools/list` /
 `tools/call` JSON-RPC, and the thing on the other end of the pipe speaks MCP. A protocol bridge does
-not speak MCP; it speaks whatever RPC shape the *consuming extension's own adapter interface* implies
+not speak MCP; it speaks whatever RPC shape the _consuming extension's own adapter interface_ implies
 (`ChatAdapter`'s connect/roster/send/events, or mail's eventual equivalent). Bolting a real mail or
-chat bridge onto MCP's tool-call semantics would be a worse fit than just extending the *isolation*
+chat bridge onto MCP's tool-call semantics would be a worse fit than just extending the _isolation_
 pattern ADR-0018 already proved and letting the RPC payload be the extension's own interface,
 zod-validated in both directions. That is the generalization this ADR names.
 
@@ -89,7 +89,7 @@ forwarding alone):
    for chat; mail's equivalent when it exists) — never a general IPC surface, never filesystem or
    process-spawn access to the host.
 4. **A wall-clock + memory budget, and crash isolation.** A bridge exceeding its budget or crashing
-   surfaces as *that adapter instance* going into an error state — nothing else in the extension, no
+   surfaces as _that adapter instance_ going into an error state — nothing else in the extension, no
    other account, no other bridge is affected.
 
 Plus the two guarantees ADR-0018 already established and this ADR does not relitigate: **exact-pinned
@@ -127,7 +127,7 @@ shared, not duplicated per extension the way ADR-0047 §4's prose currently is.
   exists specifically so that work has a contract to build against, not to shortcut it.
 - **The `background-connection` supervisor** (`phases/extensions/README.md`'s other shared
   prerequisite — keeping an account connected with every surface closed) is a **related but distinct**
-  problem: it is about extension *lifecycle* relative to renderer surfaces, applies equally to
+  problem: it is about extension _lifecycle_ relative to renderer surfaces, applies equally to
   in-process and subprocess adapters, and already has bespoke chat-only wiring
   (`ChatMessenger.init/stop/reconcile/notifyEgressChange`) that this ADR does not touch. Promoting
   that to a generic `@tepegoz/extension-host` mechanism is separate work, tracked separately.

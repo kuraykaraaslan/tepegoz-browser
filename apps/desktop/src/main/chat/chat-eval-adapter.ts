@@ -1,4 +1,10 @@
-import { IRC_CAPS, MATRIX_CAPS, XMPP_CAPS, type ChatAdapter, type ChatSession } from '@tepegoz/chat-adapters';
+import {
+  IRC_CAPS,
+  MATRIX_CAPS,
+  XMPP_CAPS,
+  type ChatAdapter,
+  type ChatSession,
+} from '@tepegoz/chat-adapters';
 import type { ChatFetchResponse, ChatTransport } from '@tepegoz/chat-adapters';
 import type { ChatEvalFixture } from '@tepegoz/shared-types';
 
@@ -37,7 +43,8 @@ export function createChatEvalAdapter(protocol: ChatEvalFixture['protocol']): Ch
     setPresence: () => Promise.resolve(),
     listConversations: () => Promise.resolve([]),
     history: () => Promise.resolve({ messages: [], nextCursor: null }),
-    sendMessage: () => Promise.resolve({ protocolId: `eval-${String(Date.now())}`, ts: Date.now() }),
+    sendMessage: () =>
+      Promise.resolve({ protocolId: `eval-${String(Date.now())}`, ts: Date.now() }),
     markRead: () => Promise.resolve(),
     joinRoom: (_session: ChatSession, address: string) =>
       Promise.resolve({
@@ -62,7 +69,9 @@ export function createChatEvalAdapter(protocol: ChatEvalFixture['protocol']): Ch
     leaveRoom: () => Promise.resolve(),
     react: () => Promise.resolve(),
     resolveMedia: (_session: ChatSession, mediaRef: string) =>
-      mediaRef.length > 0 ? { url: `${EVAL_MEDIA_SCHEME}${encodeURIComponent(mediaRef)}`, headers: {} } : null,
+      mediaRef.length > 0
+        ? { url: `${EVAL_MEDIA_SCHEME}${encodeURIComponent(mediaRef)}`, headers: {} }
+        : null,
     events: () => never,
   };
 }
@@ -91,7 +100,9 @@ export function createChatEvalTransport(): ChatTransport {
     openEventStream: refuse('event stream'),
     fetch: (url: string): Promise<ChatFetchResponse> => {
       if (!url.startsWith(EVAL_MEDIA_SCHEME)) {
-        return Promise.reject(new Error(`chat eval transport: no real fetch of "${url}" during an eval trial`));
+        return Promise.reject(
+          new Error(`chat eval transport: no real fetch of "${url}" during an eval trial`),
+        );
       }
       const bytes = Buffer.from(EVAL_MEDIA_PNG_BASE64, 'base64');
       return Promise.resolve({

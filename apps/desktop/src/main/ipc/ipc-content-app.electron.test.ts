@@ -14,7 +14,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const helpers = vi.hoisted(() => ({ h: new Map<string, (e: unknown, p: unknown) => unknown>() }));
 vi.mock('./ipc-helpers', () => ({
   handle: (c: string, fn: (e: unknown, p: unknown) => unknown) => helpers.h.set(c, fn),
-  parsePayload: (schema: { safeParse: (x: unknown) => { success: boolean; data?: unknown } }, p: unknown) => {
+  parsePayload: (
+    schema: { safeParse: (x: unknown) => { success: boolean; data?: unknown } },
+    p: unknown,
+  ) => {
     const r = schema.safeParse(p);
     if (!r.success) throw new AppError('Invalid request', 400);
     return r.data;
@@ -79,7 +82,9 @@ vi.mock('@tepegoz/desktop-ipc/schemas', () => ({
   AppInfoSchema: { parse: (x: unknown) => x },
   PreferencesImportJsonSchema: {
     safeParse: (x: unknown) =>
-      typeof x === 'string' ? { success: true, data: x } : { success: false, error: { issues: [] } },
+      typeof x === 'string'
+        ? { success: true, data: x }
+        : { success: false, error: { issues: [] } },
   },
   RemoveKeyByIdSchema: { parse: (x: unknown) => x },
   RenameProviderKeyInputSchema: { parse: (x: unknown) => x },

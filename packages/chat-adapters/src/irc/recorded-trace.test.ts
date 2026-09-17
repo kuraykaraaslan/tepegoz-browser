@@ -91,7 +91,11 @@ const REGISTRATION = [
   ':irc.libera.chat 376 ada :End of /MOTD command.',
 ];
 
-async function registered(): Promise<{ adapter: IrcAdapter; server: TraceServer; session: IrcSession }> {
+async function registered(): Promise<{
+  adapter: IrcAdapter;
+  server: TraceServer;
+  session: IrcSession;
+}> {
   const server = new TraceServer();
   const adapter = new IrcAdapter();
   const p = adapter.connect(creds, server);
@@ -108,8 +112,12 @@ describe('IRC recorded trace — registration', () => {
     expect(session.nick).toBe('ada');
     expect(server.written[0]).toBe('CAP LS 302');
     // SASL PLAIN: base64("\0ada\0s3cret")
-    const authLine = server.written.find((l) => l.startsWith('AUTHENTICATE ') && l !== 'AUTHENTICATE PLAIN');
-    expect(Buffer.from(authLine!.slice('AUTHENTICATE '.length), 'base64').toString()).toBe('\0ada\0s3cret');
+    const authLine = server.written.find(
+      (l) => l.startsWith('AUTHENTICATE ') && l !== 'AUTHENTICATE PLAIN',
+    );
+    expect(Buffer.from(authLine!.slice('AUTHENTICATE '.length), 'base64').toString()).toBe(
+      '\0ada\0s3cret',
+    );
     expect(server.written).toContain('CAP END');
   });
 
@@ -141,21 +149,61 @@ describe('IRC recorded trace — live traffic', () => {
     for (let i = 0; i < 10; i += 1) seen.push((await iter.next()).value);
 
     // our own JOIN, then the 353 NAMES list fanned out (op → moderator, voice/plain → participant)
-    expect(seen[0]).toMatchObject({ type: 'room-membership', conversationId: '#tepegoz', address: '#tepegoz/ada', joined: true, self: true });
+    expect(seen[0]).toMatchObject({
+      type: 'room-membership',
+      conversationId: '#tepegoz',
+      address: '#tepegoz/ada',
+      joined: true,
+      self: true,
+    });
     expect(seen.slice(1, 4)).toMatchObject([
-      { type: 'room-membership', address: '#tepegoz/bea', joined: true, self: false, role: 'moderator' },
+      {
+        type: 'room-membership',
+        address: '#tepegoz/bea',
+        joined: true,
+        self: false,
+        role: 'moderator',
+      },
       { type: 'room-membership', address: '#tepegoz/cem', joined: true, role: 'participant' },
-      { type: 'room-membership', address: '#tepegoz/ada', joined: true, self: true, role: 'participant' },
+      {
+        type: 'room-membership',
+        address: '#tepegoz/ada',
+        joined: true,
+        self: true,
+        role: 'participant',
+      },
     ]);
-    expect(seen[4]).toMatchObject({ type: 'message', message: { conversationId: '#tepegoz', body: 'morning all' } });
-    expect(seen[5]).toMatchObject({ type: 'message', message: { conversationId: '#tepegoz', body: '/me waves' } });
-    expect(seen[6]).toMatchObject({ type: 'message', message: { conversationId: '#tepegoz', kind: 'system', body: 'heads up: standup in 5' } });
-    expect(seen[7]).toMatchObject({ type: 'message', message: { conversationId: 'bea', body: 'ping me after' } });
-    expect(seen[8]).toMatchObject({ type: 'room-membership', conversationId: '#tepegoz', address: '#tepegoz/dan', joined: false });
+    expect(seen[4]).toMatchObject({
+      type: 'message',
+      message: { conversationId: '#tepegoz', body: 'morning all' },
+    });
+    expect(seen[5]).toMatchObject({
+      type: 'message',
+      message: { conversationId: '#tepegoz', body: '/me waves' },
+    });
+    expect(seen[6]).toMatchObject({
+      type: 'message',
+      message: { conversationId: '#tepegoz', kind: 'system', body: 'heads up: standup in 5' },
+    });
+    expect(seen[7]).toMatchObject({
+      type: 'message',
+      message: { conversationId: 'bea', body: 'ping me after' },
+    });
+    expect(seen[8]).toMatchObject({
+      type: 'room-membership',
+      conversationId: '#tepegoz',
+      address: '#tepegoz/dan',
+      joined: false,
+    });
     // the KICK also surfaces as a visible system line in the channel
     expect(seen[9]).toMatchObject({
       type: 'message',
-      message: { conversationId: '#tepegoz', kind: 'system', senderAddress: 'cem', body: 'cem kicked dan: spam' },
+      message: {
+        conversationId: '#tepegoz',
+        kind: 'system',
+        senderAddress: 'cem',
+        body: 'cem kicked dan: spam',
+      },
     });
   });
 

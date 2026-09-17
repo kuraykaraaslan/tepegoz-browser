@@ -42,7 +42,9 @@ describe('parseDiscoItems', () => {
   });
 
   it('returns null when there is no disco#items query', () => {
-    expect(parseDiscoItems(el(`<iq type="result"><query xmlns="jabber:iq:roster"/></iq>`))).toBeNull();
+    expect(
+      parseDiscoItems(el(`<iq type="result"><query xmlns="jabber:iq:roster"/></iq>`)),
+    ).toBeNull();
   });
 });
 

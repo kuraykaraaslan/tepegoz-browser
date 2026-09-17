@@ -104,7 +104,12 @@ describe('buildRunReport', () => {
         }),
       ],
     });
-    expect(report.terminal).toEqual({ known: true, outcome: 'succeeded', message: 'Task complete', ts: 2000 });
+    expect(report.terminal).toEqual({
+      known: true,
+      outcome: 'succeeded',
+      message: 'Task complete',
+      ts: 2000,
+    });
     expect(report.endedAt).toBe(2000);
   });
 

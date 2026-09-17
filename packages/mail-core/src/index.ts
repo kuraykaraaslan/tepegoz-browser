@@ -5,18 +5,9 @@
  * live in `@tepegoz/shared-types` `mail.ts`.
  */
 
-export {
-  parseAddressList,
-  formatAddress,
-  formatAddressList,
-} from './address';
+export { parseAddressList, formatAddress, formatAddressList } from './address';
 
-export {
-  parseMime,
-  decodeEncodedWords,
-  iterMimeParts,
-  selectBodyStructure,
-} from './mime-parse';
+export { parseMime, decodeEncodedWords, iterMimeParts, selectBodyStructure } from './mime-parse';
 export type {
   ParsedMime,
   MimeHeader,

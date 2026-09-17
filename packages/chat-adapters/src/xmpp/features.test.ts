@@ -53,9 +53,9 @@ describe('parseStreamFeatures', () => {
 
 describe('pickSaslMechanism', () => {
   it('prefers SCRAM-SHA-256 > SCRAM-SHA-1 > PLAIN', () => {
-    expect(
-      pickSaslMechanism(['PLAIN', 'SCRAM-SHA-1', 'SCRAM-SHA-256'], { tlsActive: true }),
-    ).toBe('SCRAM-SHA-256');
+    expect(pickSaslMechanism(['PLAIN', 'SCRAM-SHA-1', 'SCRAM-SHA-256'], { tlsActive: true })).toBe(
+      'SCRAM-SHA-256',
+    );
     expect(pickSaslMechanism(['PLAIN', 'SCRAM-SHA-1'], { tlsActive: true })).toBe('SCRAM-SHA-1');
   });
 
@@ -71,9 +71,9 @@ describe('pickSaslMechanism', () => {
         channelBindingAvailable: true,
       }),
     ).toBe('SCRAM-SHA-256-PLUS');
-    expect(
-      pickSaslMechanism(['SCRAM-SHA-256', 'SCRAM-SHA-256-PLUS'], { tlsActive: true }),
-    ).toBe('SCRAM-SHA-256');
+    expect(pickSaslMechanism(['SCRAM-SHA-256', 'SCRAM-SHA-256-PLUS'], { tlsActive: true })).toBe(
+      'SCRAM-SHA-256',
+    );
   });
 
   it('returns null when nothing acceptable is offered', () => {

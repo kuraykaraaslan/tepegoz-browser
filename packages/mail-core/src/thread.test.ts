@@ -11,10 +11,7 @@ import {
 } from './thread';
 
 let clock = 0;
-function mk(
-  id: string,
-  opts: Partial<Omit<ThreadableMessage, 'id'>> = {},
-): ThreadableMessage {
+function mk(id: string, opts: Partial<Omit<ThreadableMessage, 'id'>> = {}): ThreadableMessage {
   return {
     id,
     messageId: 'messageId' in opts ? (opts.messageId ?? null) : `${id}@x.org`,
@@ -271,7 +268,11 @@ describe('threadMessages — a tangled 12-message golden', () => {
       references: ['m1', 'm2', 'm10'],
     });
     // duplicate Message-ID of m2 (seen in two folders)
-    const m12 = mk('m12', { messageId: 'm2', subject: 'Re: Release checklist', references: ['m1'] });
+    const m12 = mk('m12', {
+      messageId: 'm2',
+      subject: 'Re: Release checklist',
+      references: ['m1'],
+    });
 
     const all = [m1, m2, m3, m4, m5, m6, m7, m8, m9, m10, m11, m12];
     const { threadIdOf, threads } = threadMessages(all);
@@ -288,7 +289,9 @@ describe('threadMessages — a tangled 12-message golden', () => {
     expect(new Set(ids)).toEqual(new Set(all.map((m) => m.id)));
     // m8 sits under m6 which sits under m3
     const m3node = findNode(root!, 'm3');
-    expect(m3node && findNode(m3node, 'm6') && findNode(findNode(m3node, 'm6')!, 'm8')).toBeTruthy();
+    expect(
+      m3node && findNode(m3node, 'm6') && findNode(findNode(m3node, 'm6')!, 'm8'),
+    ).toBeTruthy();
     // m11 sits under m10
     const m10node = findNode(root!, 'm10');
     expect(m10node && findNode(m10node, 'm11')).toBeTruthy();

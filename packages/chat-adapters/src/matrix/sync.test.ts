@@ -34,8 +34,20 @@ describe('parseSyncResponse', () => {
               },
               state: {
                 events: [
-                  { type: 'm.room.member', sender: '@bob:s', event_id: '$m1', origin_server_ts: 1, content: { membership: 'join' } },
-                  { type: 'm.room.member', sender: '@me:s', event_id: '$m2', origin_server_ts: 1, content: { membership: 'join' } },
+                  {
+                    type: 'm.room.member',
+                    sender: '@bob:s',
+                    event_id: '$m1',
+                    origin_server_ts: 1,
+                    content: { membership: 'join' },
+                  },
+                  {
+                    type: 'm.room.member',
+                    sender: '@me:s',
+                    event_id: '$m2',
+                    origin_server_ts: 1,
+                    content: { membership: 'join' },
+                  },
                 ],
               },
               ephemeral: {
@@ -51,7 +63,15 @@ describe('parseSyncResponse', () => {
     expect(result.nextBatch).toBe('s2');
     expect(result.events.map((e) => e.type)).toEqual(['message', 'typing']);
     expect(result.rooms).toEqual([
-      { roomId: '!r:s', name: 'General', topic: '', memberCount: 2, isSpace: false, limited: true, prevBatch: 'p1' },
+      {
+        roomId: '!r:s',
+        name: 'General',
+        topic: '',
+        memberCount: 2,
+        isSpace: false,
+        limited: true,
+        prevBatch: 'p1',
+      },
     ]);
   });
 
@@ -83,7 +103,13 @@ describe('parseSyncResponse', () => {
               timeline: { events: [] },
               state: {
                 events: [
-                  { type: 'm.room.create', sender: '@me:s', event_id: '$c', origin_server_ts: 1, content: { type: 'm.space' } },
+                  {
+                    type: 'm.room.create',
+                    sender: '@me:s',
+                    event_id: '$c',
+                    origin_server_ts: 1,
+                    content: { type: 'm.space' },
+                  },
                 ],
               },
             },
@@ -103,7 +129,9 @@ describe('parseSyncResponse', () => {
           invite: {
             '!inv:s': {
               invite_state: {
-                events: [{ type: 'm.room.member', sender: '@host:s', content: { membership: 'invite' } }],
+                events: [
+                  { type: 'm.room.member', sender: '@host:s', content: { membership: 'invite' } },
+                ],
               },
             },
           },
@@ -153,7 +181,10 @@ describe('parseSyncResponse', () => {
       ctx,
     );
     expect(r.events.map((e) => e.type)).toEqual(['room-membership', 'message']);
-    expect(r.events[1]).toMatchObject({ type: 'message', message: { kind: 'system', body: 'bob was banned by op: trolling' } });
+    expect(r.events[1]).toMatchObject({
+      type: 'message',
+      message: { kind: 'system', body: 'bob was banned by op: trolling' },
+    });
   });
 
   it('surfaces a timeline m.room.topic as a room-topic event', () => {
@@ -181,13 +212,22 @@ describe('parseSyncResponse', () => {
       ctx,
     );
     expect(r.events).toEqual([
-      { type: 'room-topic', conversationId: '!r:s', topic: 'New direction', setBy: '@ada:s', ts: 20 },
+      {
+        type: 'room-topic',
+        conversationId: '!r:s',
+        topic: 'New direction',
+        setBy: '@ada:s',
+        ts: 20,
+      },
     ]);
   });
 
   it('drops a timeline entry with no type', () => {
     const r = parseSyncResponse(
-      { next_batch: 's', rooms: { join: { '!r:s': { timeline: { events: [{ sender: '@a:s' }, 'x'] } } } } },
+      {
+        next_batch: 's',
+        rooms: { join: { '!r:s': { timeline: { events: [{ sender: '@a:s' }, 'x'] } } } },
+      },
       ctx,
     );
     expect(r.events).toEqual([]);

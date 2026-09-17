@@ -40,8 +40,7 @@ Measured reality ([eval-results.md](eval-results.md)): only 5/52 scenarios are m
       `completionOutcomeField`) → `AgentRunResult` → `Turn.evidence` — and the chip's tooltip
       (`panel-thread.tsx`) now cites each record via the new `describeEvidence` (`panel-evidence.ts`),
       falling back to the plain category hint when there is nothing to cite (a pure read task).
-      Regression-locked at both ends (`reactor.test.ts` for the assembly/threading, `panel-evidence.test.ts`
-      + `panel-thread.test.tsx` for the render), mutation-verified on the orchestrator side. EN+TR for
+      Regression-locked at both ends (`reactor.test.ts` for the assembly/threading, `panel-evidence.test.ts` + `panel-thread.test.tsx` for the render), mutation-verified on the orchestrator side. EN+TR for
       the two new label sets (`evidence.kind`, `evidence.verdict`), parity-tested._
 - [x] Plan modal approval mints a `follow_a_plan` grant read by the S6 store (verified by a reduced per-tool prompt count on a plan-approved run).
 - [x] Approval modals show the S6 risk-tier badge and a one-tap scoped grant; the grant is honoured for subsequent same-scope tools in the run.
@@ -205,8 +204,8 @@ Six UI-scoped PRs, each ≤250 lines, sequenced behind their substrate phases. N
         refunds in teardown). Fellou's Sparks complaints and Neon's price backlash are both "paying for
         the tool's own failure" — that half doesn't happen here.
 - [~] **A health panel for the agent's dependency chain** — provider key present/valid, model reachable, MCP
-      servers up, local model loaded — each with a plain-language failure cause. The single largest complaint
-      cluster against the Claude extension is "it is installed, the panel is open, and nothing happens."
+  servers up, local model loaded — each with a plain-language failure cause. The single largest complaint
+  cluster against the Claude extension is "it is installed, the panel is open, and nothing happens."
   - [x] **Three of the four signals are already covered, confirmed 2026-09-16.** "Provider key present"
         and "local model loaded" were already surfaced the whole time, just not under this name: the
         run-target picker (`panel-run-config.tsx:81-98`) disables any choice whose `available` flag is
@@ -251,7 +250,7 @@ Six UI-scoped PRs, each ≤250 lines, sequenced behind their substrate phases. N
       conversation-history-dropdown + history-page + command-palette + schedule-task-modal + icons). One
       genuine gap: the token chip's hover breakdown in `panel-header.tsx` assembled its input/output
       split from hardcoded fragments (`… in / … out (this run)`) — now `tokenUsage.{breakdown,
-      breakdownThisRun}` in the parity-tested dict, wired through a placeholder helper. Test:
+breakdownThisRun}` in the parity-tested dict, wired through a placeholder helper. Test:
       `panel-header.test.tsx`. Everything else already pulls from `useT(agentDict)` / `coreDict` / passed
       labels. Out of scope, noted not fixed: `summarizeConversationPrompt`'s `'Untitled conversation'`
       fallback in `history.ts` is computed at persist time in `@tepegoz/persistence` (main process, no
@@ -336,29 +335,29 @@ Six UI-scoped PRs, each ≤250 lines, sequenced behind their substrate phases. N
   (prompt + response copy, missing-clipboard tolerance, empty-thread, layout). **Quote and
   edit-and-resend still owed** — those touch the composer/attachment path, not just the renderer._
 - [~] **A2 — A context-fullness gauge, distinct from the token counter.** The counter and the 80% quota
-      warning measure **cost**; how full the _context window_ is is invisible. That is the real breaking point
-      of a long run. The data already exists on the `cache-window` / `TokenLedger` side. Showing it answers
-      "why did it suddenly summarize?" _before_ it happens — pair it with the visible compaction marker in
-      [Phase 1b](../product/phase-1b-agentic-deepening.md) / `webbrain` P9-a.
-      _Landed 2026-09-09: `ContextGauge` (`panel-context-gauge.tsx`) — a thin bar + `Context NN%` beside the
-      token chip in `PanelHeader`, amber past 70% of the window, red past 85%, `role="progressbar"`, and a
-      localized `title` that spells out it is the model's working memory for this task, **not** the token
-      quota (en + tr `context.*`). Hidden entirely when the run has reported no context size (`contextTokens
-      <= 0`) — a 0% gauge would imply "empty" when the truth is "unknown". **The USED figure is real:**
-      `TokenLedger` now tracks `peakContextTokens()` — the high-water mark of the actual prompt size
-      (uncached input + cache reads + cache writes) of any single model call in the run, distinct from the
-      cumulative cost `totals()` — and `ipc-agent-shared.tokenUsage()` carries it to the panel as
-      `TokenUsageSnapshot.contextTokens` (no new zod boundary: main → renderer, display-only). Tests:
-      `token-ledger.test.ts` (peak is a high-water mark, not a sum; survives a smaller later call; cleared
-      by `reset`), `ipc-agent-shared.test.ts` (the field is carried), `panel-context-gauge.test.tsx` (11 —
-      hidden with no data / non-finite, the three colour bands at threshold values, 100% clamp, en+tr
-      tooltip, and the `contextWindowFor` lookup). **Still owed for `[x]`:** the window MAX is a per-model
-      lookup table in `panel-context-gauge.tsx` (Opus 5 / Sonnet 5 = 1M and Haiku 4.5 = 200K from the
-      `claude-api` reference; the other providers are conservative best-effort constants) because model
-      context-window sizes are not reported to the panel — a real `contextMax` would come from
-      `@tepegoz/model-gateway` (`models.ts` has no window column yet) threaded through the same
-      `tokenUsage()` snapshot. That follow-up, plus the live (non-peak) value and the visible compaction
-      marker, are what this item is short of `[x]`._
+  warning measure **cost**; how full the _context window_ is is invisible. That is the real breaking point
+  of a long run. The data already exists on the `cache-window` / `TokenLedger` side. Showing it answers
+  "why did it suddenly summarize?" _before_ it happens — pair it with the visible compaction marker in
+  [Phase 1b](../product/phase-1b-agentic-deepening.md) / `webbrain` P9-a.
+  _Landed 2026-09-09: `ContextGauge` (`panel-context-gauge.tsx`) — a thin bar + `Context NN%` beside the
+  token chip in `PanelHeader`, amber past 70% of the window, red past 85%, `role="progressbar"`, and a
+  localized `title` that spells out it is the model's working memory for this task, **not** the token
+  quota (en + tr `context.*`). Hidden entirely when the run has reported no context size (`contextTokens
+<= 0`) — a 0% gauge would imply "empty" when the truth is "unknown". **The USED figure is real:**
+  `TokenLedger` now tracks `peakContextTokens()` — the high-water mark of the actual prompt size
+  (uncached input + cache reads + cache writes) of any single model call in the run, distinct from the
+  cumulative cost `totals()` — and `ipc-agent-shared.tokenUsage()` carries it to the panel as
+  `TokenUsageSnapshot.contextTokens` (no new zod boundary: main → renderer, display-only). Tests:
+  `token-ledger.test.ts` (peak is a high-water mark, not a sum; survives a smaller later call; cleared
+  by `reset`), `ipc-agent-shared.test.ts` (the field is carried), `panel-context-gauge.test.tsx` (11 —
+  hidden with no data / non-finite, the three colour bands at threshold values, 100% clamp, en+tr
+  tooltip, and the `contextWindowFor` lookup). **Still owed for `[x]`:** the window MAX is a per-model
+  lookup table in `panel-context-gauge.tsx` (Opus 5 / Sonnet 5 = 1M and Haiku 4.5 = 200K from the
+  `claude-api` reference; the other providers are conservative best-effort constants) because model
+  context-window sizes are not reported to the panel — a real `contextMax` would come from
+  `@tepegoz/model-gateway` (`models.ts` has no window column yet) threaded through the same
+  `tokenUsage()` snapshot. That follow-up, plus the live (non-peak) value and the visible compaction
+  marker, are what this item is short of `[x]`._
 - [~] **A3 — Activity-phase grouping + a live tool-intent label.** A 40-step run is a flat
   `step_start`/`step_ok`/`step_error` list today. **Tepegöz can do this more cheaply and more honestly
   than LibreChat does:** LibreChat has the _model_ generate group headers, but the plan here is already a
@@ -371,12 +370,12 @@ Six UI-scoped PRs, each ≤250 lines, sequenced behind their substrate phases. N
   event as its intent with the raw id on hover; a `plan` line is left verbatim; an unmapped id (a new
   tool, an MCP tool) de-snakes rather than getting an invented label — so the feed never shows a bare
   `snake_case` identifier and never lies about one. `panel-tool-intent.test.ts` (4) + 3 in
-  `panel-thread.test.tsx`. _StepFeed rows landed 2026-09-08: `humanizeStepMessage(kind, message, a)`
+  `panel-thread.test.tsx`. *StepFeed rows landed 2026-09-08: `humanizeStepMessage(kind, message, a)`
   (`panel-step-message.ts`) parses the three exact shapes the runtime emits
   (`browser_get_page: allow` / `browser_get_page ✓` / `browser_update_page ✗`) into the localized
   `toolIntent` plus a status glyph or a localized `ask` / `deny` suffix; an unmatched message is
   returned untouched, so it can only improve a row. Applied to the feed rows and the collapsed-header
-  latest-step line; raw prose kept on hover. `panel-step-message.test.ts` (5)._ **Still owed for
+  latest-step line; raw prose kept on hover. `panel-step-message.test.ts` (5).* **Still owed for
   `[x]`:** the activity-phase grouping (deterministic headers keyed off the plan-DAG step)._
 - [ ] **A1 — Steer queue: pending chips + a receipt when applied.** `steer` today is one-shot — you send it,
       it joins the run, and there is no visible queue, no undo. Queue them, show pending steers as chips the
@@ -444,7 +443,7 @@ run` when those boxes were also ticked. The blocking modal is untouched. en + tr
 - [x] **Wire interactive Ask streaming the last mile.** Was already wired: `panel-state.ts`'s
       `appendLiveDelta` renders the streaming tail from `IpcChannels.agentDelta` in place of the static
       "working" label for every run — the claim that `ext-agent` never consumed it was stale. The real gap was
-      the other direction: nothing scoped streaming *away* from tool-call-bearing turns, so the JSON decision
+      the other direction: nothing scoped streaming _away_ from tool-call-bearing turns, so the JSON decision
       arm (every provider without native tool support) streamed its raw decision JSON — action, tool id,
       args, rationale, ledger — into that same indicator. Fixed engine-side in
       [S1](phase-s1-foundation-native-loop.md) PR5b by gating `onModelDelta` to the native decision arm, whose

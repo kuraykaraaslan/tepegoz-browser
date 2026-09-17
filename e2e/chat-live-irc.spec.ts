@@ -1,6 +1,12 @@
 import { resolve, join } from 'node:path';
 import { mkdirSync, writeFileSync, rmSync } from 'node:fs';
-import { test, expect, _electron as electron, type ElectronApplication, type Page } from '@playwright/test';
+import {
+  test,
+  expect,
+  _electron as electron,
+  type ElectronApplication,
+  type Page,
+} from '@playwright/test';
 
 /**
  * The IRC counterpart to `chat-live-xmpp.spec.ts` — X-chat.10's Playwright `_electron` e2e, run for
@@ -65,7 +71,9 @@ test('adds a live IRC account, joins a channel, and sees a sent message render',
       .poll(
         () =>
           window.evaluate(async () => {
-            type ChatBridge = { listChatAccounts: () => Promise<{ states: Record<string, string> }> };
+            type ChatBridge = {
+              listChatAccounts: () => Promise<{ states: Record<string, string> }>;
+            };
             const bridge = (window as unknown as { tepegoz: ChatBridge }).tepegoz;
             const snapshot = await bridge.listChatAccounts();
             return Object.values(snapshot.states);

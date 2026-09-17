@@ -105,7 +105,9 @@ describe('applyChatChange', () => {
   });
 
   it('a message change for an existing protocolId replaces it in place', () => {
-    let state = seedHistory(opened(), 'c1', [msg({ protocolId: 'p1', body: 'first', receivedAt: 200 })]);
+    let state = seedHistory(opened(), 'c1', [
+      msg({ protocolId: 'p1', body: 'first', receivedAt: 200 }),
+    ]);
     state = applyChatChange(state, {
       kind: 'message',
       conversationId: 'c1',
@@ -117,8 +119,16 @@ describe('applyChatChange', () => {
 
   it('orders two messages with identical timestamps by protocolId', () => {
     const state = applyChatChanges(opened(), [
-      { kind: 'message', conversationId: 'c1', message: msg({ protocolId: 'zeta', originTs: 5, receivedAt: 5 }) },
-      { kind: 'message', conversationId: 'c1', message: msg({ protocolId: 'alpha', originTs: 5, receivedAt: 5 }) },
+      {
+        kind: 'message',
+        conversationId: 'c1',
+        message: msg({ protocolId: 'zeta', originTs: 5, receivedAt: 5 }),
+      },
+      {
+        kind: 'message',
+        conversationId: 'c1',
+        message: msg({ protocolId: 'alpha', originTs: 5, receivedAt: 5 }),
+      },
     ]);
     expect((state.messages.c1 ?? []).map((m) => m.protocolId)).toEqual(['alpha', 'zeta']);
   });
@@ -190,13 +200,15 @@ describe('applyChatChange', () => {
       lastReadId: 'm5',
     });
     expect(state.conversations.c1).toMatchObject({ unread: 3, mentions: 1, lastReadId: 'm5' });
-    expect(applyChatChange(opened(), {
-      kind: 'conversation',
-      conversationId: 'ghost',
-      unread: 1,
-      mentions: 0,
-      lastReadId: null,
-    }).conversations.ghost).toBeUndefined();
+    expect(
+      applyChatChange(opened(), {
+        kind: 'conversation',
+        conversationId: 'ghost',
+        unread: 1,
+        mentions: 0,
+        lastReadId: null,
+      }).conversations.ghost,
+    ).toBeUndefined();
   });
 
   it('roster add / remove', () => {
@@ -216,7 +228,10 @@ describe('applyChatChange', () => {
       address: 'bob@x.example',
       effective: { presence: 'online', statusText: 'here' },
     });
-    expect(state.roster['work:bob@x.example']).toMatchObject({ presence: 'online', statusText: 'here' });
+    expect(state.roster['work:bob@x.example']).toMatchObject({
+      presence: 'online',
+      statusText: 'here',
+    });
   });
 
   it('typing toggles the per-conversation set idempotently', () => {
@@ -260,7 +275,16 @@ describe('applyChatChange', () => {
       joined: true,
       selfNick: 'me',
       subject: 'Weekly',
-      occupants: { Bea: { nick: 'Bea', realJid: null, affiliation: 'member', role: 'participant', presence: 'online', statusText: '' } },
+      occupants: {
+        Bea: {
+          nick: 'Bea',
+          realJid: null,
+          affiliation: 'member',
+          role: 'participant',
+          presence: 'online',
+          statusText: '',
+        },
+      },
     } as never;
     const state = applyChatChange(opened(), { kind: 'room', conversationId: 'r1', room });
     expect(state.rooms.r1).toBe(room);

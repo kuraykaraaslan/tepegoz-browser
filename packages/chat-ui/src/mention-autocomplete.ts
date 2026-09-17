@@ -24,7 +24,7 @@ export function findMentionQuery(text: string, caret: number): MentionQuery | nu
   while (i >= 0) {
     const ch = text[i] ?? '';
     if (ch === '@') {
-      const before = i > 0 ? text[i - 1] ?? '' : '';
+      const before = i > 0 ? (text[i - 1] ?? '') : '';
       if (i === 0 || BOUNDARY.test(before)) {
         return { prefix: text.slice(i + 1, caret), start: i, end: caret };
       }

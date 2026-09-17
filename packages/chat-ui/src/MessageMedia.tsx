@@ -13,7 +13,8 @@ export interface MessageMediaProps {
   onOpenMedia?: ((mediaRef: string) => void) | undefined;
 }
 
-type State = { phase: 'loading' } | { phase: 'error' } | { phase: 'ready'; resource: MediaResource };
+type State =
+  { phase: 'loading' } | { phase: 'error' } | { phase: 'ready'; resource: MediaResource };
 
 /**
  * One attachment. Loads strictly through `resolveMedia` (host reads the quarantined part) and renders

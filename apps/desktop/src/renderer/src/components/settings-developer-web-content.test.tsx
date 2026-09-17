@@ -34,7 +34,9 @@ afterEach(cleanup);
 describe('WebContentDefaultsCard', () => {
   it('renders a locked badge for each isolation key and a toggle for each editable key', () => {
     renderCard();
-    expect(screen.getAllByText(s.webContentDefaultsLocked)).toHaveLength(LOCKED_WEB_CONTENT_KEYS.length);
+    expect(screen.getAllByText(s.webContentDefaultsLocked)).toHaveLength(
+      LOCKED_WEB_CONTENT_KEYS.length,
+    );
     expect(screen.getAllByRole('switch')).toHaveLength(EDITABLE_WEB_CONTENT_KEYS.length);
     for (const key of [...LOCKED_WEB_CONTENT_KEYS, ...EDITABLE_WEB_CONTENT_KEYS]) {
       expect(screen.getByText(key)).toBeTruthy();

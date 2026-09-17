@@ -42,8 +42,8 @@ describe('matrixTimelineEvent — messages', () => {
       matrixTimelineEvent(ev({ content: { msgtype: 'm.emote', body: 'waves' } }), ROOM, ctx),
     ).toMatchObject({ message: { body: '/me waves' } });
     expect(
-      matrixTimelineEvent(ev({ content: { msgtype: 'm.notice', body: 'fyi' } }), ROOM, ctx)?.type ===
-        'message',
+      matrixTimelineEvent(ev({ content: { msgtype: 'm.notice', body: 'fyi' } }), ROOM, ctx)
+        ?.type === 'message',
     ).toBe(true);
     expect(matrixTimelineEvent(ev({ sender: '@me:s' }), ROOM, ctx)).toMatchObject({
       message: { deliveryState: 'sent' },
@@ -56,7 +56,9 @@ describe('matrixTimelineEvent — messages', () => {
       ROOM,
       ctx,
     );
-    expect(e).toMatchObject({ message: { kind: 'media', mediaRef: 'mxc://s/abc', body: 'cat.png' } });
+    expect(e).toMatchObject({
+      message: { kind: 'media', mediaRef: 'mxc://s/abc', body: 'cat.png' },
+    });
     // encrypted-file url shape
     expect(
       matrixTimelineEvent(
@@ -69,7 +71,13 @@ describe('matrixTimelineEvent — messages', () => {
 
   it('a reply relation becomes replyToId', () => {
     const e = matrixTimelineEvent(
-      ev({ content: { msgtype: 'm.text', body: 're', 'm.relates_to': { 'm.in_reply_to': { event_id: '$0' } } } }),
+      ev({
+        content: {
+          msgtype: 'm.text',
+          body: 're',
+          'm.relates_to': { 'm.in_reply_to': { event_id: '$0' } },
+        },
+      }),
       ROOM,
       ctx,
     );
@@ -131,19 +139,35 @@ describe('matrixTimelineEvent — messages', () => {
     });
     // a malformed relation is dropped
     expect(
-      matrixTimelineEvent(ev({ type: 'm.reaction', content: { 'm.relates_to': { key: 'x' } } }), ROOM, ctx),
+      matrixTimelineEvent(
+        ev({ type: 'm.reaction', content: { 'm.relates_to': { key: 'x' } } }),
+        ROOM,
+        ctx,
+      ),
     ).toBeNull();
   });
 
   it('m.room.member join/leave → room-membership', () => {
     expect(
-      matrixTimelineEvent(ev({ type: 'm.room.member', sender: '@me:s', content: { membership: 'join' } }), ROOM, ctx),
+      matrixTimelineEvent(
+        ev({ type: 'm.room.member', sender: '@me:s', content: { membership: 'join' } }),
+        ROOM,
+        ctx,
+      ),
     ).toMatchObject({ type: 'room-membership', joined: true, self: true });
     expect(
-      matrixTimelineEvent(ev({ type: 'm.room.member', content: { membership: 'leave' } }), ROOM, ctx),
+      matrixTimelineEvent(
+        ev({ type: 'm.room.member', content: { membership: 'leave' } }),
+        ROOM,
+        ctx,
+      ),
     ).toMatchObject({ joined: false });
     expect(
-      matrixTimelineEvent(ev({ type: 'm.room.member', content: { membership: 'invite' } }), ROOM, ctx),
+      matrixTimelineEvent(
+        ev({ type: 'm.room.member', content: { membership: 'invite' } }),
+        ROOM,
+        ctx,
+      ),
     ).toBeNull();
   });
 
@@ -162,24 +186,38 @@ describe('matrixTimelineEvent — messages', () => {
       ts: 1_700_000_000_000,
     });
     // a cleared topic (no content.topic) is still a valid change
-    expect(
-      matrixTimelineEvent(ev({ type: 'm.room.topic', content: {} }), ROOM, ctx),
-    ).toMatchObject({ type: 'room-topic', topic: '' });
+    expect(matrixTimelineEvent(ev({ type: 'm.room.topic', content: {} }), ROOM, ctx)).toMatchObject(
+      { type: 'room-topic', topic: '' },
+    );
   });
 
   it('drops an unmodelled type, an empty body, and a bad shape', () => {
     expect(matrixTimelineEvent(ev({ type: 'm.room.avatar' }), ROOM, ctx)).toBeNull();
-    expect(matrixTimelineEvent(ev({ content: { msgtype: 'm.text', body: '' } }), ROOM, ctx)).toBeNull();
+    expect(
+      matrixTimelineEvent(ev({ content: { msgtype: 'm.text', body: '' } }), ROOM, ctx),
+    ).toBeNull();
     expect(matrixTimelineEvent(ev({ sender: '' }), ROOM, ctx)).toBeNull();
   });
 });
 
 describe('matrixMemberSystemMessage', () => {
   const member = (over: Partial<MatrixRoomEvent>): MatrixRoomEvent =>
-    ev({ type: 'm.room.member', sender: '@op:s', state_key: '@bob:s', content: { membership: 'ban' }, ...over });
+    ev({
+      type: 'm.room.member',
+      sender: '@op:s',
+      state_key: '@bob:s',
+      content: { membership: 'ban' },
+      ...over,
+    });
 
   it('renders a ban with the actor and reason', () => {
-    expect(matrixMemberSystemMessage(member({ content: { membership: 'ban', reason: 'spam' } }), ROOM, ctx)).toMatchObject({
+    expect(
+      matrixMemberSystemMessage(
+        member({ content: { membership: 'ban', reason: 'spam' } }),
+        ROOM,
+        ctx,
+      ),
+    ).toMatchObject({
       type: 'message',
       message: { conversationId: ROOM, kind: 'system', body: 'bob was banned by op: spam' },
     });
@@ -188,18 +226,34 @@ describe('matrixMemberSystemMessage', () => {
   it('renders a third-party leave as a kick, and "You were" for self', () => {
     const body = (e: ReturnType<typeof matrixMemberSystemMessage>): string | undefined =>
       e?.type === 'message' ? e.message.body : undefined;
-    expect(body(matrixMemberSystemMessage(member({ content: { membership: 'leave' } }), ROOM, ctx))).toBe(
-      'bob was kicked by op',
-    );
     expect(
-      body(matrixMemberSystemMessage(member({ state_key: '@me:s', content: { membership: 'leave' } }), ROOM, ctx)),
+      body(matrixMemberSystemMessage(member({ content: { membership: 'leave' } }), ROOM, ctx)),
+    ).toBe('bob was kicked by op');
+    expect(
+      body(
+        matrixMemberSystemMessage(
+          member({ state_key: '@me:s', content: { membership: 'leave' } }),
+          ROOM,
+          ctx,
+        ),
+      ),
     ).toBe('You were kicked by op');
   });
 
   it('is null for a self-leave, a join, an invite, or a non-member event', () => {
-    expect(matrixMemberSystemMessage(member({ sender: '@bob:s', content: { membership: 'leave' } }), ROOM, ctx)).toBeNull();
-    expect(matrixMemberSystemMessage(member({ content: { membership: 'join' } }), ROOM, ctx)).toBeNull();
-    expect(matrixMemberSystemMessage(member({ content: { membership: 'invite' } }), ROOM, ctx)).toBeNull();
+    expect(
+      matrixMemberSystemMessage(
+        member({ sender: '@bob:s', content: { membership: 'leave' } }),
+        ROOM,
+        ctx,
+      ),
+    ).toBeNull();
+    expect(
+      matrixMemberSystemMessage(member({ content: { membership: 'join' } }), ROOM, ctx),
+    ).toBeNull();
+    expect(
+      matrixMemberSystemMessage(member({ content: { membership: 'invite' } }), ROOM, ctx),
+    ).toBeNull();
     expect(matrixMemberSystemMessage(ev({ type: 'm.room.message' }), ROOM, ctx)).toBeNull();
     expect(matrixMemberSystemMessage(member({ state_key: '' }), ROOM, ctx)).toBeNull();
   });
@@ -208,7 +262,11 @@ describe('matrixMemberSystemMessage', () => {
 describe('matrixEphemeralEvents', () => {
   it('m.typing → a typing event per other user', () => {
     expect(
-      matrixEphemeralEvents({ type: 'm.typing', content: { user_ids: ['@a:s', '@me:s', '@b:s'] } }, ROOM, ctx),
+      matrixEphemeralEvents(
+        { type: 'm.typing', content: { user_ids: ['@a:s', '@me:s', '@b:s'] } },
+        ROOM,
+        ctx,
+      ),
     ).toEqual([
       { type: 'typing', conversationId: ROOM, senderAddress: '@a:s', active: true },
       { type: 'typing', conversationId: ROOM, senderAddress: '@b:s', active: true },
@@ -227,7 +285,13 @@ describe('matrixEphemeralEvents', () => {
     expect(out).toEqual([
       {
         type: 'receipt',
-        receipt: { conversationId: ROOM, messageId: '$5', byAddress: '@a:s', kind: 'read', ts: 111 },
+        receipt: {
+          conversationId: ROOM,
+          messageId: '$5',
+          byAddress: '@a:s',
+          kind: 'read',
+          ts: 111,
+        },
       },
     ]);
   });

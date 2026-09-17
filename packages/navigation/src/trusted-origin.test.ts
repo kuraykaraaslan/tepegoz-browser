@@ -121,7 +121,11 @@ describe('isTrustedAppUrl', () => {
       'ShadowPrompt used (a *.claude.ai wildcard let any matching subdomain in). S6 second wave: ' +
       '"never write an origin allow-list as a pattern".',
     () => {
-      const opts = { isPackaged: true, chromeUrl: CHROME, internalPageHosts: ['settings', 'history'] };
+      const opts = {
+        isPackaged: true,
+        chromeUrl: CHROME,
+        internalPageHosts: ['settings', 'history'],
+      };
       // A superstring of the allow-listed name, both directions — the shape a `.startsWith`/`.endsWith`/
       // `.includes` "convenience" match (instead of the array's own exact `.includes(hostname)`) would
       // wrongly admit.

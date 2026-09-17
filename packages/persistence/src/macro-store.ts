@@ -65,9 +65,9 @@ export class MacroStore {
    * deliberate user action, not a hot path.
    */
   static exportAll(db: Db): Macro[] {
-    const rows = db
-      .prepare('SELECT ir FROM macros ORDER BY updated_at DESC')
-      .all() as { ir: string }[];
+    const rows = db.prepare('SELECT ir FROM macros ORDER BY updated_at DESC').all() as {
+      ir: string;
+    }[];
     const macros: Macro[] = [];
     for (const row of rows) {
       try {

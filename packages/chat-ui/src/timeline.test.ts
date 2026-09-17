@@ -41,7 +41,10 @@ describe('buildTimeline', () => {
       msg({ id: 'b', originTs: T0 + 60_000 }),
     ]);
     const messages = items.filter((i) => i.kind === 'message');
-    expect(messages.map((m) => (m.kind === 'message' ? m.startsGroup : null))).toEqual([true, false]);
+    expect(messages.map((m) => (m.kind === 'message' ? m.startsGroup : null))).toEqual([
+      true,
+      false,
+    ]);
   });
 
   it('breaks the group on a sender change or a long gap', () => {
@@ -56,25 +59,38 @@ describe('buildTimeline', () => {
   });
 
   it('inserts a day separator when the calendar day changes', () => {
-    const items = buildTimeline([msg({ id: 'a', originTs: T0 }), msg({ id: 'b', originTs: T0 + DAY })]);
+    const items = buildTimeline([
+      msg({ id: 'a', originTs: T0 }),
+      msg({ id: 'b', originTs: T0 + DAY }),
+    ]);
     expect(kinds(items)).toEqual(['day', 'message', 'day', 'message']);
   });
 
   it('places the unread divider before the first message after lastReadId', () => {
     const items = buildTimeline(
-      [msg({ id: 'a' }), msg({ id: 'b', originTs: T0 + 1000 }), msg({ id: 'c', originTs: T0 + 2000 })],
+      [
+        msg({ id: 'a' }),
+        msg({ id: 'b', originTs: T0 + 1000 }),
+        msg({ id: 'c', originTs: T0 + 2000 }),
+      ],
       { lastReadId: 'a' },
     );
     expect(kinds(items)).toEqual(['day', 'message', 'unread-divider', 'message', 'message']);
   });
 
   it('emits no divider when everything is read or lastReadId is unknown', () => {
-    expect(kinds(buildTimeline([msg({ id: 'a' })], { lastReadId: 'a' }))).toEqual(['day', 'message']);
+    expect(kinds(buildTimeline([msg({ id: 'a' })], { lastReadId: 'a' }))).toEqual([
+      'day',
+      'message',
+    ]);
     expect(kinds(buildTimeline([msg({ id: 'a' })], { lastReadId: 'missing' }))).toEqual([
       'day',
       'message',
     ]);
-    expect(kinds(buildTimeline([msg({ id: 'a' })], { lastReadId: null }))).toEqual(['day', 'message']);
+    expect(kinds(buildTimeline([msg({ id: 'a' })], { lastReadId: null }))).toEqual([
+      'day',
+      'message',
+    ]);
   });
 
   it('never groups a system message', () => {
@@ -98,8 +114,14 @@ describe('buildTimeline', () => {
     );
 
     it('renders everything when under the cap or the cap is 0', () => {
-      expect(kinds(buildTimeline(many.slice(0, 10), { maxMessages: 200 })).filter((k) => k === 'message')).toHaveLength(10);
-      expect(kinds(buildTimeline(many, { maxMessages: 0 })).filter((k) => k === 'message')).toHaveLength(500);
+      expect(
+        kinds(buildTimeline(many.slice(0, 10), { maxMessages: 200 })).filter(
+          (k) => k === 'message',
+        ),
+      ).toHaveLength(10);
+      expect(
+        kinds(buildTimeline(many, { maxMessages: 0 })).filter((k) => k === 'message'),
+      ).toHaveLength(500);
     });
 
     it('keeps only the most-recent N and prepends one truncated item with the hidden count', () => {

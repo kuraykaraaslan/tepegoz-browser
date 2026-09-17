@@ -5,7 +5,12 @@ import {
   isConversationAgentVisible,
   wrapChatContent,
 } from '@tepegoz/chat-core';
-import type { ChatContact, ChatConversation, ChatMessage, ChatPresence } from '@tepegoz/shared-types';
+import type {
+  ChatContact,
+  ChatConversation,
+  ChatMessage,
+  ChatPresence,
+} from '@tepegoz/shared-types';
 import type {
   ChatCapabilityHost,
   ChatConversationDetail,
@@ -86,7 +91,9 @@ function decodeDataUrl(url: string): { mime: string; bytes: Uint8Array } {
   const mime = m[1] !== undefined && m[1].length > 0 ? m[1] : 'application/octet-stream';
   const raw = m[3] ?? '';
   const bytes =
-    m[2] === ';base64' ? new Uint8Array(Buffer.from(raw, 'base64')) : new TextEncoder().encode(decodeURIComponent(raw));
+    m[2] === ';base64'
+      ? new Uint8Array(Buffer.from(raw, 'base64'))
+      : new TextEncoder().encode(decodeURIComponent(raw));
   return { mime, bytes };
 }
 
@@ -132,7 +139,10 @@ export function createChatCapabilityHost(deps: ChatCapabilityHostDeps): ChatCapa
 
   return {
     listItems(accountId: string): Promise<ChatConversationSummary[]> {
-      const convs = filterAgentConversations(deps.listConversations(accountId), deps.sessionOptIns());
+      const convs = filterAgentConversations(
+        deps.listConversations(accountId),
+        deps.sessionOptIns(),
+      );
       return Promise.resolve(convs.map((c) => summarize(c, null)));
     },
 
@@ -181,7 +191,11 @@ export function createChatCapabilityHost(deps: ChatCapabilityHostDeps): ChatCapa
           }
           return ok;
         })
-        .map((m) => ({ conversationId: m.conversationId, accountId: m.accountId, message: agentMessageView(m) }));
+        .map((m) => ({
+          conversationId: m.conversationId,
+          accountId: m.accountId,
+          message: agentMessageView(m),
+        }));
       return Promise.resolve(hits);
     },
 

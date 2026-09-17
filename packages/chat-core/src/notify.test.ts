@@ -13,8 +13,11 @@ const base: NotifyContext = {
 const decide = (over: Partial<NotifyContext>) => decideNotification({ ...base, ...over });
 
 describe('decideNotification', () => {
-  it('never notifies for the user\'s own echo', () => {
-    expect(decide({ fromSelf: true, body: '@ada ping' })).toEqual({ notify: false, reason: 'from-self' });
+  it("never notifies for the user's own echo", () => {
+    expect(decide({ fromSelf: true, body: '@ada ping' })).toEqual({
+      notify: false,
+      reason: 'from-self',
+    });
   });
 
   it('a direct nick mention always notifies — even muted, even "mentions", even "none"', () => {
@@ -31,7 +34,10 @@ describe('decideNotification', () => {
   });
 
   it('a room ping notifies at "all" / "mentions" but not "none"', () => {
-    expect(decide({ level: 'all', body: '@here standup' })).toEqual({ notify: true, reason: 'room-ping' });
+    expect(decide({ level: 'all', body: '@here standup' })).toEqual({
+      notify: true,
+      reason: 'room-ping',
+    });
     expect(decide({ level: 'mentions', body: '@here standup' })).toEqual({
       notify: true,
       reason: 'room-ping',
@@ -43,7 +49,10 @@ describe('decideNotification', () => {
   });
 
   it('a plain room message follows the level then the mute flag', () => {
-    expect(decide({ level: 'all', body: 'just chatting' })).toEqual({ notify: true, reason: 'room-all' });
+    expect(decide({ level: 'all', body: 'just chatting' })).toEqual({
+      notify: true,
+      reason: 'room-all',
+    });
     expect(decide({ level: 'all', muted: true, body: 'just chatting' })).toEqual({
       notify: false,
       reason: 'muted',
@@ -63,7 +72,10 @@ describe('decideNotification', () => {
       notify: true,
       reason: 'direct-message',
     });
-    expect(decide({ isRoom: false, muted: true, body: 'hi' })).toEqual({ notify: false, reason: 'muted' });
+    expect(decide({ isRoom: false, muted: true, body: 'hi' })).toEqual({
+      notify: false,
+      reason: 'muted',
+    });
   });
 
   it('defaults a room with no level to "all"', () => {

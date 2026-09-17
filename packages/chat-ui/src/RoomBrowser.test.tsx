@@ -31,7 +31,9 @@ describe('RoomBrowser', () => {
       ]),
     );
     const onJoin = vi.fn();
-    wrap(<RoomBrowser discoverRooms={discoverRooms} onJoin={onJoin} defaultService="conf.example" />);
+    wrap(
+      <RoomBrowser discoverRooms={discoverRooms} onJoin={onJoin} defaultService="conf.example" />,
+    );
 
     fireEvent.click(screen.getByRole('button', { name: 'Browse' }));
     expect(discoverRooms).toHaveBeenCalledWith('conf.example');
@@ -54,7 +56,12 @@ describe('RoomBrowser', () => {
       <RoomBrowser
         discoverRooms={() =>
           Promise.resolve([
-            room({ jid: 'club@conf.example', name: 'Club', membersOnly: true, description: 'invite only' }),
+            room({
+              jid: 'club@conf.example',
+              name: 'Club',
+              membersOnly: true,
+              description: 'invite only',
+            }),
           ])
         }
         onJoin={vi.fn()}

@@ -8,7 +8,11 @@
       "kind": "room",
       "title": "#support",
       "messages": [
-        { "from": "ops@example.com", "body": "Getting a lot of the same question today about the login redirect.", "ts": 7000 }
+        {
+          "from": "ops@example.com",
+          "body": "Getting a lot of the same question today about the login redirect.",
+          "ts": 7000
+        }
       ]
     }
   ]

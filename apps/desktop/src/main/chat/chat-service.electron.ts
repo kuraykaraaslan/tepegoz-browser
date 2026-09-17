@@ -138,7 +138,10 @@ function loadChatEvalFixtureFromEnv(): ReturnType<typeof parseChatEvalFixture> {
   try {
     raw = readFileSync(path, 'utf8');
   } catch (err) {
-    Logger.error('[chat-eval] could not read TEPEGOZ_EVAL_CHAT_FIXTURE', { path, err: String(err) });
+    Logger.error('[chat-eval] could not read TEPEGOZ_EVAL_CHAT_FIXTURE', {
+      path,
+      err: String(err),
+    });
     return null;
   }
   const fixture = parseChatEvalFixture(raw);
@@ -150,7 +153,9 @@ function loadChatEvalFixtureFromEnv(): ReturnType<typeof parseChatEvalFixture> {
  *  `service.start()` reads `loadAccounts()`, so the seeded account is there from the account's very
  *  first `spinUp`. Conversations are written before messages (their foreign key needs the row to
  *  already exist — the same ordering bug X-chat.5's Matrix sync fix was about). */
-function seedChatEvalFixtureIntoDb(fixture: NonNullable<ReturnType<typeof parseChatEvalFixture>>): void {
+function seedChatEvalFixtureIntoDb(
+  fixture: NonNullable<ReturnType<typeof parseChatEvalFixture>>,
+): void {
   if (getDb() === null) return;
   const db = requireDb();
   const seed = buildChatEvalSeed(fixture, Date.now());
@@ -206,9 +211,12 @@ export async function init(): Promise<void> {
       // `secrets.get(secretRef) !== null` check to let a runner exist for the seeded account.
       await ChatSecrets.set(`chat:${evalFixture.accountId}`, 'eval-fixture-no-real-credential');
     } catch (err) {
-      Logger.error('[chat-eval] could not store the fixture credential — the account gets no runner', {
-        err: String(err),
-      });
+      Logger.error(
+        '[chat-eval] could not store the fixture credential — the account gets no runner',
+        {
+          err: String(err),
+        },
+      );
     }
   }
   await seedChatAccountsFromEnv(
@@ -301,7 +309,8 @@ const chatAgentOptIns = new Set<string>();
 /** The agent `chat_*` capability host — `ChatService` + DB-backed reads through the agent-view guards. */
 export function chatCapabilityHost(): ReturnType<typeof createChatCapabilityHost> {
   return createChatCapabilityHost({
-    listConversations: (accountId) => (getDb() === null ? [] : listConversations(requireDb(), accountId)),
+    listConversations: (accountId) =>
+      getDb() === null ? [] : listConversations(requireDb(), accountId),
     getConversation: (id) => (getDb() === null ? null : ChatStore.getConversation(requireDb(), id)),
     listContacts: (accountId) => (getDb() === null ? [] : listContacts(requireDb(), accountId)),
     searchMessages: (opts) => (getDb() === null ? [] : ChatStore.searchMessages(requireDb(), opts)),

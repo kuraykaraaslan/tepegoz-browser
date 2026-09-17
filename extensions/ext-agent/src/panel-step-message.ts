@@ -18,7 +18,11 @@ const OK_RE = /^(\S+) ✓$/;
 const ERROR_RE = /^(\S+) ✗$/;
 const START_RE = /^(\S+): (allow|ask|deny)$/;
 
-export function humanizeStepMessage(kind: AgentEvent['kind'], message: string, a: AgentStrings): string {
+export function humanizeStepMessage(
+  kind: AgentEvent['kind'],
+  message: string,
+  a: AgentStrings,
+): string {
   if (kind === 'step_ok') {
     const m = OK_RE.exec(message);
     return m ? `${toolIntent(m[1]!, a)} ✓` : message;
@@ -56,10 +60,7 @@ function explainTitle(c: Resources, reason: string): string | null {
  *  improve, never mangle" rule as {@link humanizeStepMessage}. */
 const DETAIL_RE = /^(\S+)(.*)$/;
 
-export function humanizeStepDetail(
-  detail: string | undefined,
-  c: Resources,
-): string | undefined {
+export function humanizeStepDetail(detail: string | undefined, c: Resources): string | undefined {
   if (detail === undefined) return detail;
   const m = DETAIL_RE.exec(detail);
   if (m === null) return detail;

@@ -68,7 +68,11 @@ describe('SubprocessChatAdapter', () => {
       return child;
     });
     session = { accountId: 'acc-1', caps: BRIDGE_DEFAULT_CAPS };
-    creds = { accountId: 'acc-1', server: { protocol: 'bridge', bridgeId: 'echo', config: {} }, secret: 's3cr3t' };
+    creds = {
+      accountId: 'acc-1',
+      server: { protocol: 'bridge', bridgeId: 'echo', config: {} },
+      secret: 's3cr3t',
+    };
   });
 
   afterEach(() => {

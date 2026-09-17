@@ -24,22 +24,22 @@ append-only Journal.
 - [ ] **Counterfactual Dry-Run** produces a human-readable Consequence Report for a full plan with **zero real
       side-effects**, then commits the identical plan for real on approval
 - [~] **Pre-flight Cost & Risk Contract** shown + accepted before run; on failure the auto-refund is a
-      verifiable before/after diff against the contract
-      _(2026-09-15: the plan-preview modal — already blocking, already accepted before a run — now shows
-      each step's declared danger class, which sites the plan will touch (reusing `planGrantScope`'s own
-      URL-collection heuristic, so the preview and the grant it leads to can never disagree about scope),
-      AND a floor count of `guaranteedApprovals` — steps whose `classifyRisk`-derived tier is one
-      `NEVER_AUTO_GRANTABLE_TIERS` names, which per `risk-tier.ts`'s own invariant asks a human "every
-      time", under every autonomy level, no exceptions. Shown only when > 0 (a "0" line would misleadingly
-      read as "nothing will ask for approval" — this is a floor, not the total, since `ask`/`notify`
-      autonomy prompts for more than just these tiers, and that fuller count needs the live Policy Kernel,
-      unavailable at plan-preview time). Cost estimation and the refund diff are still open; see the task
-      note below.)_
+  verifiable before/after diff against the contract
+  _(2026-09-15: the plan-preview modal — already blocking, already accepted before a run — now shows
+  each step's declared danger class, which sites the plan will touch (reusing `planGrantScope`'s own
+  URL-collection heuristic, so the preview and the grant it leads to can never disagree about scope),
+  AND a floor count of `guaranteedApprovals` — steps whose `classifyRisk`-derived tier is one
+  `NEVER_AUTO_GRANTABLE_TIERS` names, which per `risk-tier.ts`'s own invariant asks a human "every
+  time", under every autonomy level, no exceptions. Shown only when > 0 (a "0" line would misleadingly
+  read as "nothing will ask for approval" — this is a floor, not the total, since `ask`/`notify`
+  autonomy prompts for more than just these tiers, and that fuller count needs the live Policy Kernel,
+  unavailable at plan-preview time). Cost estimation and the refund diff are still open; see the task
+  note below.)_
 - [~] **Data Rights**: a subject-access export + a **provable erasure** (tombstone + blob-refcount decrement)
-      complete end-to-end; erasure is itself an append-only recorded event
-      _(2026-09-15: subject-access export is real — see the task note below — but read-only; erasure is
-      untouched, deliberately: a wrong deletion is a worse failure than a missing feature, and deserves
-      its own pass rather than riding in on a search feature's momentum.)_
+  complete end-to-end; erasure is itself an append-only recorded event
+  _(2026-09-15: subject-access export is real — see the task note below — but read-only; erasure is
+  untouched, deliberately: a wrong deletion is a worse failure than a missing feature, and deserves
+  its own pass rather than riding in on a search feature's momentum.)_
 - [ ] **i18n:** en+tr keys added for new surfaces (Notary/receipt UI, Accountability Dashboard, Dry-Run report,
       Cost/Risk contract, Data Rights panel, Compliance Pack export)
 - [x] ADR accepted: **ADR-0014** (NotaryService: hash-chained Journal + signed Replay Receipts + anchoring)
@@ -86,7 +86,7 @@ append-only Journal.
 > fresh self-contained receipt with the device's Ed25519 key (`NotarySigningKeyStore.getOrCreate()`'s
 > first real caller), and writes it to `~/tepegoz/`. **Independently confirmed against the BUILT
 > standalone CLI**, not just the library function or a mock: a realistic 3-event receipt PASSed (`node
-> dist/tepegoz-verify.mjs` → exit 0), and a hand-tampered copy came back TAMPERED at the exact edited
+dist/tepegoz-verify.mjs` → exit 0), and a hand-tampered copy came back TAMPERED at the exact edited
 > event (exit 1) — the DoD's own acceptance language, demonstrated literally.
 >
 > **Same day, the "no UI affordance" gap on BOTH of the above closed** — not with a new button, with the
@@ -145,8 +145,8 @@ append-only Journal.
   verifier has nothing to check an arbitrary claimed tail against) and signs it with the device key.
   **Manually validated against the BUILT standalone CLI**, not just the library function: generated a
   receipt from a realistic 3-event run, `node dist/tepegoz-verify.mjs` → `PASS — run-demo-1 verified (3
-  events)` (exit 0); hand-tampered one event's payload → `TAMPERED — hash chain broken at event 1
-  (hash_mismatch)` (exit 1).
+events)` (exit 0); hand-tampered one event's payload → `TAMPERED — hash chain broken at event 1
+(hash_mismatch)` (exit 1).
   **Same day, reachable from the existing UI too:** `collectAgentExportBundleFiles` now writes
   `runs/<runId>.receipt.json` (+ `.report.md`) for every turn in the "export diagnostic bundle" the
   header star already triggers — see the run-report task's note above for the wiring. **Owed:** the
@@ -228,27 +228,27 @@ append-only Journal.
 ### L3/L7 — Pre-flight Cost & Risk Contract
 
 - [~] Before any task runs, surface a binding **Run Contract**: estimated token cost (from the DAG cost
-      estimator), highest danger-class node, count of HITL gates, which adapters/sites will be touched
-      _(2026-09-15, three of the four corners landed. **Highest danger-class node:** the plan-preview
-      modal (already a blocking pre-flight gate, `requestPlanApproval` in `ipc-agent-run.ts`) now carries
-      each step's DECLARED `dangerClass` from `CapabilityRegistry`, and `panel-modals.tsx` renders it as
-      a badge — read-only steps stay unbadged so the signal does not train the user to stop looking.
-      Deliberately NOT the same axis as the six-tier `RiskTier` a HITL prompt shows later (`risk-tier.ts`'s
-      own module doc: `dangerClass` is author-declared and static, `RiskTier` is derived from a step's
-      actual arguments and not knowable before it runs) — a separate palette (`DANGER_CLASS_TONE`) keeps
-      the two from being visually conflated. **Which adapters/sites will be touched:** the same preview
-      now carries `sites` — deduped hostnames from `planGrantScope`'s existing URL-collection heuristic
-      (entry tab + every URL found in a step's arguments), the SAME computation `mintPlanGrant` already
-      used to size the approval grant, so the preview a user reads and the grant they approve can never
-      silently disagree about scope. **Count of HITL gates (a FLOOR, not the total):** `guaranteedApprovals`
-      — this turned out achievable without `resolveAutonomy`/the live Policy Kernel after all:
-      `classifyRisk` (already used by `planGrantScope`) is a pure function of a step's declared
-      `dangerClass` + its own arguments, so calling it per step and counting how many land in
-      `NEVER_AUTO_GRANTABLE_TIERS` gives an ALWAYS-TRUE lower bound — those tiers prompt under every
-      autonomy level, no exceptions, so this can never overclaim. Rendered only when > 0. **Not
-      attempted:** the token-cost estimate (no DAG cost estimator exists anywhere in the codebase yet — a
-      real modeling exercise, not a wiring one, and a wrong estimate would be worse than none) and the
-      post-run verifiable refund diff.)_
+  estimator), highest danger-class node, count of HITL gates, which adapters/sites will be touched
+  _(2026-09-15, three of the four corners landed. **Highest danger-class node:** the plan-preview
+  modal (already a blocking pre-flight gate, `requestPlanApproval` in `ipc-agent-run.ts`) now carries
+  each step's DECLARED `dangerClass` from `CapabilityRegistry`, and `panel-modals.tsx` renders it as
+  a badge — read-only steps stay unbadged so the signal does not train the user to stop looking.
+  Deliberately NOT the same axis as the six-tier `RiskTier` a HITL prompt shows later (`risk-tier.ts`'s
+  own module doc: `dangerClass` is author-declared and static, `RiskTier` is derived from a step's
+  actual arguments and not knowable before it runs) — a separate palette (`DANGER_CLASS_TONE`) keeps
+  the two from being visually conflated. **Which adapters/sites will be touched:** the same preview
+  now carries `sites` — deduped hostnames from `planGrantScope`'s existing URL-collection heuristic
+  (entry tab + every URL found in a step's arguments), the SAME computation `mintPlanGrant` already
+  used to size the approval grant, so the preview a user reads and the grant they approve can never
+  silently disagree about scope. **Count of HITL gates (a FLOOR, not the total):** `guaranteedApprovals`
+  — this turned out achievable without `resolveAutonomy`/the live Policy Kernel after all:
+  `classifyRisk` (already used by `planGrantScope`) is a pure function of a step's declared
+  `dangerClass` + its own arguments, so calling it per step and counting how many land in
+  `NEVER_AUTO_GRANTABLE_TIERS` gives an ALWAYS-TRUE lower bound — those tiers prompt under every
+  autonomy level, no exceptions, so this can never overclaim. Rendered only when > 0. **Not
+  attempted:** the token-cost estimate (no DAG cost estimator exists anywhere in the codebase yet — a
+  real modeling exercise, not a wiring one, and a wrong estimate would be worse than none) and the
+  post-run verifiable refund diff.)_
 - [ ] User accepts (recorded as an event); on failure/loop/abort the Token-Ledger auto-refund is shown as a
       reconciled before/after with a verifiable diff ("promised ≤X, spent Y, refunded Z"), replayable from the
       Journal — weaponizes competitors' #1/#2 cost complaints (no refund, no pre-cost telegraphing)
@@ -256,30 +256,30 @@ append-only Journal.
 ### L1/L2/L6 — KVKK/GDPR self-service + living Compliance Pack
 
 - [~] **Data Rights** panel treating the local Journal + memory + blob store as a queryable personal-data
-      corpus: enter a subject (email/domain/name/profile) → deterministic search across events, FTS5 memory,
-      CAS blobs → a portable **SAR export bundle** (machine- + human-readable, en+tr)
-      _(2026-09-15, first slice landed — READ-ONLY, erasure deliberately not attempted in the same pass:
-      [subject-access-search.ts](../../apps/desktop/src/main/privacy/subject-access-search.ts) +
-      [ipc-data-rights.ts](../../apps/desktop/src/main/ipc/ipc-data-rights.ts) register
-      `privacy:data-rights-export`. Searched Agent Conversation turns
-      (`AgentConversationStore.searchTurnsForSubject`, reusing the exact folded-`LIKE` + Turkish
-      `foldForSearch` contract `list()` already uses — no new search rule to drift from) and the full
-      Event Journal (`searchEventsForSubject`, JS-side since the journal has no fold-column index —
-      unbounded `EventJournal.readFrom(db, 0)`, a known scaling limit worth revisiting once a real
-      install has years of history). Writes a self-contained Markdown SAR document to `~/tepegoz/`.
-      Deliberately NOT gated behind the agent-enabled guard: past data stays exportable even after the
-      extension is turned off.
-      **Same day, three more dimensions added.** Browsing History (`HistoryStore.search`) and Bookmarks
-      (`BookmarkTreeStore.search`, which also matches on tags — a small bonus this module didn't have to
-      build), each the SAME folded-LIKE query its own page already runs. Then **Downloads**
-      (`searchDownloadsForSubject`, JS-side over `DownloadStore.list` — downloads have no fold-column
-      index either, so this one follows the Journal's pattern rather than History/Bookmarks'). **Every
-      source with an existing search contract to reuse is now covered.** Only the CAS blob store remains
-      — genuinely out of scope, since blobs are hash-addressed opaque bytes with no text to search. No
-      UI affordance — devtools-console-only via `window.api.exportDataRights({ subject })`, same
-      starting point every other Phase 7 export took
-      before its own UI-reachability pass. i18n: none needed yet (no renderer strings — the export is a
-      file, not a rendered surface).)_
+  corpus: enter a subject (email/domain/name/profile) → deterministic search across events, FTS5 memory,
+  CAS blobs → a portable **SAR export bundle** (machine- + human-readable, en+tr)
+  _(2026-09-15, first slice landed — READ-ONLY, erasure deliberately not attempted in the same pass:
+  [subject-access-search.ts](../../apps/desktop/src/main/privacy/subject-access-search.ts) +
+  [ipc-data-rights.ts](../../apps/desktop/src/main/ipc/ipc-data-rights.ts) register
+  `privacy:data-rights-export`. Searched Agent Conversation turns
+  (`AgentConversationStore.searchTurnsForSubject`, reusing the exact folded-`LIKE` + Turkish
+  `foldForSearch` contract `list()` already uses — no new search rule to drift from) and the full
+  Event Journal (`searchEventsForSubject`, JS-side since the journal has no fold-column index —
+  unbounded `EventJournal.readFrom(db, 0)`, a known scaling limit worth revisiting once a real
+  install has years of history). Writes a self-contained Markdown SAR document to `~/tepegoz/`.
+  Deliberately NOT gated behind the agent-enabled guard: past data stays exportable even after the
+  extension is turned off.
+  **Same day, three more dimensions added.** Browsing History (`HistoryStore.search`) and Bookmarks
+  (`BookmarkTreeStore.search`, which also matches on tags — a small bonus this module didn't have to
+  build), each the SAME folded-LIKE query its own page already runs. Then **Downloads**
+  (`searchDownloadsForSubject`, JS-side over `DownloadStore.list` — downloads have no fold-column
+  index either, so this one follows the Journal's pattern rather than History/Bookmarks'). **Every
+  source with an existing search contract to reuse is now covered.** Only the CAS blob store remains
+  — genuinely out of scope, since blobs are hash-addressed opaque bytes with no text to search. No
+  UI affordance — devtools-console-only via `window.api.exportDataRights({ subject })`, same
+  starting point every other Phase 7 export took
+  before its own UI-reachability pass. i18n: none needed yet (no renderer strings — the export is a
+  file, not a rendered surface).)_
 - [ ] **Provable erasure**: tombstone events + blob-refcount decrement + memory-audit purge, recorded as
       append-only "erasure performed" events so deletion is itself provable (reuses the `kv` tombstone column
       already in schema v1)

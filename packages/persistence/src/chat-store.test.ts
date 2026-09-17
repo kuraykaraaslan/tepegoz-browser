@@ -19,7 +19,14 @@ const account = (id: string, order = 0): ChatAccount => ({
   id,
   label: id,
   displayName: '',
-  server: { protocol: 'xmpp', jid: `${id}@example.com`, host: null, port: null, security: 'tls', wsUrl: null },
+  server: {
+    protocol: 'xmpp',
+    jid: `${id}@example.com`,
+    host: null,
+    port: null,
+    security: 'tls',
+    wsUrl: null,
+  },
   secretRef: `chat:${id}`,
   color: null,
   order,
@@ -47,7 +54,11 @@ const conversation = (id: string, accountId: string, address: string): ChatConve
   updatedAt: 1000,
 });
 
-const message = (protocolId: string, conversationId: string, over: Partial<ChatMessage> = {}): ChatMessage => ({
+const message = (
+  protocolId: string,
+  conversationId: string,
+  over: Partial<ChatMessage> = {},
+): ChatMessage => ({
   id: `id-${protocolId}`,
   conversationId,
   accountId: 'acc',
@@ -79,7 +90,10 @@ describe('ChatStore — accounts', () => {
     const got = ChatStore.getAccount(db, 'a');
     expect(got?.server.protocol).toBe('xmpp');
     expect(got?.secretRef).toBe('chat:a');
-    const raw = db.prepare('SELECT * FROM chat_accounts WHERE id = ?').get('a') as Record<string, unknown>;
+    const raw = db.prepare('SELECT * FROM chat_accounts WHERE id = ?').get('a') as Record<
+      string,
+      unknown
+    >;
     expect(Object.keys(raw)).not.toContain('secret');
     expect(Object.keys(raw)).not.toContain('password');
   });
@@ -258,8 +272,15 @@ describe('ChatStore — messages', () => {
     for (let i = 0; i < 5; i += 1) {
       ChatStore.upsertMessage(db, message(`p${String(i)}`, 'cv1', { originTs: i * 10 }));
     }
-    expect(ChatStore.listMessages(db, 'cv1', 3).map((m) => m.protocolId)).toEqual(['p2', 'p3', 'p4']);
-    expect(ChatStore.listMessages(db, 'cv1', 10, 20).map((m) => m.protocolId)).toEqual(['p0', 'p1']);
+    expect(ChatStore.listMessages(db, 'cv1', 3).map((m) => m.protocolId)).toEqual([
+      'p2',
+      'p3',
+      'p4',
+    ]);
+    expect(ChatStore.listMessages(db, 'cv1', 10, 20).map((m) => m.protocolId)).toEqual([
+      'p0',
+      'p1',
+    ]);
   });
 
   it('writes a Turkish-folded body shadow and redaction clears it', () => {
@@ -275,8 +296,13 @@ describe('ChatStore — messages', () => {
   });
 
   it('stores and reads back reactions json', () => {
-    ChatStore.upsertMessage(db, message('p1', 'cv1', { reactions: [{ emoji: '👍', count: 2, me: true }] }));
-    expect(ChatStore.listMessages(db, 'cv1')[0]?.reactions).toEqual([{ emoji: '👍', count: 2, me: true }]);
+    ChatStore.upsertMessage(
+      db,
+      message('p1', 'cv1', { reactions: [{ emoji: '👍', count: 2, me: true }] }),
+    );
+    expect(ChatStore.listMessages(db, 'cv1')[0]?.reactions).toEqual([
+      { emoji: '👍', count: 2, me: true },
+    ]);
   });
 
   it('getMessage fetches one message by its id, scoped to the conversation', () => {
@@ -289,9 +315,15 @@ describe('ChatStore — messages', () => {
   describe('searchMessages', () => {
     beforeEach(() => {
       ChatStore.upsertConversation(db, conversation('cv2', 'acc', 'ada@example.com'));
-      ChatStore.upsertMessage(db, message('p1', 'cv1', { body: 'Şişli toplantısı yarın', originTs: 10 }));
+      ChatStore.upsertMessage(
+        db,
+        message('p1', 'cv1', { body: 'Şişli toplantısı yarın', originTs: 10 }),
+      );
       ChatStore.upsertMessage(db, message('p2', 'cv1', { body: 'kahve içelim mi', originTs: 20 }));
-      ChatStore.upsertMessage(db, message('p3', 'cv2', { body: 'toplantı notları hazır', originTs: 30 }));
+      ChatStore.upsertMessage(
+        db,
+        message('p3', 'cv2', { body: 'toplantı notları hazır', originTs: 30 }),
+      );
     });
 
     it('matches fold-insensitively (Turkish) and returns newest-first', () => {
@@ -300,26 +332,38 @@ describe('ChatStore — messages', () => {
     });
 
     it('scopes to one conversation / one account', () => {
-      expect(ChatStore.searchMessages(db, { text: 'toplanti', conversationId: 'cv1' }).map((m) => m.protocolId)).toEqual(['p1']);
+      expect(
+        ChatStore.searchMessages(db, { text: 'toplanti', conversationId: 'cv1' }).map(
+          (m) => m.protocolId,
+        ),
+      ).toEqual(['p1']);
       expect(ChatStore.searchMessages(db, { text: 'toplanti', accountId: 'other' })).toEqual([]);
     });
 
     it('ignores redacted messages and blank / wildcard-only needles', () => {
       ChatStore.redactMessage(db, 'cv1', 'p1');
-      expect(ChatStore.searchMessages(db, { text: 'toplanti' }).map((m) => m.protocolId)).toEqual(['p3']);
+      expect(ChatStore.searchMessages(db, { text: 'toplanti' }).map((m) => m.protocolId)).toEqual([
+        'p3',
+      ]);
       expect(ChatStore.searchMessages(db, { text: '   ' })).toEqual([]);
       expect(ChatStore.searchMessages(db, { text: '%' })).toEqual([]);
     });
 
     it('treats a "%" in the query literally, not as a wildcard', () => {
       ChatStore.upsertMessage(db, message('p9', 'cv1', { body: '100% sure', originTs: 40 }));
-      expect(ChatStore.searchMessages(db, { text: '100% sure' }).map((m) => m.protocolId)).toEqual(['p9']);
+      expect(ChatStore.searchMessages(db, { text: '100% sure' }).map((m) => m.protocolId)).toEqual([
+        'p9',
+      ]);
     });
 
     it('re-indexes an edited body — the old text stops matching, the new text matches', () => {
       ChatStore.upsertMessage(db, message('p1', 'cv1', { body: 'kahvaltı planı', originTs: 10 }));
-      expect(ChatStore.searchMessages(db, { text: 'kahvalti' }).map((m) => m.protocolId)).toEqual(['p1']);
-      expect(ChatStore.searchMessages(db, { text: 'toplanti' }).map((m) => m.protocolId)).toEqual(['p3']);
+      expect(ChatStore.searchMessages(db, { text: 'kahvalti' }).map((m) => m.protocolId)).toEqual([
+        'p1',
+      ]);
+      expect(ChatStore.searchMessages(db, { text: 'toplanti' }).map((m) => m.protocolId)).toEqual([
+        'p3',
+      ]);
     });
 
     it('drops index rows when the messages are cascade-deleted (FTS trigger)', () => {
@@ -344,8 +388,20 @@ describe('ChatStore — receipts', () => {
   });
 
   it('upserts a receipt by its composite key', () => {
-    ChatStore.addReceipt(db, { conversationId: 'cv1', messageId: 'm1', byAddress: 'bob@example.com', kind: 'read', ts: 5 });
-    ChatStore.addReceipt(db, { conversationId: 'cv1', messageId: 'm1', byAddress: 'bob@example.com', kind: 'read', ts: 9 });
+    ChatStore.addReceipt(db, {
+      conversationId: 'cv1',
+      messageId: 'm1',
+      byAddress: 'bob@example.com',
+      kind: 'read',
+      ts: 5,
+    });
+    ChatStore.addReceipt(db, {
+      conversationId: 'cv1',
+      messageId: 'm1',
+      byAddress: 'bob@example.com',
+      kind: 'read',
+      ts: 9,
+    });
     const list = ChatStore.listReceipts(db, 'cv1');
     expect(list).toHaveLength(1);
     expect(list[0]?.ts).toBe(9);

@@ -1,6 +1,12 @@
 import { resolve, join } from 'node:path';
 import { mkdirSync, writeFileSync, rmSync } from 'node:fs';
-import { test, expect, _electron as electron, type ElectronApplication, type Page } from '@playwright/test';
+import {
+  test,
+  expect,
+  _electron as electron,
+  type ElectronApplication,
+  type Page,
+} from '@playwright/test';
 
 /**
  * The Matrix counterpart to `chat-live-xmpp.spec.ts` — X-chat.10's Playwright `_electron` e2e, run
@@ -52,7 +58,10 @@ import { test, expect, _electron as electron, type ElectronApplication, type Pag
  * that test's fake in-memory store has no foreign key to violate; only the real SQLite-backed
  * desktop app does.
  */
-test.skip(process.env.TEPEGOZ_LIVE_MATRIX !== '1', 'needs a live local Synapse with a TLS listener — see the file header');
+test.skip(
+  process.env.TEPEGOZ_LIVE_MATRIX !== '1',
+  'needs a live local Synapse with a TLS listener — see the file header',
+);
 
 const appDir = resolve(process.cwd(), 'apps/desktop');
 
@@ -160,7 +169,9 @@ test('adds a live Matrix account, joins a room, sends/reacts/edits, and recovers
       .poll(
         () =>
           window.evaluate(async () => {
-            type ChatBridge = { listChatAccounts: () => Promise<{ states: Record<string, string> }> };
+            type ChatBridge = {
+              listChatAccounts: () => Promise<{ states: Record<string, string> }>;
+            };
             const bridge = (window as unknown as { tepegoz: ChatBridge }).tepegoz;
             const snapshot = await bridge.listChatAccounts();
             return Object.values(snapshot.states);

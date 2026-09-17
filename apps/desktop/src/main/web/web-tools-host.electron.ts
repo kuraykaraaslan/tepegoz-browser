@@ -103,9 +103,7 @@ async function fetchPage(input: WebFetchResolvedInput): Promise<WebFetchResult> 
   // Belt and braces on the value we hand the model: the `blockPrivateHosts` client already re-checks
   // every redirect hop, but re-verify the final URL here too before it becomes a pageRef / citation.
   if (finalUrl !== input.url && !isPublicHttpUrl(finalUrl)) {
-    throw new Error(
-      `web_get_page landed on a non-public address after a redirect: ${finalUrl}`,
-    );
+    throw new Error(`web_get_page landed on a non-public address after a redirect: ${finalUrl}`);
   }
   const raw = response.data.slice(0, input.maxBytes + 1);
   const truncated = raw.length > input.maxBytes;

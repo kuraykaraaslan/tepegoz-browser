@@ -83,9 +83,9 @@ describe('ConversationList', () => {
         onSelect={vi.fn()}
       />,
     );
-    expect(screen.getByRole('button').querySelector('.chat-conv__muted')?.getAttribute('title')).toBe(
-      'Muted',
-    );
+    expect(
+      screen.getByRole('button').querySelector('.chat-conv__muted')?.getAttribute('title'),
+    ).toBe('Muted');
   });
 
   it('stays one flat, recency-ordered list across multiple accounts — no grouping headers', () => {
@@ -103,10 +103,9 @@ describe('ConversationList', () => {
       />,
     );
     expect(screen.queryByRole('heading')).toBeNull();
-    expect(screen.getAllByRole('button').map((b) => b.querySelector('.chat-conv__title')?.textContent)).toEqual([
-      'H1',
-      'W1',
-    ]);
+    expect(
+      screen.getAllByRole('button').map((b) => b.querySelector('.chat-conv__title')?.textContent),
+    ).toEqual(['H1', 'W1']);
   });
 
   it('renders a presence dot for DMs when presenceOf resolves one', () => {
@@ -129,9 +128,12 @@ describe('ConversationList', () => {
         onSelect={vi.fn()}
       />,
     );
-    expect(screen.getByRole('button').querySelector('.chat-protocol-badge')?.getAttribute('data-protocol')).toBe(
-      'xmpp',
-    );
+    expect(
+      screen
+        .getByRole('button')
+        .querySelector('.chat-protocol-badge')
+        ?.getAttribute('data-protocol'),
+    ).toBe('xmpp');
   });
 
   it('badges rows by the right account across a grouped, multi-protocol roster', () => {
@@ -178,7 +180,9 @@ describe('ConversationList', () => {
       />,
     );
     expect(screen.getByText('see you at 5')).toBeDefined();
-    expect(screen.getByRole('button').querySelector('.chat-conv__time')?.textContent).toMatch(/2:05/);
+    expect(screen.getByRole('button').querySelector('.chat-conv__time')?.textContent).toMatch(
+      /2:05/,
+    );
   });
 
   it('shows no preview line for a brand-new conversation with no messages yet', () => {

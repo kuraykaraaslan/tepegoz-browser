@@ -32,7 +32,11 @@ function previewText(conversation: ChatConversation, strings: ChatUiStrings): st
   return last.body;
 }
 
-function CountBadge({ kind, value, label }: Readonly<{ kind: string; value: number; label: string }>) {
+function CountBadge({
+  kind,
+  value,
+  label,
+}: Readonly<{ kind: string; value: number; label: string }>) {
   if (value <= 0) return null;
   return (
     <span className="chat-conv__badge" data-kind={kind} aria-label={`${value} ${label}`}>
@@ -94,7 +98,11 @@ function Row({
             {conversation.muted && (
               <span className="chat-conv__muted" title={strings.list.muted} aria-hidden="true" />
             )}
-            <CountBadge kind="mentions" value={conversation.mentions} label={strings.list.mentions} />
+            <CountBadge
+              kind="mentions"
+              value={conversation.mentions}
+              label={strings.list.mentions}
+            />
             <CountBadge kind="unread" value={conversation.unread} label={strings.list.unread} />
           </span>
         </span>
@@ -122,7 +130,8 @@ export function ConversationList({
   const locale = useLocale();
   const presence = (c: ChatConversation): ChatPresence | null => presenceOf?.(c) ?? null;
   const accountById = new Map(accounts.map((a) => [a.id, a]));
-  const protocolOf = (accountId: string): string | undefined => accountById.get(accountId)?.protocol;
+  const protocolOf = (accountId: string): string | undefined =>
+    accountById.get(accountId)?.protocol;
 
   if (conversations.length === 0) {
     return <p className="chat-conv-list__empty">{s.list.empty}</p>;

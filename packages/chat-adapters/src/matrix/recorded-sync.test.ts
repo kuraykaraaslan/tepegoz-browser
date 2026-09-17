@@ -17,7 +17,9 @@ const ctx: MatrixContext = { accountId: 'acc-1', selfUserId: '@ada:example.org' 
 const INITIAL_SYNC = {
   next_batch: 's72_1_0_1_1_1_1_1',
   account_data: { events: [{ type: 'm.push_rules', content: { global: {} } }] },
-  presence: { events: [{ type: 'm.presence', sender: '@bob:example.org', content: { presence: 'online' } }] },
+  presence: {
+    events: [{ type: 'm.presence', sender: '@bob:example.org', content: { presence: 'online' } }],
+  },
   rooms: {
     join: {
       '!general:example.org': {
@@ -199,7 +201,9 @@ const INCREMENTAL_SYNC = {
               sender: '@bob:example.org',
               event_id: '$react1',
               origin_server_ts: 1_700_000_011_000,
-              content: { 'm.relates_to': { rel_type: 'm.annotation', event_id: '$msg2', key: '🔥' } },
+              content: {
+                'm.relates_to': { rel_type: 'm.annotation', event_id: '$msg2', key: '🔥' },
+              },
             },
             {
               type: 'm.room.redaction',
@@ -238,7 +242,11 @@ describe('recorded Synapse /sync — initial', () => {
   it('reports the joined room and the space, but not the space timeline', () => {
     const general = result.rooms.find((r) => r.roomId === '!general:example.org');
     const space = result.rooms.find((r) => r.roomId === '!spaceroom:example.org');
-    expect(general).toMatchObject({ name: 'General', topic: 'Everything and nothing', isSpace: false });
+    expect(general).toMatchObject({
+      name: 'General',
+      topic: 'Everything and nothing',
+      isSpace: false,
+    });
     expect(general?.memberCount).toBe(3); // summary count wins over the 2 join state events
     expect(general).toMatchObject({ limited: true, prevBatch: 't34-req' });
     expect(space).toMatchObject({ name: 'The Lab', isSpace: true });
@@ -255,7 +263,9 @@ describe('recorded Synapse /sync — initial', () => {
   });
 
   it('surfaces the invite with its inviter', () => {
-    expect(result.invites).toEqual([{ roomId: '!secret:other.org', inviter: '@mallory:other.org' }]);
+    expect(result.invites).toEqual([
+      { roomId: '!secret:other.org', inviter: '@mallory:other.org' },
+    ]);
   });
 
   it('carries the next_batch token forward', () => {
@@ -273,10 +283,23 @@ describe('recorded Synapse /sync — incremental', () => {
       'message-redact',
       'room-membership',
     ]);
-    expect(result.events[0]).toMatchObject({ type: 'message-edit', protocolId: '$msg1', body: 'morning everyone' });
-    expect(result.events[1]).toMatchObject({ type: 'reaction', protocolId: '$msg2', emoji: '🔥', add: true });
+    expect(result.events[0]).toMatchObject({
+      type: 'message-edit',
+      protocolId: '$msg1',
+      body: 'morning everyone',
+    });
+    expect(result.events[1]).toMatchObject({
+      type: 'reaction',
+      protocolId: '$msg2',
+      emoji: '🔥',
+      add: true,
+    });
     expect(result.events[2]).toMatchObject({ type: 'message-redact', protocolId: '$msg2' });
-    expect(result.events[3]).toMatchObject({ type: 'room-membership', address: '@carol:example.org', joined: false });
+    expect(result.events[3]).toMatchObject({
+      type: 'room-membership',
+      address: '@carol:example.org',
+      joined: false,
+    });
   });
 
   it('reports the room we left', () => {

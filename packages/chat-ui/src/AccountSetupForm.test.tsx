@@ -122,7 +122,9 @@ describe('AccountSetupForm', () => {
       switchToIrc();
       fireEvent.change(screen.getByLabelText('Account name'), { target: { value: 'Libera' } });
       fireEvent.change(screen.getByLabelText('Nickname'), { target: { value: 'ada' } });
-      fireEvent.change(screen.getByLabelText('Server host'), { target: { value: 'irc.libera.chat' } });
+      fireEvent.change(screen.getByLabelText('Server host'), {
+        target: { value: 'irc.libera.chat' },
+      });
       fireEvent.change(screen.getByLabelText('Port'), { target: { value: '6697' } });
       fireEvent.click(screen.getByRole('button', { name: 'Add account' }));
       expect(onAdd).toHaveBeenCalledTimes(1);
@@ -130,7 +132,14 @@ describe('AccountSetupForm', () => {
       expect(arg).toMatchObject({
         account: {
           id: 'libera',
-          server: { protocol: 'irc', server: 'irc.libera.chat', port: 6697, tls: true, nick: 'ada', sasl: false },
+          server: {
+            protocol: 'irc',
+            server: 'irc.libera.chat',
+            port: 6697,
+            tls: true,
+            nick: 'ada',
+            sasl: false,
+          },
         },
         secret: '',
       });
@@ -170,7 +179,9 @@ describe('AccountSetupForm', () => {
     it('submitting with the password left blank keeps the id and returns secret: null (no validation error)', () => {
       const onAdd = vi.fn<OnAdd>();
       wrap(<AccountSetupForm onAdd={onAdd} existingAccount={existingAccount} />);
-      fireEvent.change(screen.getByLabelText('Account name'), { target: { value: 'Work (renamed)' } });
+      fireEvent.change(screen.getByLabelText('Account name'), {
+        target: { value: 'Work (renamed)' },
+      });
       fireEvent.click(screen.getByRole('button', { name: 'Save' }));
       expect(onAdd).toHaveBeenCalledTimes(1);
       const [arg] = onAdd.mock.calls.at(0) ?? [];
@@ -222,7 +233,11 @@ describe('AccountSetupForm', () => {
       expect(arg).toMatchObject({
         account: {
           id: 'matrix',
-          server: { protocol: 'matrix', homeserverUrl: 'https://matrix.example.org', userId: '@ada:example.org' },
+          server: {
+            protocol: 'matrix',
+            homeserverUrl: 'https://matrix.example.org',
+            userId: '@ada:example.org',
+          },
         },
         secret: 'sekret',
       });

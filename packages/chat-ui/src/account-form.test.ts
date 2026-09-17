@@ -74,7 +74,12 @@ describe('validateXmppAccountForm', () => {
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     expect(result.account.id).toBe('work');
-    expect(result.account.server).toMatchObject({ protocol: 'xmpp', jid: 'ada@example.org', host: null, port: null });
+    expect(result.account.server).toMatchObject({
+      protocol: 'xmpp',
+      jid: 'ada@example.org',
+      host: null,
+      port: null,
+    });
     expect(result.secret).toBe('pencil');
     // the draft + host-filled fields must satisfy the canonical schema
     expect(
@@ -89,7 +94,13 @@ describe('validateXmppAccountForm', () => {
 
   it('carries advanced fields through when provided', () => {
     const result = validateXmppAccountForm(
-      { ...filled(), host: 'xmpp.example.org', port: '5223', security: 'starttls', wsUrl: 'wss://x.example/ws' },
+      {
+        ...filled(),
+        host: 'xmpp.example.org',
+        port: '5223',
+        security: 'starttls',
+        wsUrl: 'wss://x.example/ws',
+      },
       MSG,
     );
     expect(result.ok).toBe(true);
@@ -112,9 +123,20 @@ describe('validateXmppAccountForm', () => {
       id: 'work',
       color: '#3366ff',
       order: 3,
-      server: { protocol: 'xmpp', jid: 'ada@example.org', host: null, port: null, security: 'tls', wsUrl: null },
+      server: {
+        protocol: 'xmpp',
+        jid: 'ada@example.org',
+        host: null,
+        port: null,
+        security: 'tls',
+        wsUrl: null,
+      },
     };
-    const result = validateXmppAccountForm({ ...filled(), password: '', label: 'Work (renamed)' }, MSG, existing);
+    const result = validateXmppAccountForm(
+      { ...filled(), password: '', label: 'Work (renamed)' },
+      MSG,
+      existing,
+    );
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     expect(result.account.id).toBe('work'); // NOT re-derived from the new label
@@ -129,7 +151,14 @@ describe('validateXmppAccountForm', () => {
       id: 'work',
       color: null,
       order: 0,
-      server: { protocol: 'xmpp', jid: 'ada@example.org', host: null, port: null, security: 'tls', wsUrl: null },
+      server: {
+        protocol: 'xmpp',
+        jid: 'ada@example.org',
+        host: null,
+        port: null,
+        security: 'tls',
+        wsUrl: null,
+      },
     };
     const result = validateXmppAccountForm({ ...filled(), password: 'new-pw' }, MSG, existing);
     expect(result.ok).toBe(true);
@@ -172,7 +201,14 @@ describe('accountFormFromAccount', () => {
       id: 'libera',
       label: 'Libera',
       displayName: '',
-      server: { protocol: 'irc', server: 'irc.libera.chat', port: 6697, tls: true, nick: 'ada', sasl: true },
+      server: {
+        protocol: 'irc',
+        server: 'irc.libera.chat',
+        port: 6697,
+        tls: true,
+        nick: 'ada',
+        sasl: true,
+      },
       color: null,
       order: 0,
       updatedAt: 0,
@@ -191,7 +227,11 @@ describe('accountFormFromAccount', () => {
       id: 'matrix',
       label: 'Matrix',
       displayName: '',
-      server: { protocol: 'matrix', homeserverUrl: 'https://matrix.example.org', userId: '@ada:example.org' },
+      server: {
+        protocol: 'matrix',
+        homeserverUrl: 'https://matrix.example.org',
+        userId: '@ada:example.org',
+      },
       color: null,
       order: 0,
       updatedAt: 0,
@@ -304,9 +344,20 @@ describe('validateIrcAccountForm', () => {
       id: 'libera',
       color: null,
       order: 0,
-      server: { protocol: 'irc', server: 'irc.libera.chat', port: 6697, tls: true, nick: 'ada', sasl: false },
+      server: {
+        protocol: 'irc',
+        server: 'irc.libera.chat',
+        port: 6697,
+        tls: true,
+        nick: 'ada',
+        sasl: false,
+      },
     };
-    const result = validateIrcAccountForm({ ...filledIrc(), password: 'new-pw' }, IRC_MSG, existing);
+    const result = validateIrcAccountForm(
+      { ...filledIrc(), password: 'new-pw' },
+      IRC_MSG,
+      existing,
+    );
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     expect(result.account.server).toMatchObject({ sasl: true });

@@ -87,7 +87,10 @@ describe('perceivedHandoffSignal', () => {
   it('flags a CAPTCHA / login wall in a perceived page', () => {
     expect(
       perceivedHandoffSignal(
-        outcome({ tool: 'browser_get_elements', result: { content: 'Please verify you are human' } }),
+        outcome({
+          tool: 'browser_get_elements',
+          result: { content: 'Please verify you are human' },
+        }),
       )?.kind,
     ).toBe('captcha');
     expect(
@@ -116,7 +119,10 @@ describe('perceivedHandoffSignal', () => {
     ).toBeNull();
     expect(
       perceivedHandoffSignal(
-        outcome({ tool: 'web_search_items', result: { content: 'Result: verify you are human …' } }),
+        outcome({
+          tool: 'web_search_items',
+          result: { content: 'Result: verify you are human …' },
+        }),
       ),
     ).toBeNull();
     expect(
@@ -127,7 +133,9 @@ describe('perceivedHandoffSignal', () => {
   });
 
   it('is null when the outcome carries no content', () => {
-    expect(perceivedHandoffSignal(outcome({ tool: 'browser_get_elements', result: {} }))).toBeNull();
+    expect(
+      perceivedHandoffSignal(outcome({ tool: 'browser_get_elements', result: {} })),
+    ).toBeNull();
   });
 });
 

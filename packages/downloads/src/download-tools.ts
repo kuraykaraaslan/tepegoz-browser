@@ -88,7 +88,7 @@ export function registerDownloadTools(deps: { host: DownloadToolsHost }): void {
     descriptor: descriptor(
       'download_analyze_media',
       'read',
-      "Resolve a public media URL (image/video/audio) into direct, verified metadata BEFORE downloading " +
+      'Resolve a public media URL (image/video/audio) into direct, verified metadata BEFORE downloading ' +
         "it. Returns { kind: 'direct', url, contentType, contentLengthBytes, suggestedFilename } when the " +
         "URL IS the media bytes, or { kind: 'not_direct', reason, hint } when it is a page or unusable — " +
         'follow the hint (browse to it, or use web_get_page) instead of guessing. Read-only: it never ' +

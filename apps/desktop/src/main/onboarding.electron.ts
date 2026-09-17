@@ -30,7 +30,10 @@ const delay = (ms: number): Promise<void> => new Promise((resolve) => setTimeout
  * followed straight by `?`. Rejects only after every dev retry is exhausted; a caller that wants to
  * surface the failure attaches its own `.catch`.
  */
-export async function loadChrome(win: BrowserWindow, query?: Record<string, string>): Promise<void> {
+export async function loadChrome(
+  win: BrowserWindow,
+  query?: Record<string, string>,
+): Promise<void> {
   const devUrl = process.env['ELECTRON_RENDERER_URL'];
   if (devUrl !== undefined && devUrl.length > 0) {
     const search = query === undefined ? '' : new URLSearchParams(query).toString();

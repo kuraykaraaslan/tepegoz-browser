@@ -22,7 +22,13 @@ function InviteIcon() {
         strokeWidth="1.5"
         strokeLinecap="round"
       />
-      <path d="M16 6v5M13.5 8.5h5" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+      <path
+        d="M16 6v5M13.5 8.5h5"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+      />
     </svg>
   );
 }
@@ -75,7 +81,16 @@ function LeaveIcon() {
 function ArchiveIcon() {
   return (
     <svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true" focusable="false">
-      <rect x="3" y="4" width="14" height="3.2" rx="1" fill="none" stroke="currentColor" strokeWidth="1.5" />
+      <rect
+        x="3"
+        y="4"
+        width="14"
+        height="3.2"
+        rx="1"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.5"
+      />
       <path
         d="M4.3 7.5v7a1.2 1.2 0 0 0 1.2 1.2h9a1.2 1.2 0 0 0 1.2-1.2v-7"
         fill="none"
@@ -83,7 +98,13 @@ function ArchiveIcon() {
         strokeWidth="1.5"
         strokeLinejoin="round"
       />
-      <path d="M8.2 10.5h3.6" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+      <path
+        d="M8.2 10.5h3.6"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+      />
     </svg>
   );
 }
@@ -189,7 +210,10 @@ export function RoomHeader({
             />
           ) : (
             <p className="chat-room-header__topic">
-              <span className="chat-room-header__topic-text" title={topic !== '' ? topic : undefined}>
+              <span
+                className="chat-room-header__topic-text"
+                title={topic !== '' ? topic : undefined}
+              >
                 {topic !== '' ? topic : s.room.noTopicHeader}
               </span>
               {onSetTopic !== undefined && (

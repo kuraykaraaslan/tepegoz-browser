@@ -34,7 +34,10 @@ export function socks5Connect(
     let handshakeData: (chunk: Uint8Array) => void = () => undefined;
     const timer =
       opts.timeoutMs !== undefined
-        ? setTimer(() => finish(new Error(`SOCKS5 handshake timed out after ${String(opts.timeoutMs)}ms`)), opts.timeoutMs)
+        ? setTimer(
+            () => finish(new Error(`SOCKS5 handshake timed out after ${String(opts.timeoutMs)}ms`)),
+            opts.timeoutMs,
+          )
         : null;
 
     function finish(err?: Error): void {
@@ -59,7 +62,9 @@ export function socks5Connect(
     };
 
     socket.onData((chunk) => handshakeData(chunk));
-    socket.onClose((err) => finish(err ?? new Error('proxy closed the connection during handshake')));
+    socket.onClose((err) =>
+      finish(err ?? new Error('proxy closed the connection during handshake')),
+    );
     socket.write(neg.start());
   });
 }

@@ -74,12 +74,10 @@ export interface UseChatState {
   /** MUC — present only when the port supports rooms. Both take an explicit `accountId` rather than
    *  implying `activeAccountId` — `<NewChatDialog>`'s Rooms tab lets the user discover/join under
    *  any configured account, not just whichever conversation happens to be open. */
-  rooms:
-    | {
-        discover: (accountId: string, service: string) => Promise<RoomListing[]>;
-        join: (accountId: string, roomJid: string) => Promise<void>;
-      }
-    | null;
+  rooms: {
+    discover: (accountId: string, service: string) => Promise<RoomListing[]>;
+    join: (accountId: string, roomJid: string) => Promise<void>;
+  } | null;
 }
 
 /**

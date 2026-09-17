@@ -35,7 +35,12 @@ describe('download tools', () => {
   it('resolves media through the probe host and never touches downloads state', async () => {
     CapabilityRegistry.reset();
     const probeMedia = vi.fn(() =>
-      Promise.resolve({ status: 200, contentType: 'image/png', contentLengthBytes: 42, finalUrl: 'https://cdn.example.com/pic.png' }),
+      Promise.resolve({
+        status: 200,
+        contentType: 'image/png',
+        contentLengthBytes: 42,
+        finalUrl: 'https://cdn.example.com/pic.png',
+      }),
     );
     const host: DownloadToolsHost = {
       listDownloads: () => [],

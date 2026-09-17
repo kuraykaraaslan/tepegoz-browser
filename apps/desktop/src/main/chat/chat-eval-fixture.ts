@@ -35,7 +35,9 @@ function localPart(address: string): string {
 }
 
 /** The account's own protocol address — what a seeded message's `from: "me"` resolves to. */
-export function chatEvalSelfAddress(fixture: Pick<ChatEvalFixture, 'accountId' | 'protocol'>): string {
+export function chatEvalSelfAddress(
+  fixture: Pick<ChatEvalFixture, 'accountId' | 'protocol'>,
+): string {
   if (fixture.protocol === 'irc') return fixture.accountId;
   if (fixture.protocol === 'matrix') return `@${fixture.accountId}:localhost.invalid`;
   return `${fixture.accountId}@localhost.invalid`;
@@ -52,9 +54,20 @@ export function chatEvalServerConfig(protocol: ChatEvalFixture['protocol']): Cha
     return { protocol: 'irc', server: 'localhost', port: 1, tls: false, nick: 'eval', sasl: false };
   }
   if (protocol === 'matrix') {
-    return { protocol: 'matrix', homeserverUrl: 'https://localhost.invalid', userId: '@eval:localhost.invalid' };
+    return {
+      protocol: 'matrix',
+      homeserverUrl: 'https://localhost.invalid',
+      userId: '@eval:localhost.invalid',
+    };
   }
-  return { protocol: 'xmpp', jid: 'eval@localhost.invalid', host: 'localhost', port: 1, security: 'tls', wsUrl: null };
+  return {
+    protocol: 'xmpp',
+    jid: 'eval@localhost.invalid',
+    host: 'localhost',
+    port: 1,
+    security: 'tls',
+    wsUrl: null,
+  };
 }
 
 export function chatEvalAccount(fixture: ChatEvalFixture, now: number): ChatAccount {
@@ -154,5 +167,10 @@ export function buildChatEvalSeed(fixture: ChatEvalFixture, now: number): ChatEv
     });
   }
 
-  return { account: chatEvalAccount(fixture, now), contacts: chatEvalContacts(fixture), conversations, messages };
+  return {
+    account: chatEvalAccount(fixture, now),
+    contacts: chatEvalContacts(fixture),
+    conversations,
+    messages,
+  };
 }

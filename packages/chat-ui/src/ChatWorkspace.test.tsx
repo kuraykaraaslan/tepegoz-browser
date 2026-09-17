@@ -210,7 +210,10 @@ describe('ChatWorkspace', () => {
     const onOpenLink = vi.fn();
     const { port } = makePort({
       getChatHistory: () =>
-        Promise.resolve({ messages: [msg({ body: 'see https://tepegoz.example/x' })], nextCursor: null }),
+        Promise.resolve({
+          messages: [msg({ body: 'see https://tepegoz.example/x' })],
+          nextCursor: null,
+        }),
     });
     wrap(<ChatWorkspace port={port} onOpenLink={onOpenLink} />);
     fireEvent.click(await screen.findByRole('button', { name: /Bob/ }));
@@ -245,7 +248,7 @@ describe('ChatWorkspace', () => {
     await screen.findByText('hi there');
   });
 
-  it('wires the roster panel\'s add-contact form to the port, for the active account', async () => {
+  it("wires the roster panel's add-contact form to the port, for the active account", async () => {
     const addChatContact = vi.fn(() => Promise.resolve());
     const { port } = makePort({ addChatContact });
     wrap(<ChatWorkspace port={port} />);
@@ -257,7 +260,7 @@ describe('ChatWorkspace', () => {
     await waitFor(() => expect(addChatContact).toHaveBeenCalledWith('work', 'carol@example.org'));
   });
 
-  it('wires the roster panel\'s remove-contact control to the port, for the active account', async () => {
+  it("wires the roster panel's remove-contact control to the port, for the active account", async () => {
     const removeChatContact = vi.fn(() => Promise.resolve());
     const { port } = makePort({ removeChatContact });
     wrap(<ChatWorkspace port={port} />);
@@ -282,7 +285,15 @@ describe('ChatWorkspace', () => {
   it('renders a room header + toggles the member list for a room conversation', async () => {
     const { port, emit } = makePort({
       listChatConversations: () =>
-        Promise.resolve([conv({ id: 'room@conf', kind: 'room', address: 'room@conf', name: 'Room', topic: 'Weekly' })]),
+        Promise.resolve([
+          conv({
+            id: 'room@conf',
+            kind: 'room',
+            address: 'room@conf',
+            name: 'Room',
+            topic: 'Weekly',
+          }),
+        ]),
     });
     wrap(<ChatWorkspace port={port} />);
     fireEvent.click(await screen.findByRole('button', { name: /Room/ }));
@@ -303,7 +314,14 @@ describe('ChatWorkspace', () => {
             selfNick: 'me',
             subject: 'Weekly',
             occupants: {
-              Bea: { nick: 'Bea', realJid: null, affiliation: 'member', role: 'participant', presence: 'online', statusText: '' },
+              Bea: {
+                nick: 'Bea',
+                realJid: null,
+                affiliation: 'member',
+                role: 'participant',
+                presence: 'online',
+                statusText: '',
+              },
             },
           },
         },
@@ -319,7 +337,9 @@ describe('ChatWorkspace', () => {
   it('clicking a room member starts a DM with them (nick as the address, when no real JID)', async () => {
     const { port, emit } = makePort({
       listChatConversations: () =>
-        Promise.resolve([conv({ id: 'room@conf', kind: 'room', address: 'room@conf', name: 'Room' })]),
+        Promise.resolve([
+          conv({ id: 'room@conf', kind: 'room', address: 'room@conf', name: 'Room' }),
+        ]),
     });
     wrap(<ChatWorkspace port={port} />);
     fireEvent.click(await screen.findByRole('button', { name: /Room/ }));
@@ -336,7 +356,14 @@ describe('ChatWorkspace', () => {
             selfNick: 'me',
             subject: '',
             occupants: {
-              Bea: { nick: 'Bea', realJid: null, affiliation: 'member', role: 'participant', presence: 'online', statusText: '' },
+              Bea: {
+                nick: 'Bea',
+                realJid: null,
+                affiliation: 'member',
+                role: 'participant',
+                presence: 'online',
+                statusText: '',
+              },
             },
           },
         },
@@ -350,7 +377,9 @@ describe('ChatWorkspace', () => {
   it('clicking yourself in the room member list does nothing', async () => {
     const { port, emit } = makePort({
       listChatConversations: () =>
-        Promise.resolve([conv({ id: 'room@conf', kind: 'room', address: 'room@conf', name: 'Room' })]),
+        Promise.resolve([
+          conv({ id: 'room@conf', kind: 'room', address: 'room@conf', name: 'Room' }),
+        ]),
     });
     wrap(<ChatWorkspace port={port} />);
     fireEvent.click(await screen.findByRole('button', { name: /Room/ }));
@@ -367,7 +396,14 @@ describe('ChatWorkspace', () => {
             selfNick: 'me',
             subject: '',
             occupants: {
-              me: { nick: 'me', realJid: null, affiliation: 'member', role: 'participant', presence: 'online', statusText: '' },
+              me: {
+                nick: 'me',
+                realJid: null,
+                affiliation: 'member',
+                role: 'participant',
+                presence: 'online',
+                statusText: '',
+              },
             },
           },
         },
@@ -378,10 +414,12 @@ describe('ChatWorkspace', () => {
     expect(screen.getByRole('heading', { name: 'Room' })).toBeDefined();
   });
 
-  it('recognises the local user\'s own room messages by occupant nick, not by address equality', async () => {
+  it("recognises the local user's own room messages by occupant nick, not by address equality", async () => {
     const { port, emit } = makePort({
       listChatConversations: () =>
-        Promise.resolve([conv({ id: 'room@conf', kind: 'room', address: 'room@conf', name: 'Room' })]),
+        Promise.resolve([
+          conv({ id: 'room@conf', kind: 'room', address: 'room@conf', name: 'Room' }),
+        ]),
       getChatHistory: () =>
         Promise.resolve({
           messages: [
@@ -408,9 +446,13 @@ describe('ChatWorkspace', () => {
     });
 
     await waitFor(() =>
-      expect(screen.getByText('my line').closest('.chat-msg')?.getAttribute('data-own')).toBe('true'),
+      expect(screen.getByText('my line').closest('.chat-msg')?.getAttribute('data-own')).toBe(
+        'true',
+      ),
     );
-    expect(screen.getByText('their line').closest('.chat-msg')?.getAttribute('data-own')).toBe('false');
+    expect(screen.getByText('their line').closest('.chat-msg')?.getAttribute('data-own')).toBe(
+      'false',
+    );
   });
 
   it("the New Chat dialog's Rooms tab discovers only when the port supports MUC, and joins from it", async () => {
@@ -487,7 +529,14 @@ describe('ChatWorkspace', () => {
       listChatAccounts: () =>
         Promise.resolve({
           accounts: [
-            { id: 'work', label: 'Libera', displayName: '', protocol: 'irc', color: null, order: 0 },
+            {
+              id: 'work',
+              label: 'Libera',
+              displayName: '',
+              protocol: 'irc',
+              color: null,
+              order: 0,
+            },
           ],
           states: { work: 'online' },
         }),
@@ -516,7 +565,14 @@ describe('ChatWorkspace', () => {
       listChatAccounts: () =>
         Promise.resolve({
           accounts: [
-            { id: 'work', label: 'Libera', displayName: '', protocol: 'irc', color: null, order: 0 },
+            {
+              id: 'work',
+              label: 'Libera',
+              displayName: '',
+              protocol: 'irc',
+              color: null,
+              order: 0,
+            },
           ],
           states: { work: 'online' },
         }),
@@ -550,7 +606,14 @@ describe('ChatWorkspace', () => {
       listChatAccounts: () =>
         Promise.resolve({
           accounts: [
-            { id: 'work', label: 'Libera', displayName: '', protocol: 'irc', color: null, order: 0 },
+            {
+              id: 'work',
+              label: 'Libera',
+              displayName: '',
+              protocol: 'irc',
+              color: null,
+              order: 0,
+            },
           ],
           states: { work: 'online' },
         }),
@@ -578,7 +641,12 @@ describe('ChatWorkspace', () => {
       emit({
         kind: 'change',
         accountId: 'work',
-        change: { kind: 'typing', conversationId: 'c1', senderAddress: 'bob@x.example', active: true },
+        change: {
+          kind: 'typing',
+          conversationId: 'c1',
+          senderAddress: 'bob@x.example',
+          active: true,
+        },
       });
     });
     expect(screen.getByText('typing…')).toBeDefined();
@@ -609,7 +677,10 @@ describe('ChatWorkspace', () => {
   it('hides archived conversations from the default list; "Show archived" reveals them', async () => {
     const { port } = makePort({
       listChatConversations: () =>
-        Promise.resolve([conv({ id: 'c1', name: 'Bob' }), conv({ id: 'c2', name: 'Ada', archived: true })]),
+        Promise.resolve([
+          conv({ id: 'c1', name: 'Bob' }),
+          conv({ id: 'c2', name: 'Ada', archived: true }),
+        ]),
     });
     wrap(<ChatWorkspace port={port} />);
     await screen.findByText('Bob');
@@ -627,7 +698,9 @@ describe('ChatWorkspace', () => {
   it('names who is typing in a room', async () => {
     const { port, emit } = makePort({
       listChatConversations: () =>
-        Promise.resolve([conv({ id: 'room@conf', kind: 'room', address: 'room@conf', name: 'Room' })]),
+        Promise.resolve([
+          conv({ id: 'room@conf', kind: 'room', address: 'room@conf', name: 'Room' }),
+        ]),
     });
     wrap(<ChatWorkspace port={port} />);
     fireEvent.click(await screen.findByRole('button', { name: /Room/ }));
@@ -636,12 +709,22 @@ describe('ChatWorkspace', () => {
       emit({
         kind: 'change',
         accountId: 'work',
-        change: { kind: 'typing', conversationId: 'room@conf', senderAddress: 'room@conf/Bea', active: true },
+        change: {
+          kind: 'typing',
+          conversationId: 'room@conf',
+          senderAddress: 'room@conf/Bea',
+          active: true,
+        },
       });
       emit({
         kind: 'change',
         accountId: 'work',
-        change: { kind: 'typing', conversationId: 'room@conf', senderAddress: 'room@conf/Cy', active: true },
+        change: {
+          kind: 'typing',
+          conversationId: 'room@conf',
+          senderAddress: 'room@conf/Cy',
+          active: true,
+        },
       });
     });
     expect(screen.getByText('Bea & Cy are typing…')).toBeDefined();

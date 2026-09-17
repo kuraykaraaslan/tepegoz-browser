@@ -26,7 +26,11 @@ describe('MessageMedia', () => {
   });
 
   it('NEVER renders a src from a non-local URL — treats it as unavailable', async () => {
-    const resolve = resolveTo({ url: 'https://evil.example/track.png', mime: 'image/png', name: 'x' });
+    const resolve = resolveTo({
+      url: 'https://evil.example/track.png',
+      mime: 'image/png',
+      name: 'x',
+    });
     wrap(<MessageMedia mediaRef="ref-2" resolveMedia={resolve} />);
     await screen.findByText('Attachment unavailable');
     expect(screen.queryByRole('img')).toBeNull();
@@ -86,7 +90,9 @@ describe('MessageMedia', () => {
   });
 
   it('shows unavailable when resolveMedia rejects', async () => {
-    wrap(<MessageMedia mediaRef="boom" resolveMedia={vi.fn(() => Promise.reject(new Error('io')))} />);
+    wrap(
+      <MessageMedia mediaRef="boom" resolveMedia={vi.fn(() => Promise.reject(new Error('io')))} />,
+    );
     await screen.findByText('Attachment unavailable');
   });
 });

@@ -51,7 +51,9 @@ describe('ircMessageToEvent — PRIVMSG', () => {
 
   it('uses the server-time tag for originTs, msgid for protocolId', () => {
     const e = ev('@time=2026-01-02T03:04:05.000Z;msgid=abc :bob!b@h PRIVMSG #c :yo');
-    expect(e?.type === 'message' && e.message.originTs).toBe(Date.parse('2026-01-02T03:04:05.000Z'));
+    expect(e?.type === 'message' && e.message.originTs).toBe(
+      Date.parse('2026-01-02T03:04:05.000Z'),
+    );
     expect(e?.type === 'message' && e.message.protocolId).toBe('abc');
   });
 
@@ -74,7 +76,9 @@ describe('ircMessageToEvent — PRIVMSG', () => {
   });
 
   it('folds RFC-1459 special chars in the channel id (the default casemapping)', () => {
-    expect(ev(':bob!b@h PRIVMSG #Foo[Bar] :x')).toMatchObject({ message: { conversationId: '#foo{bar}' } });
+    expect(ev(':bob!b@h PRIVMSG #Foo[Bar] :x')).toMatchObject({
+      message: { conversationId: '#foo{bar}' },
+    });
   });
 
   it('an `ascii` casemapping folds only A–Z — brackets are left alone', () => {
@@ -139,15 +143,30 @@ describe('ISUPPORT PREFIX + RPL_NAMREPLY (353)', () => {
   it('fans a 353 line out to one joined membership per occupant, op → moderator', () => {
     const msg = parseIrcLine(':srv 353 ada = #Chan :@bea +cem ada')!;
     expect(namesReplyToEvents(msg, ctx)).toMatchObject([
-      { type: 'room-membership', conversationId: '#chan', address: '#chan/bea', joined: true, role: 'moderator', self: false },
+      {
+        type: 'room-membership',
+        conversationId: '#chan',
+        address: '#chan/bea',
+        joined: true,
+        role: 'moderator',
+        self: false,
+      },
       { type: 'room-membership', address: '#chan/cem', joined: true, role: 'participant' },
-      { type: 'room-membership', address: '#chan/ada', joined: true, role: 'participant', self: true },
+      {
+        type: 'room-membership',
+        address: '#chan/ada',
+        joined: true,
+        role: 'participant',
+        self: true,
+      },
     ]);
   });
 
   it('honours a non-default PREFIX symbol set and the negotiated casemapping', () => {
     const msg = parseIrcLine(':srv 353 ada = #Foo[1] :%hank ~ida')!;
-    expect(namesReplyToEvents(msg, { ...ctx, prefixSymbols: '~&@%+', casemapping: 'ascii' })).toMatchObject([
+    expect(
+      namesReplyToEvents(msg, { ...ctx, prefixSymbols: '~&@%+', casemapping: 'ascii' }),
+    ).toMatchObject([
       { address: '#foo[1]/hank', role: 'moderator' },
       { address: '#foo[1]/ida', role: 'moderator' },
     ]);
@@ -189,7 +208,12 @@ describe('ircMessageToEvent — membership', () => {
     };
     expect(line(':op!o@h KICK #Chan bob :rude')).toMatchObject({
       type: 'message',
-      message: { conversationId: '#chan', kind: 'system', senderAddress: 'op', body: 'op kicked bob: rude' },
+      message: {
+        conversationId: '#chan',
+        kind: 'system',
+        senderAddress: 'op',
+        body: 'op kicked bob: rude',
+      },
     });
     expect(line(':op!o@h KICK #Chan bob')).toMatchObject({
       message: { kind: 'system', body: 'op kicked bob' },

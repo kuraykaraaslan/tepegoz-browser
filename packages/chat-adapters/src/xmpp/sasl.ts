@@ -111,13 +111,9 @@ function bufferSource(view: Uint8Array): Uint8Array<ArrayBuffer> {
 }
 
 async function hmac(key: Uint8Array, data: Uint8Array, hash: ScramHash): Promise<Uint8Array> {
-  const k = await crypto.subtle.importKey(
-    'raw',
-    bufferSource(key),
-    { name: 'HMAC', hash },
-    false,
-    ['sign'],
-  );
+  const k = await crypto.subtle.importKey('raw', bufferSource(key), { name: 'HMAC', hash }, false, [
+    'sign',
+  ]);
   return new Uint8Array(await crypto.subtle.sign('HMAC', k, bufferSource(data)));
 }
 
@@ -188,7 +184,8 @@ export async function scramFinal(
   const parsed = parseServerFirst(serverFirst);
   if (parsed === null) return null;
   // The server must extend our nonce, not merely echo it.
-  if (!parsed.nonce.startsWith(state.clientNonce) || parsed.nonce === state.clientNonce) return null;
+  if (!parsed.nonce.startsWith(state.clientNonce) || parsed.nonce === state.clientNonce)
+    return null;
 
   const channelBinding = bytesToB64(enc.encode(state.gs2Header));
   const clientFinalNoProof = `c=${channelBinding},r=${parsed.nonce}`;

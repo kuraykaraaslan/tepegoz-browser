@@ -24,7 +24,11 @@ export interface RoomBrowserProps {
   addressPlaceholder?: string;
 }
 
-type Phase = { kind: 'idle' } | { kind: 'loading' } | { kind: 'loaded'; rooms: RoomListing[] } | { kind: 'error' };
+type Phase =
+  | { kind: 'idle' }
+  | { kind: 'loading' }
+  | { kind: 'loaded'; rooms: RoomListing[] }
+  | { kind: 'error' };
 
 /**
  * Browse a conference service's public rooms, filter them, or join one by address. Presentational —
@@ -129,7 +133,11 @@ export function RoomBrowser({
             <ul className="chat-room-browser__list">
               {rooms.map((room) => (
                 <li key={room.jid}>
-                  <button type="button" className="chat-room-browser__room" onClick={() => join(room.jid)}>
+                  <button
+                    type="button"
+                    className="chat-room-browser__room"
+                    onClick={() => join(room.jid)}
+                  >
                     <span className="chat-room-browser__name">{roomListingLabel(room)}</span>
                     {room.occupants !== null && (
                       <span className="chat-room-browser__count">

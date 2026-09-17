@@ -130,7 +130,13 @@ describe('registerDataRightsIpc', () => {
       },
     ]);
     historyStore.search.mockReturnValue([
-      { url: 'https://example.com/kaya', title: 'Kaya profile', ts: 1500, visitCount: 2, favicon: null },
+      {
+        url: 'https://example.com/kaya',
+        title: 'Kaya profile',
+        ts: 1500,
+        visitCount: 2,
+        favicon: null,
+      },
     ]);
     bookmarkStore.search.mockReturnValue([
       { url: 'https://example.com/kaya-bm', title: 'Kaya (bookmarked)', ts: 1600, favicon: null },
@@ -139,7 +145,12 @@ describe('registerDataRightsIpc', () => {
       // searchDownloadsForSubject runs a REAL filter (downloads have no fold-index to pre-filter by,
       // unlike history/bookmarks above), so unlike those mocks this fixture must actually contain the
       // subject for the match to happen.
-      { id: 'd1', filename: 'kaya@example.com-report.pdf', url: 'https://example.com/d', createdAt: 1700 },
+      {
+        id: 'd1',
+        filename: 'kaya@example.com-report.pdf',
+        url: 'https://example.com/d',
+        createdAt: 1700,
+      },
       { id: 'd2', filename: 'unrelated.zip', url: 'https://example.com/z', createdAt: 1800 },
     ]);
 

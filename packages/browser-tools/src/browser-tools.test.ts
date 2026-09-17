@@ -115,7 +115,9 @@ describe('registerBrowserTools', () => {
   });
 
   it('registers browser_list_pages as read, anchored on the current page URL', async () => {
-    const discoverSitemap = vi.fn(() => Promise.resolve(['https://x/pricing', 'https://x/contact']));
+    const discoverSitemap = vi.fn(() =>
+      Promise.resolve(['https://x/pricing', 'https://x/contact']),
+    );
     registerBrowserTools({ host: fakeHost({ discoverSitemap }) });
 
     const descriptor = CapabilityRegistry.list().find((d) => d.id === 'browser_list_pages');
@@ -774,7 +776,9 @@ describe('browser_search_elements (S2)', () => {
     query: string,
     host?: Partial<BrowserHost>,
   ): Promise<Record<string, unknown>> => {
-    registerBrowserTools({ host: fakeHost({ snapshotElements: () => Promise.resolve(page), ...host }) });
+    registerBrowserTools({
+      host: fakeHost({ snapshotElements: () => Promise.resolve(page), ...host }),
+    });
     const tool = CapabilityRegistry.get('browser_search_elements');
     return (await tool?.handler({ query })) as Record<string, unknown>;
   };
@@ -787,7 +791,9 @@ describe('browser_search_elements (S2)', () => {
 
   it('matches case-insensitively against name, tag, role and href', async () => {
     const byName = await run('checkout');
-    expect(byName['matches']).toEqual([{ ref: 1, role: 'button', name: 'Checkout now', tag: 'button' }]);
+    expect(byName['matches']).toEqual([
+      { ref: 1, role: 'button', name: 'Checkout now', tag: 'button' },
+    ]);
 
     CapabilityRegistry.reset();
     const byHref = await run('unsub');
@@ -1049,7 +1055,9 @@ describe('drag (S3 PR6 spike)', () => {
     const native = await drag(fakeHost({ dragElement: () => Promise.resolve({ mode: 'native' }) }));
     expect(native['dragMode']).toBe('native');
     CapabilityRegistry.reset();
-    const pointer = await drag(fakeHost({ dragElement: () => Promise.resolve({ mode: 'pointer' }) }));
+    const pointer = await drag(
+      fakeHost({ dragElement: () => Promise.resolve({ mode: 'pointer' }) }),
+    );
     expect(pointer['dragMode']).toBe('pointer');
   });
 

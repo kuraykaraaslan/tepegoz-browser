@@ -1,12 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ProcessRow } from '@tepegoz/desktop-ipc';
-import {
-  formatBytes,
-  formatCpu,
-  sortRows,
-  sortRowsByColumn,
-  totals,
-} from './process-page-helpers';
+import { formatBytes, formatCpu, sortRows, sortRowsByColumn, totals } from './process-page-helpers';
 
 function row(over: Partial<ProcessRow>): ProcessRow {
   return {

@@ -9,10 +9,17 @@ import { profileSpawnCommand } from './profile-launcher';
  * process tree); elsewhere a plain detached spawn is enough.
  */
 describe('profileSpawnCommand', () => {
-  const args = ['--user-data-dir=C:\\Users\\a b\\tepegoz\\Profiles\\profile-1', '--profile-id=profile-1'];
+  const args = [
+    '--user-data-dir=C:\\Users\\a b\\tepegoz\\Profiles\\profile-1',
+    '--profile-id=profile-1',
+  ];
 
   it('routes the Windows launch through `start` so it breaks out of the process tree', () => {
-    const { command, args: spawnArgs, shell } = profileSpawnCommand('C:\\app\\electron.exe', args, 'win32');
+    const {
+      command,
+      args: spawnArgs,
+      shell,
+    } = profileSpawnCommand('C:\\app\\electron.exe', args, 'win32');
     expect(shell).toBe(true);
     expect(spawnArgs).toEqual([]);
     expect(command).toBe(
@@ -27,7 +34,11 @@ describe('profileSpawnCommand', () => {
   });
 
   it('spawns the exe directly on POSIX (detached is enough there)', () => {
-    const { command, args: spawnArgs, shell } = profileSpawnCommand('/opt/tepegoz/electron', args, 'linux');
+    const {
+      command,
+      args: spawnArgs,
+      shell,
+    } = profileSpawnCommand('/opt/tepegoz/electron', args, 'linux');
     expect(shell).toBe(false);
     expect(command).toBe('/opt/tepegoz/electron');
     expect(spawnArgs).toEqual(args);

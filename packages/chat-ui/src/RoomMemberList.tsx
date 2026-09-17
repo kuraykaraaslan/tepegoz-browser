@@ -39,7 +39,11 @@ export function RoomMemberList({ room, onSelectMember }: Readonly<RoomMemberList
         {members.map((occupant) => {
           const badge = affiliationBadge(occupant.affiliation, occupant.role, s.room);
           return (
-            <li key={occupant.nick} className="chat-room-members__row" data-affiliation={occupant.affiliation}>
+            <li
+              key={occupant.nick}
+              className="chat-room-members__row"
+              data-affiliation={occupant.affiliation}
+            >
               <button
                 type="button"
                 className="chat-room-members__pick"

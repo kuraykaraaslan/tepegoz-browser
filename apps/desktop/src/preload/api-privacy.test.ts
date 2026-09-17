@@ -11,5 +11,7 @@ const { privacyApi } = await import('./api-privacy');
 
 it('sends the subject through to main untouched', () => {
   void privacyApi.exportDataRights({ subject: 'kaya@example.com' });
-  expect(invoke).toHaveBeenCalledWith(IpcChannels.dataRightsExport, { subject: 'kaya@example.com' });
+  expect(invoke).toHaveBeenCalledWith(IpcChannels.dataRightsExport, {
+    subject: 'kaya@example.com',
+  });
 });

@@ -36,7 +36,9 @@ function parseOne(xml: string): XmlElement {
 describe('stanzaToEvent — messages', () => {
   it('maps a chat message to a message event', () => {
     const ev = stanzaToEvent(
-      parseOne(`<message from="bob@x.com/phone" to="ada@x.com" type="chat" id="m1"><body>merhaba</body></message>`),
+      parseOne(
+        `<message from="bob@x.com/phone" to="ada@x.com" type="chat" id="m1"><body>merhaba</body></message>`,
+      ),
       ctx,
     );
     expect(ev?.type).toBe('message');
@@ -56,7 +58,8 @@ describe('stanzaToEvent — messages', () => {
       ),
       ctx,
     );
-    if (ev?.type === 'message') expect(ev.message.originTs).toBe(Date.parse('2020-01-01T00:00:00Z'));
+    if (ev?.type === 'message')
+      expect(ev.message.originTs).toBe(Date.parse('2020-01-01T00:00:00Z'));
   });
 
   it('maps XEP-0308 correction to a message-edit', () => {
@@ -81,12 +84,19 @@ describe('stanzaToEvent — messages', () => {
 
   it('maps a delivery receipt and a read marker', () => {
     const delivered = stanzaToEvent(
-      parseOne(`<message from="bob@x.com/p" type="chat"><received xmlns="urn:xmpp:receipts" id="m1"/></message>`),
+      parseOne(
+        `<message from="bob@x.com/p" type="chat"><received xmlns="urn:xmpp:receipts" id="m1"/></message>`,
+      ),
       ctx,
     );
-    expect(delivered).toMatchObject({ type: 'receipt', receipt: { kind: 'delivered', messageId: 'm1' } });
+    expect(delivered).toMatchObject({
+      type: 'receipt',
+      receipt: { kind: 'delivered', messageId: 'm1' },
+    });
     const read = stanzaToEvent(
-      parseOne(`<message from="bob@x.com/p" type="chat"><displayed xmlns="urn:xmpp:chat-markers:0" id="m1"/></message>`),
+      parseOne(
+        `<message from="bob@x.com/p" type="chat"><displayed xmlns="urn:xmpp:chat-markers:0" id="m1"/></message>`,
+      ),
       ctx,
     );
     expect(read).toMatchObject({ type: 'receipt', receipt: { kind: 'read' } });
@@ -94,7 +104,9 @@ describe('stanzaToEvent — messages', () => {
 
   it('maps a chat-state notification to typing (composing → active:true)', () => {
     const ev = stanzaToEvent(
-      parseOne(`<message from="bob@x.com/p" type="chat"><composing xmlns="http://jabber.org/protocol/chatstates"/></message>`),
+      parseOne(
+        `<message from="bob@x.com/p" type="chat"><composing xmlns="http://jabber.org/protocol/chatstates"/></message>`,
+      ),
       ctx,
     );
     expect(ev).toMatchObject({ type: 'typing', active: true, senderAddress: 'bob@x.com' });
@@ -106,12 +118,16 @@ describe('stanzaToEvent — messages', () => {
 
   it('falls back to now when <delay/> has a bad or missing stamp', () => {
     const bad = stanzaToEvent(
-      parseOne(`<message from="b@x.com/p" type="chat" id="m"><body>x</body><delay xmlns="urn:xmpp:delay" stamp="not-a-date"/></message>`),
+      parseOne(
+        `<message from="b@x.com/p" type="chat" id="m"><body>x</body><delay xmlns="urn:xmpp:delay" stamp="not-a-date"/></message>`,
+      ),
       ctx,
     );
     if (bad?.type === 'message') expect(bad.message.originTs).toBe(1000);
     const noStamp = stanzaToEvent(
-      parseOne(`<message from="b@x.com/p" type="chat" id="m"><body>x</body><delay xmlns="urn:xmpp:delay"/></message>`),
+      parseOne(
+        `<message from="b@x.com/p" type="chat" id="m"><body>x</body><delay xmlns="urn:xmpp:delay"/></message>`,
+      ),
       ctx,
     );
     if (noStamp?.type === 'message') expect(noStamp.message.originTs).toBe(1000);
@@ -129,7 +145,9 @@ describe('stanzaToEvent — messages', () => {
 
   it('a groupchat message takes senderName from the occupant resource', () => {
     const ev = stanzaToEvent(
-      parseOne(`<message from="room@conf.x.com/Cem" type="groupchat" id="g1"><body>selam</body></message>`),
+      parseOne(
+        `<message from="room@conf.x.com/Cem" type="groupchat" id="g1"><body>selam</body></message>`,
+      ),
       ctx,
     );
     if (ev?.type === 'message') {
@@ -142,7 +160,9 @@ describe('stanzaToEvent — messages', () => {
   it('a correction with an empty body is dropped', () => {
     expect(
       stanzaToEvent(
-        parseOne(`<message from="b@x.com/p" type="chat"><replace xmlns="urn:xmpp:message-correct:0" id="m1"/></message>`),
+        parseOne(
+          `<message from="b@x.com/p" type="chat"><replace xmlns="urn:xmpp:message-correct:0" id="m1"/></message>`,
+        ),
         ctx,
       ),
     ).toBeNull();
@@ -160,8 +180,16 @@ describe('stanzaToEvent — messages', () => {
 describe('stanzaToEvent — presence & roster', () => {
   it('maps presence show/status across all show values', () => {
     expect(
-      stanzaToEvent(parseOne(`<presence from="b@x.com/p"><show>dnd</show><status>busy</status></presence>`), ctx),
-    ).toMatchObject({ type: 'presence', address: 'b@x.com/p', presence: 'dnd', statusText: 'busy' });
+      stanzaToEvent(
+        parseOne(`<presence from="b@x.com/p"><show>dnd</show><status>busy</status></presence>`),
+        ctx,
+      ),
+    ).toMatchObject({
+      type: 'presence',
+      address: 'b@x.com/p',
+      presence: 'dnd',
+      statusText: 'busy',
+    });
     expect(
       stanzaToEvent(parseOne(`<presence from="b@x.com/p"><show>away</show></presence>`), ctx),
     ).toMatchObject({ presence: 'away' });
@@ -178,9 +206,7 @@ describe('stanzaToEvent — presence & roster', () => {
       stanzaToEvent(parseOne(`<presence from="bob@x.com/p" type="unavailable"/>`), ctx),
     ).toMatchObject({ presence: 'offline' });
     expect(stanzaToEvent(parseOne(`<presence from="ada@x.com/p"/>`), ctx)).toBeNull();
-    expect(
-      stanzaToEvent(parseOne(`<presence from="c@x.com" type="subscribe"/>`), ctx),
-    ).toBeNull();
+    expect(stanzaToEvent(parseOne(`<presence from="c@x.com" type="subscribe"/>`), ctx)).toBeNull();
   });
 
   it('maps a roster-set push to a roster-change with groups', () => {
@@ -231,7 +257,9 @@ describe('stanzaToEvent — presence & roster', () => {
     ).toBeNull();
     expect(
       stanzaToEvent(
-        parseOne(`<iq type="get"><query xmlns="jabber:iq:roster"><item jid="c@x.com"/></query></iq>`),
+        parseOne(
+          `<iq type="get"><query xmlns="jabber:iq:roster"><item jid="c@x.com"/></query></iq>`,
+        ),
         ctx,
       ),
     ).toBeNull();
@@ -244,7 +272,9 @@ describe('stanzaToEvent — presence & roster', () => {
   });
 
   it('a message with no routable peer returns null; a to-only message uses the to jid', () => {
-    expect(stanzaToEvent(parseOne(`<message type="chat"><body>x</body></message>`), ctx)).toBeNull();
+    expect(
+      stanzaToEvent(parseOne(`<message type="chat"><body>x</body></message>`), ctx),
+    ).toBeNull();
     const toOnly = stanzaToEvent(
       parseOne(`<message to="bob@x.com" type="chat" id="m"><body>x</body></message>`),
       ctx,
@@ -272,14 +302,23 @@ describe('outgoing builders', () => {
   });
 
   it('buildMessage carries a correction id and a receipt request', () => {
-    const xml = buildMessage({ to: 'b@x', body: 'x', id: 'm', replaceId: 'old', requestReceipt: true });
+    const xml = buildMessage({
+      to: 'b@x',
+      body: 'x',
+      id: 'm',
+      replaceId: 'old',
+      requestReceipt: true,
+    });
     expect(xml).toContain('urn:xmpp:message-correct:0');
     expect(xml).toContain('<request xmlns="urn:xmpp:receipts"/>');
   });
 
   it('round-trips: buildMessage → parse → stanzaToEvent', () => {
     const xml = buildMessage({ to: 'bob@x.com', body: 'ping', id: 'm10', groupchat: true });
-    const ev = stanzaToEvent({ ...parseOne(xml), attrs: { ...parseOne(xml).attrs, from: 'room@x.com/ada' } }, ctx);
+    const ev = stanzaToEvent(
+      { ...parseOne(xml), attrs: { ...parseOne(xml).attrs, from: 'room@x.com/ada' } },
+      ctx,
+    );
     if (ev?.type === 'message') expect(ev.message.body).toBe('ping');
   });
 
@@ -288,7 +327,9 @@ describe('outgoing builders', () => {
     expect(buildReceipt('b@x', 'm1')).toContain('<received xmlns="urn:xmpp:receipts" id="m1"/>');
     expect(buildReadMarker('b@x', 'm1')).toContain('urn:xmpp:chat-markers:0');
     expect(buildPresence()).toBe('<presence/>');
-    expect(buildPresence('away', 'brb')).toBe('<presence><show>away</show><status>brb</status></presence>');
+    expect(buildPresence('away', 'brb')).toBe(
+      '<presence><show>away</show><status>brb</status></presence>',
+    );
   });
 
   it('buildReactions sends the full set (XEP-0444), chat by default and groupchat when asked', () => {
@@ -308,7 +349,7 @@ describe('outgoing builders', () => {
     );
   });
 
-  it('buildSubscribeRequest asks to see the contact\'s presence', () => {
+  it("buildSubscribeRequest asks to see the contact's presence", () => {
     expect(buildSubscribeRequest('bob@x.com')).toBe('<presence to="bob@x.com" type="subscribe"/>');
   });
 

@@ -28,8 +28,7 @@ export interface RunReportStep {
 }
 
 export type RunReportTerminal =
-  | { known: false }
-  | { known: true; outcome: 'succeeded' | 'failed'; message: string; ts: number };
+  { known: false } | { known: true; outcome: 'succeeded' | 'failed'; message: string; ts: number };
 
 export interface RunReport {
   runId: string;
@@ -184,9 +183,7 @@ export function renderRunReportMarkdown(report: RunReport): string {
   }
   if (report.terminal.known) {
     lines.push('');
-    lines.push(
-      `## Terminal — ${report.terminal.outcome === 'succeeded' ? 'Succeeded' : 'Failed'}`,
-    );
+    lines.push(`## Terminal — ${report.terminal.outcome === 'succeeded' ? 'Succeeded' : 'Failed'}`);
     lines.push('');
     lines.push(report.terminal.message);
   }

@@ -20,7 +20,8 @@ import type { ChatApi } from './api-chat';
 
 /** The exact surface bridged to `window.tepegoz` in the renderer. */
 export interface TepegozApi
-  extends AppApi,
+  extends
+    AppApi,
     TabsApi,
     AgentApi,
     ExtensionsApi,

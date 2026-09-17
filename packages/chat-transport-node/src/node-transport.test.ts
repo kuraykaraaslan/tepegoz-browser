@@ -97,8 +97,15 @@ describe('NodeChatTransport — upgradeTLS', () => {
 
   it('rejects a stream it did not create', async () => {
     const t = new NodeChatTransport({ dial: () => Promise.resolve(new FakeRaw()) });
-    const foreign = { write: () => undefined, onData: () => undefined, onClose: () => undefined, close: () => undefined };
-    await expect(t.upgradeTLS(foreign, { host: 'x' })).rejects.toThrow(/not created by this transport/);
+    const foreign = {
+      write: () => undefined,
+      onData: () => undefined,
+      onClose: () => undefined,
+      close: () => undefined,
+    };
+    await expect(t.upgradeTLS(foreign, { host: 'x' })).rejects.toThrow(
+      /not created by this transport/,
+    );
   });
 });
 
@@ -118,11 +125,17 @@ type FetchFn = (url: string, init?: RequestInit) => Promise<Response>;
 
 describe('NodeChatTransport — fetch', () => {
   it('maps method/headers/body and flattens response headers', async () => {
-    const fetchMock = vi.fn<FetchFn>().mockResolvedValue(
-      new Response('body-text', { status: 201, headers: { 'content-type': 'text/plain' } }),
-    );
+    const fetchMock = vi
+      .fn<FetchFn>()
+      .mockResolvedValue(
+        new Response('body-text', { status: 201, headers: { 'content-type': 'text/plain' } }),
+      );
     const t = new NodeChatTransport({ fetch: fetchMock as unknown as typeof fetch });
-    const res = await t.fetch('https://x.com/a', { method: 'POST', headers: { A: '1' }, body: 'q' });
+    const res = await t.fetch('https://x.com/a', {
+      method: 'POST',
+      headers: { A: '1' },
+      body: 'q',
+    });
     expect(res.status).toBe(201);
     expect(res.headers['content-type']).toBe('text/plain');
     expect(await res.text()).toBe('body-text');
@@ -145,17 +158,20 @@ describe('NodeChatTransport — fetch', () => {
     const payload = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a]);
     const fetchMock = vi
       .fn<FetchFn>()
-      .mockResolvedValue(new Response(payload, { status: 200, headers: { 'content-type': 'image/png' } }));
+      .mockResolvedValue(
+        new Response(payload, { status: 200, headers: { 'content-type': 'image/png' } }),
+      );
     const t = new NodeChatTransport({ fetch: fetchMock as unknown as typeof fetch });
     const res = await t.fetch('https://x.com/pic.png');
     expect(Array.from(await res.bytes())).toEqual(Array.from(payload));
   });
 
   it('aborts on timeout', async () => {
-    const fetchMock = vi.fn<FetchFn>((_url, opts) =>
-      new Promise<Response>((_resolve, reject) => {
-        opts?.signal?.addEventListener('abort', () => reject(new Error('aborted')));
-      }),
+    const fetchMock = vi.fn<FetchFn>(
+      (_url, opts) =>
+        new Promise<Response>((_resolve, reject) => {
+          opts?.signal?.addEventListener('abort', () => reject(new Error('aborted')));
+        }),
     );
     const t = new NodeChatTransport({ fetch: fetchMock as unknown as typeof fetch });
     await expect(t.fetch('https://x.com', { timeoutMs: 5 })).rejects.toThrow(/aborted/);

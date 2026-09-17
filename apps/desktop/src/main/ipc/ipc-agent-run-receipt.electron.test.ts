@@ -110,7 +110,17 @@ describe('registerAgentRunReceiptIpc', () => {
 
   it('409s with a clear reason when the run predates chaining (unchained events)', async () => {
     journal.readRecent.mockReturnValue([
-      { lsn: 1, id: 'e1', type: 'AgentStepExecuted', ts: 1000, actor: 'agent', correlationId: 'run-1', payload: {}, redacted: true, deviceId: 'device-1' },
+      {
+        lsn: 1,
+        id: 'e1',
+        type: 'AgentStepExecuted',
+        ts: 1000,
+        actor: 'agent',
+        correlationId: 'run-1',
+        payload: {},
+        redacted: true,
+        deviceId: 'device-1',
+      },
     ]);
     await expect(call({ runId: 'run-1' })).rejects.toThrow('predates Notary hash-chaining');
     expect(fsHost.writeExport).not.toHaveBeenCalled();
@@ -143,6 +153,8 @@ describe('registerAgentRunReceiptIpc', () => {
     expect(written).toMatchObject({ correlationId: 'run-1', deviceId: 'device-1' });
     // The whole point: what gets written is a receipt a standalone verifier (nothing but the file)
     // would PASS — not merely well-formed JSON.
-    expect(verifyReceipt(written as Parameters<typeof verifyReceipt>[0])).toEqual({ status: 'PASS' });
+    expect(verifyReceipt(written as Parameters<typeof verifyReceipt>[0])).toEqual({
+      status: 'PASS',
+    });
   });
 });

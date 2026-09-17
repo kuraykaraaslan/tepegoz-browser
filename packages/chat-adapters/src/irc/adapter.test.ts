@@ -67,7 +67,15 @@ class FakeServer implements ChatTransport {
 const creds = (over: Partial<IrcServer> = {}): ChatAccountCreds => ({
   accountId: 'acc',
   secret: 'pw',
-  server: { protocol: 'irc', server: 'irc.example', port: 6697, tls: true, nick: 'ada', sasl: false, ...over },
+  server: {
+    protocol: 'irc',
+    server: 'irc.example',
+    port: 6697,
+    tls: true,
+    nick: 'ada',
+    sasl: false,
+    ...over,
+  },
 });
 
 async function connected(server = new FakeServer()) {
@@ -87,7 +95,12 @@ describe('IrcAdapter — connect', () => {
     const { server, session } = await connected();
     expect(server.lastOpen).toMatchObject({ host: 'irc.example', port: 6697, tls: true });
     expect(session.nick).toBe('ada');
-    expect(server.written.slice(0, 4)).toEqual(['CAP LS 302', 'PASS pw', 'NICK ada', 'USER ada 0 * ada']);
+    expect(server.written.slice(0, 4)).toEqual([
+      'CAP LS 302',
+      'PASS pw',
+      'NICK ada',
+      'USER ada 0 * ada',
+    ]);
   });
 
   it('answers PING with PONG while connected', async () => {
@@ -132,9 +145,21 @@ describe('IrcAdapter — connect', () => {
     server.send(':irc.example 366 ada #chan :End of /NAMES list.'); // ignored
     server.send(':bob!b@h PRIVMSG #chan :hi'); // proves the 366 did not stall the stream
 
-    expect((await it.next()).value).toMatchObject({ address: '#chan/alice', joined: true, role: 'moderator' });
-    expect((await it.next()).value).toMatchObject({ address: '#chan/bob', joined: true, role: 'moderator' });
-    expect((await it.next()).value).toMatchObject({ address: '#chan/cara', joined: true, role: 'participant' });
+    expect((await it.next()).value).toMatchObject({
+      address: '#chan/alice',
+      joined: true,
+      role: 'moderator',
+    });
+    expect((await it.next()).value).toMatchObject({
+      address: '#chan/bob',
+      joined: true,
+      role: 'moderator',
+    });
+    expect((await it.next()).value).toMatchObject({
+      address: '#chan/cara',
+      joined: true,
+      role: 'participant',
+    });
     expect((await it.next()).value).toMatchObject({ type: 'message', message: { body: 'hi' } });
   });
 
@@ -188,7 +213,11 @@ describe('IrcAdapter — live traffic', () => {
     const session = (await p) as IrcSession;
 
     const it = adapter.events(session)[Symbol.asyncIterator]();
-    const sendP = adapter.sendMessage(session, '#chan', { body: 'yo', replyToId: null, mediaPath: null });
+    const sendP = adapter.sendMessage(session, '#chan', {
+      body: 'yo',
+      replyToId: null,
+      mediaPath: null,
+    });
     await tick();
     expect(server.lastWritten()).toBe('PRIVMSG #chan :yo');
 
@@ -198,7 +227,10 @@ describe('IrcAdapter — live traffic', () => {
     const receipt = await sendP;
     expect(receipt.protocolId).toBe('srv-echo-1');
     const echoed = await it.next();
-    expect(echoed.value).toMatchObject({ type: 'message', message: { protocolId: 'srv-echo-1', body: 'yo' } });
+    expect(echoed.value).toMatchObject({
+      type: 'message',
+      message: { protocolId: 'srv-echo-1', body: 'yo' },
+    });
   });
 
   it('with echo-message ACKed but no echo received, sendMessage still resolves (fallback id, not a hang)', async () => {
@@ -213,7 +245,11 @@ describe('IrcAdapter — live traffic', () => {
       server.send(':irc.example 001 ada :Welcome ada');
       const session = (await p) as IrcSession;
 
-      const receiptP = adapter.sendMessage(session, '#chan', { body: 'yo', replyToId: null, mediaPath: null });
+      const receiptP = adapter.sendMessage(session, '#chan', {
+        body: 'yo',
+        replyToId: null,
+        mediaPath: null,
+      });
       await vi.advanceTimersByTimeAsync(5_000);
       const receipt = await receiptP;
       expect(receipt.protocolId).toMatch(/^\d+~ada~yo$/);
@@ -451,7 +487,18 @@ describe('IrcAdapter — SASL + errors', () => {
   it('rejects a non-irc account', async () => {
     await expect(
       new IrcAdapter().connect(
-        { accountId: 'a', secret: 'x', server: { protocol: 'xmpp', jid: 'a@b', host: null, port: null, security: 'tls', wsUrl: null } },
+        {
+          accountId: 'a',
+          secret: 'x',
+          server: {
+            protocol: 'xmpp',
+            jid: 'a@b',
+            host: null,
+            port: null,
+            security: 'tls',
+            wsUrl: null,
+          },
+        },
         new FakeServer(),
       ),
     ).rejects.toThrow(/not an irc account/);
@@ -463,7 +510,9 @@ describe('IrcAdapter — flood protection', () => {
     void adapter.sendMessage(session, '#c', { body, replyToId: null, mediaPath: null });
   };
   const privmsgs = (server: FakeServer): string[] =>
-    server.written.filter((l) => l.startsWith('PRIVMSG #c :')).map((l) => l.slice('PRIVMSG #c :'.length));
+    server.written
+      .filter((l) => l.startsWith('PRIVMSG #c :'))
+      .map((l) => l.slice('PRIVMSG #c :'.length));
 
   it('lets a short burst through immediately, then paces the rest in order', async () => {
     const { adapter, server, session } = await connected();
@@ -517,7 +566,12 @@ describe('IrcAdapter — flood protection', () => {
   it('bounds the event queue for a stalled consumer (X-chat.10 memory)', async () => {
     const stream = { write: () => {}, onData: () => {}, onClose: () => {}, close: () => {} };
     const s = new IrcSession('acc', 'ada', stream);
-    const line = { type: 'error' as const, scope: 'account' as const, conversationId: null, message: 'x' };
+    const line = {
+      type: 'error' as const,
+      scope: 'account' as const,
+      conversationId: null,
+      message: 'x',
+    };
     for (let i = 0; i < 4_096 + 200; i += 1) s.push({ ...line });
     expect((s as unknown as { queue: unknown[] }).queue.length).toBe(4_096); // hard cap
     expect(s.droppedEvents).toBe(200);

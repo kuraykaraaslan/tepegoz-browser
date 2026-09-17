@@ -184,7 +184,11 @@ export async function maybeRunEval(): Promise<void> {
   // init finishes, so by the time this hook runs the agent's chat_* tools already see real seeded
   // data. There is no page to navigate to or read back, so this run skips both.
   const isChatFixture = process.env.TEPEGOZ_EVAL_CHAT_FIXTURE !== undefined;
-  if (prompt === undefined || outPath === undefined || (!isChatFixture && fixtureUrl === undefined)) {
+  if (
+    prompt === undefined ||
+    outPath === undefined ||
+    (!isChatFixture && fixtureUrl === undefined)
+  ) {
     Logger.error('[eval] TEPEGOZ_EVAL=1 but a required env var is missing', {
       prompt: prompt ?? '',
       fixtureUrl: fixtureUrl ?? '',

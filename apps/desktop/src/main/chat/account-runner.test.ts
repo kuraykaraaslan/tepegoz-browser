@@ -1,5 +1,10 @@
 import { describe, it, expect, vi } from 'vitest';
-import type { ChatAccount, ChatContact, ChatConversation, ChatMessage } from '@tepegoz/shared-types';
+import type {
+  ChatAccount,
+  ChatContact,
+  ChatConversation,
+  ChatMessage,
+} from '@tepegoz/shared-types';
 import { XMPP_CAPS } from '@tepegoz/chat-adapters';
 import { openDatabase, migrate, ChatStore } from '@tepegoz/persistence';
 import {
@@ -66,7 +71,14 @@ class FakeAdapter {
   listConversations = vi.fn(() => Promise.resolve([]));
   discoverRooms = vi.fn(() =>
     Promise.resolve([
-      { jid: 'g@conf', name: 'G', description: null, occupants: 2, passwordProtected: false, membersOnly: false },
+      {
+        jid: 'g@conf',
+        name: 'G',
+        description: null,
+        occupants: 2,
+        passwordProtected: false,
+        membersOnly: false,
+      },
     ]),
   );
   joinRoom = vi.fn((_s: unknown, jid: string) =>
@@ -92,7 +104,7 @@ class FakeAdapter {
   );
   setRoomTopic = vi.fn(() => Promise.resolve());
   inviteToRoom = vi.fn(() => Promise.resolve());
-  resolveMedia?= vi.fn((_s: unknown, ref: string) =>
+  resolveMedia? = vi.fn((_s: unknown, ref: string) =>
     ref.startsWith('mxc://')
       ? { url: `https://hs.example/media/${ref.slice(6)}`, headers: { authorization: 'Bearer t' } }
       : null,
@@ -105,7 +117,9 @@ class FakeStore implements ChatRunnerStore {
   contacts: ChatContact[] = [];
   redacted: Array<[string, string]> = [];
   upsertMessage(m: ChatMessage): void {
-    const i = this.messages.findIndex((x) => x.conversationId === m.conversationId && x.protocolId === m.protocolId);
+    const i = this.messages.findIndex(
+      (x) => x.conversationId === m.conversationId && x.protocolId === m.protocolId,
+    );
     if (i >= 0) this.messages[i] = m;
     else this.messages.push(m);
   }
@@ -146,7 +160,14 @@ const account: ChatAccount = {
   id: 'acc',
   label: 'Work',
   displayName: 'Ada',
-  server: { protocol: 'xmpp', jid: 'ada@example.com', host: null, port: null, security: 'tls', wsUrl: null },
+  server: {
+    protocol: 'xmpp',
+    jid: 'ada@example.com',
+    host: null,
+    port: null,
+    security: 'tls',
+    wsUrl: null,
+  },
   secretRef: 'chat:acc',
   color: null,
   order: 0,
@@ -286,10 +307,21 @@ describe('ChatAccountRunner — connect + ingest', () => {
     await tick();
     adapter.channel.push(incomingMessage('m1', 'oops'));
     await tick();
-    adapter.channel.push({ type: 'message-edit', conversationId: 'bob@example.com', protocolId: 'm1', body: 'fixed', editedAt: 9 });
+    adapter.channel.push({
+      type: 'message-edit',
+      conversationId: 'bob@example.com',
+      protocolId: 'm1',
+      body: 'fixed',
+      editedAt: 9,
+    });
     await tick();
     expect(store.messages[0]?.body).toBe('fixed');
-    adapter.channel.push({ type: 'message-redact', conversationId: 'bob@example.com', protocolId: 'm1', redactedAt: 10 });
+    adapter.channel.push({
+      type: 'message-redact',
+      conversationId: 'bob@example.com',
+      protocolId: 'm1',
+      redactedAt: 10,
+    });
     await tick();
     expect(store.redacted).toEqual([['bob@example.com', 'm1']]);
   });
@@ -307,22 +339,42 @@ describe('ChatAccountRunner — connect + ingest', () => {
     });
 
     // A newer message advances the preview.
-    adapter.channel.push({ ...incomingMessage('m2', 'newer'), message: { ...incomingMessage('m2', 'newer').message, originTs: 600 } });
+    adapter.channel.push({
+      ...incomingMessage('m2', 'newer'),
+      message: { ...incomingMessage('m2', 'newer').message, originTs: 600 },
+    });
     await tick();
     expect(store.conversations.get('bob@example.com')?.lastMessage?.protocolId).toBe('m2');
 
     // Editing the CURRENT last message refreshes its body in place.
-    adapter.channel.push({ type: 'message-edit', conversationId: 'bob@example.com', protocolId: 'm2', body: 'fixed', editedAt: 9 });
+    adapter.channel.push({
+      type: 'message-edit',
+      conversationId: 'bob@example.com',
+      protocolId: 'm2',
+      body: 'fixed',
+      editedAt: 9,
+    });
     await tick();
     expect(store.conversations.get('bob@example.com')?.lastMessage?.body).toBe('fixed');
 
     // Editing an OLDER message (not the current preview) must not resurrect it as the preview.
-    adapter.channel.push({ type: 'message-edit', conversationId: 'bob@example.com', protocolId: 'm1', body: 'edited old one', editedAt: 9 });
+    adapter.channel.push({
+      type: 'message-edit',
+      conversationId: 'bob@example.com',
+      protocolId: 'm1',
+      body: 'edited old one',
+      editedAt: 9,
+    });
     await tick();
     expect(store.conversations.get('bob@example.com')?.lastMessage?.protocolId).toBe('m2');
 
     // Redacting the CURRENT preview message clears its body and marks it redacted.
-    adapter.channel.push({ type: 'message-redact', conversationId: 'bob@example.com', protocolId: 'm2', redactedAt: 10 });
+    adapter.channel.push({
+      type: 'message-redact',
+      conversationId: 'bob@example.com',
+      protocolId: 'm2',
+      redactedAt: 10,
+    });
     await tick();
     expect(store.conversations.get('bob@example.com')?.lastMessage).toMatchObject({
       protocolId: 'm2',
@@ -498,7 +550,9 @@ describe('ChatAccountRunner — actions', () => {
       ...incomingMessage('h1', 'stale local copy').message,
       reactions: [{ emoji: '👍', count: 1, me: true }],
     });
-    adapter.historyPages = [{ ...incomingMessage('h1', 'fresh from server').message, originTs: 500 }];
+    adapter.historyPages = [
+      { ...incomingMessage('h1', 'fresh from server').message, originTs: 500 },
+    ];
     const page = await runner.history('bob@example.com', null);
     expect(page.messages).toHaveLength(1);
     expect(page.messages[0]?.body).toBe('stale local copy');
@@ -524,7 +578,17 @@ describe('ChatAccountRunner — actions', () => {
   it('roster persists every contact', async () => {
     const { runner, adapter, store } = await online();
     adapter.rosterContacts = [
-      { id: 'acc:c@x', accountId: 'acc', address: 'c@x', name: 'C', groups: [], presence: 'offline', statusText: '', subscription: 'both', blocked: false },
+      {
+        id: 'acc:c@x',
+        accountId: 'acc',
+        address: 'c@x',
+        name: 'C',
+        groups: [],
+        presence: 'offline',
+        statusText: '',
+        subscription: 'both',
+        blocked: false,
+      },
     ];
     expect(await runner.roster()).toHaveLength(1);
     expect(store.contacts).toHaveLength(1);
@@ -533,7 +597,14 @@ describe('ChatAccountRunner — actions', () => {
   it('discoverRooms passes through the adapter; joinRoom persists the room conversation', async () => {
     const { runner, adapter, store } = await online();
     expect(await runner.discoverRooms('conf.example')).toEqual([
-      { jid: 'g@conf', name: 'G', description: null, occupants: 2, passwordProtected: false, membersOnly: false },
+      {
+        jid: 'g@conf',
+        name: 'G',
+        description: null,
+        occupants: 2,
+        passwordProtected: false,
+        membersOnly: false,
+      },
     ]);
     expect(adapter.discoverRooms).toHaveBeenCalled();
 
@@ -569,14 +640,31 @@ describe('ChatAccountRunner — actions', () => {
   it('persists a room-topic change onto the stored conversation row', async () => {
     const { adapter, store } = await online();
     store.upsertConversation({
-      id: '#c', accountId: 'acc', kind: 'room', address: '#c', name: '#c', topic: '',
-      memberCount: 0, unread: 0, mentions: 0, lastReadId: null, muted: false,
- mutedUntil: null,
-      notifyLevel: 'all', isKnownContact: true,
- archived: false,
- lastMessage: null, updatedAt: 1,
+      id: '#c',
+      accountId: 'acc',
+      kind: 'room',
+      address: '#c',
+      name: '#c',
+      topic: '',
+      memberCount: 0,
+      unread: 0,
+      mentions: 0,
+      lastReadId: null,
+      muted: false,
+      mutedUntil: null,
+      notifyLevel: 'all',
+      isKnownContact: true,
+      archived: false,
+      lastMessage: null,
+      updatedAt: 1,
     });
-    adapter.channel.push({ type: 'room-topic', conversationId: '#c', topic: 'Release week', setBy: 'op', ts: null });
+    adapter.channel.push({
+      type: 'room-topic',
+      conversationId: '#c',
+      topic: 'Release week',
+      setBy: 'op',
+      ts: null,
+    });
     await tick();
     expect(store.conversations.get('#c')?.topic).toBe('Release week');
   });
@@ -602,7 +690,10 @@ describe('ChatAccountRunner — actions', () => {
       self: true,
     });
     await tick();
-    expect(store.getConversation('!room:example')).toMatchObject({ id: '!room:example', kind: 'room' });
+    expect(store.getConversation('!room:example')).toMatchObject({
+      id: '!room:example',
+      kind: 'room',
+    });
   });
 
   it('a message from a contact with no prior conversation creates the conversation row first', async () => {
@@ -617,7 +708,10 @@ describe('ChatAccountRunner — actions', () => {
     expect(store.getConversation('bob@example.com')).toBeNull();
     adapter.channel.push(incomingMessage('p1', 'hi'));
     await tick();
-    expect(store.getConversation('bob@example.com')).toMatchObject({ id: 'bob@example.com', kind: 'dm' });
+    expect(store.getConversation('bob@example.com')).toMatchObject({
+      id: 'bob@example.com',
+      kind: 'dm',
+    });
   });
 
   it('setRoomNotifyLevel patches the stored conversation (creating a stub if needed)', async () => {
@@ -709,7 +803,8 @@ describe('ChatAccountRunner — actions', () => {
     const blockContact = vi.fn(() => Promise.resolve());
     const unblockContact = vi.fn(() => Promise.resolve());
     (adapter as unknown as { blockContact: typeof blockContact }).blockContact = blockContact;
-    (adapter as unknown as { unblockContact: typeof unblockContact }).unblockContact = unblockContact;
+    (adapter as unknown as { unblockContact: typeof unblockContact }).unblockContact =
+      unblockContact;
 
     await runner.blockContact('bob@example.com', true);
     expect(blockContact).toHaveBeenCalledWith(expect.anything(), 'bob@example.com');
@@ -722,7 +817,9 @@ describe('ChatAccountRunner — actions', () => {
 
   it('editMessage 501s without adapter support; otherwise delegates with a write-only OutgoingMessage', async () => {
     const { runner, adapter } = await online();
-    await expect(runner.editMessage('room@conf', 'm1', 'fixed')).rejects.toThrow(/editing messages/);
+    await expect(runner.editMessage('room@conf', 'm1', 'fixed')).rejects.toThrow(
+      /editing messages/,
+    );
 
     const editMessage = vi.fn(() => Promise.resolve());
     (adapter as unknown as { editMessage: typeof editMessage }).editMessage = editMessage;
@@ -736,7 +833,16 @@ describe('ChatAccountRunner — actions', () => {
 
   it('a roster-remove event is not persisted as a contact', async () => {
     const { adapter, store } = await online();
-    const contact = { id: 'acc:c@x', accountId: 'acc', address: 'c@x', name: '', groups: [], presence: 'offline' as const, statusText: '', subscription: 'none' as const };
+    const contact = {
+      id: 'acc:c@x',
+      accountId: 'acc',
+      address: 'c@x',
+      name: '',
+      groups: [],
+      presence: 'offline' as const,
+      statusText: '',
+      subscription: 'none' as const,
+    };
     adapter.channel.push({ type: 'roster-change', removed: true, contact });
     await tick();
     expect(store.contacts).toHaveLength(0);
@@ -780,27 +886,40 @@ describe('ChatAccountRunner — actions', () => {
     );
 
     it('resolves an mxc ref to a size-capped, sanitized data URL via the egress-bound transport', async () => {
-      const { runner, adapter } = await online({ transport: { fetch: fetchOk } as unknown as Deps['transport'] });
+      const { runner, adapter } = await online({
+        transport: { fetch: fetchOk } as unknown as Deps['transport'],
+      });
       const out = await runner.resolveMedia('mxc://hs.example/AbC');
       expect(adapter.resolveMedia).toHaveBeenCalledWith(expect.anything(), 'mxc://hs.example/AbC');
       expect(fetchOk).toHaveBeenCalledWith(
         'https://hs.example/media/hs.example/AbC',
         expect.objectContaining({ method: 'GET', headers: { authorization: 'Bearer t' } }),
       );
-      expect(out).toEqual({ dataUrl: `data:image/png;base64,${Buffer.from(png).toString('base64')}` });
+      expect(out).toEqual({
+        dataUrl: `data:image/png;base64,${Buffer.from(png).toString('base64')}`,
+      });
     });
 
     it('returns null when the adapter cannot resolve the ref', async () => {
-      const { runner } = await online({ transport: { fetch: fetchOk } as unknown as Deps['transport'] });
+      const { runner } = await online({
+        transport: { fetch: fetchOk } as unknown as Deps['transport'],
+      });
       expect(await runner.resolveMedia('https://not-a-ref/x')).toBeNull();
     });
 
     it('returns null on an oversized download', async () => {
       const big = new Uint8Array(13 * 1024 * 1024);
       const fetchBig = vi.fn(() =>
-        Promise.resolve({ status: 200, headers: {}, text: () => Promise.resolve(''), bytes: () => Promise.resolve(big) }),
+        Promise.resolve({
+          status: 200,
+          headers: {},
+          text: () => Promise.resolve(''),
+          bytes: () => Promise.resolve(big),
+        }),
       );
-      const { runner } = await online({ transport: { fetch: fetchBig } as unknown as Deps['transport'] });
+      const { runner } = await online({
+        transport: { fetch: fetchBig } as unknown as Deps['transport'],
+      });
       expect(await runner.resolveMedia('mxc://hs.example/big')).toBeNull();
     });
 
@@ -815,7 +934,9 @@ describe('ChatAccountRunner — actions', () => {
     });
 
     it('returns null when the adapter has no media repo', async () => {
-      const { runner, adapter } = await online({ transport: { fetch: fetchOk } as unknown as Deps['transport'] });
+      const { runner, adapter } = await online({
+        transport: { fetch: fetchOk } as unknown as Deps['transport'],
+      });
       Reflect.deleteProperty(adapter, 'resolveMedia');
       expect(await runner.resolveMedia('mxc://hs.example/AbC')).toBeNull();
     });
@@ -842,14 +963,20 @@ describe('ChatAccountRunner — actions', () => {
   it('treats a groupchat address (with a resource) as a room conversation', async () => {
     const { adapter, store } = await online();
     const base = incomingMessage('g1', 'hi').message;
-    adapter.channel.push({ type: 'message', message: { ...base, conversationId: 'room@conf/ada' } });
+    adapter.channel.push({
+      type: 'message',
+      message: { ...base, conversationId: 'room@conf/ada' },
+    });
     await tick();
     expect(store.conversations.get('room@conf/ada')?.kind).toBe('room');
   });
 
   it('derives the self identity per protocol (incl. the bridge fallback)', async () => {
     for (const [server, store] of [
-      [{ protocol: 'irc', server: 'irc.x', port: 6697, tls: true, nick: 'ada', sasl: false }, new FakeStore()],
+      [
+        { protocol: 'irc', server: 'irc.x', port: 6697, tls: true, nick: 'ada', sasl: false },
+        new FakeStore(),
+      ],
       [{ protocol: 'matrix', homeserverUrl: 'https://x', userId: '@ada:x' }, new FakeStore()],
       [{ protocol: 'bridge', bridgeId: 'telegram', config: {} }, new FakeStore()],
     ] as const) {
@@ -883,7 +1010,7 @@ describe('ChatAccountRunner — notifications', () => {
     ]);
   });
 
-  it('does not notify for the account\'s own echo or a redacted message', async () => {
+  it("does not notify for the account's own echo or a redacted message", async () => {
     const { adapter, notifications } = await online();
     const own = incomingMessage('m1', 'mine');
     own.message.senderAddress = 'ada@example.com';
@@ -898,15 +1025,26 @@ describe('ChatAccountRunner — notifications', () => {
     expect(notifications).toEqual([]);
   });
 
-  it('does not notify for the account\'s own room message — matched by occupant nick, not raw address', async () => {
+  it("does not notify for the account's own room message — matched by occupant nick, not raw address", async () => {
     const { adapter, store, notifications } = await online();
     store.conversations.set('room@conf', {
-      id: 'room@conf', accountId: 'acc', kind: 'room', address: 'room@conf', name: 'Room', topic: '',
-      memberCount: 1, unread: 0, mentions: 0, lastReadId: null, muted: false,
- mutedUntil: null, notifyLevel: 'all',
+      id: 'room@conf',
+      accountId: 'acc',
+      kind: 'room',
+      address: 'room@conf',
+      name: 'Room',
+      topic: '',
+      memberCount: 1,
+      unread: 0,
+      mentions: 0,
+      lastReadId: null,
+      muted: false,
+      mutedUntil: null,
+      notifyLevel: 'all',
       isKnownContact: true,
       archived: false,
-      lastMessage: null, updatedAt: 1,
+      lastMessage: null,
+      updatedAt: 1,
     });
     // Self-presence (XEP-0045 status 110 equivalent) — sets this account's nick in the room.
     adapter.channel.push({
@@ -934,12 +1072,23 @@ describe('ChatAccountRunner — notifications', () => {
   it('respects a room set to "mentions" — a plain line is silent, a nick ping is not', async () => {
     const { runner, adapter, store, notifications } = await online();
     store.conversations.set('room@conf', {
-      id: 'room@conf', accountId: 'acc', kind: 'room', address: 'room@conf', name: 'Room', topic: '',
-      memberCount: 3, unread: 0, mentions: 0, lastReadId: null, muted: false,
- mutedUntil: null, notifyLevel: 'mentions',
+      id: 'room@conf',
+      accountId: 'acc',
+      kind: 'room',
+      address: 'room@conf',
+      name: 'Room',
+      topic: '',
+      memberCount: 3,
+      unread: 0,
+      mentions: 0,
+      lastReadId: null,
+      muted: false,
+      mutedUntil: null,
+      notifyLevel: 'mentions',
       isKnownContact: true,
       archived: false,
-      lastMessage: null, updatedAt: 1,
+      lastMessage: null,
+      updatedAt: 1,
     });
     const roomMsg = (protocolId: string, body: string) => {
       const m = incomingMessage(protocolId, body);
@@ -963,7 +1112,7 @@ describe('ChatAccountRunner — against the real ChatStore', () => {
   // message before the conversation row exists — which is exactly what happened here. This suite
   // exists to run the same event sequences against the real, migrated, in-memory SQLite store so a
   // constraint violation actually throws instead of being silently absorbed by a fixture.
-  it('a brand-new DM contact\'s first message does not violate the chat_messages foreign key', async () => {
+  it("a brand-new DM contact's first message does not violate the chat_messages foreign key", async () => {
     const db = openDatabase(':memory:');
     migrate(db);
     ChatStore.upsertAccount(db, account);

@@ -56,13 +56,7 @@ export type RegistrationAction =
   | { kind: 'failed'; reason: string };
 
 type Phase =
-  | 'idle'
-  | 'cap-ls'
-  | 'sasl-auth'
-  | 'sasl-wait'
-  | 'cap-end-wait'
-  | 'registered'
-  | 'failed';
+  'idle' | 'cap-ls' | 'sasl-auth' | 'sasl-wait' | 'cap-end-wait' | 'registered' | 'failed';
 
 export class IrcRegistration {
   private phase: Phase = 'idle';

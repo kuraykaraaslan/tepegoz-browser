@@ -28,12 +28,21 @@ function fakeApi(over: Partial<ChatHostApi> = {}): ChatHostApi {
   };
 }
 
-function account(over: Partial<Omit<ChatAccount, 'secretRef'>> = {}): Omit<ChatAccount, 'secretRef'> {
+function account(
+  over: Partial<Omit<ChatAccount, 'secretRef'>> = {},
+): Omit<ChatAccount, 'secretRef'> {
   return {
     id: 'work',
     label: 'Work',
     displayName: '',
-    server: { protocol: 'xmpp', jid: 'ada@x.org', host: null, port: null, security: 'tls', wsUrl: null },
+    server: {
+      protocol: 'xmpp',
+      jid: 'ada@x.org',
+      host: null,
+      port: null,
+      security: 'tls',
+      wsUrl: null,
+    },
     color: null,
     order: 0,
     updatedAt: 0,

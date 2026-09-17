@@ -149,7 +149,11 @@ export interface BrowserHost {
    * and released — what sortable-list/kanban widgets, including this app's own `@dnd-kit` tab groups,
    * actually listen for). The caller picks neither; the element's own `draggable` IDL property decides.
    */
-  dragElement(ref: number, targetRef: number, tabId?: string): Promise<{ mode: 'native' | 'pointer' }>;
+  dragElement(
+    ref: number,
+    targetRef: number,
+    tabId?: string,
+  ): Promise<{ mode: 'native' | 'pointer' }>;
   /**
    * Focus the input identified by `ref` and replace its value with `text`.
    *

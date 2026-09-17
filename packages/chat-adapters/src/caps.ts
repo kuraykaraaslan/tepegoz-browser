@@ -1,4 +1,8 @@
-import { type ChatAdapterCaps, ChatAdapterCapsSchema, type ChatProtocol } from '@tepegoz/shared-types';
+import {
+  type ChatAdapterCaps,
+  ChatAdapterCapsSchema,
+  type ChatProtocol,
+} from '@tepegoz/shared-types';
 
 /**
  * Per-protocol capability presets — the *maximum* a protocol can do. A live connection narrows these

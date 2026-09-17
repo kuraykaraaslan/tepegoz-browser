@@ -6,10 +6,22 @@ import type {
   ChatMessage,
 } from '@tepegoz/shared-types';
 import { normalizeEvent } from './normalize';
-import { type ConversationView, emptyConversation, foldEvent, markRead, reconcileEcho } from './conversation';
+import {
+  type ConversationView,
+  emptyConversation,
+  foldEvent,
+  markRead,
+  reconcileEcho,
+} from './conversation';
 import { PresenceTracker, type EffectivePresence } from './presence';
 import { bareJid, parseJid } from './address';
-import { applyOccupant, applySubject, emptyRoom, type RoomOccupantUpdate, type RoomView } from './room';
+import {
+  applyOccupant,
+  applySubject,
+  emptyRoom,
+  type RoomOccupantUpdate,
+  type RoomView,
+} from './room';
 
 /**
  * The in-memory aggregate for one connected account: it takes the adapter's **raw** event stream,
@@ -34,9 +46,18 @@ export interface ChatAccountStateOptions {
 
 export type ChatStateChange =
   | { kind: 'message'; conversationId: string; message: ChatMessage }
-  | { kind: 'message-updated'; conversationId: string; protocolId: string; message: ChatMessage | null }
   | {
-      kind: 'conversation'; conversationId: string; unread: number; mentions: number; lastReadId: string | null;
+      kind: 'message-updated';
+      conversationId: string;
+      protocolId: string;
+      message: ChatMessage | null;
+    }
+  | {
+      kind: 'conversation';
+      conversationId: string;
+      unread: number;
+      mentions: number;
+      lastReadId: string | null;
     }
   | { kind: 'roster'; contact: ChatContact; removed: boolean }
   | { kind: 'presence'; address: string; effective: EffectivePresence }
@@ -156,9 +177,11 @@ export class ChatAccountState {
     >,
   ): ChatStateChange[] {
     const conversationId =
-      event.type === 'message' ? event.message.conversationId
-      : event.type === 'receipt' ? event.receipt.conversationId
-      : event.conversationId;
+      event.type === 'message'
+        ? event.message.conversationId
+        : event.type === 'receipt'
+          ? event.receipt.conversationId
+          : event.conversationId;
 
     const before = this.view(conversationId);
     const after = foldEvent(before, event, this.foldOpts());
@@ -173,7 +196,12 @@ export class ChatAccountState {
       event.type === 'reaction'
     ) {
       const message = after.messages.find((m) => m.protocolId === event.protocolId) ?? null;
-      changes.push({ kind: 'message-updated', conversationId, protocolId: event.protocolId, message });
+      changes.push({
+        kind: 'message-updated',
+        conversationId,
+        protocolId: event.protocolId,
+        message,
+      });
     }
     if (
       after.unread !== before.unread ||
@@ -192,7 +220,11 @@ export class ChatAccountState {
     return changes;
   }
 
-  private applyPresence(address: string, presence: ChatContact['presence'], statusText: string): ChatStateChange[] {
+  private applyPresence(
+    address: string,
+    presence: ChatContact['presence'],
+    statusText: string,
+  ): ChatStateChange[] {
     this.presence.apply(address, presence, statusText);
     const bare = bareJid(address) ?? address;
     const effective = this.presence.effective(bare);
@@ -223,13 +255,21 @@ export class ChatAccountState {
 
   /** Record an optimistic local send; returns the message to display immediately. */
   echoLocalSend(message: ChatMessage): ChatStateChange[] {
-    const after = foldEvent(this.view(message.conversationId), { type: 'message', message }, this.foldOpts());
+    const after = foldEvent(
+      this.view(message.conversationId),
+      { type: 'message', message },
+      this.foldOpts(),
+    );
     this.views.set(message.conversationId, after);
     return [{ kind: 'message', conversationId: message.conversationId, message }];
   }
 
   /** Reconcile an echo once the server acks it with its real protocol id. */
-  reconcileSend(conversationId: string, tempId: string, serverMessage: ChatMessage): ChatStateChange[] {
+  reconcileSend(
+    conversationId: string,
+    tempId: string,
+    serverMessage: ChatMessage,
+  ): ChatStateChange[] {
     const after = reconcileEcho(this.view(conversationId), tempId, serverMessage);
     this.views.set(conversationId, after);
     return [
@@ -286,7 +326,12 @@ export class ChatAccountState {
     for (const [id, view] of this.views) {
       const base = existing.get(id);
       if (base === undefined) continue;
-      out.push({ ...base, unread: view.unread, mentions: view.mentions, lastReadId: view.lastReadId });
+      out.push({
+        ...base,
+        unread: view.unread,
+        mentions: view.mentions,
+        lastReadId: view.lastReadId,
+      });
     }
     return out;
   }

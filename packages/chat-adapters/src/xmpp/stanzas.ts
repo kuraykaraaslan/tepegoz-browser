@@ -84,7 +84,7 @@ function messageEvent(el: XmlElement, ctx: StanzaContext): ChatEvent | null {
   const to = el.attrs.to ?? '';
   const type = el.attrs.type ?? 'normal';
   const isGroup = type === 'groupchat';
-  const peer = isGroup ? bareJid(from) : bareJid(from) ?? bareJid(to);
+  const peer = isGroup ? bareJid(from) : (bareJid(from) ?? bareJid(to));
   if (peer === null || peer.length === 0) return null;
   const conversationId = convIdFor(peer);
   const ts = delayTs(el) ?? ctx.now;
@@ -149,7 +149,8 @@ function messageEvent(el: XmlElement, ctx: StanzaContext): ChatEvent | null {
   const stanzaId = child(el, 'stanza-id', NS.stanzaId)?.attrs.id;
   const protocolId = el.attrs.id ?? stanzaId ?? `${String(ts)}-${from}`;
   const senderAddress = isGroup ? from : (bareJid(from) ?? from);
-  const senderName = isGroup && parseJid(from)?.resource !== null ? (parseJid(from)?.resource ?? '') : '';
+  const senderName =
+    isGroup && parseJid(from)?.resource !== null ? (parseJid(from)?.resource ?? '') : '';
 
   const message: ChatMessage = {
     id: protocolId,
@@ -177,7 +178,12 @@ function presenceEvent(el: XmlElement, ctx: StanzaContext): ChatEvent | null {
   const bare = bareJid(from);
   if (bare === null || bare.length === 0 || bare === ctx.selfBareJid) return null;
   const type = el.attrs.type ?? '';
-  if (type === 'subscribe' || type === 'subscribed' || type === 'unsubscribe' || type === 'unsubscribed') {
+  if (
+    type === 'subscribe' ||
+    type === 'subscribed' ||
+    type === 'unsubscribe' ||
+    type === 'unsubscribed'
+  ) {
     return null; // subscription workflow handled elsewhere
   }
   const unavailable = type === 'unavailable';

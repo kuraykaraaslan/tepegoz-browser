@@ -107,7 +107,12 @@ describe('registerFileOperations', () => {
     // would be silently harmless (rule 3 already covers state-changing/destructive taint), but
     // under-applying it on a real content-reading tool would leave the exfil gap this flag exists to
     // close, so both directions are asserted.
-    const withPath = ['file_get_content', 'file_list_items', 'file_get_metadata', 'file_search_items'];
+    const withPath = [
+      'file_get_content',
+      'file_list_items',
+      'file_get_metadata',
+      'file_search_items',
+    ];
     for (const id of withPath) {
       expect(CapabilityRegistry.get(id)?.descriptor.localFileAccess, id).toBe(true);
     }

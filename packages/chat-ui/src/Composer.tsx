@@ -124,11 +124,7 @@ export function Composer({
             composing.current = false;
           }}
         />
-        <button
-          type="submit"
-          className="chat-composer__send"
-          disabled={disabled || !canSend(text)}
-        >
+        <button type="submit" className="chat-composer__send" disabled={disabled || !canSend(text)}>
           {s.composer.send}
         </button>
       </div>

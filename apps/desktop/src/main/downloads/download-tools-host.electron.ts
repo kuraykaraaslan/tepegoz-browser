@@ -15,7 +15,10 @@ function contentLengthOf(value: unknown): number | null {
   return Number.isFinite(n) && n >= 0 ? n : null;
 }
 
-function finalUrlOf(response: { request?: { res?: { responseUrl?: unknown } } }, fallback: string): string {
+function finalUrlOf(
+  response: { request?: { res?: { responseUrl?: unknown } } },
+  fallback: string,
+): string {
   const responseUrl = response.request?.res?.responseUrl;
   return typeof responseUrl === 'string' && responseUrl.length > 0 ? responseUrl : fallback;
 }
@@ -27,13 +30,17 @@ function finalUrlOf(response: { request?: { res?: { responseUrl?: unknown } } },
  *  unreachable is a classification the resolver makes, not an error the caller has to catch. */
 async function probeMedia(url: string): Promise<MediaProbeResult | null> {
   try {
-    const response = await mediaProbeClient.head(url, { maxRedirects: 5, validateStatus: () => true });
+    const response = await mediaProbeClient.head(url, {
+      maxRedirects: 5,
+      validateStatus: () => true,
+    });
     if (response.status !== 405 && response.status !== 501) {
       return {
         status: response.status,
-        contentType: typeof response.headers['content-type'] === 'string'
-          ? response.headers['content-type']
-          : undefined,
+        contentType:
+          typeof response.headers['content-type'] === 'string'
+            ? response.headers['content-type']
+            : undefined,
         contentLengthBytes: contentLengthOf(response.headers['content-length']),
         finalUrl: finalUrlOf(response, url),
       };
@@ -50,9 +57,10 @@ async function probeMedia(url: string): Promise<MediaProbeResult | null> {
     });
     return {
       status: response.status,
-      contentType: typeof response.headers['content-type'] === 'string'
-        ? response.headers['content-type']
-        : undefined,
+      contentType:
+        typeof response.headers['content-type'] === 'string'
+          ? response.headers['content-type']
+          : undefined,
       // A 206/200 to a ranged request reports the FULL resource size via Content-Range, not the
       // single byte just transferred — prefer it, falling back to Content-Length for a server that
       // ignored the Range header entirely.

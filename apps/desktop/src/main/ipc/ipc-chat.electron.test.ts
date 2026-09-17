@@ -22,7 +22,9 @@ vi.mock('electron', () => ({
 
 const TRUSTED = 'app://tepegoz/chrome.html';
 vi.mock('../lib/trusted-origin', () => ({ isTrustedAppUrl: (u: string) => u === TRUSTED }));
-vi.mock('../lib/i18n-main', () => ({ mainStrings: () => ({ errors: { forbidden: 'forbidden' } }) }));
+vi.mock('../lib/i18n-main', () => ({
+  mainStrings: () => ({ errors: { forbidden: 'forbidden' } }),
+}));
 
 const { registerChatIpc } = await import('./ipc-chat');
 
@@ -60,7 +62,8 @@ const svc = {
 
 const ev = { senderFrame: { url: TRUSTED }, sender: {} };
 const evil = { senderFrame: { url: 'https://evil.example/' }, sender: {} };
-const call = (channel: string, payload?: unknown): unknown => h.handlers.get(channel)?.(ev, payload);
+const call = (channel: string, payload?: unknown): unknown =>
+  h.handlers.get(channel)?.(ev, payload);
 
 const account = {
   id: 'work',
@@ -101,7 +104,12 @@ it('chat:react validates + delegates', async () => {
   });
   expect(svc.react).toHaveBeenCalledWith('work', 'general@conf.example', 'm1', '👍', true);
   await expect(
-    call(IpcChannels.chatReact, { accountId: 'work', conversationId: 'c', messageId: 'm1', emoji: '👍' }),
+    call(IpcChannels.chatReact, {
+      accountId: 'work',
+      conversationId: 'c',
+      messageId: 'm1',
+      emoji: '👍',
+    }),
   ).rejects.toBeDefined();
 });
 
@@ -142,7 +150,11 @@ it('chat:set-archived validates + delegates', async () => {
 });
 
 it('chat:block-contact validates + delegates', async () => {
-  await call(IpcChannels.chatBlockContact, { accountId: 'work', address: 'bob@example.com', blocked: true });
+  await call(IpcChannels.chatBlockContact, {
+    accountId: 'work',
+    address: 'bob@example.com',
+    blocked: true,
+  });
   expect(svc.blockContact).toHaveBeenCalledWith('work', 'bob@example.com', true);
   await expect(
     call(IpcChannels.chatBlockContact, { accountId: 'work', address: '' }),
@@ -165,7 +177,9 @@ it('chat:edit-message validates + delegates', async () => {
 it('chat:add-contact validates + delegates', async () => {
   await call(IpcChannels.chatAddContact, { accountId: 'work', address: 'bob@example.com' });
   expect(svc.addContact).toHaveBeenCalledWith('work', 'bob@example.com');
-  await expect(call(IpcChannels.chatAddContact, { accountId: 'work', address: '' })).rejects.toBeDefined();
+  await expect(
+    call(IpcChannels.chatAddContact, { accountId: 'work', address: '' }),
+  ).rejects.toBeDefined();
 });
 
 it('chat:remove-contact validates + delegates', async () => {
@@ -189,7 +203,11 @@ describe('rooms', () => {
       conversationId: 'general@conf.example',
       invitee: 'carol@example.com',
     });
-    expect(svc.inviteToRoom).toHaveBeenCalledWith('work', 'general@conf.example', 'carol@example.com');
+    expect(svc.inviteToRoom).toHaveBeenCalledWith(
+      'work',
+      'general@conf.example',
+      'carol@example.com',
+    );
     await expect(
       call(IpcChannels.chatInviteToRoom, { accountId: 'work', conversationId: 'g', invitee: '' }),
     ).rejects.toBeDefined();
@@ -200,11 +218,16 @@ describe('rooms', () => {
       call(IpcChannels.chatJoinRoom, { accountId: 'work', roomJid: 'general@conf.example' }),
     ).resolves.toBe('general@conf.example');
     expect(svc.joinRoom).toHaveBeenCalledWith('work', 'general@conf.example');
-    await expect(call(IpcChannels.chatJoinRoom, { accountId: 'work', roomJid: 'x' })).rejects.toBeDefined();
+    await expect(
+      call(IpcChannels.chatJoinRoom, { accountId: 'work', roomJid: 'x' }),
+    ).rejects.toBeDefined();
   });
 
   it('chat:leave-room validates + delegates', async () => {
-    await call(IpcChannels.chatLeaveRoom, { accountId: 'work', conversationId: 'general@conf.example' });
+    await call(IpcChannels.chatLeaveRoom, {
+      accountId: 'work',
+      conversationId: 'general@conf.example',
+    });
     expect(svc.leaveRoom).toHaveBeenCalledWith('work', 'general@conf.example');
     await expect(call(IpcChannels.chatLeaveRoom, { accountId: 'work' })).rejects.toBeDefined();
   });
@@ -228,7 +251,10 @@ describe('rooms', () => {
 
 describe('media', () => {
   it('chat:resolve-media validates + delegates + returns the data url', async () => {
-    const out = await call(IpcChannels.chatResolveMedia, { accountId: 'work', mediaRef: 'mxc://s/abc' });
+    const out = await call(IpcChannels.chatResolveMedia, {
+      accountId: 'work',
+      mediaRef: 'mxc://s/abc',
+    });
     expect(svc.resolveMedia).toHaveBeenCalledWith('work', 'mxc://s/abc');
     expect(out).toEqual({ dataUrl: 'data:image/png;base64,AAAA' });
     await expect(call(IpcChannels.chatResolveMedia, { accountId: 'work' })).rejects.toBeDefined();
@@ -266,7 +292,9 @@ describe('reads', () => {
 
 describe('validation gates the service', () => {
   it('chat:add-account rejects an over-long secret and a bad account, before the service', async () => {
-    await expect(call(IpcChannels.chatAddAccount, { account, secret: 'x'.repeat(4097) })).rejects.toBeDefined();
+    await expect(
+      call(IpcChannels.chatAddAccount, { account, secret: 'x'.repeat(4097) }),
+    ).rejects.toBeDefined();
     await expect(
       call(IpcChannels.chatAddAccount, { account: { ...account, id: 'Bad Id' }, secret: 'p' }),
     ).rejects.toBeDefined();
@@ -275,15 +303,27 @@ describe('validation gates the service', () => {
 
   it('chat:add-account passes a valid payload through', async () => {
     await call(IpcChannels.chatAddAccount, { account, secret: 'pencil' });
-    expect(svc.addAccount).toHaveBeenCalledWith('work', 'pencil', expect.objectContaining({ id: 'work' }));
+    expect(svc.addAccount).toHaveBeenCalledWith(
+      'work',
+      'pencil',
+      expect.objectContaining({ id: 'work' }),
+    );
   });
 
   it('chat:update-account accepts secret: null (keep the vault existing one) and a fresh secret alike', async () => {
     await call(IpcChannels.chatUpdateAccount, { account, secret: null });
-    expect(svc.updateAccount).toHaveBeenCalledWith('work', null, expect.objectContaining({ id: 'work' }));
+    expect(svc.updateAccount).toHaveBeenCalledWith(
+      'work',
+      null,
+      expect.objectContaining({ id: 'work' }),
+    );
 
     await call(IpcChannels.chatUpdateAccount, { account, secret: 'new-pw' });
-    expect(svc.updateAccount).toHaveBeenCalledWith('work', 'new-pw', expect.objectContaining({ id: 'work' }));
+    expect(svc.updateAccount).toHaveBeenCalledWith(
+      'work',
+      'new-pw',
+      expect.objectContaining({ id: 'work' }),
+    );
   });
 
   it('chat:update-account rejects an over-long secret and a bad account, before the service', async () => {
@@ -298,7 +338,11 @@ describe('validation gates the service', () => {
 
   it('chat:send-message caps the body and shapes the result', async () => {
     await expect(
-      call(IpcChannels.chatSendMessage, { accountId: 'a', conversationId: 'c', body: { body: 'x'.repeat(100_001) } }),
+      call(IpcChannels.chatSendMessage, {
+        accountId: 'a',
+        conversationId: 'c',
+        body: { body: 'x'.repeat(100_001) },
+      }),
     ).rejects.toBeDefined();
     expect(svc.sendMessage).not.toHaveBeenCalled();
 
@@ -314,7 +358,11 @@ describe('validation gates the service', () => {
     await expect(
       call(IpcChannels.chatSetPresence, { accountId: 'a', presence: 'invisible' }),
     ).rejects.toBeDefined();
-    await call(IpcChannels.chatSetPresence, { accountId: 'a', presence: 'away', statusText: 'brb' });
+    await call(IpcChannels.chatSetPresence, {
+      accountId: 'a',
+      presence: 'away',
+      statusText: 'brb',
+    });
     expect(svc.setPresence).toHaveBeenCalledWith('a', 'away', 'brb');
   });
 

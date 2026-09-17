@@ -127,7 +127,11 @@ const RFC1459_STRICT_EXTRA: Record<string, string> = { '[': '{', ']': '}', '\\':
  */
 export function foldIrcTarget(target: string, mapping: IrcCasemapping = 'rfc1459'): string {
   const extra =
-    mapping === 'rfc1459' ? RFC1459_EXTRA : mapping === 'rfc1459-strict' ? RFC1459_STRICT_EXTRA : null;
+    mapping === 'rfc1459'
+      ? RFC1459_EXTRA
+      : mapping === 'rfc1459-strict'
+        ? RFC1459_STRICT_EXTRA
+        : null;
   let out = '';
   for (const ch of target) {
     if (ch >= 'A' && ch <= 'Z') out += ch.toLowerCase();
@@ -213,7 +217,12 @@ export function ircKickSystemMessage(msg: IrcMessage, ctx: IrcContext): ChatEven
   if (msg.command !== 'KICK') return null;
   const by = parseIrcPrefix(msg.prefix ?? '');
   const [channel, nick, reason] = msg.params;
-  if (by === null || channel === undefined || nick === undefined || !isChannel(channel, ctx.chanTypes)) {
+  if (
+    by === null ||
+    channel === undefined ||
+    nick === undefined ||
+    !isChannel(channel, ctx.chanTypes)
+  ) {
     return null;
   }
   const conversationId = foldIrcTarget(channel, ctx.casemapping);
@@ -282,12 +291,7 @@ export function ircMessageToEvent(msg: IrcMessage, ctx: IrcContext): ChatEvent |
       return membershipEvent(msg, ctx, false);
     case 'KICK':
       // KICK <channel> <nick> [:reason] — the kicked nick is param 1, not the sender.
-      return membershipEvent(
-        { ...msg, prefix: msg.params[1] ?? '' },
-        ctx,
-        false,
-        0,
-      );
+      return membershipEvent({ ...msg, prefix: msg.params[1] ?? '' }, ctx, false, 0);
     case 'TOPIC': // live topic change
     case '331': // RPL_NOTOPIC
     case '332': // RPL_TOPIC

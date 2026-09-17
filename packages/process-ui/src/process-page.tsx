@@ -53,7 +53,9 @@ function SortHeader({
       <span aria-hidden className="text-[10px] leading-none">
         {active ? (ascending ? '▲' : '▼') : ''}
       </span>
-      {active && <span className="sr-only">{ascending ? strings.ascending : strings.descending}</span>}
+      {active && (
+        <span className="sr-only">{ascending ? strings.ascending : strings.descending}</span>
+      )}
     </button>
   );
 }

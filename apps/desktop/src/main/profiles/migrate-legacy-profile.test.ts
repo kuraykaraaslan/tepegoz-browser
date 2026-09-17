@@ -69,8 +69,12 @@ describe('migrateLegacyProfile', () => {
     // so Chromium finds the migrated cookie jars instead of creating empty new ones.
     const parts = join(defaultDir, 'Partitions');
     expect(readFileSync(join(parts, 'tepegoz-profile-default', 'Cookies'), 'utf8')).toBe('c');
-    expect(readFileSync(join(parts, 'tepegoz-profile-default--app', 'Local Storage'), 'utf8')).toBe('x');
-    expect(readFileSync(join(parts, 'tepegoz-profile-default--conn-vpn-a', 'Cookies'), 'utf8')).toBe('t');
+    expect(readFileSync(join(parts, 'tepegoz-profile-default--app', 'Local Storage'), 'utf8')).toBe(
+      'x',
+    );
+    expect(
+      readFileSync(join(parts, 'tepegoz-profile-default--conn-vpn-a', 'Cookies'), 'utf8'),
+    ).toBe('t');
     expect(existsSync(join(parts, 'tepegoz-web'))).toBe(false);
     expect(existsSync(join(parts, 'tepegoz-app'))).toBe(false);
   });

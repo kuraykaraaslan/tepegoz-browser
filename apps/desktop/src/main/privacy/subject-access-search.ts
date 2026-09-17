@@ -178,7 +178,9 @@ export function renderSubjectAccessMarkdown(report: SubjectAccessReport): string
       } catch {
         payloadText = String(e.payload);
       }
-      lines.push(`- [${isoOrUnknown(e.ts)}] **${e.type}** (run \`${e.correlationId}\`): ${payloadText}`);
+      lines.push(
+        `- [${isoOrUnknown(e.ts)}] **${e.type}** (run \`${e.correlationId}\`): ${payloadText}`,
+      );
     }
   }
   lines.push('');

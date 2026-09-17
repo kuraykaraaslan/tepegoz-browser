@@ -81,9 +81,10 @@ export function pickSaslMechanism(
   opts: { tlsActive: boolean; channelBindingAvailable?: boolean },
 ): string | null {
   const set = new Set(offered.map((m) => m.toUpperCase()));
-  const order = opts.channelBindingAvailable === true
-    ? ['SCRAM-SHA-256-PLUS', 'SCRAM-SHA-256', 'SCRAM-SHA-1-PLUS', 'SCRAM-SHA-1']
-    : ['SCRAM-SHA-256', 'SCRAM-SHA-1'];
+  const order =
+    opts.channelBindingAvailable === true
+      ? ['SCRAM-SHA-256-PLUS', 'SCRAM-SHA-256', 'SCRAM-SHA-1-PLUS', 'SCRAM-SHA-1']
+      : ['SCRAM-SHA-256', 'SCRAM-SHA-1'];
   for (const m of order) {
     if (set.has(m)) return m;
   }

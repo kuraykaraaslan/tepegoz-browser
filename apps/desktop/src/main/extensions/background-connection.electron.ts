@@ -1,5 +1,8 @@
 import { Logger } from '@tepegoz/libs';
-import { BackgroundConnectionSupervisor, type BackgroundConnectionProvider } from '@tepegoz/extension-host';
+import {
+  BackgroundConnectionSupervisor,
+  type BackgroundConnectionProvider,
+} from '@tepegoz/extension-host';
 
 /**
  * Main-process wiring for the shared background-connection supervisor (the "shared prerequisite"

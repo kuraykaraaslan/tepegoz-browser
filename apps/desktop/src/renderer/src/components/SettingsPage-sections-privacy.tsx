@@ -133,9 +133,7 @@ function PreferencesBackupRow({ s }: { s: SettingsStrings }) {
     try {
       const { applied, skipped } = await window.tepegoz.importPreferences(await file.text());
       const parts =
-        applied === 0
-          ? [s.importNothing]
-          : [s.importApplied.replace('{applied}', String(applied))];
+        applied === 0 ? [s.importNothing] : [s.importApplied.replace('{applied}', String(applied))];
       if (skipped.length > 0) {
         parts.push(s.importSkipped.replace('{skipped}', String(skipped.length)));
       }

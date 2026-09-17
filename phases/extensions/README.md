@@ -8,7 +8,7 @@ numbered product roadmap and **not** in the [v1 ship line](../README.md#v1-ship-
 > real roadmap status the same way a `tracks/` document does: by being promoted into a product
 > `phase-*.md` DoD **or** an ADR. Until then it is a written design with an owner's name on it.
 >
-> This folder exists because these are *extensions* specifically — they all sit on the same standard
+> This folder exists because these are _extensions_ specifically — they all sit on the same standard
 > ([ADR-0021](../../docs/adr/0021-agent-controllable-extensions.md) in-process capability providers,
 > [ADR-0018](../../docs/adr/0018-mcp-client.md) out-of-process adapters,
 > [ADR-0023](../../docs/adr/0023-ai-adaptors.md) grouping) and share one trust model, so keeping their
@@ -18,9 +18,9 @@ numbered product roadmap and **not** in the [v1 ship line](../README.md#v1-ship-
 
 ## Index
 
-| Doc | Extension | Sub-phases | Goal | Status |
-| --- | --- | --- | --- | --- |
-| [ext-mail.md](ext-mail.md) | `@tepegoz/ext-mail` | **9** (X-mail.0–.8) | A full **multi-account** mail client — IMAP/SMTP + JMAP + (Phase 3) OAuth Gmail/Graph, a real reader, compose, search/filters, and a complete agent capability set behind the one PEP. | 📋 Proposed — not scheduled |
+| Doc                        | Extension           | Sub-phases            | Goal                                                                                                                                                                                                                                              | Status                      |
+| -------------------------- | ------------------- | --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------- |
+| [ext-mail.md](ext-mail.md) | `@tepegoz/ext-mail` | **9** (X-mail.0–.8)   | A full **multi-account** mail client — IMAP/SMTP + JMAP + (Phase 3) OAuth Gmail/Graph, a real reader, compose, search/filters, and a complete agent capability set behind the one PEP.                                                            | 📋 Proposed — not scheduled |
 | [ext-chat.md](ext-chat.md) | `@tepegoz/ext-chat` | **11** (X-chat.0–.10) | A **multi-account, multi-protocol** messenger on a Pidgin/libpurple protocol-plugin model — native XMPP / IRC / Matrix, out-of-process bridges for Telegram / Slack / Discord / (caveated) WhatsApp later, all agent-drivable behind the one PEP. | 📋 Proposed — not scheduled |
 
 ### How the docs are structured
@@ -91,11 +91,11 @@ These are not restated per-document beyond a pointer; they are the price of bein
       main-process singleton (mirrors `capability-supervisor.electron.ts`); `main/index.ts`'s startup +
       `before-quit`, `ipc-content-app.ts`'s two prefs-reconcile paths, and `ipc-network.ts`'s
       `broadcastNetworkState` now call `BackgroundConnectionService.init/stop/reconcile/
-      notifyEgressChange()` instead of `ChatMessenger.*` directly — `com.tepegoz.chat` is registered as
+notifyEgressChange()` instead of `ChatMessenger.*` directly — `com.tepegoz.chat` is registered as
       the first (and so far only) provider. A future `ext-mail` gets all four lifecycle hooks by calling
       `provide()` once, instead of duplicating these four call sites.
 - [x] **Adapter-as-subprocess contract** — generalise `manifest.mcpServer` (stdio) into the shape a
-      third-party mail/chat adapter or a protocol *bridge* would use: no host access, its own egress
+      third-party mail/chat adapter or a protocol _bridge_ would use: no host access, its own egress
       binding, every result normalised and re-validated before the core sees it, every tool still
       behind the one PEP. **Addendum ADR landed 2026-09-12:**
       [ADR-0048](../../docs/adr/0048-adapter-subprocess-contract.md) — design only, no
@@ -104,8 +104,7 @@ These are not restated per-document beyond a pointer; they are the price of bein
       §4 (own state dir, own egress binding, no host RPC beyond the extension's own adapter
       interface, crash isolation, signed package, never bundled), typed RPC over the extension's own
       adapter interface rather than MCP tool-call semantics. **First code slice landed 2026-09-13:**
-      `@tepegoz/adapter-subprocess` — the generic spawn/health-check/restart-with-backoff supervisor
-      + the typed newline-JSON RPC envelope, plus the `manifest.adapterSubprocess` declaration itself
+      `@tepegoz/adapter-subprocess` — the generic spawn/health-check/restart-with-backoff supervisor + the typed newline-JSON RPC envelope, plus the `manifest.adapterSubprocess` declaration itself
       (`@tepegoz/extension-sdk`). **Second code slice landed 2026-09-13:** `SubprocessChatAdapter`
       (`packages/chat-adapters/src/bridge/subprocess-adapter.ts`) — the concrete `ChatAdapter`-over-
       subprocess consumer, mapping every adapter method onto the generic supervisor's `call()`.

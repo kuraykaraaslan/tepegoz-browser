@@ -1,7 +1,13 @@
 import { resolve, join } from 'node:path';
 import { mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { connect as tlsConnect, type TLSSocket } from 'node:tls';
-import { test, expect, _electron as electron, type ElectronApplication, type Page } from '@playwright/test';
+import {
+  test,
+  expect,
+  _electron as electron,
+  type ElectronApplication,
+  type Page,
+} from '@playwright/test';
 import { XmppAdapter, type ChatAccountCreds, type ChatSession } from '@tepegoz/chat-adapters';
 import { NodeChatTransport, type RawDuplex } from '@tepegoz/chat-transport-node';
 import { startTcpPassthrough, type TcpPassthrough } from './tcp-passthrough';
@@ -21,7 +27,10 @@ import { startTcpPassthrough, type TcpPassthrough } from './tcp-passthrough';
  * Skipped unless `TEPEGOZ_LIVE_XMPP=1` — see `chat-live-xmpp.spec.ts`'s header for how to stand up
  * the local Prosody this needs.
  */
-test.skip(process.env.TEPEGOZ_LIVE_XMPP !== '1', 'needs a live local Prosody — see chat-live-xmpp.spec.ts');
+test.skip(
+  process.env.TEPEGOZ_LIVE_XMPP !== '1',
+  'needs a live local Prosody — see chat-live-xmpp.spec.ts',
+);
 
 const appDir = resolve(process.cwd(), 'apps/desktop');
 
@@ -72,7 +81,14 @@ async function connectBob(): Promise<{ adapter: XmppAdapter; session: ChatSessio
   const creds: ChatAccountCreds = {
     accountId: 'bob',
     secret: 'bobpw123',
-    server: { protocol: 'xmpp', jid: 'bob@localhost', host: 'localhost', port: 5222, security: 'starttls', wsUrl: null },
+    server: {
+      protocol: 'xmpp',
+      jid: 'bob@localhost',
+      host: 'localhost',
+      port: 5222,
+      security: 'starttls',
+      wsUrl: null,
+    },
   };
   const session = await adapter.connect(creds, insecureTransport());
   await adapter.setPresence(session, 'online');
@@ -117,7 +133,10 @@ test('a dropped connection reconnects cleanly, and a message sent during the dro
     await window.getByRole('button', { name: 'Add account' }).click();
 
     type ChatBridge = {
-      listChatAccounts: () => Promise<{ accounts: { id: string }[]; states: Record<string, string> }>;
+      listChatAccounts: () => Promise<{
+        accounts: { id: string }[];
+        states: Record<string, string>;
+      }>;
     };
     const accountId = await window.evaluate(async () => {
       const bridge = (window as unknown as { tepegoz: ChatBridge }).tepegoz;
@@ -131,14 +150,19 @@ test('a dropped connection reconnects cleanly, and a message sent during the dro
         const bridge = (window as unknown as { tepegoz: ChatBridge }).tepegoz;
         return (await bridge.listChatAccounts()).states;
       });
-    await expect.poll(async () => (await statesOf())[accountId as string], { timeout: 20_000 }).toBe('online');
+    await expect
+      .poll(async () => (await statesOf())[accountId as string], { timeout: 20_000 })
+      .toBe('online');
 
     // The app never broadcasts initial presence automatically on connect, and an XMPP resource that
     // has never sent bare `<presence/>` is not "available" for live routing (RFC 6121) — without
     // this, bob's messages below only ever land in alice's MAM archive, never live.
     await window.evaluate(async (id: string) => {
-      const bridge = (window as unknown as { tepegoz: { setChatPresence: (a: string, p: string) => Promise<void> } })
-        .tepegoz;
+      const bridge = (
+        window as unknown as {
+          tepegoz: { setChatPresence: (a: string, p: string) => Promise<void> };
+        }
+      ).tepegoz;
       await bridge.setChatPresence(id, 'online');
     }, accountId as string);
     await window.waitForTimeout(500);
@@ -161,7 +185,9 @@ test('a dropped connection reconnects cleanly, and a message sent during the dro
 
     // ── Simulate the drop: kill the live pipe, Prosody itself and its session stay up ──
     passthrough.dropAll();
-    await expect.poll(async () => (await statesOf())[accountId as string], { timeout: 15_000 }).not.toBe('online');
+    await expect
+      .poll(async () => (await statesOf())[accountId as string], { timeout: 15_000 })
+      .not.toBe('online');
 
     // While alice is down, bob sends a message that can only ever reach her via MAM catch-up (no
     // XEP-0198 resumption is wired — see the file header) once she reconnects.
@@ -174,7 +200,9 @@ test('a dropped connection reconnects cleanly, and a message sent during the dro
 
     // ── The SAME passthrough listener is still up, so a plain reconnect (full bind, not resume)
     // reaches Prosody again through it and comes back online. ──
-    await expect.poll(async () => (await statesOf())[accountId as string], { timeout: 30_000 }).toBe('online');
+    await expect
+      .poll(async () => (await statesOf())[accountId as string], { timeout: 30_000 })
+      .toBe('online');
 
     // `selectConversation` only fetches history the FIRST time a conversation's message window is
     // seeded — it is a no-op on an already-open one, live pushes aside. There is no manual refresh

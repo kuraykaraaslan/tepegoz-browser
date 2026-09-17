@@ -39,8 +39,7 @@ describe('SASL EXTERNAL', () => {
 
 describe('SCRAM-SHA-1 (RFC 5802 §5 test vector)', () => {
   const clientNonce = 'fyko+d2lbbFgONRv9qkxdawL';
-  const serverFirst =
-    'r=fyko+d2lbbFgONRv9qkxdawL3rfcNHYJY1ZVvWVs7j,s=QSXCR+Q6sek8bf92,i=4096';
+  const serverFirst = 'r=fyko+d2lbbFgONRv9qkxdawL3rfcNHYJY1ZVvWVs7j,s=QSXCR+Q6sek8bf92,i=4096';
 
   it('produces the exact client proof and server signature', async () => {
     const state = startScram('SCRAM-SHA-1', 'user', 'pencil', clientNonce);
@@ -79,9 +78,9 @@ describe('SCRAM-SHA-256', () => {
 
     // Recompute the server signature independently via the client path (it is symmetric here
     // because scramFinal already returns expectedServerSignature computed from ServerKey).
-    expect(scramVerify(b64(`v=${final.expectedServerSignature}`), final.expectedServerSignature)).toBe(
-      true,
-    );
+    expect(
+      scramVerify(b64(`v=${final.expectedServerSignature}`), final.expectedServerSignature),
+    ).toBe(true);
   });
 });
 

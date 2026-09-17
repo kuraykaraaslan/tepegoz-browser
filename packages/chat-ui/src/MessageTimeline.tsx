@@ -341,7 +341,11 @@ export function MessageTimeline({
               <span className="chat-msg__gutter">
                 {startsGroup && (
                   <span className="chat-msg__avatar-tip" title={senderName}>
-                    <Avatar name={senderName} seed={message.senderAddress || senderName} size="sm" />
+                    <Avatar
+                      name={senderName}
+                      seed={message.senderAddress || senderName}
+                      size="sm"
+                    />
                     {/* The name is still in the accessibility tree — just not shown as its own
                      *  line, a hover tooltip on the avatar carries it visually instead. */}
                     <span className="chat-presence__sr-only">{senderName}</span>

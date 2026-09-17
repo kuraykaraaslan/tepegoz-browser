@@ -312,7 +312,12 @@ describe('PanelThread — evidence chip cites its record (S4 → S8 PR2)', () =>
         evidence: {
           mutating: true,
           items: [
-            { id: 'a', kind: 'network', verdict: 'contradicts', detail: '5xx after the Save click' },
+            {
+              id: 'a',
+              kind: 'network',
+              verdict: 'contradicts',
+              detail: '5xx after the Save click',
+            },
           ],
         },
       }),

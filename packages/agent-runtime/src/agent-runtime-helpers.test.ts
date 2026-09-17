@@ -78,7 +78,9 @@ describe('terminalMessageFor', () => {
   });
 
   it('in dev with a failure that carries no detail, still shows the plain-language reason', () => {
-    expect(terminalMessageFor('max_steps', undefined, failure({ message: '' }), S)).toBe(S.maxSteps);
+    expect(terminalMessageFor('max_steps', undefined, failure({ message: '' }), S)).toBe(
+      S.maxSteps,
+    );
   });
 
   it('falls back to the generic line for a reason not in the map, and never shows the raw code', () => {

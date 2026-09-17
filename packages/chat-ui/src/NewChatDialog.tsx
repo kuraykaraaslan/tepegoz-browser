@@ -74,7 +74,9 @@ export function NewChatDialog({
     () => accounts.filter((a) => browsableAccountIds.has(a.id)),
     [accounts, browsableAccountIds],
   );
-  const [discoverAccountId, setDiscoverAccountId] = useState(browsable[0]?.id ?? accounts[0]?.id ?? '');
+  const [discoverAccountId, setDiscoverAccountId] = useState(
+    browsable[0]?.id ?? accounts[0]?.id ?? '',
+  );
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent): void => {
@@ -85,8 +87,14 @@ export function NewChatDialog({
   }, [onClose]);
 
   const accountById = useMemo(() => new Map(accounts.map((a) => [a.id, a])), [accounts]);
-  const filteredContacts = useMemo(() => filterRoster(contacts, contactQuery), [contacts, contactQuery]);
-  const filteredRooms = useMemo(() => filterConversations(joinedRooms, roomQuery), [joinedRooms, roomQuery]);
+  const filteredContacts = useMemo(
+    () => filterRoster(contacts, contactQuery),
+    [contacts, contactQuery],
+  );
+  const filteredRooms = useMemo(
+    () => filterConversations(joinedRooms, roomQuery),
+    [joinedRooms, roomQuery],
+  );
 
   const discoverAccount = accountById.get(discoverAccountId);
   const addressTarget = addressAccountId || accounts[0]?.id;
@@ -109,19 +117,39 @@ export function NewChatDialog({
       <div className="chat-new-chat" role="dialog" aria-modal="true" aria-label={s.newChat.title}>
         <div className="chat-new-chat__head">
           <h2>{s.newChat.title}</h2>
-          <button type="button" className="chat-new-chat__close" aria-label={s.newChat.close} onClick={onClose}>
+          <button
+            type="button"
+            className="chat-new-chat__close"
+            aria-label={s.newChat.close}
+            onClick={onClose}
+          >
             ×
           </button>
         </div>
 
         <div className="chat-new-chat__tabs" role="tablist">
-          <button type="button" role="tab" aria-selected={tab === 'contacts'} onClick={() => setTab('contacts')}>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={tab === 'contacts'}
+            onClick={() => setTab('contacts')}
+          >
             {s.newChat.tabContacts}
           </button>
-          <button type="button" role="tab" aria-selected={tab === 'rooms'} onClick={() => setTab('rooms')}>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={tab === 'rooms'}
+            onClick={() => setTab('rooms')}
+          >
             {s.newChat.tabRooms}
           </button>
-          <button type="button" role="tab" aria-selected={tab === 'address'} onClick={() => setTab('address')}>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={tab === 'address'}
+            onClick={() => setTab('address')}
+          >
             {s.newChat.tabAddress}
           </button>
         </div>
@@ -152,8 +180,14 @@ export function NewChatDialog({
                         }}
                       >
                         <span className="chat-new-chat__avatar">
-                          <Avatar name={contactDisplayName(contact)} seed={contact.address || contact.id} size="sm" />
-                          {account?.protocol !== undefined && <ProtocolBadge protocol={account.protocol} />}
+                          <Avatar
+                            name={contactDisplayName(contact)}
+                            seed={contact.address || contact.id}
+                            size="sm"
+                          />
+                          {account?.protocol !== undefined && (
+                            <ProtocolBadge protocol={account.protocol} />
+                          )}
                         </span>
                         <span className="chat-new-chat__row-main">
                           <span className="chat-new-chat__name">{contactDisplayName(contact)}</span>
@@ -196,7 +230,9 @@ export function NewChatDialog({
                       >
                         <span className="chat-new-chat__avatar">
                           <Avatar name={conversationTitle(room)} seed={room.id} size="sm" />
-                          {account?.protocol !== undefined && <ProtocolBadge protocol={account.protocol} />}
+                          {account?.protocol !== undefined && (
+                            <ProtocolBadge protocol={account.protocol} />
+                          )}
                         </span>
                         <span className="chat-new-chat__row-main">
                           <span className="chat-new-chat__name">{conversationTitle(room)}</span>
@@ -231,8 +267,12 @@ export function NewChatDialog({
                   <RoomBrowser
                     key={discoverAccountId}
                     discoverRooms={(service) => discoverRooms(discoverAccountId, service)}
-                    onJoin={(roomJid) => onJoinRoom(discoverAccountId, roomJid).then(() => onClose())}
-                    canBrowse={discoverAccount !== undefined && browsableAccountIds.has(discoverAccount.id)}
+                    onJoin={(roomJid) =>
+                      onJoinRoom(discoverAccountId, roomJid).then(() => onClose())
+                    }
+                    canBrowse={
+                      discoverAccount !== undefined && browsableAccountIds.has(discoverAccount.id)
+                    }
                     {...(discoverAddressPlaceholder !== undefined
                       ? { addressPlaceholder: discoverAddressPlaceholder }
                       : {})}

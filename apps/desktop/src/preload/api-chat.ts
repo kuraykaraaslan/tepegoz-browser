@@ -74,7 +74,11 @@ export const chatApi: Pick<
       before: before ?? null,
     }),
   sendChatMessage: (accountId: string, conversationId: string, body: OutgoingMessage) =>
-    invoke<{ protocolId: string }>(IpcChannels.chatSendMessage, { accountId, conversationId, body }),
+    invoke<{ protocolId: string }>(IpcChannels.chatSendMessage, {
+      accountId,
+      conversationId,
+      body,
+    }),
   setChatPresence: (accountId: string, presence: ChatPresence, statusText?: string) =>
     invoke<void>(IpcChannels.chatSetPresence, {
       accountId,

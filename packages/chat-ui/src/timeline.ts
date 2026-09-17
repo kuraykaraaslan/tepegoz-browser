@@ -8,13 +8,21 @@ import { startOfDay } from './time';
  * bucketing rules are unit-tested directly.
  */
 
-type TimelineMessageFields = Pick<ChatMessage, 'id' | 'senderAddress' | 'kind' | 'originTs' | 'receivedAt'>;
+type TimelineMessageFields = Pick<
+  ChatMessage,
+  'id' | 'senderAddress' | 'kind' | 'originTs' | 'receivedAt'
+>;
 
 export type TimelineItem<M> =
   | { readonly kind: 'day'; readonly day: number; readonly key: string }
   | { readonly kind: 'unread-divider'; readonly key: string }
   | { readonly kind: 'truncated'; readonly hiddenCount: number; readonly key: string }
-  | { readonly kind: 'message'; readonly message: M; readonly key: string; readonly startsGroup: boolean };
+  | {
+      readonly kind: 'message';
+      readonly message: M;
+      readonly key: string;
+      readonly startsGroup: boolean;
+    };
 
 export interface BuildTimelineOptions<M> {
   /** Sender-grouping window: a gap wider than this opens a new group even for the same sender. */

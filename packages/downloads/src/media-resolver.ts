@@ -49,11 +49,7 @@ export interface MediaProbeResult {
 export type MediaProbe = (url: string) => Promise<MediaProbeResult | null>;
 
 export type MediaResolutionReason =
-  | 'unsupported_scheme'
-  | 'invalid_url'
-  | 'unreachable'
-  | 'html_page'
-  | 'unknown_type';
+  'unsupported_scheme' | 'invalid_url' | 'unreachable' | 'html_page' | 'unknown_type';
 
 export type MediaResolution =
   | {

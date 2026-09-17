@@ -61,14 +61,20 @@ describe('parseUploadSlot', () => {
         `<put url="https://u/1"/><get url="https://g/1"/>` +
         `</slot></iq>`,
     );
-    expect(parseUploadSlot(iq)).toEqual({ putUrl: 'https://u/1', putHeaders: {}, getUrl: 'https://g/1' });
+    expect(parseUploadSlot(iq)).toEqual({
+      putUrl: 'https://u/1',
+      putHeaders: {},
+      getUrl: 'https://g/1',
+    });
   });
 
   it('returns null for an iq with no slot, or a slot missing either url', () => {
     expect(parseUploadSlot(el('<iq type="result"/>'))).toBeNull();
     expect(
       parseUploadSlot(
-        el('<iq type="result"><slot xmlns="urn:xmpp:http:upload:0"><get url="https://g/1"/></slot></iq>'),
+        el(
+          '<iq type="result"><slot xmlns="urn:xmpp:http:upload:0"><get url="https://g/1"/></slot></iq>',
+        ),
       ),
     ).toBeNull();
     expect(
@@ -99,7 +105,10 @@ describe('parseUploadSlotError', () => {
         `<file-too-large xmlns="urn:xmpp:http:upload:0"><max-file-size>10485760</max-file-size></file-too-large>` +
         `</error></iq>`,
     );
-    expect(parseUploadSlotError(iq)).toEqual({ condition: 'not-acceptable', maxFileSize: 10_485_760 });
+    expect(parseUploadSlotError(iq)).toEqual({
+      condition: 'not-acceptable',
+      maxFileSize: 10_485_760,
+    });
   });
 
   it('returns null for a non-error iq, or one with no <error/>', () => {

@@ -36,7 +36,12 @@ function ChatSurface({ api }: Readonly<{ api: ChatHostApi }>) {
         {...(mode.kind === 'edit' ? { existingAccount: mode.account } : {})}
         onCancel={() => setMode(null)}
         onAdd={async ({ account, secret }) => {
-          const withMeta = { ...account, secretRef: `chat:${account.id}`, updatedAt: Date.now(), version: 1 };
+          const withMeta = {
+            ...account,
+            secretRef: `chat:${account.id}`,
+            updatedAt: Date.now(),
+            version: 1,
+          };
           if (mode.kind === 'edit') {
             await api.updateChatAccount(withMeta, secret);
           } else {

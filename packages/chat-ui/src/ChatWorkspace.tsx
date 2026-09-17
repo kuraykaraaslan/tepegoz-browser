@@ -83,7 +83,12 @@ function NewChatIcon() {
         strokeWidth="1.3"
         strokeLinejoin="round"
       />
-      <path d="M8.5 5.7v4M6.5 7.7h4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+      <path
+        d="M8.5 5.7v4M6.5 7.7h4"
+        stroke="currentColor"
+        strokeWidth="1.3"
+        strokeLinecap="round"
+      />
     </svg>
   );
 }
@@ -156,7 +161,9 @@ export function ChatWorkspace({
   // roster entry to key off of. Deliberately not a room join (that stays in the Rooms tab): this is
   // for starting a DM with an address the user already knows, phone-lookup's future landing spot.
   const startByAddress = (accountId: string, address: string): void => {
-    const existing = chat.conversations.find((c) => c.accountId === accountId && c.address === address);
+    const existing = chat.conversations.find(
+      (c) => c.accountId === accountId && c.address === address,
+    );
     setTab('chats');
     chat.selectConversation(existing?.id ?? address, accountId);
   };
@@ -189,9 +196,9 @@ export function ChatWorkspace({
           ? stubConversation(chat.selectedConversationId, chat.activeAccountId)
           : undefined));
   const messages: readonly ChatMessage[] = selected
-    ? chat.client.messages[selected.id] ?? []
+    ? (chat.client.messages[selected.id] ?? [])
     : [];
-  const typing = selected ? chat.client.typing[selected.id] ?? [] : [];
+  const typing = selected ? (chat.client.typing[selected.id] ?? []) : [];
   const selectedRoom = selected ? chat.client.rooms[selected.id] : undefined;
   // IRC has no end-to-end encryption at any layer — surface that on every one of its conversations.
   // Derived from the account protocol rather than an adapter-caps round-trip: the fact is static and
@@ -340,7 +347,7 @@ export function ChatWorkspace({
                 selectedId={chat.selectedConversationId}
                 onSelect={chat.selectConversation}
                 presenceOf={(c) =>
-                  c.kind === 'dm' ? contactByAddress.get(c.address)?.presence ?? null : null
+                  c.kind === 'dm' ? (contactByAddress.get(c.address)?.presence ?? null) : null
                 }
               />
             </>
@@ -357,7 +364,10 @@ export function ChatWorkspace({
                   }
                 : {})}
               {...(chat.removeContact !== null
-                ? { onRemoveContact: (contact) => chat.removeContact?.(contact.accountId, contact.address) }
+                ? {
+                    onRemoveContact: (contact) =>
+                      chat.removeContact?.(contact.accountId, contact.address),
+                  }
                 : {})}
               {...(chat.blockContact !== null
                 ? {
@@ -432,7 +442,9 @@ export function ChatWorkspace({
                       }
                     : {})}
                   {...(chat.setRoomTopic !== null
-                    ? { onSetTopic: (topic: string) => void chat.setRoomTopic?.(selected.id, topic) }
+                    ? {
+                        onSetTopic: (topic: string) => void chat.setRoomTopic?.(selected.id, topic),
+                      }
                     : {})}
                   {...(chat.inviteToRoom !== null
                     ? { onInvite: (who: string) => void chat.inviteToRoom?.(selected.id, who) }
@@ -515,7 +527,10 @@ export function ChatWorkspace({
                       if (nick === selectedRoom.selfNick) return; // no DM with yourself
                       const address = selectedRoom.occupants[nick]?.realJid ?? nick;
                       const existing = chat.conversations.find(
-                        (c) => c.kind === 'dm' && c.accountId === selected.accountId && c.address === address,
+                        (c) =>
+                          c.kind === 'dm' &&
+                          c.accountId === selected.accountId &&
+                          c.address === address,
                       );
                       // A DM's conversation id is its peer's bare address (see `blankConversation`) —
                       // `selectConversation` handles a brand-new one gracefully.

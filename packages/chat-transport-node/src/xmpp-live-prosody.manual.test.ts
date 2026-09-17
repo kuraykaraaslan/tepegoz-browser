@@ -68,11 +68,21 @@ describe.skipIf(process.env.TEPEGOZ_LIVE_XMPP !== '1')('XmppAdapter — live Pro
     return {
       accountId: user,
       secret,
-      server: { protocol: 'xmpp', jid: `${user}@${host}`, host, port, security: 'starttls', wsUrl: null },
+      server: {
+        protocol: 'xmpp',
+        jid: `${user}@${host}`,
+        host,
+        port,
+        security: 'starttls',
+        wsUrl: null,
+      },
     };
   }
 
-  async function connect(user: string, secret: string): Promise<{ adapter: XmppAdapter; session: ChatSession }> {
+  async function connect(
+    user: string,
+    secret: string,
+  ): Promise<{ adapter: XmppAdapter; session: ChatSession }> {
     const adapter = new XmppAdapter();
     const session = await adapter.connect(creds(user, secret), insecureTransport());
     return { adapter, session };
@@ -91,7 +101,10 @@ describe.skipIf(process.env.TEPEGOZ_LIVE_XMPP !== '1')('XmppAdapter — live Pro
     const deadline = Date.now() + timeoutMs;
     for (;;) {
       const remaining = deadline - Date.now();
-      if (remaining <= 0) throw new Error(`timed out after ${String(timeoutMs)}ms waiting for message body "${body}"`);
+      if (remaining <= 0)
+        throw new Error(
+          `timed out after ${String(timeoutMs)}ms waiting for message body "${body}"`,
+        );
       const timeout = new Promise<never>((_resolve, reject) => {
         setTimeout(() => reject(new Error('per-event timeout')), remaining);
       });
@@ -127,10 +140,16 @@ describe.skipIf(process.env.TEPEGOZ_LIVE_XMPP !== '1')('XmppAdapter — live Pro
         setTimeout(() => reject(new Error('per-event timeout')), remaining);
       });
       const result: IteratorResult<unknown> = await Promise.race([it.next(), timeout]);
-      const value = result.value as
-        | { type?: unknown; removed?: unknown; contact?: { address?: unknown } }
-        | null;
-      if (value?.type === 'roster-change' && value.contact?.address === address && value.removed === removed) {
+      const value = result.value as {
+        type?: unknown;
+        removed?: unknown;
+        contact?: { address?: unknown };
+      } | null;
+      if (
+        value?.type === 'roster-change' &&
+        value.contact?.address === address &&
+        value.removed === removed
+      ) {
         return value;
       }
     }
@@ -143,7 +162,11 @@ describe.skipIf(process.env.TEPEGOZ_LIVE_XMPP !== '1')('XmppAdapter — live Pro
     // 6121 §2.1) on its own, or Prosody silently drops the live push below.
     await alice.adapter.addContact?.(alice.session, 'bob@localhost');
     const event = await waitForRosterChange(it, 'bob@localhost', false);
-    expect(event).toMatchObject({ type: 'roster-change', removed: false, contact: { address: 'bob@localhost' } });
+    expect(event).toMatchObject({
+      type: 'roster-change',
+      removed: false,
+      contact: { address: 'bob@localhost' },
+    });
     await alice.adapter.disconnect(alice.session);
   }, 15_000);
 
@@ -154,7 +177,11 @@ describe.skipIf(process.env.TEPEGOZ_LIVE_XMPP !== '1')('XmppAdapter — live Pro
     await waitForRosterChange(it, 'bob@localhost', false);
     await alice.adapter.removeContact?.(alice.session, 'bob@localhost');
     const event = await waitForRosterChange(it, 'bob@localhost', true);
-    expect(event).toMatchObject({ type: 'roster-change', removed: true, contact: { address: 'bob@localhost' } });
+    expect(event).toMatchObject({
+      type: 'roster-change',
+      removed: true,
+      contact: { address: 'bob@localhost' },
+    });
     await alice.adapter.disconnect(alice.session);
   }, 15_000);
 

@@ -61,15 +61,15 @@ Because S12 is three gated sub-phases, the DoD is partitioned. S12a is `local` (
 ### PR1 — S12a: wire the local provider into the real decision path (Lane C, no reactor collision)
 
 - [~] Replace the `local-slm` **placeholder** in [`models.ts:137-141`](../../packages/model-gateway/src/models.ts) (line drifted from the original `:77-79` citation as the file grew; corrected 2026-09-16) with a real profile pointing the `exec`/`classify` tiers at a catalogued GGUF model id; keep `plan` on the frontier tier for now.
-      — _Re-checked 2026-09-16: the string is **not read by anything that decides which model runs**.
-      `LocalProvider.complete()` (`local-provider.ts:24-30`) ignores `req.model` entirely and resolves
-      the real model itself via `config.resolveModel()` (`ModelManager`/prefs) — so `local-slm` is a
-      routing no-op, not a broken pointer, and "replacing" it would change no behavior. What it MIGHT
-      still affect is cosmetic: `effectiveReq.model` (the placeholder string) is what `TokenLedger.record`
-      stores as the model label for a local-tier call, so a Token Ledger UI showing "which model" for a
-      local run could show `local-slm` instead of the real resolved GGUF id — **not verified either way**
-      (no UI surface renders that field in a string search of the codebase), left open as a narrower,
-      separate cosmetic question rather than the routing gap this line originally described._
+  — _Re-checked 2026-09-16: the string is **not read by anything that decides which model runs**.
+  `LocalProvider.complete()` (`local-provider.ts:24-30`) ignores `req.model` entirely and resolves
+  the real model itself via `config.resolveModel()` (`ModelManager`/prefs) — so `local-slm` is a
+  routing no-op, not a broken pointer, and "replacing" it would change no behavior. What it MIGHT
+  still affect is cosmetic: `effectiveReq.model` (the placeholder string) is what `TokenLedger.record`
+  stores as the model label for a local-tier call, so a Token Ledger UI showing "which model" for a
+  local run could show `local-slm` instead of the real resolved GGUF id — **not verified either way**
+  (no UI surface renders that field in a string search of the codebase), left open as a narrower,
+  separate cosmetic question rather than the routing gap this line originally described._
 - [x] Serve the [`model-router.ts`](../../packages/model-gateway/src/model-router.ts) `eligibleForLocal` route through [`local-provider.ts`](../../packages/local-inference/src/local-provider.ts) so a `SIMPLE_CAPABILITIES` decision actually reaches the GGUF backend (today the branch resolves to a stub).
       — _**Stale claim, corrected 2026-09-16: this is not a stub.**
       `agent-runtime-providers.ts`'s `registerRunProvider` (lines 154-156) already registers a real

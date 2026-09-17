@@ -2,7 +2,12 @@ import { shell } from 'electron';
 import { AppError } from '@tepegoz/libs';
 import { IpcChannels } from '@tepegoz/desktop-ipc';
 import { DataRightsExportRequestSchema, type DataRightsExportResult } from '@tepegoz/shared-types';
-import { AgentConversationStore, DownloadStore, EventJournal, HistoryStore } from '@tepegoz/persistence';
+import {
+  AgentConversationStore,
+  DownloadStore,
+  EventJournal,
+  HistoryStore,
+} from '@tepegoz/persistence';
 import { BookmarkTreeStore } from '@tepegoz/bookmarks';
 import {
   buildSubjectAccessReport,

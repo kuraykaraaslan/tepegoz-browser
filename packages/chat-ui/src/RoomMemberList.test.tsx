@@ -38,14 +38,24 @@ describe('RoomMemberList', () => {
     wrap(<RoomMemberList room={room} />);
     expect(screen.getByRole('heading', { name: '4 Members' })).toBeDefined();
 
-    const nicks = screen.getAllByRole('button').map((b) => b.querySelector('.chat-room-members__nick')?.textContent);
+    const nicks = screen
+      .getAllByRole('button')
+      .map((b) => b.querySelector('.chat-room-members__nick')?.textContent);
     expect(nicks).toEqual(['ada', 'bea', 'cem', 'zoe']);
 
     const adaRow = screen.getByText('ada').closest('button');
     expect(adaRow?.querySelector('.chat-room-members__badge')?.textContent).toBe('Owner');
-    expect(screen.getByText('bea').closest('button')?.querySelector('.chat-room-members__badge')?.textContent).toBe('Mod');
-    expect(screen.getByText('cem').closest('button')?.querySelector('.chat-room-members__badge')?.textContent).toBe('Admin');
-    expect(screen.getByText('zoe').closest('button')?.querySelector('.chat-room-members__badge')).toBeNull();
+    expect(
+      screen.getByText('bea').closest('button')?.querySelector('.chat-room-members__badge')
+        ?.textContent,
+    ).toBe('Mod');
+    expect(
+      screen.getByText('cem').closest('button')?.querySelector('.chat-room-members__badge')
+        ?.textContent,
+    ).toBe('Admin');
+    expect(
+      screen.getByText('zoe').closest('button')?.querySelector('.chat-room-members__badge'),
+    ).toBeNull();
   });
 
   it('calls onSelectMember on click; the pick is disabled without a handler', () => {

@@ -22,8 +22,7 @@ describe('buildMime — headers', () => {
       generateId: seq(),
     });
     const m = parseMime(raw);
-    const h = (name: string): string | undefined =>
-      m.headers.find((x) => x.name === name)?.value;
+    const h = (name: string): string | undefined => m.headers.find((x) => x.name === name)?.value;
     expect(h('date')).toBe('Thu, 10 Sep 2026 17:53:00 +0000');
     expect(h('from')).toBe('Ada <ada@example.org>');
     expect(h('to')).toBe('bob@example.net');
@@ -151,7 +150,11 @@ describe('buildMime — body structure', () => {
       from: { address: 'a@x.org' },
       text: 'see attached',
       attachments: [
-        { filename: 'note.txt', contentType: 'text/plain', content: new TextEncoder().encode('file data') },
+        {
+          filename: 'note.txt',
+          contentType: 'text/plain',
+          content: new TextEncoder().encode('file data'),
+        },
       ],
       now: FIXED,
       messageId: 'x@x.org',
@@ -275,7 +278,13 @@ describe('buildMime — encoding', () => {
     const raw = buildMime({
       from: { address: 'a@x.org' },
       text: 'x',
-      attachments: [{ filename: 'çıktı raporu.pdf', contentType: 'application/pdf', content: new Uint8Array([1]) }],
+      attachments: [
+        {
+          filename: 'çıktı raporu.pdf',
+          contentType: 'application/pdf',
+          content: new Uint8Array([1]),
+        },
+      ],
       now: FIXED,
       messageId: 'x@x.org',
       generateId: seq(),
@@ -345,8 +354,17 @@ describe('buildMime — more edge cases for coverage', () => {
   });
 
   it('folds a long References header onto continuation lines', () => {
-    const refs = Array.from({ length: 12 }, (_, i) => `<msg-${i}-aaaaaaaaaaaaaaaaaaaa@example.org>`);
-    const raw = buildMime({ ...base, from: { address: 'a@x.org' }, text: 'x', references: refs, generateId: seq() });
+    const refs = Array.from(
+      { length: 12 },
+      (_, i) => `<msg-${i}-aaaaaaaaaaaaaaaaaaaa@example.org>`,
+    );
+    const raw = buildMime({
+      ...base,
+      from: { address: 'a@x.org' },
+      text: 'x',
+      references: refs,
+      generateId: seq(),
+    });
     const headerBlock = raw.slice(0, raw.indexOf('\r\n\r\n'));
     const refLineIdx = headerBlock.split('\r\n').findIndex((l) => l.startsWith('References:'));
     expect(headerBlock.split('\r\n')[refLineIdx + 1]?.startsWith('\t')).toBe(true);
@@ -391,7 +409,10 @@ describe('buildMime — more edge cases for coverage', () => {
       ...base,
       from: { address: 'a@x.org' },
       text: 'x',
-      headers: [['   ', 'ignored'], ['X-Keep', 'yes']],
+      headers: [
+        ['   ', 'ignored'],
+        ['X-Keep', 'yes'],
+      ],
       generateId: seq(),
     });
     const m = parseMime(raw);

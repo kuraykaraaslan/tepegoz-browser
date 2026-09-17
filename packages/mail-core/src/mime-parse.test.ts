@@ -1,10 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import {
-  parseMime,
-  decodeEncodedWords,
-  iterMimeParts,
-  selectBodyStructure,
-} from './mime-parse';
+import { parseMime, decodeEncodedWords, iterMimeParts, selectBodyStructure } from './mime-parse';
 
 const CRLF = '\r\n';
 /** Join lines with CRLF, as a real message on the wire has them. */
@@ -73,7 +68,12 @@ describe('parseMime — Content-Transfer-Encoding', () => {
   it('treats 8bit as raw bytes and decodes with the declared charset', () => {
     // 0xE9 is é in ISO-8859-1
     const m = parseMime(
-      msg('Content-Type: text/plain; charset=iso-8859-1', 'Content-Transfer-Encoding: 8bit', '', 'café'),
+      msg(
+        'Content-Type: text/plain; charset=iso-8859-1',
+        'Content-Transfer-Encoding: 8bit',
+        '',
+        'café',
+      ),
     );
     expect(m.text).toBe('café');
   });
@@ -188,7 +188,7 @@ describe('parseMime — Content-Disposition + filenames', () => {
     const m = parseMime(
       msg(
         'Content-Type: application/pdf',
-        "Content-Disposition: attachment;" +
+        'Content-Disposition: attachment;' +
           " filename*0*=utf-8''%C3%BC%C3%A7;" +
           ' filename*1*=%20rapor.pdf',
         '',
@@ -277,7 +277,14 @@ describe('decodeEncodedWords — RFC 2047', () => {
 
 describe('parseMime — totality / hardening', () => {
   it('never throws on junk input and always yields a usable body', () => {
-    for (const junk of ['', '\r\n\r\n', 'Subject', '=?=?=?=?', '--x--\r\n', 'Content-Type: multipart/mixed; boundary=']) {
+    for (const junk of [
+      '',
+      '\r\n\r\n',
+      'Subject',
+      '=?=?=?=?',
+      '--x--\r\n',
+      'Content-Type: multipart/mixed; boundary=',
+    ]) {
       expect(() => parseMime(junk)).not.toThrow();
       const m = parseMime(junk);
       expect(typeof m.text === 'string' || m.text === null).toBe(true);
@@ -307,9 +314,10 @@ describe('parseMime — totality / hardening', () => {
   });
 
   it('caps the total part count on a boundary bomb', () => {
-    const parts = Array.from({ length: 5000 }, () => '--B\r\nContent-Type: text/plain\r\n\r\nx').join(
-      '\r\n',
-    );
+    const parts = Array.from(
+      { length: 5000 },
+      () => '--B\r\nContent-Type: text/plain\r\n\r\nx',
+    ).join('\r\n');
     const m = parseMime(`Content-Type: multipart/mixed; boundary="B"\r\n\r\n${parts}\r\n--B--`);
     expect(m.parts.length).toBeLessThanOrEqual(1000);
     expect(m.diagnostics.join(' ')).toMatch(/part budget/);
@@ -324,7 +332,12 @@ describe('parseMime — more edge cases for coverage', () => {
 
   it('falls back when the charset label is not one TextDecoder knows', () => {
     const m = parseMime(
-      msg('Content-Type: text/plain; charset=x-bogus-charset', 'Content-Transfer-Encoding: 8bit', '', 'plain ascii'),
+      msg(
+        'Content-Type: text/plain; charset=x-bogus-charset',
+        'Content-Transfer-Encoding: 8bit',
+        '',
+        'plain ascii',
+      ),
     );
     expect(m.text).toBe('plain ascii');
   });
@@ -362,7 +375,12 @@ describe('parseMime — more edge cases for coverage', () => {
 
   it('honours a backslash escape inside a quoted parameter value', () => {
     const m = parseMime(
-      msg('Content-Type: text/plain', 'Content-Disposition: attachment; filename="a\\"b.txt"', '', 'x'),
+      msg(
+        'Content-Type: text/plain',
+        'Content-Disposition: attachment; filename="a\\"b.txt"',
+        '',
+        'x',
+      ),
     );
     expect(m.filename).toBe('a"b.txt');
   });

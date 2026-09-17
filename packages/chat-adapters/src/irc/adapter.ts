@@ -128,10 +128,13 @@ export class IrcSession implements ChatSession {
       const now = Date.now();
       if (this.floodBudgetUntil < now) this.floodBudgetUntil = now;
       if (this.floodBudgetUntil - now > FLOOD_BURST_MS) {
-        this.flushTimer = setTimeout(() => {
-          this.flushTimer = null;
-          this.pump();
-        }, this.floodBudgetUntil - FLOOD_BURST_MS - now);
+        this.flushTimer = setTimeout(
+          () => {
+            this.flushTimer = null;
+            this.pump();
+          },
+          this.floodBudgetUntil - FLOOD_BURST_MS - now,
+        );
         return;
       }
       const line = this.pending.shift();
@@ -219,8 +222,7 @@ export class IrcAdapter implements ChatAdapter {
     const external = server.saslMechanism === 'external';
     // Pre-SASL account auth: `PASS` before registration (default) or a `NickServ IDENTIFY` message
     // sent once after `001`. Only one path fires, and only when SASL is off with a secret present.
-    const nickServ =
-      !server.sasl && server.preSaslAuth === 'nickserv' && creds.secret.length > 0;
+    const nickServ = !server.sasl && server.preSaslAuth === 'nickserv' && creds.secret.length > 0;
     const registration = new IrcRegistration({
       nick: server.nick,
       user: server.nick,
@@ -352,7 +354,10 @@ export class IrcAdapter implements ChatAdapter {
       return;
     }
     // Track our own channel membership so a reconnect can auto-rejoin.
-    if ((msg.command === 'JOIN' || msg.command === 'PART') && msg.prefix?.startsWith(`${session.nick}!`)) {
+    if (
+      (msg.command === 'JOIN' || msg.command === 'PART') &&
+      msg.prefix?.startsWith(`${session.nick}!`)
+    ) {
       const chan = msg.params[0] !== undefined ? session.fold(msg.params[0]) : undefined;
       if (chan !== undefined) {
         if (msg.command === 'JOIN') session.joined.add(chan);
@@ -431,7 +436,10 @@ export class IrcAdapter implements ChatAdapter {
         const oldest = messages[0];
         resolve({
           messages,
-          nextCursor: messages.length > 0 && oldest !== undefined ? new Date(oldest.originTs).toISOString() : null,
+          nextCursor:
+            messages.length > 0 && oldest !== undefined
+              ? new Date(oldest.originTs).toISOString()
+              : null,
         });
       });
       s.enqueue(`CHATHISTORY BEFORE ${conv} ${selector} ${IRC_HISTORY_LIMIT}`);

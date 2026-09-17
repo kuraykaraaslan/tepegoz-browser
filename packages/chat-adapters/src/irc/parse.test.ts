@@ -44,7 +44,9 @@ describe('parseIrcLine', () => {
   });
 
   it('caps the parameter count', () => {
-    expect(parseIrcLine(`CMD ${Array.from({ length: 20 }, (_, i) => `p${i}`).join(' ')}`)).toBeNull();
+    expect(
+      parseIrcLine(`CMD ${Array.from({ length: 20 }, (_, i) => `p${i}`).join(' ')}`),
+    ).toBeNull();
   });
 
   it('caps the tag count and tolerates a lone unknown escape / trailing empty tag part', () => {

@@ -5,8 +5,4 @@
  * traffic does through Chromium's proxy.
  */
 export { Socks5Negotiator, type Socks5Target, type Socks5Step } from './negotiator';
-export {
-  socks5Connect,
-  type Socks5Socket,
-  type Socks5ConnectOptions,
-} from './connect';
+export { socks5Connect, type Socks5Socket, type Socks5ConnectOptions } from './connect';

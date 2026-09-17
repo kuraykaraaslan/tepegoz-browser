@@ -48,7 +48,9 @@ describe('ContextGauge', () => {
 
   it('shows the percentage of the window used', () => {
     // 40k of Haiku's 200k = 20%.
-    render(<ContextGauge contextTokens={40_000} provider="anthropic" model="claude-haiku-4-5" a={a} />);
+    render(
+      <ContextGauge contextTokens={40_000} provider="anthropic" model="claude-haiku-4-5" a={a} />,
+    );
     expect(screen.getByText(`${a.context.label} 20%`)).toBeTruthy();
   });
 
@@ -79,7 +81,12 @@ describe('ContextGauge', () => {
 
   it('clamps a run that overflows its estimated window at 100%', () => {
     render(
-      <ContextGauge contextTokens={5_000_000} provider="anthropic" model="claude-haiku-4-5" a={a} />,
+      <ContextGauge
+        contextTokens={5_000_000}
+        provider="anthropic"
+        model="claude-haiku-4-5"
+        a={a}
+      />,
     );
     expect(screen.getByText(`${a.context.label} 100%`)).toBeTruthy();
   });

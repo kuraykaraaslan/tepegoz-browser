@@ -85,7 +85,9 @@ export class NodeChatTransport implements ChatTransport {
   async fetch(url: string, init?: ChatFetchInit): Promise<ChatFetchResponse> {
     const controller = new AbortController();
     const timer =
-      init?.timeoutMs !== undefined ? setTimeout(() => controller.abort(), init.timeoutMs) : undefined;
+      init?.timeoutMs !== undefined
+        ? setTimeout(() => controller.abort(), init.timeoutMs)
+        : undefined;
     try {
       const body = toRequestBody(init?.body);
       const res = await this.ports.fetch(url, {
@@ -214,12 +216,12 @@ function wrapNodeSocket(socket: NodeSocketLike, nodeSocket?: Socket): RawDuplex 
     fired = true;
     closeCb(err);
   };
-  socket.on('error', ((err: Error) => fireClose(err)));
-  socket.on('close', (() => fireClose()));
-  socket.on('end', (() => fireClose()));
+  socket.on('error', (err: Error) => fireClose(err));
+  socket.on('close', () => fireClose());
+  socket.on('end', () => fireClose());
   return {
     write: (data) => socket.write(data),
-    onData: (cb) => socket.on('data', ((chunk: Buffer) => cb(new Uint8Array(chunk)))),
+    onData: (cb) => socket.on('data', (chunk: Buffer) => cb(new Uint8Array(chunk))),
     onClose: (cb) => {
       closeCb = cb;
     },

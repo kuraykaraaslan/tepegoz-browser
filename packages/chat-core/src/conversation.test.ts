@@ -33,7 +33,10 @@ function msg(over: Partial<ChatMessage>): ChatMessage {
   };
 }
 
-const message = (over: Partial<ChatMessage>): ChatEvent => ({ type: 'message', message: msg(over) });
+const message = (over: Partial<ChatMessage>): ChatEvent => ({
+  type: 'message',
+  message: msg(over),
+});
 
 describe('foldEvent — ordering & dedup', () => {
   it('orders by originTs regardless of arrival order', () => {
@@ -112,15 +115,26 @@ describe('window limit & echo reconciliation', () => {
   it('drops the oldest beyond the window', () => {
     let v = emptyConversation();
     for (let i = 0; i < 10; i += 1) {
-      v = foldEvent(v, message({ protocolId: `p${String(i)}`, originTs: i }), { ...opts, windowLimit: 3 });
+      v = foldEvent(v, message({ protocolId: `p${String(i)}`, originTs: i }), {
+        ...opts,
+        windowLimit: 3,
+      });
     }
     expect(v.messages.map((m) => m.protocolId)).toEqual(['p7', 'p8', 'p9']);
   });
 
   it('reconcileEcho replaces the temp message in place and marks it sent', () => {
     let v = emptyConversation();
-    v = foldEvent(v, message({ protocolId: 'temp-1', originTs: 1, senderAddress: 'me@x.com' }), opts);
-    v = reconcileEcho(v, 'temp-1', msg({ protocolId: 'server-9', originTs: 1, senderAddress: 'me@x.com' }));
+    v = foldEvent(
+      v,
+      message({ protocolId: 'temp-1', originTs: 1, senderAddress: 'me@x.com' }),
+      opts,
+    );
+    v = reconcileEcho(
+      v,
+      'temp-1',
+      msg({ protocolId: 'server-9', originTs: 1, senderAddress: 'me@x.com' }),
+    );
     expect(v.messages[0]?.protocolId).toBe('server-9');
     expect(v.messages[0]?.deliveryState).toBe('sent');
   });
@@ -133,7 +147,13 @@ describe('window limit & echo reconciliation', () => {
       v,
       {
         type: 'receipt',
-        receipt: { conversationId: 'c1', messageId: 'a', byAddress: 'me@x.com', kind: 'read', ts: 5 },
+        receipt: {
+          conversationId: 'c1',
+          messageId: 'a',
+          byAddress: 'me@x.com',
+          kind: 'read',
+          ts: 5,
+        },
       },
       opts,
     );
@@ -182,7 +202,13 @@ describe('window limit & echo reconciliation', () => {
       v,
       {
         type: 'receipt',
-        receipt: { conversationId: 'c1', messageId: 'a', byAddress: 'bob@x.com', kind: 'read', ts: 5 },
+        receipt: {
+          conversationId: 'c1',
+          messageId: 'a',
+          byAddress: 'bob@x.com',
+          kind: 'read',
+          ts: 5,
+        },
       },
       opts,
     );

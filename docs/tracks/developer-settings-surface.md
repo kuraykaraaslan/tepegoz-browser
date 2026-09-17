@@ -15,14 +15,14 @@
   `chromium-flags-boot.ts` (startup apply) + `settings-developer-flags.tsx` (flags card) +
   `DeveloperPageSurface.tsx` at `tepegoz://developer` (full Developer surface, not dev-gated) +
   `@tepegoz/preferences/developer-registry` (`PREFERENCE_METADATA` — `stability` `stable`/`experimental`/`internal`
-  + `restartRequired`, one row per `Preferences` key, `satisfies Record<keyof Preferences, …>` so an
-  unclassified key is a compile error; `preferenceMeta()` fails open to `stable`). The raw editor
-  (`developer-settings-model.ts` + `settings-developer.tsx`) now carries stability into each row, shows a
-  badge for non-`stable` keys, indexes it for search, and shows a "relaunch to apply" hint in the edit
-  modal for the three startup-only keys. `Preferences.webContentDefaults` + `WEB_CONTENT_DEFAULTS` /
-  `applyWebContentDefaults` in `@tepegoz/shared-types/web-content-defaults` +
-  `settings-developer-web-content.tsx` (Tier C/D card) + the `browsedViewWebPreferences()` merge. See
-  [ADR-0041 § Implementation status](../../docs/adr/0041-developer-settings-surface.md).
+  - `restartRequired`, one row per `Preferences` key, `satisfies Record<keyof Preferences, …>` so an
+    unclassified key is a compile error; `preferenceMeta()` fails open to `stable`). The raw editor
+    (`developer-settings-model.ts` + `settings-developer.tsx`) now carries stability into each row, shows a
+    badge for non-`stable` keys, indexes it for search, and shows a "relaunch to apply" hint in the edit
+    modal for the three startup-only keys. `Preferences.webContentDefaults` + `WEB_CONTENT_DEFAULTS` /
+    `applyWebContentDefaults` in `@tepegoz/shared-types/web-content-defaults` +
+    `settings-developer-web-content.tsx` (Tier C/D card) + the `browsedViewWebPreferences()` merge. See
+    [ADR-0041 § Implementation status](../../docs/adr/0041-developer-settings-surface.md).
 - **Companion ADR:** [ADR-0041](../../docs/adr/0041-developer-settings-surface.md) — the security
   carve-out (what is exposable, what is permanently locked) is decided there, not here.
 

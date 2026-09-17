@@ -63,7 +63,7 @@ describe('CHAT_SCRIPTS', () => {
     }
   });
 
-  it('chat_media_to_sandbox reads the room then calls chat_get_media on Bea\'s attachment message', () => {
+  it("chat_media_to_sandbox reads the room then calls chat_get_media on Bea's attachment message", () => {
     const build = CHAT_SCRIPTS.chat_media_to_sandbox;
     expect(build).toBeDefined();
     const replies = build!();

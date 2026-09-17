@@ -485,7 +485,9 @@ describe('writeExport / writeExportBundle', () => {
     expect(fsp.writeFile).toHaveBeenCalledWith(path.join(dir, 'm1.png'), Buffer.from(bytes));
 
     realpath.mockImplementation((p: string) => Promise.resolve(p === dir ? dir : '/elsewhere/x'));
-    await expect(Host.writeAttachment('../escape', bytes)).rejects.toMatchObject({ statusCode: 400 });
+    await expect(Host.writeAttachment('../escape', bytes)).rejects.toMatchObject({
+      statusCode: 400,
+    });
   });
 
   it('writeExportBundle rejects a bundle name that escapes the folder', async () => {

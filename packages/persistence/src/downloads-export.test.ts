@@ -53,7 +53,7 @@ describe('serializeDownloadsCsv', () => {
   it('neutralizes a spreadsheet formula-injection filename (leading = + - @)', () => {
     const out = serializeDownloadsCsv([row({ filename: '=cmd|"/c calc"!A1' })]);
     // prefixed with a quote so Excel/Sheets treat it as text, then CSV-quoted for the inner quotes
-    expect(out.split('\r\n')[1]).toContain("\"'=cmd|");
+    expect(out.split('\r\n')[1]).toContain('"\'=cmd|');
   });
 
   it('leaves created_at blank for a non-finite timestamp', () => {

@@ -123,11 +123,14 @@ describe('page-command shortcuts', () => {
 
   it('prefers the reloadActiveTab target (routes through the tab model, so tepegoz:// pages reload)', () => {
     const reloadActiveTab = vi.fn();
-    expect(handleWindowShortcut(win, press('r', { control: true }), { page, reloadActiveTab })).toBe(
-      true,
-    );
+    expect(
+      handleWindowShortcut(win, press('r', { control: true }), { page, reloadActiveTab }),
+    ).toBe(true);
     expect(reloadActiveTab).toHaveBeenLastCalledWith(false);
-    handleWindowShortcut(win, press('r', { control: true, shift: true }), { page, reloadActiveTab });
+    handleWindowShortcut(win, press('r', { control: true, shift: true }), {
+      page,
+      reloadActiveTab,
+    });
     expect(reloadActiveTab).toHaveBeenLastCalledWith(true);
     expect(commands.reloadPage).not.toHaveBeenCalled();
   });

@@ -1,8 +1,4 @@
-import {
-  type ChatAdapterCaps,
-  type ChatEvent,
-  ChatEventSchema,
-} from '@tepegoz/shared-types';
+import { type ChatAdapterCaps, type ChatEvent, ChatEventSchema } from '@tepegoz/shared-types';
 
 /**
  * The "prpl abstraction" boundary. Every adapter — native or an out-of-process bridge — hands the

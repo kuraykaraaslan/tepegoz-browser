@@ -13,7 +13,11 @@ import { GENESIS_HASH, selfHashOf } from '@tepegoz/notary';
 
 const journal = vi.hoisted(() => ({
   tailHash: vi.fn((): string | null => null),
-  append: vi.fn((_db: unknown, input: Record<string, unknown>) => ({ lsn: 1, deviceId: 'device-1', ...input })),
+  append: vi.fn((_db: unknown, input: Record<string, unknown>) => ({
+    lsn: 1,
+    deviceId: 'device-1',
+    ...input,
+  })),
 }));
 vi.mock('@tepegoz/persistence', () => ({ EventJournal: journal }));
 

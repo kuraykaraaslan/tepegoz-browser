@@ -145,9 +145,9 @@ describe('NetworkHealthCard', () => {
     expect(within(row).getByText(new RegExp(s.network.connError.handshake))).toBeTruthy();
     expect(within(row).queryByText(/bad key material/)).toBeNull();
     // …which stays one hover away for a bug report.
-    expect(within(row).getByText(new RegExp(s.network.connError.handshake)).getAttribute('title')).toBe(
-      'wireproxy did not come up: bad key material',
-    );
+    expect(
+      within(row).getByText(new RegExp(s.network.connError.handshake)).getAttribute('title'),
+    ).toBe('wireproxy did not come up: bad key material');
   });
 
   it('degrades to "unavailable" when the health record fails zod validation', () => {

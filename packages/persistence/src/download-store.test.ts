@@ -44,7 +44,13 @@ describe('DownloadStore', () => {
 
     DownloadStore.upsert(
       db,
-      download({ id: 'old', filename: 'old.txt', createdAt: 100, completedAt: 150, sha256: undefined }),
+      download({
+        id: 'old',
+        filename: 'old.txt',
+        createdAt: 100,
+        completedAt: 150,
+        sha256: undefined,
+      }),
     );
     DownloadStore.upsert(
       db,
@@ -72,9 +78,16 @@ describe('DownloadStore', () => {
     });
     // No leak of on-disk paths, the content hash, or quarantine internals.
     for (const r of rows) {
-      expect(Object.keys(r).sort()).toEqual(
-        ['completedAt', 'createdAt', 'filename', 'risk', 'sourceOrigin', 'status', 'totalBytes', 'url'],
-      );
+      expect(Object.keys(r).sort()).toEqual([
+        'completedAt',
+        'createdAt',
+        'filename',
+        'risk',
+        'sourceOrigin',
+        'status',
+        'totalBytes',
+        'url',
+      ]);
     }
 
     db.close();

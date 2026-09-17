@@ -1,6 +1,11 @@
 import { z } from 'zod';
 import { IpcChannels } from '@tepegoz/desktop-ipc';
-import type { ChatAccount, ChatContact, ChatConversation, ChatMessage } from '@tepegoz/shared-types';
+import type {
+  ChatAccount,
+  ChatContact,
+  ChatConversation,
+  ChatMessage,
+} from '@tepegoz/shared-types';
 import {
   ChatAccountIdArgSchema,
   ChatAddAccountSchema,
@@ -112,7 +117,12 @@ export interface ChatIpcService {
     emoji: string,
     on: boolean,
   ) => Promise<void>;
-  editMessage: (accountId: string, conversationId: string, messageId: string, body: string) => Promise<void>;
+  editMessage: (
+    accountId: string,
+    conversationId: string,
+    messageId: string,
+    body: string,
+  ) => Promise<void>;
 }
 
 export function registerChatIpc(service: ChatIpcService): void {
@@ -152,11 +162,14 @@ export function registerChatIpc(service: ChatIpcService): void {
     return service.getHistory(accountId, conversationId, before);
   });
 
-  handleAsync(IpcChannels.chatSendMessage, async (_event, payload): Promise<{ protocolId: string }> => {
-    const { accountId, conversationId, body } = parsePayload(ChatSendMessageSchema, payload);
-    const protocolId = await service.sendMessage(accountId, conversationId, body);
-    return { protocolId };
-  });
+  handleAsync(
+    IpcChannels.chatSendMessage,
+    async (_event, payload): Promise<{ protocolId: string }> => {
+      const { accountId, conversationId, body } = parsePayload(ChatSendMessageSchema, payload);
+      const protocolId = await service.sendMessage(accountId, conversationId, body);
+      return { protocolId };
+    },
+  );
 
   handleAsync(IpcChannels.chatSetPresence, async (_event, payload): Promise<void> => {
     const { accountId, presence, statusText } = parsePayload(ChatSetPresenceSchema, payload);
@@ -184,7 +197,10 @@ export function registerChatIpc(service: ChatIpcService): void {
   });
 
   handleAsync(IpcChannels.chatSetRoomNotifyLevel, async (_event, payload): Promise<void> => {
-    const { accountId, conversationId, level } = parsePayload(ChatSetRoomNotifyLevelSchema, payload);
+    const { accountId, conversationId, level } = parsePayload(
+      ChatSetRoomNotifyLevelSchema,
+      payload,
+    );
     await service.setRoomNotifyLevel(accountId, conversationId, level);
   });
 
@@ -224,12 +240,18 @@ export function registerChatIpc(service: ChatIpcService): void {
   });
 
   handleAsync(IpcChannels.chatReact, async (_event, payload): Promise<void> => {
-    const { accountId, conversationId, messageId, emoji, on } = parsePayload(ChatReactSchema, payload);
+    const { accountId, conversationId, messageId, emoji, on } = parsePayload(
+      ChatReactSchema,
+      payload,
+    );
     await service.react(accountId, conversationId, messageId, emoji, on);
   });
 
   handleAsync(IpcChannels.chatEditMessage, async (_event, payload): Promise<void> => {
-    const { accountId, conversationId, messageId, body } = parsePayload(ChatEditMessageSchema, payload);
+    const { accountId, conversationId, messageId, body } = parsePayload(
+      ChatEditMessageSchema,
+      payload,
+    );
     await service.editMessage(accountId, conversationId, messageId, body);
   });
 

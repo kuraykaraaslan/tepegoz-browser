@@ -1,4 +1,9 @@
-import { DEFAULT_PROFILE_ID, PROFILE_COLOR_COUNT, type Profile, type ProfilesFile } from './profiles-model';
+import {
+  DEFAULT_PROFILE_ID,
+  PROFILE_COLOR_COUNT,
+  type Profile,
+  type ProfilesFile,
+} from './profiles-model';
 
 /** Pure reducers over `ProfilesFile` — no I/O (mirrors `@tepegoz/downloads`'s reducer style). The
  *  Electron-facing `ProfilesStore` (this package's `./store` subpath) wraps these with persistence. */

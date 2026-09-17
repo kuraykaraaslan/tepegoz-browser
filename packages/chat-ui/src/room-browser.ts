@@ -35,6 +35,8 @@ export function filterRoomListings(rooms: readonly RoomListing[], query: string)
 /** Most-populated first, then by label — the order the browser lists them in. */
 export function sortRoomListings(rooms: readonly RoomListing[]): RoomListing[] {
   return [...rooms].sort(
-    (a, b) => (b.occupants ?? -1) - (a.occupants ?? -1) || roomListingLabel(a).localeCompare(roomListingLabel(b)),
+    (a, b) =>
+      (b.occupants ?? -1) - (a.occupants ?? -1) ||
+      roomListingLabel(a).localeCompare(roomListingLabel(b)),
   );
 }

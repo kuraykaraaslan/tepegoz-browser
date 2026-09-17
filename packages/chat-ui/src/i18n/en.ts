@@ -45,7 +45,8 @@ export const en = {
     loading: 'Loading rooms…',
     /** Shown instead of the browse form for a protocol with no room directory (IRC, Matrix) — the
      *  address field below still works. */
-    noBrowse: 'This protocol has no room directory to browse — join a channel or room by its address below.',
+    noBrowse:
+      'This protocol has no room directory to browse — join a channel or room by its address below.',
     /** The join itself failed (not connected, wrong address, rejected by the server, …). */
     joinError: "Couldn't join — check the address and that the account is connected.",
   },
@@ -175,7 +176,8 @@ export const en = {
     /** Heading over the XEP-0030 directory browser embedded in the Rooms tab. */
     discoverRooms: 'Discover public rooms',
     /** Shown instead of {@link discoverRooms} when no configured account can browse a directory. */
-    discoverUnavailable: 'No account here can browse a room directory — join one by its address instead.',
+    discoverUnavailable:
+      'No account here can browse a room directory — join one by its address instead.',
     /** Label for the account picker that selects which account a discovery search runs against. */
     discoverAccount: 'Account',
     /** Label + placeholder for the generic "start a chat with this address" field — deliberately

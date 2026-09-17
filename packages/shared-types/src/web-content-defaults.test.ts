@@ -73,7 +73,9 @@ describe('applyWebContentDefaults', () => {
 
   it('is a no-op for undefined overrides and for a non-boolean value', () => {
     expect(applyWebContentDefaults(hardened(), undefined).plugins).toBe(true);
-    const wrongType = { plugins: 'yes' } as unknown as Parameters<typeof applyWebContentDefaults>[1];
+    const wrongType = { plugins: 'yes' } as unknown as Parameters<
+      typeof applyWebContentDefaults
+    >[1];
     expect(applyWebContentDefaults(hardened(), wrongType).plugins).toBe(true);
   });
 });

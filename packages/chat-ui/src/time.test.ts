@@ -44,9 +44,19 @@ describe('daySeparatorLabel', () => {
   });
 
   it('formats an older day, adding the year only when it differs', () => {
-    const thisYear = daySeparatorLabel(startOfDay(new Date(2026, 0, 4).getTime()), NOON, WORDS, 'en-US');
+    const thisYear = daySeparatorLabel(
+      startOfDay(new Date(2026, 0, 4).getTime()),
+      NOON,
+      WORDS,
+      'en-US',
+    );
     expect(thisYear).toBe('January 4');
-    const lastYear = daySeparatorLabel(startOfDay(new Date(2025, 11, 20).getTime()), NOON, WORDS, 'en-US');
+    const lastYear = daySeparatorLabel(
+      startOfDay(new Date(2025, 11, 20).getTime()),
+      NOON,
+      WORDS,
+      'en-US',
+    );
     expect(lastYear).toBe('December 20, 2025');
   });
 });

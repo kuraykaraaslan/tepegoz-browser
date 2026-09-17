@@ -232,7 +232,9 @@ describe('isNativeDraggable (S3 PR6 spike)', () => {
     S.DraggableSchema.safeParse.mockReturnValueOnce(ok({ result: { value: { draggable: true } } }));
     expect(await dom.isNativeDraggable(cast(wc()), cast({ backendNodeId: 1 }))).toBe(true);
 
-    S.DraggableSchema.safeParse.mockReturnValueOnce(ok({ result: { value: { draggable: false } } }));
+    S.DraggableSchema.safeParse.mockReturnValueOnce(
+      ok({ result: { value: { draggable: false } } }),
+    );
     expect(await dom.isNativeDraggable(cast(wc()), cast({ backendNodeId: 1 }))).toBe(false);
   });
 

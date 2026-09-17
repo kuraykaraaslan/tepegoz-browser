@@ -21,7 +21,9 @@ function renderControls(
     over.exportMacros ??
       (() => Promise.resolve('{"format":"tepegoz.macros","version":1,"macros":[]}')),
   );
-  const importMacros = vi.fn(over.importMacros ?? (() => Promise.resolve({ imported: 0, skipped: 0 })));
+  const importMacros = vi.fn(
+    over.importMacros ?? (() => Promise.resolve({ imported: 0, skipped: 0 })),
+  );
   const onImported = vi.fn();
   render(
     <I18nProvider locale="en">

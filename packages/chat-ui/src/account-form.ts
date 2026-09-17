@@ -355,7 +355,8 @@ export function validateMatrixAccountForm(
 
   if (Object.keys(errors).length > 0) return { ok: false, errors };
 
-  const id = existing?.id ?? deriveAccountId(label || userId.replace(/^@/, '').split(':')[0] || 'account');
+  const id =
+    existing?.id ?? deriveAccountId(label || userId.replace(/^@/, '').split(':')[0] || 'account');
   const draft = {
     id,
     label,

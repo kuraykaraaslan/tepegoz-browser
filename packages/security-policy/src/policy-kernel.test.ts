@@ -124,9 +124,7 @@ describe('PolicyKernel.evaluate — EU AI Act Annex III risk gate', () => {
       reason: 'eu_ai_act_high_risk_lockout',
       biometric: false,
     });
-    expect(evaluate('destructive', { targetUrl: 'https://www.equifax.com' }).decision).toBe(
-      'deny',
-    );
+    expect(evaluate('destructive', { targetUrl: 'https://www.equifax.com' }).decision).toBe('deny');
   });
   it('asks (not allow) for reads on a high-risk site', () => {
     expect(evaluate('read', { targetUrl: 'https://onfido.com' })).toEqual({

@@ -76,7 +76,8 @@ function makePort(over: Partial<ChatClientPort> = {}): {
         conv({ id: 'c2', accountId: accountId ?? 'work', updatedAt: 300 }),
       ]),
     getChatRoster: () => Promise.resolve([] as ChatContact[]),
-    getChatHistory: () => Promise.resolve({ messages: [msg({ protocolId: 'h1' })], nextCursor: null }),
+    getChatHistory: () =>
+      Promise.resolve({ messages: [msg({ protocolId: 'h1' })], nextCursor: null }),
     sendChatMessage,
     setChatPresence: () => Promise.resolve(),
     markChatRead,
@@ -129,7 +130,7 @@ describe('useChatState', () => {
     expect(result.current.activeAccountId).toBe('work');
   });
 
-  it('selectConversation\'s hintAccountId resolves a brand-new (not-yet-existing) conversation to the RIGHT account, not activeAccountId', async () => {
+  it("selectConversation's hintAccountId resolves a brand-new (not-yet-existing) conversation to the RIGHT account, not activeAccountId", async () => {
     const { port } = makePort({
       listChatConversations: () =>
         Promise.resolve([
@@ -165,15 +166,18 @@ describe('useChatState', () => {
     const { port } = makePort({
       getChatRoster: (accountId: string) =>
         Promise.resolve(
-          accountId === 'home' ? [contact('home', 'alice@x.example')] : [contact('work', 'bob@x.example')],
+          accountId === 'home'
+            ? [contact('home', 'alice@x.example')]
+            : [contact('work', 'bob@x.example')],
         ),
     });
     const { result } = renderHook(() => useChatState(port));
     await waitFor(() => expect(Object.keys(result.current.client.roster).length).toBe(2));
-    expect(Object.values(result.current.client.roster).map((c) => c.address).sort()).toEqual([
-      'alice@x.example',
-      'bob@x.example',
-    ]);
+    expect(
+      Object.values(result.current.client.roster)
+        .map((c) => c.address)
+        .sort(),
+    ).toEqual(['alice@x.example', 'bob@x.example']);
   });
 
   it('selecting a conversation loads history once and marks it read', async () => {
@@ -202,7 +206,8 @@ describe('useChatState', () => {
     // unconditional — but chat-store's message-append path only fires when the conversation's
     // message window is already seeded, and a race meant the live event arrived before
     // `getChatHistory`'s response did).
-    let resolveHistory: ((page: { messages: ChatMessage[]; nextCursor: null }) => void) | null = null;
+    let resolveHistory: ((page: { messages: ChatMessage[]; nextCursor: null }) => void) | null =
+      null;
     const { port, emit } = makePort({
       listChatConversations: () => Promise.resolve([conv({ accountId: 'home' })]),
       getChatHistory: () =>
@@ -221,7 +226,11 @@ describe('useChatState', () => {
       emit({
         kind: 'change',
         accountId: 'home',
-        change: { kind: 'message', conversationId: 'c1', message: msg({ protocolId: 'live', receivedAt: 999 }) },
+        change: {
+          kind: 'message',
+          conversationId: 'c1',
+          message: msg({ protocolId: 'live', receivedAt: 999 }),
+        },
       });
     });
     expect(result.current.client.messages.c1?.some((m) => m.protocolId === 'live')).toBe(true);
@@ -231,7 +240,10 @@ describe('useChatState', () => {
       resolveHistory?.({ messages: [msg({ protocolId: 'h1' })], nextCursor: null });
     });
     await waitFor(() => expect(result.current.client.messages.c1?.length).toBe(2));
-    expect(result.current.client.messages.c1?.map((m) => m.protocolId).sort()).toEqual(['h1', 'live']);
+    expect(result.current.client.messages.c1?.map((m) => m.protocolId).sort()).toEqual([
+      'h1',
+      'live',
+    ]);
   });
 
   it('applies a pushed change event and a connection-state event', async () => {
@@ -249,7 +261,11 @@ describe('useChatState', () => {
       emit({
         kind: 'change',
         accountId: 'home',
-        change: { kind: 'message', conversationId: 'c1', message: msg({ protocolId: 'live', receivedAt: 999 }) },
+        change: {
+          kind: 'message',
+          conversationId: 'c1',
+          message: msg({ protocolId: 'live', receivedAt: 999 }),
+        },
       });
       emit({ kind: 'state', accountId: 'home', state: 'error' });
     });
@@ -355,8 +371,7 @@ describe('useChatState', () => {
     const setChatMuted = vi.fn(() => Promise.resolve());
     const { port } = makePort({
       setChatMuted,
-      listChatConversations: () =>
-        Promise.resolve([conv({ id: 'c1', accountId: 'home' })]),
+      listChatConversations: () => Promise.resolve([conv({ id: 'c1', accountId: 'home' })]),
     });
     const { result } = renderHook(() => useChatState(port));
     await waitFor(() => expect(result.current.conversations.length).toBe(1));
@@ -536,7 +551,8 @@ describe('useChatState', () => {
 
   it('startEditing / cancelEditing track the Composer edit target; switching conversation clears it', async () => {
     const { port } = makePort({
-      listChatConversations: () => Promise.resolve([conv({ accountId: 'home' }), conv({ id: 'c2', accountId: 'home' })]),
+      listChatConversations: () =>
+        Promise.resolve([conv({ accountId: 'home' }), conv({ id: 'c2', accountId: 'home' })]),
     });
     const { result } = renderHook(() => useChatState(port));
     await waitFor(() => expect(result.current.conversations.length).toBe(2));

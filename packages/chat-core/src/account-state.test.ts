@@ -1,5 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { ChatAdapterCapsSchema, type ChatConversation, type ChatMessage } from '@tepegoz/shared-types';
+import {
+  ChatAdapterCapsSchema,
+  type ChatConversation,
+  type ChatMessage,
+} from '@tepegoz/shared-types';
 import { ChatAccountState, type ChatStateChange } from './account-state';
 
 const caps = ChatAdapterCapsSchema.parse({
@@ -57,7 +61,10 @@ describe('ChatAccountState — messages', () => {
 
   it('counts a mention when the body pings a self name', () => {
     const s = state();
-    const cs = s.applyRaw({ type: 'message', message: msg({ protocolId: 'm1', body: 'hey @ada look' }) });
+    const cs = s.applyRaw({
+      type: 'message',
+      message: msg({ protocolId: 'm1', body: 'hey @ada look' }),
+    });
     expect(cs.find((c) => c.kind === 'conversation')).toMatchObject({ mentions: 1 });
   });
 
@@ -123,14 +130,28 @@ describe('ChatAccountState — messages', () => {
   it('X-chat.10: a hostile raw-event stream never throws and never corrupts a view', () => {
     const s = state();
     const hostile: unknown[] = [
-      null, undefined, 0, '', 'message', [], {}, { type: 'garbage' },
+      null,
+      undefined,
+      0,
+      '',
+      'message',
+      [],
+      {},
+      { type: 'garbage' },
       { type: 'message', message: {} },
       { type: 'message', message: { id: 'x', conversationId: 'bob@x.com' } },
       { type: 'message-edit', conversationId: 'bob@x.com', protocolId: '', body: 5, editedAt: -1 },
       { type: 'room-membership', conversationId: 'bob@x.com', address: 'a', joined: 'maybe' },
       { type: 'room-topic', conversationId: 'bob@x.com', topic: 42 },
       JSON.parse('{"__proto__":{"p":1},"type":"typing"}'),
-      { type: 'reaction', conversationId: 'bob@x.com', protocolId: 'p1', emoji: '', senderAddress: '', add: 'y' },
+      {
+        type: 'reaction',
+        conversationId: 'bob@x.com',
+        protocolId: 'p1',
+        emoji: '',
+        senderAddress: '',
+        add: 'y',
+      },
     ];
     // one real message so the view exists and can be checked for corruption
     s.applyRaw({ type: 'message', message: msg({ protocolId: 'real', body: 'hello' }) });
@@ -171,12 +192,20 @@ describe('ChatAccountState — seedLastRead', () => {
     // the moment a reconnect's history replay (MUC rejoin, MAM/`/sync` catch-up) re-delivers them.
     s.seedLastRead('bob@x.com', 'm2');
     s.applyRaw({ type: 'message', message: msg({ protocolId: 'm1', originTs: 1 }) });
-    const changes = s.applyRaw({ type: 'message', message: msg({ protocolId: 'm2', originTs: 2 }) });
+    const changes = s.applyRaw({
+      type: 'message',
+      message: msg({ protocolId: 'm2', originTs: 2 }),
+    });
     expect(s.conversationView('bob@x.com').unread).toBe(0);
     // Only a genuinely NEW message (after the seeded marker) counts.
     const after = s.applyRaw({ type: 'message', message: msg({ protocolId: 'm3', originTs: 3 }) });
     expect(s.conversationView('bob@x.com').unread).toBe(1);
-    expect(kinds(changes).concat(kinds(after))).toEqual(['message', 'conversation', 'message', 'conversation']);
+    expect(kinds(changes).concat(kinds(after))).toEqual([
+      'message',
+      'conversation',
+      'message',
+      'conversation',
+    ]);
   });
 
   it('is a no-op once the conversation already has a live view — never clobbers real state', () => {
@@ -216,7 +245,11 @@ describe('ChatAccountState — presence & roster', () => {
       statusText: 'busy',
     });
     expect(pc).toEqual([
-      { kind: 'presence', address: 'bob@x.com', effective: { presence: 'dnd', statusText: 'busy' } },
+      {
+        kind: 'presence',
+        address: 'bob@x.com',
+        effective: { presence: 'dnd', statusText: 'busy' },
+      },
     ]);
     expect(s.roster()[0]).toMatchObject({ presence: 'dnd' });
   });
@@ -241,13 +274,26 @@ describe('ChatAccountState — presence & roster', () => {
   it('forwards a typing event', () => {
     const s = state();
     expect(
-      s.applyRaw({ type: 'typing', conversationId: 'bob@x.com', senderAddress: 'bob@x.com', active: true }),
-    ).toEqual([{ kind: 'typing', conversationId: 'bob@x.com', senderAddress: 'bob@x.com', active: true }]);
+      s.applyRaw({
+        type: 'typing',
+        conversationId: 'bob@x.com',
+        senderAddress: 'bob@x.com',
+        active: true,
+      }),
+    ).toEqual([
+      { kind: 'typing', conversationId: 'bob@x.com', senderAddress: 'bob@x.com', active: true },
+    ]);
   });
 
   it('exposes effective presence and the live conversation id set', () => {
     const s = state();
-    s.applyRaw({ type: 'presence', accountId: 'acc', address: 'bob@x.com/p', presence: 'away', statusText: 'brb' });
+    s.applyRaw({
+      type: 'presence',
+      accountId: 'acc',
+      address: 'bob@x.com/p',
+      presence: 'away',
+      statusText: 'brb',
+    });
     expect(s.effectivePresence('bob@x.com')).toEqual({ presence: 'away', statusText: 'brb' });
     s.applyRaw({ type: 'message', message: msg({ protocolId: 'm1' }) });
     expect(s.conversationIds()).toEqual(['bob@x.com']);
@@ -255,7 +301,9 @@ describe('ChatAccountState — presence & roster', () => {
 
   it('error events yield no changes', () => {
     const s = state();
-    expect(s.applyEvent({ type: 'error', scope: 'account', message: 'x', conversationId: null })).toEqual([]);
+    expect(
+      s.applyEvent({ type: 'error', scope: 'account', message: 'x', conversationId: null }),
+    ).toEqual([]);
   });
 
   it('folds room-membership into a room view: occupants, count and the self / joined flag', () => {
@@ -315,12 +363,26 @@ describe('ChatAccountState — presence & roster', () => {
 
     // same topic again → no change
     expect(
-      s.applyEvent({ type: 'room-topic', conversationId: 'room@conf', topic: 'Weekly sync', setBy: null, ts: null }),
+      s.applyEvent({
+        type: 'room-topic',
+        conversationId: 'room@conf',
+        topic: 'Weekly sync',
+        setBy: null,
+        ts: null,
+      }),
     ).toEqual([]);
 
     // a clear
     expect(
-      kinds(s.applyEvent({ type: 'room-topic', conversationId: 'room@conf', topic: '', setBy: 'ada', ts: null })),
+      kinds(
+        s.applyEvent({
+          type: 'room-topic',
+          conversationId: 'room@conf',
+          topic: '',
+          setBy: 'ada',
+          ts: null,
+        }),
+      ),
     ).toEqual(['room']);
     expect(s.roomView('room@conf')?.subject).toBe('');
   });
@@ -343,7 +405,11 @@ describe('ChatAccountState — local send + history', () => {
     const s = state();
     s.echoLocalSend(msg({ protocolId: 'temp-1', senderAddress: 'me@x.com', body: 'hi' }));
     expect(s.conversationView('bob@x.com').messages[0]?.protocolId).toBe('temp-1');
-    const cs = s.reconcileSend('bob@x.com', 'temp-1', msg({ protocolId: 's-9', senderAddress: 'me@x.com' }));
+    const cs = s.reconcileSend(
+      'bob@x.com',
+      'temp-1',
+      msg({ protocolId: 's-9', senderAddress: 'me@x.com' }),
+    );
     expect(cs).toHaveLength(1);
     const [c] = cs;
     expect(c?.kind).toBe('message-updated');

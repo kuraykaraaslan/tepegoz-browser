@@ -40,7 +40,7 @@ seam applied to chat. It gives us:
 
 - **One UI, one agent surface, N networks.** Adding Signal is an adapter, not a feature.
 - **A clean trust boundary.** A native adapter (XMPP/IRC/Matrix — protocols we can implement and
-  audit) runs in-process in `ChatService`. A *bridge* to a closed network (Telegram/Slack/Discord/
+  audit) runs in-process in `ChatService`. A _bridge_ to a closed network (Telegram/Slack/Discord/
   WhatsApp — where the "adapter" is really a third-party daemon or an unofficial client) runs
   **out of process** behind [ADR-0018](../../docs/adr/0018-mcp-client.md): no host access, its own
   egress binding, every event re-validated before the core sees it.
@@ -52,20 +52,20 @@ seam applied to chat. It gives us:
 
 Same shape as [ext-mail](ext-mail.md).
 
-| Package | Layer | Electron? | Owns |
-| --- | --- | --- | --- |
-| `@tepegoz/ext-chat` (`extensions/ext-chat`) | extension | no | Manifest (surfaces), `capabilities.ts`, view models. |
-| `@tepegoz/chat-core` | domain lib | **no** | The normalized model: account, **roster/contacts**, **conversation** (1:1 and multi-user room / MUC / channel), **message** (text, edits, replies, reactions, attachments, system events), **presence**, delivery/read receipts, typing. The cross-protocol event normaliser (the "prpl abstraction"). Offline send queue. Turkish-aware history search fold. |
-| `@tepegoz/chat-adapters` | domain lib | **no** | The `ChatAdapter` contract + first-party **XMPP**, **IRC**, **Matrix** adapters, each over an injected transport (TCP/TLS, WebSocket, HTTP) so they test against recorded traces. |
-| desktop `ChatService` (`apps/desktop/src/main/chat/`) | L0 host | yes | Opens connections (bound to profile egress), resolves credentials + E2EE keys from the vault, runs native adapters, supervises **out-of-process bridge adapters**, writes the DB, emits redacted Journal events, runs the `background-connection` supervisor. The `ChatCapabilityHost`. |
-| `@tepegoz/chat-ui` | feature-ui | no (renderer) | Conversation list, message timeline, composer, roster, room browser, account setup. Self-localizes. |
-| `@tepegoz/persistence` (extend) | L1 | no | `ChatStore` + migration (appendix). |
+| Package                                               | Layer      | Electron?     | Owns                                                                                                                                                                                                                                                                                                                                                          |
+| ----------------------------------------------------- | ---------- | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `@tepegoz/ext-chat` (`extensions/ext-chat`)           | extension  | no            | Manifest (surfaces), `capabilities.ts`, view models.                                                                                                                                                                                                                                                                                                          |
+| `@tepegoz/chat-core`                                  | domain lib | **no**        | The normalized model: account, **roster/contacts**, **conversation** (1:1 and multi-user room / MUC / channel), **message** (text, edits, replies, reactions, attachments, system events), **presence**, delivery/read receipts, typing. The cross-protocol event normaliser (the "prpl abstraction"). Offline send queue. Turkish-aware history search fold. |
+| `@tepegoz/chat-adapters`                              | domain lib | **no**        | The `ChatAdapter` contract + first-party **XMPP**, **IRC**, **Matrix** adapters, each over an injected transport (TCP/TLS, WebSocket, HTTP) so they test against recorded traces.                                                                                                                                                                             |
+| desktop `ChatService` (`apps/desktop/src/main/chat/`) | L0 host    | yes           | Opens connections (bound to profile egress), resolves credentials + E2EE keys from the vault, runs native adapters, supervises **out-of-process bridge adapters**, writes the DB, emits redacted Journal events, runs the `background-connection` supervisor. The `ChatCapabilityHost`.                                                                       |
+| `@tepegoz/chat-ui`                                    | feature-ui | no (renderer) | Conversation list, message timeline, composer, roster, room browser, account setup. Self-localizes.                                                                                                                                                                                                                                                           |
+| `@tepegoz/persistence` (extend)                       | L1         | no            | `ChatStore` + migration (appendix).                                                                                                                                                                                                                                                                                                                           |
 
 ## The adapter contract
 
 ```ts
 interface ChatAdapter {
-  readonly id: string;                    // 'xmpp' | 'irc' | 'matrix' | 'bridge:telegram' | ...
+  readonly id: string; // 'xmpp' | 'irc' | 'matrix' | 'bridge:telegram' | ...
   readonly capabilities: ChatAdapterCaps; // receipts? typing? edits? reactions? threads? e2ee? media? presence? history-sync?
   connect(account: ChatAccountCreds, transport: ChatTransport): Promise<ChatSession>;
   roster(s: ChatSession): Promise<Contact[]>;
@@ -79,40 +79,40 @@ interface ChatAdapter {
   joinRoom?(s: ChatSession, room: RoomAddr): Promise<Conversation>;
   leaveRoom?(s: ChatSession, conv: ConvId): Promise<void>;
   uploadMedia?(s: ChatSession, file: SandboxPath): Promise<MediaRef>;
-  events(s: ChatSession): AsyncIterable<ChatEvent>;   // incoming messages, presence, receipts, typing, room changes
+  events(s: ChatSession): AsyncIterable<ChatEvent>; // incoming messages, presence, receipts, typing, room changes
   close(s: ChatSession): Promise<void>;
 }
 ```
 
-| Adapter | Kind | Sub-phase | Notes |
-| --- | --- | --- | --- |
-| `xmpp` | native, in-process | X-chat.1 (+ MUC in .3, OMEMO in .7) | Core RFC 6120/6121 + XEPs: `0198` (stream management / reconnect), `0280` (carbons), `0313` (MAM history), `0363` (HTTP upload), `0384` (**OMEMO** E2EE), `0045` (MUC), `0085` (typing), `0184` (receipts). Direct TLS or WebSocket. Password or token in the vault. |
-| `irc` | native, in-process | X-chat.4 | RFC 1459/2812 + IRCv3 (`server-time`, `message-tags`, `chathistory`, SASL, `echo-message`, `batch`). No E2EE (protocol has none — the caps flag says so). NickServ/SASL creds in the vault. |
-| `matrix` | native, in-process | X-chat.5 (E2EE in .7) | Client-Server API, `/sync` long-poll, **Olm/Megolm** E2EE with device verification, media repo, spaces. The substrate most third-party bridges already target. |
-| `bridge:telegram` | **out-of-process** | X-chat.9 | Telegram's own API (vetted MTProto client lib, or Bot API for the narrow bot case). Subprocess adapter — no host access, own egress binding. |
-| `bridge:slack` / `bridge:discord` | **out-of-process** | X-chat.9 | Official APIs + user/bot tokens. Same subprocess isolation. Rate-limit + ToS constraints in the adapter caps + docs. |
-| `bridge:whatsapp` | **out-of-process, caveated** | X-chat.9 (behind a flag) | No official multi-device client API for third parties. Options: a self-hosted Matrix bridge (`mautrix-whatsapp`), or an unofficial web-client library — **both carry account-ban risk and a ToS violation.** Ships behind an explicit acknowledgement screen, never bundled, documented as unsupported / at-own-risk. Listed because the user asked; not a recommended path. |
-| *third-party* | out-of-process | after the ADR-0018 generalisation | Any user/community protocol adapter arrives the same way — signed package, results re-validated, behind the one PEP. |
+| Adapter                           | Kind                         | Sub-phase                           | Notes                                                                                                                                                                                                                                                                                                                                                                        |
+| --------------------------------- | ---------------------------- | ----------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `xmpp`                            | native, in-process           | X-chat.1 (+ MUC in .3, OMEMO in .7) | Core RFC 6120/6121 + XEPs: `0198` (stream management / reconnect), `0280` (carbons), `0313` (MAM history), `0363` (HTTP upload), `0384` (**OMEMO** E2EE), `0045` (MUC), `0085` (typing), `0184` (receipts). Direct TLS or WebSocket. Password or token in the vault.                                                                                                         |
+| `irc`                             | native, in-process           | X-chat.4                            | RFC 1459/2812 + IRCv3 (`server-time`, `message-tags`, `chathistory`, SASL, `echo-message`, `batch`). No E2EE (protocol has none — the caps flag says so). NickServ/SASL creds in the vault.                                                                                                                                                                                  |
+| `matrix`                          | native, in-process           | X-chat.5 (E2EE in .7)               | Client-Server API, `/sync` long-poll, **Olm/Megolm** E2EE with device verification, media repo, spaces. The substrate most third-party bridges already target.                                                                                                                                                                                                               |
+| `bridge:telegram`                 | **out-of-process**           | X-chat.9                            | Telegram's own API (vetted MTProto client lib, or Bot API for the narrow bot case). Subprocess adapter — no host access, own egress binding.                                                                                                                                                                                                                                 |
+| `bridge:slack` / `bridge:discord` | **out-of-process**           | X-chat.9                            | Official APIs + user/bot tokens. Same subprocess isolation. Rate-limit + ToS constraints in the adapter caps + docs.                                                                                                                                                                                                                                                         |
+| `bridge:whatsapp`                 | **out-of-process, caveated** | X-chat.9 (behind a flag)            | No official multi-device client API for third parties. Options: a self-hosted Matrix bridge (`mautrix-whatsapp`), or an unofficial web-client library — **both carry account-ban risk and a ToS violation.** Ships behind an explicit acknowledgement screen, never bundled, documented as unsupported / at-own-risk. Listed because the user asked; not a recommended path. |
+| _third-party_                     | out-of-process               | after the ADR-0018 generalisation   | Any user/community protocol adapter arrives the same way — signed package, results re-validated, behind the one PEP.                                                                                                                                                                                                                                                         |
 
 ## Agent capabilities (behind the one PEP) — delivered in X-chat.6
 
-| Tool | Danger class | Notes |
-| --- | --- | --- |
-| `chat_list_items` | `read` | Conversations for an account — last message preview, unread count, kind (dm/room). |
-| `chat_get_item` | `read` | One conversation's metadata + participants. |
-| `chat_get_history` | `read` | Recent messages, oldest-first, each body `wrapUntrustedContent`. Paginated. |
-| `chat_search_items` | `read` | Structured/full-text search over local history. |
-| `chat_create_message` | `state_changing` → **always HITL** · idempotency key | Send a message to one conversation. The confirm surface shows the target conversation + rendered body; unsuppressible. |
-| `chat_update_item` | `state_changing` | Mark read, set a per-conversation mute, add a reaction. |
-| `chat_update_presence` | `state_changing` | Set the account's presence/status text. |
-| `chat_create_room_join` | `state_changing` → HITL | Join a room/channel by address. |
-| `chat_delete_item` | `destructive` | Leave a room, or delete a local conversation copy. |
-| `chat_get_media` | `read` → gated | Materialize an attachment into the file-operations sandbox after quarantine. |
+| Tool                    | Danger class                                         | Notes                                                                                                                  |
+| ----------------------- | ---------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `chat_list_items`       | `read`                                               | Conversations for an account — last message preview, unread count, kind (dm/room).                                     |
+| `chat_get_item`         | `read`                                               | One conversation's metadata + participants.                                                                            |
+| `chat_get_history`      | `read`                                               | Recent messages, oldest-first, each body `wrapUntrustedContent`. Paginated.                                            |
+| `chat_search_items`     | `read`                                               | Structured/full-text search over local history.                                                                        |
+| `chat_create_message`   | `state_changing` → **always HITL** · idempotency key | Send a message to one conversation. The confirm surface shows the target conversation + rendered body; unsuppressible. |
+| `chat_update_item`      | `state_changing`                                     | Mark read, set a per-conversation mute, add a reaction.                                                                |
+| `chat_update_presence`  | `state_changing`                                     | Set the account's presence/status text.                                                                                |
+| `chat_create_room_join` | `state_changing` → HITL                              | Join a room/channel by address.                                                                                        |
+| `chat_delete_item`      | `destructive`                                        | Leave a room, or delete a local conversation copy.                                                                     |
+| `chat_get_media`        | `read` → gated                                       | Materialize an attachment into the file-operations sandbox after quarantine.                                           |
 
 ### Rules specific to the agent surface
 
-- **Chat is the hardest untrusted-input surface in the product.** Unlike a page or an email, *a
-  stranger can initiate* — an unsolicited DM lands directly in a channel the agent may be asked to
+- **Chat is the hardest untrusted-input surface in the product.** Unlike a page or an email, _a
+  stranger can initiate_ — an unsolicited DM lands directly in a channel the agent may be asked to
   read. Every message body, sender display name and room topic is wrapped untrusted content and can
   never alter the agent's authority or auto-approve a tool.
 - **Auto-processing of unknown contacts is off by default.** The agent only reads/acts on
@@ -135,7 +135,7 @@ interface ChatAdapter {
   denial.
 - **Credentials + E2EE key material only in `@tepegoz/credential-vault` / `safeStorage`** — passwords,
   SASL secrets, Matrix access tokens + device keys, OMEMO identity keys. Redacted from the Journal and
-  logs; the Journal records *that* a message was sent (conversation id hash, account, timestamp),
+  logs; the Journal records _that_ a message was sent (conversation id hash, account, timestamp),
   never plaintext.
 - **Zod `safeParse` at every boundary:** IPC, **every adapter event** (an XMPP stanza, a Matrix sync
   event, an IRC line, a bridge's normalized payload are all hostile until parsed), agent tool args,
@@ -204,6 +204,7 @@ surfaces are X-chat.2). · **Branch:** `feat/ext-chat-core` → `main`
 wrong is expensive later.
 
 ### Deliverables
+
 - [x] **Domain schemas** in `@tepegoz/shared-types` (`chat.ts`, appendix): `ChatAccount`
       (multi-account, per-protocol `ChatServerConfig` discriminated union, `secretRef`),
       `ChatContact`, `ChatConversation` (`kind: 'dm' | 'room'`), `ChatMessage` (text / media /
@@ -228,6 +229,7 @@ wrong is expensive later.
       Matrix (`@user:server`, `#room:server`, `!roomid:server`) parse + format.
 
 ### Functional DoD
+
 - [x] A recorded stream of mixed events (out-of-order delivery, an edit before its original, a
       redaction, a duplicate) folds into the correct final conversation state (golden test —
       `conversation.test.ts` "same final state regardless of event order", dedup, redaction, ordering;
@@ -247,6 +249,7 @@ wrong is expensive later.
 DoD-template close-out (gated on that). **Kill-switch behaviour verified live 2026-09-12; the
 coverage-floor DoD line closed the same day with no live server needed** — see the Functional DoD
 below. **The renderer has no chat UI yet — that is X-chat.2.**
+
 - `@tepegoz/chat-adapters` — the full pure XMPP client: `XmlStreamParser` (incremental, bounded,
   fail-closed) · stanza↔`ChatEvent` mapping (message/presence/roster/receipts/chat-states/correction/
   retraction/MAM) · `<stream:features>` + SASL (PLAIN + SCRAM-SHA-1/256 via Web Crypto, RFC 5802
@@ -262,11 +265,12 @@ below. **The renderer has no chat UI yet — that is X-chat.2.**
   `ExtensionPermissionSchema` extended · [ADR-0047](../../docs/adr/0047-chat-protocol-adapter-and-bridge-trust-model.md).
 
 **The desktop host** — landed in `apps/desktop/src/main/chat/`:
+
 - `egress-dialer.ts` — `NodeTransportPorts.dial`: direct route → `net.connect`; tunnel route →
   loopback SOCKS port + `@tepegoz/socks5` CONNECT; bound-but-down → fail-closed 503.
 - `account-runner.ts` — `ChatAccountRunner`: one account's `ChatConnectionManager` + `ChatAccountState`
-  + `ChatStore` glue; `sendMessage` (optimistic echo → reconcile), `setPresence`, `markRead`,
-  `history` (MAM), `roster`; per-protocol self identity.
+  - `ChatStore` glue; `sendMessage` (optimistic echo → reconcile), `setPresence`, `markRead`,
+    `history` (MAM), `roster`; per-protocol self identity.
 - `chat-service.ts` — `ChatService`: the runner map + the lifecycle that gates it (extension enabled ·
   profile in force · Phase-5 kill switch fans out to every runner); `addAccount` / `removeAccount` /
   `setEnabled` / `stop`; delegates the actions; default adapter = `XmppAdapter` for xmpp.
@@ -290,6 +294,7 @@ methods + the `chat:state` subscription).
 close-out. · **Branch:** `main` · **Risk:** low.
 
 ### Deliverables
+
 - [x] **`extensions/ext-chat` scaffold** — manifest (`com.tepegoz.chat`, surfaces `sidebar`+`page`,
       permissions `accounts`/`background-connection`/`notifications`/`contacts`), `src/i18n/`,
       catalog pickup, surface-loader thunk.
@@ -322,7 +327,7 @@ close-out. · **Branch:** `main` · **Risk:** low.
       `sendMessage` yet** — doing so surfaced a real, unresolved design gap, not just missing code:
       `ChatAccountRunner.sendMessage` only takes `{ body, replyToId }` (no `mediaPath` parameter at
       all, despite the adapter contract's `uploadMedia` existing); `OutgoingMessageSchema.mediaPath`
-      is read by nothing; and there is no field anywhere to carry an *already-uploaded* `mediaRef`
+      is read by nothing; and there is no field anywhere to carry an _already-uploaded_ `mediaRef`
       from a host-side upload step into the stanza the adapter builds — `uploadMedia`'s own contract
       says the **host** reads sandbox bytes and calls it, but `sendMessage` only ever sees a path, not
       a resolved ref. Wiring this needs a design decision (extend `OutgoingMessage` with a `mediaRef`
@@ -332,12 +337,12 @@ close-out. · **Branch:** `main` · **Risk:** low.
       discovers the account's XEP-0030-advertised upload service (cached on the session), requests a
       slot, `PUT`s the bytes through the injected `ChatTransport.fetch`, returns the public `GET` url
       as the `mediaRef`; `resolveMedia` is a thin `https://`-only check since XEP-0363's ref already
-      *is* the fetchable url (unlike Matrix's opaque `mxc://`). 5 new tests, live-server-free.
+      _is_ the fetchable url (unlike Matrix's opaque `mxc://`). 5 new tests, live-server-free.
       **Confirmed the gap above is not XMPP-specific while scoping the next slice:**
-      `MatrixAdapter.sendMessage` (`matrix/adapter.ts`) *also* never reads any media field — it always
+      `MatrixAdapter.sendMessage` (`matrix/adapter.ts`) _also_ never reads any media field — it always
       sends `msgtype: 'm.text'` regardless — despite Matrix's own `uploadMedia`/`resolveMedia` being
       real and tested (X-chat.5). Neither native adapter's `sendMessage` has ever sent an attachment;
-      only the *receive*-and-render half of media has ever worked, for Matrix only. The
+      only the _receive_-and-render half of media has ever worked, for Matrix only. The
       `ChatAccountRunner.sendMessage` upload-then-send orchestration is therefore genuinely
       cross-adapter design work, not a XEP-0363-shaped afterthought — sized accordingly for whoever
       picks it up next.
@@ -355,39 +360,40 @@ close-out. · **Branch:** `main` · **Risk:** low.
       manual override.
 
 ### Functional DoD
+
 - [~] A user adds **two** XMPP accounts; both connect, load the roster with presence, exchange 1:1
-      messages, and backfill history via MAM. **Connect + message exchange + MAM backfill verified
-      live (2026-09-12)** against a real, unprivileged local Prosody (no root, no Docker — an
-      `apt-get download` + `dpkg -x` user-space install, see the IRC note below for the same
-      technique): two accounts (`alice@localhost`/`bob@localhost`) connect over STARTTLS + SASL
-      PLAIN, exchange a 1:1 message, and a reconnect's MAM query actually returns it. Unlike the IRC
-      run this one found no adapter bug — a useful negative result. Kept as a permanent opt-in
-      regression check: `packages/chat-transport-node/src/xmpp-live-prosody.manual.test.ts`, gated
-      behind `TEPEGOZ_LIVE_XMPP=1`. **Still open:** roster-with-presence wasn't exercised (the test
-      only proved messaging + MAM), and this is still the adapter directly, not the desktop app —
-      the Playwright `_electron` e2e (X-chat.10) is what closes the rest of this bullet.
+  messages, and backfill history via MAM. **Connect + message exchange + MAM backfill verified
+  live (2026-09-12)** against a real, unprivileged local Prosody (no root, no Docker — an
+  `apt-get download` + `dpkg -x` user-space install, see the IRC note below for the same
+  technique): two accounts (`alice@localhost`/`bob@localhost`) connect over STARTTLS + SASL
+  PLAIN, exchange a 1:1 message, and a reconnect's MAM query actually returns it. Unlike the IRC
+  run this one found no adapter bug — a useful negative result. Kept as a permanent opt-in
+  regression check: `packages/chat-transport-node/src/xmpp-live-prosody.manual.test.ts`, gated
+  behind `TEPEGOZ_LIVE_XMPP=1`. **Still open:** roster-with-presence wasn't exercised (the test
+  only proved messaging + MAM), and this is still the adapter directly, not the desktop app —
+  the Playwright `_electron` e2e (X-chat.10) is what closes the rest of this bullet.
 - [~] Network drop → XEP-0198 resumption (no missed/duplicated messages); a longer outage →
-      clean reconnect + MAM catch-up. **Investigated + partially verified live (2026-09-12).** XEP-0198
-      resumption itself is NOT wired — `StreamManager.resumeXml`/`canResume`/`previd`
-      (`xmpp/stream-management.ts`) are pure, fixture-tested primitives with no caller anywhere in
-      `negotiator.ts` / `adapter.ts`: every reconnect, dropped or not, does a full fresh bind, never
-      `<resume/>`. This doc previously listed "resumption" as a shipped part of the checked-off XMPP
-      adapter deliverable on the strength of those primitives alone. What IS verified live —
-      `e2e/chat-live-xmpp-resumption.spec.ts`, a transparent TCP passthrough
-      (`e2e/tcp-passthrough.ts`) simulating the drop without touching the real Prosody — is the
-      achievable half: a drop is detected, the account does a full clean reconnect through the same
-      passthrough, and a message sent while it was down is recovered via MAM with no duplicate once
-      the conversation reopens (no missed, no duplicated — just not via `<resume/>`). Building this
-      found and fixed two more real bugs along the way: a brand-new contact's first-ever message
-      crashed the event pump (FK violation on `chat_messages.conversation_id`, same shape as the
-      earlier Matrix passive-room-discovery bug) and, once fixed, never rendered in the Chats tab at
-      all (the renderer's live-push reducer only ever patched an existing conversation row, never
-      added a new one); and MAM catch-up silently duplicated any message already delivered live,
-      since `parseMamResult` preferred a different id than the live delivery path for the identical
-      stanza. **Remaining for a full ✔:** wire actual `<resume/>` (needs a design decision — carry
-      SM state across a `ChatConnectionManager` reconnect, or make resumption fully internal to one
-      long-lived `XmppSession` — not attempted this session, scoped as real feature work, not a
-      quick fix).
+  clean reconnect + MAM catch-up. **Investigated + partially verified live (2026-09-12).** XEP-0198
+  resumption itself is NOT wired — `StreamManager.resumeXml`/`canResume`/`previd`
+  (`xmpp/stream-management.ts`) are pure, fixture-tested primitives with no caller anywhere in
+  `negotiator.ts` / `adapter.ts`: every reconnect, dropped or not, does a full fresh bind, never
+  `<resume/>`. This doc previously listed "resumption" as a shipped part of the checked-off XMPP
+  adapter deliverable on the strength of those primitives alone. What IS verified live —
+  `e2e/chat-live-xmpp-resumption.spec.ts`, a transparent TCP passthrough
+  (`e2e/tcp-passthrough.ts`) simulating the drop without touching the real Prosody — is the
+  achievable half: a drop is detected, the account does a full clean reconnect through the same
+  passthrough, and a message sent while it was down is recovered via MAM with no duplicate once
+  the conversation reopens (no missed, no duplicated — just not via `<resume/>`). Building this
+  found and fixed two more real bugs along the way: a brand-new contact's first-ever message
+  crashed the event pump (FK violation on `chat_messages.conversation_id`, same shape as the
+  earlier Matrix passive-room-discovery bug) and, once fixed, never rendered in the Chats tab at
+  all (the renderer's live-push reducer only ever patched an existing conversation row, never
+  added a new one); and MAM catch-up silently duplicated any message already delivered live,
+  since `parseMamResult` preferred a different id than the live delivery path for the identical
+  stanza. **Remaining for a full ✔:** wire actual `<resume/>` (needs a design decision — carry
+  SM state across a `ChatConnectionManager` reconnect, or make resumption fully internal to one
+  long-lived `XmppSession` — not attempted this session, scoped as real feature work, not a
+  quick fix).
 - [x] Kill-switched profile: accounts show "blocked", no socket opens. **Verified live (2026-09-12)**
       — `e2e/chat-live-xmpp-killswitch.spec.ts` reuses the Phase 5 network-binding kill-switch
       (`spike-tunnel-binding.spec.ts`'s pattern): a General binding pointed at a connection whose
@@ -400,7 +406,7 @@ close-out. · **Branch:** `main` · **Risk:** low.
 - [x] XMPP stanza engine meets the `packages/**` coverage floor against fixtures. **Verified
       2026-09-12** — `packages/chat-adapters/src/xmpp/**` measures **S98.27 / B89.45 / F98.12 /
       L98.27** against the gate's current `packages/**` floor (S95/B89/F93/L95, `vitest.coverage.
-      config.ts`): clears all four, branches by the thinnest margin (0.45pt) of any dimension here.
+config.ts`): clears all four, branches by the thinnest margin (0.45pt) of any dimension here.
       `xml-stream.ts` (96.86/90.9) and `adapter.ts` (95.94/80.3) carry the two weakest branch numbers
       in the subtree — worth a look before the floor itself ratchets up again, but not a blocker
       today.
@@ -474,7 +480,7 @@ query collapses the two-pane layout to one column with a back button in the side
 Then (2026-09-12) a **live-found race fix** — `chat-store`'s message-append fold only tracks a
 conversation once its window is seeded (`state.messages[id] !== undefined`, a deliberate bound so an
 unopened conversation isn't tracked forever), but `useChatState.selectConversation` only seeded the
-window *after* its `getChatHistory` call resolved. A message arriving in that gap — the server's echo
+window _after_ its `getChatHistory` call resolved. A message arriving in that gap — the server's echo
 of one you just sent, most reliably — was silently dropped from the timeline (the unread badge still
 bumped, since that fold path is unconditional, so the only symptom was a message that never
 rendered). Fixed by seeding the window with `[]` synchronously before the fetch starts;
@@ -530,7 +536,7 @@ unconditional either way) and `addressPlaceholder`; `<ChatWorkspace>` derives bo
 account's protocol (`xmpp` browses, `irc`/`matrix` get `#channel` / `#room:matrix.example.org`
 placeholders). No adapter or IPC change — this was UI wording hiding an already-working path.
 A second, real bug turned up right behind it, live-reported the same day: joining a room whose join
-actually *failed* (account still reconnecting, bad address, refused by the server) looked identical
+actually _failed_ (account still reconnecting, bad address, refused by the server) looked identical
 to success — `<RoomBrowser>`'s `onJoin` was fire-and-forget (`void chat.rooms?.join(jid)`) and
 `<ChatWorkspace>` switched to the Chats tab unconditionally, so a rejected join landed on an empty
 pane with no room and no error, reading as "IRC rooms just don't work." `onJoin` is now
@@ -569,6 +575,7 @@ decision, the same way `chat_create_message` does, not a quick add alongside the
 
 Then (2026-09-14) **a UI/correctness pass following direct user feedback on the running app**, closing
 one real regression bug per feedback item, not cosmetic fixes:
+
 - **Unified account-agnostic UI.** The per-account switcher tab strip above the Chats list is gone —
   `<ConversationList>` no longer groups conversations under account headers (`groupConversationsByAccount`
   and its `<h3>` sections deleted, both now unused code, not a hidden feature); every account's rows
@@ -579,7 +586,7 @@ one real regression bug per feedback item, not cosmetic fixes:
   "Message deleted", empty body → "Attachment", same vocabulary the timeline already uses) and its
   time on the right (bare clock time today, a short date otherwise). Required a real schema change,
   not just UI: `ChatConversation` gained `lastMessage` (a `{protocolId, body, senderAddress, kind,
-  redacted, originTs}` snapshot), persisted as `chat_conversations.last_message_json` (migration 24,
+redacted, originTs}` snapshot), persisted as `chat_conversations.last_message_json` (migration 24,
   same convention as `reactions_json`). `ChatAccountRunner` keeps it current — advances on a new
   message (never regresses it for an out-of-order MAM/backfill arrival), and refreshes it in place
   when an edit or redaction lands on the message it's currently showing. The SAME migration added
@@ -608,7 +615,7 @@ one real regression bug per feedback item, not cosmetic fixes:
   (MUC rejoin re-requesting up to 30 recent stanzas, MAM/`/sync` catch-up) re-delivers messages the
   user already read as fresh `'message'` events; `recount()`, finding no `lastReadId` to anchor on,
   marked every one of them unread again. Added `ChatAccountState.seedLastRead(conversationId,
-  lastReadId)` (a no-op once a real live view exists — never clobbers in-session state) and call it
+lastReadId)` (a no-op once a real live view exists — never clobbers in-session state) and call it
   once per known conversation in `ChatAccountRunner`'s constructor, seeded from
   `store.listReadMarkers(accountId)` (new `ChatRunnerStore` method). Verified at both layers: a
   `chat-core` unit test proves `recount()` anchors on the seeded marker instead of an empty one, and a
@@ -633,6 +640,7 @@ one real regression bug per feedback item, not cosmetic fixes:
   add-button) disappears for a protocol that could never produce a reaction event in the first place.
 
 Then (2026-09-14, same session) **the Contacts tab, timed mute, and archive** landed:
+
 - **Contacts unified across every account**, same treatment as Chats: `getChatRoster` has no "every
   account" form the way `listChatConversations` does, so `useChatState` now fetches each configured
   account's roster in parallel (`Promise.all`) and concatenates them — contact ids are already
@@ -656,6 +664,7 @@ Then (2026-09-14, same session) **the Contacts tab, timed mute, and archive** la
 
 Then **clicking a room member to start a DM, and hiding the sender name in favor of an avatar
 tooltip**, landed together with a real fix the first one exposed:
+
 - `<RoomMemberList>`'s `onSelectMember` had existed (and been tested) since it was built, but
   `<ChatWorkspace>` never passed it — another instance of this session's recurring "built but
   unwired" shape. Wired it to open (or start) a DM with the clicked occupant: the real JID when the
@@ -720,6 +729,7 @@ menus (messages, room-list rows, contacts).
 X-chat.1 · **Branch:** `main` · **Risk:** low.
 
 ### Deliverables
+
 - [x] **`@tepegoz/chat-ui`** — conversation list (unread/mention badges, account grouping + colour),
       roster panel (presence, groups, add/remove contact — wired to a real adapter 2026-09-12, XMPP
       only, see below — `from`-subscription pending marker), account
@@ -750,6 +760,7 @@ X-chat.1 · **Branch:** `main` · **Risk:** low.
       for send / mark-read / **mute** (`chat:set-muted`, all zod-gated).
 
 ### Functional DoD
+
 - [ ] A human holds a real XMPP conversation across two accounts: send/receive, reactions, edits,
       typing, read receipts, an image attachment round-trips through the sandbox. **"edits" closed
       live 2026-09-14** (see the build-history note above — `chat-live-xmpp.spec.ts` now edits a real
@@ -918,6 +929,7 @@ template remains.** ·
 **Depends on:** X-chat.2 · **Branch:** `main` · **Risk:** low-medium.
 
 ### Deliverables
+
 - [x] **XMPP MUC (XEP-0045)** — join/leave by JID, nickname, room roster + affiliations/roles,
       history-on-join limit, password rooms. `xmpp/muc.ts` (join/leave/subject/invite builders +
       presence/subject/error parse) + `chat-core` `RoomView` + `XmppAdapter` join/leave/presence
@@ -932,8 +944,7 @@ template remains.** ·
       Room invite: `ChatAdapter.inviteToRoom(session, conv, invitee)` on all three native adapters
       (XMPP MUC mediated `<invite>` via `buildMucInvite`, IRC `INVITE nick #chan` via
       `buildIrcInvite`, Matrix `POST /rooms/{id}/invite`), wired end-to-end — `chat:invite-to-room`
-      channel + `ChatInviteToRoomSchema` + `ipc-chat` handler + `ChatService`/`ChatAccountRunner`
-      + `ChatApi.inviteToChatRoom` + preload, and an **Invite** field in `<RoomHeader>` (reveal on
+      channel + `ChatInviteToRoomSchema` + `ipc-chat` handler + `ChatService`/`ChatAccountRunner` + `ChatApi.inviteToChatRoom` + preload, and an **Invite** field in `<RoomHeader>` (reveal on
       click, commit on Enter, hide on Escape) surfaced through `useChatState.inviteToRoom`. The
       `buildMucInvite` deliverable is closed.
 - [x] **Room browser** — service discovery of a MUC service's public rooms, search, join-by-address.
@@ -946,10 +957,10 @@ template remains.** ·
       "Bea is typing…" / "Bea & Cy are typing…" / "Several people are typing…", en + tr) shown under
       the room header.
 - [x] **Mention routing** — a room-ping / nick-highlight raises a notification even when the room is
-      muted for "all messages". `chat-core/notify.ts` `decideNotification` + `ChatAccountRunner.maybeNotify`
-      + `NotificationHost.push({ source: 'chat' })`.
+      muted for "all messages". `chat-core/notify.ts` `decideNotification` + `ChatAccountRunner.maybeNotify` + `NotificationHost.push({ source: 'chat' })`.
 
 ### Functional DoD
+
 - [x] Join a public MUC, send/receive, get pinged, leave; notification levels behave. Verified live
       2026-09-13 against a real Prosody with a real second participant — see the status note above.
 - [x] Sub-phase DoD template ✔ (verified per-condition, 2026-09-13, same pass that closed X-chat.4):
@@ -961,7 +972,7 @@ template remains.** ·
       of this same session's repo-wide `ipc-chat.ts` fix (see X-chat.10's status note). **`AppError`
       contract** — same fix. **Coverage** — full `pnpm coverage` gate green with this session's
       changes. **Migration-safe DB** — `chat-store.test.ts`'s `'round-trips the per-room notify
-      level; defaults to "all"'` test is a real, room-specific round trip (not just the generic
+level; defaults to "all"'` test is a real, room-specific round trip (not just the generic
       account one X-chat.4 relied on), covering `all`/`mentions`/`none` explicitly. **Self-review** —
       lint + typecheck + full test suites passed before every commit; `git log` confirms no AI
       attribution trailer (CI-enforced). **The sub-phase's own functional DoD** — ✔ above.
@@ -1045,6 +1056,7 @@ emit the same `room-topic` event — follow-up wiring under X-chat.3 / .5. ·
 **Depends on:** X-chat.1 (contract) + X-chat.2/.3 (UI) · **Branch:** `main` · **Risk:** low-medium.
 
 ### Deliverables
+
 - [x] **IRC adapter** (`irc/`) — RFC 2812 message parser, connection registration (`PASS`/`NICK`/
       `USER`), SASL (`PLAIN`, `EXTERNAL`), IRCv3 capability negotiation (`server-time`,
       `message-tags`, `account-tag`, `echo-message`, `batch`, `chathistory`, `multi-prefix`,
@@ -1063,16 +1075,17 @@ emit the same `room-topic` event — follow-up wiring under X-chat.3 / .5. ·
       and asserts exactly the surfaced message / membership events, numerics ignored.
 
 ### Functional DoD
+
 - [x] Connect to a local IRC server (ergo), join a channel, send/receive, backfill via
       `chathistory`, reconnect + auto-rejoin; the UI correctly shows IRC as unencrypted.
       **Protocol half verified live (2026-09-12)** — a real `ergo` instance run locally (no Docker:
       the static release binary, under WSL, reachable from the Windows host over the WSL2
-      localhost-forwarding path) and driven through the *real* `IrcAdapter` +
+      localhost-forwarding path) and driven through the _real_ `IrcAdapter` +
       `@tepegoz/chat-transport-node` (not a fixture): connect, join, send/receive between two live
       sessions, disconnect + reconnect + rejoin, and a chathistory backfill that actually returns
       the pre-reconnect message. This is what found and fixed a real bug (see X-chat.10's fuzz/
       regression note below and the commit `fix(chat-adapters): IRC never actually requested the
-      chathistory cap`) — `IRC_WANTED_CAPS` never listed `chathistory`/`draft/chathistory`, so a real
+chathistory cap`) — `IRC_WANTED_CAPS` never listed `chathistory`/`draft/chathistory`, so a real
       ircd's CAP REQ never asked for it and `history()` silently returned nothing forever; every unit
       test missed it because the fake test server ACKs whatever the test script scripts it to,
       independent of what the client's `CAP REQ` line actually contained. Kept as a permanent
@@ -1146,14 +1159,16 @@ a space is reported in `SyncRoom` but its timeline / membership are not surfaced
 Then media **upload** — `ChatFetchInit.body` takes `Uint8Array`, `OutgoingMedia`, and
 `MatrixAdapter.uploadMedia` → `/_matrix/media/v3/upload` → `mxc://`. Then a **recorded Synapse
 `/sync` fixture suite** (initial: room + space + invite + media + typing/receipts; incremental: edit
-+ reaction + redaction + leave) plus a pre-room-v11 top-level `redacts` fix. Then (2026-09-10,
-alongside X-chat.3/.4) a **timeline `m.room.topic` → `room-topic` event** — `matrixTimelineEvent`
-maps it (setter = `ev.sender`, ts = `origin_server_ts`); the initial topic still comes from the room
-state summary, a *change* now surfaces the same way IRC's `TOPIC` and XMPP's `<subject>` do. ·
-**Depends on:** X-chat.1 (contract) + X-chat.2/.3 (UI); E2EE is X-chat.7 · **Branch:** `main` ·
-**Risk:** medium-high.
+
+- reaction + redaction + leave) plus a pre-room-v11 top-level `redacts` fix. Then (2026-09-10,
+  alongside X-chat.3/.4) a **timeline `m.room.topic` → `room-topic` event** — `matrixTimelineEvent`
+  maps it (setter = `ev.sender`, ts = `origin_server_ts`); the initial topic still comes from the room
+  state summary, a _change_ now surfaces the same way IRC's `TOPIC` and XMPP's `<subject>` do. ·
+  **Depends on:** X-chat.1 (contract) + X-chat.2/.3 (UI); E2EE is X-chat.7 · **Branch:** `main` ·
+  **Risk:** medium-high.
 
 ### Deliverables
+
 - [x] **Matrix adapter** (`matrix/`) — login (password / token), `/sync` loop with `since`, room
       state + timeline, `m.room.message` (text/emote/notice/image/file), `m.reaction`,
       `m.room.redaction`, edits (`m.replace`), `m.room.topic` → `room-topic`, read markers +
@@ -1169,74 +1184,74 @@ state summary, a *change* now surfaces the same way IRC's `TOPIC` and XMPP's `<s
 DoD-template checklist.
 
 ### Functional DoD
+
 - [~] A Matrix account adds, syncs rooms + spaces, sends/receives text + media + reactions + edits in
-      **unencrypted** rooms, survives a sync drop and a token invalidation. **Connect + room message
-      exchange + history backfill verified live (2026-09-12)** against a real, unprivileged local
-      Synapse (no root, no Docker — `matrix-synapse` installs from prebuilt PyPI wheels into a plain
-      `python3 -m venv`, no Rust/C toolchain needed; the generated config already binds a plaintext
-      HTTP listener with SQLite storage, exactly right for a throwaway test server): two accounts
-      connect, exchange a room message, and a `/messages` backfill returns it after a reconnect. No
-      adapter bug found in that pass — a useful negative result. Kept as a permanent opt-in
-      regression check: `packages/chat-transport-node/src/matrix-live-synapse.manual.test.ts`, gated
-      behind `TEPEGOZ_LIVE_MATRIX=1`. **The desktop-app e2e attempt found — and closed — a real bug
-      the adapter-level test structurally couldn't (2026-09-12).** `e2e/chat-live-matrix.spec.ts`
-      (needs a second, TLS listener on the test Synapse: the schema requires `homeserverUrl` to
-      start with `https://`, unlike the manual adapter test's plain `:8008`) showed the account stuck
-      `reconnecting`, never `online` — a fresh `POST /login` roughly every ~1s, each one succeeding
-      server-side. Root-caused with temporary main-process `console.error` instrumentation (piped via
-      Playwright's `app.process().stdout`): `ChatConnectionManager.pump()` treats any error thrown
-      while processing an event as "the connection dropped" and reconnects; the actual error was
-      `FOREIGN KEY constraint failed` from `ChatStore.upsertMessage`, from two compounding gaps: (1)
-      `MatrixAdapter.syncOnce()` pushed a batch's `message` events before that batch's
-      `room-membership` events, and (2) more fundamentally, `ChatAccountRunner.applyChange`'s
-      `'room'` case only ever *updated* an existing conversation row, never created one — fine for a
-      room joined interactively (`joinRoom()` persists its row directly) but Matrix reports every
-      room the account is *already* a member of on its first `/sync`, with no `joinRoom()` call
-      involved. **Any real Matrix account with pre-existing room history could never get past its
-      own initial sync.** Both fixed; the adapter-level manual test never caught either because its
-      fake in-memory store has no foreign key to violate — only the real SQLite-backed app does.
-      **Reactions was already stale** — the e2e's own title ("...and reacts to it") already
-      self-reacted via `m.reaction`; the note above just hadn't been updated. **Token invalidation
-      closed live 2026-09-13** — extended the same e2e to force a REAL `M_UNKNOWN_TOKEN`, not a
-      fixture: log in fresh as alice (a session whose token the test holds) and call the standard
-      self-service `POST /logout/all`, which invalidates every access token for the user — including
-      whatever token the running app is actually holding in its vault, which the test never sees.
-      `MatrixAdapter.syncLoop`'s re-login path deliberately raises no `error`/state-change event for
-      this errcode (a clean, invisible recovery, not a visible reconnect) — so the real proof is
-      behavioral: send a message before invalidation, force it, then send another after and confirm
-      it still arrives. Passed clean on 3 repeat runs, no bug found this time (a useful negative
-      result, same as the initial connect/message pass). **Sync-drop recovery attempted and
-      deferred (2026-09-14) — a real architectural finding, plus an inconclusive harness issue that
-      shouldn't block on further unlimited digging:** tried mirroring the XMPP resumption spec's TCP
-      passthrough. First real finding: `dropAll()` alone doesn't simulate a drop for Matrix the way
-      it does for XMPP — XMPP holds ONE persistent connection, so killing it is a real drop; Matrix's
-      `/sync` opens a fresh short HTTP request per cycle, so a client's very next request just sails
-      through a passthrough that keeps accepting. A `pause()`/`resume()` (refuse new connections
-      outright) would be the real primitive needed, verified working in isolation against a bare
-      `fetch()`. Second real finding, more important: **the connState assertion the XMPP spec uses
-      doesn't apply to Matrix at all** — `MatrixAdapter.syncLoop` retries a failed `/sync` entirely
-      inside its own loop (backoff, `session.push({type:'error', scope:'account'})` as a plain
-      in-band event) without ever letting `events()` end or throw, and `ChatConnectionManager` only
-      flips `connState` when that iterable itself ends — confirmed against `account-state.test.ts`'s
-      own assertion that an `{type:'error', scope:'account'}` event is a no-op for `ChatAccountState`.
-      So the account legitimately never leaves `online` during a Matrix outage, by design — a
-      real, useful discovery about this codebase's own architecture even though the test using it
-      didn't ship. **What didn't get resolved:** driving the real app (not the raw adapter) through
-      the passthrough hit a repeatable `TypeError: fetch failed` on the very first message send —
-      never reproduced against a bare `MatrixAdapter` + `NodeChatTransport()` script through the
-      identical passthrough, which sent fine. Likely something specific to the full app's process/
-      networking context interacting with a naive TCP proxy rather than a product defect (nothing a
-      real user's traffic would ever route through), but not confirmed. Reverted all attempted
-      changes (a `chat-live-matrix-resumption.spec.ts` draft, a `pause()`/`resume()` addition to
-      `tcp-passthrough.ts`) rather than ship a flaky or half-diagnosed test — recorded here so a
-      future attempt starts from "assert behaviorally, not on connState" and "the harness's own
-      fetch-failed quirk, not yet root-caused" instead of re-deriving both from scratch. **Edits
-      closed live 2026-09-14** — see X-chat.2's build-history note: the adapter's `editMessage` had
-      existed since this sub-phase's original build, but nothing above it was ever wired until now;
-      `chat-live-matrix.spec.ts` edits a real message through the UI and confirms the corrected body
-      + "edited" marker round-trip through a real `/sync`. **Still open:** spaces, media, sync-drop
-      recovery — the e2e now exercises connect + room message + join + reaction + edit + token
-      recovery.
+  **unencrypted** rooms, survives a sync drop and a token invalidation. **Connect + room message
+  exchange + history backfill verified live (2026-09-12)** against a real, unprivileged local
+  Synapse (no root, no Docker — `matrix-synapse` installs from prebuilt PyPI wheels into a plain
+  `python3 -m venv`, no Rust/C toolchain needed; the generated config already binds a plaintext
+  HTTP listener with SQLite storage, exactly right for a throwaway test server): two accounts
+  connect, exchange a room message, and a `/messages` backfill returns it after a reconnect. No
+  adapter bug found in that pass — a useful negative result. Kept as a permanent opt-in
+  regression check: `packages/chat-transport-node/src/matrix-live-synapse.manual.test.ts`, gated
+  behind `TEPEGOZ_LIVE_MATRIX=1`. **The desktop-app e2e attempt found — and closed — a real bug
+  the adapter-level test structurally couldn't (2026-09-12).** `e2e/chat-live-matrix.spec.ts`
+  (needs a second, TLS listener on the test Synapse: the schema requires `homeserverUrl` to
+  start with `https://`, unlike the manual adapter test's plain `:8008`) showed the account stuck
+  `reconnecting`, never `online` — a fresh `POST /login` roughly every ~1s, each one succeeding
+  server-side. Root-caused with temporary main-process `console.error` instrumentation (piped via
+  Playwright's `app.process().stdout`): `ChatConnectionManager.pump()` treats any error thrown
+  while processing an event as "the connection dropped" and reconnects; the actual error was
+  `FOREIGN KEY constraint failed` from `ChatStore.upsertMessage`, from two compounding gaps: (1)
+  `MatrixAdapter.syncOnce()` pushed a batch's `message` events before that batch's
+  `room-membership` events, and (2) more fundamentally, `ChatAccountRunner.applyChange`'s
+  `'room'` case only ever _updated_ an existing conversation row, never created one — fine for a
+  room joined interactively (`joinRoom()` persists its row directly) but Matrix reports every
+  room the account is _already_ a member of on its first `/sync`, with no `joinRoom()` call
+  involved. **Any real Matrix account with pre-existing room history could never get past its
+  own initial sync.** Both fixed; the adapter-level manual test never caught either because its
+  fake in-memory store has no foreign key to violate — only the real SQLite-backed app does.
+  **Reactions was already stale** — the e2e's own title ("...and reacts to it") already
+  self-reacted via `m.reaction`; the note above just hadn't been updated. **Token invalidation
+  closed live 2026-09-13** — extended the same e2e to force a REAL `M_UNKNOWN_TOKEN`, not a
+  fixture: log in fresh as alice (a session whose token the test holds) and call the standard
+  self-service `POST /logout/all`, which invalidates every access token for the user — including
+  whatever token the running app is actually holding in its vault, which the test never sees.
+  `MatrixAdapter.syncLoop`'s re-login path deliberately raises no `error`/state-change event for
+  this errcode (a clean, invisible recovery, not a visible reconnect) — so the real proof is
+  behavioral: send a message before invalidation, force it, then send another after and confirm
+  it still arrives. Passed clean on 3 repeat runs, no bug found this time (a useful negative
+  result, same as the initial connect/message pass). **Sync-drop recovery attempted and
+  deferred (2026-09-14) — a real architectural finding, plus an inconclusive harness issue that
+  shouldn't block on further unlimited digging:** tried mirroring the XMPP resumption spec's TCP
+  passthrough. First real finding: `dropAll()` alone doesn't simulate a drop for Matrix the way
+  it does for XMPP — XMPP holds ONE persistent connection, so killing it is a real drop; Matrix's
+  `/sync` opens a fresh short HTTP request per cycle, so a client's very next request just sails
+  through a passthrough that keeps accepting. A `pause()`/`resume()` (refuse new connections
+  outright) would be the real primitive needed, verified working in isolation against a bare
+  `fetch()`. Second real finding, more important: **the connState assertion the XMPP spec uses
+  doesn't apply to Matrix at all** — `MatrixAdapter.syncLoop` retries a failed `/sync` entirely
+  inside its own loop (backoff, `session.push({type:'error', scope:'account'})` as a plain
+  in-band event) without ever letting `events()` end or throw, and `ChatConnectionManager` only
+  flips `connState` when that iterable itself ends — confirmed against `account-state.test.ts`'s
+  own assertion that an `{type:'error', scope:'account'}` event is a no-op for `ChatAccountState`.
+  So the account legitimately never leaves `online` during a Matrix outage, by design — a
+  real, useful discovery about this codebase's own architecture even though the test using it
+  didn't ship. **What didn't get resolved:** driving the real app (not the raw adapter) through
+  the passthrough hit a repeatable `TypeError: fetch failed` on the very first message send —
+  never reproduced against a bare `MatrixAdapter` + `NodeChatTransport()` script through the
+  identical passthrough, which sent fine. Likely something specific to the full app's process/
+  networking context interacting with a naive TCP proxy rather than a product defect (nothing a
+  real user's traffic would ever route through), but not confirmed. Reverted all attempted
+  changes (a `chat-live-matrix-resumption.spec.ts` draft, a `pause()`/`resume()` addition to
+  `tcp-passthrough.ts`) rather than ship a flaky or half-diagnosed test — recorded here so a
+  future attempt starts from "assert behaviorally, not on connState" and "the harness's own
+  fetch-failed quirk, not yet root-caused" instead of re-deriving both from scratch. **Edits
+  closed live 2026-09-14** — see X-chat.2's build-history note: the adapter's `editMessage` had
+  existed since this sub-phase's original build, but nothing above it was ever wired until now;
+  `chat-live-matrix.spec.ts` edits a real message through the UI and confirms the corrected body + "edited" marker round-trip through a real `/sync`. **Still open:** spaces, media, sync-drop
+  recovery — the e2e now exercises connect + room message + join + reaction + edit + token
+  recovery.
 - [ ] Sub-phase DoD template ✔ — **6 of 7 conditions verified 2026-09-14, box stays unchecked
       because it's an all-or-nothing item and condition 7 (the sub-phase's own Functional DoD,
       directly above) is still genuinely `[~]`, not a rubber-stamp gap like X-chat.3/X-chat.4's
@@ -1284,6 +1299,7 @@ through the agent-view + gate, then the write half (`chat_create_message` → `s
 medium-high — the untrusted-DM + unknown-contact guards are the sharpest in the whole product.
 
 ### Deliverables
+
 - [x] **`capabilities.ts`** — the tool table on `defineCapabilities`, ids passing `ToolNameSchema`,
       `dangerClass` per the table, idempotency key on `chat_create_message` /
       `chat_create_membership`.
@@ -1302,76 +1318,76 @@ medium-high — the untrusted-DM + unknown-contact guards are the sharpest in th
       all ten `chat_*` tools into one `kind: extension` adaptor titled "Chat" / "Sohbet" from the
       catalog manifest — verified in `ai-adaptors.test.ts`.
 - [~] **Agent-eval scenarios** in `@tepegoz/orchestrator` / `@tepegoz/agent-eval` — (a) summarize a
-      room backlog; (b) draft a reply and stop (no send); (c) `chat_create_message` blocked at HITL;
-      (d) **an unknown-contact DM is not fed to the model**; (e) **a prompt-injection DM does not
-      change agent behaviour**; (f) media → sandbox; (g) no auto-reply loop can be armed.
-      **Fixture-infra slice 1 landed (2026-09-11):** the scenario schema is no longer
-      page-fixture-shaped — `EvalTargetSchema` gained a `{ chatFixture }` member and
-      `@tepegoz/shared-types` a `ChatEvalFixtureSchema` (seed account / roster / conversations /
-      messages, `knownContact` + `optedIn` per conversation, size-capped, `safeParse`d as untrusted
-      disk input); `@tepegoz/agent-eval` `chat-fixture.ts` loads `<name>.chat.json` (name-guarded,
-      never throws) + `isSeedConversationAgentVisible` mirrors the unknown-contact gate so a scenario
-      author can assert "this DM is withheld" without booting the host. `planRun` skips a
-      `chatFixture` target for now. **Slice 2 landed (2026-09-11):** all seven scenarios + seeds
-      exist — `packages/agent-eval/chat-fixtures/{room-backlog,draft-reply,send-hitl,unknown-dm,
-      injection-dm,media-attachment,auto-reply}.chat.json` + `scenarios/chat-agent.json` (each a
-      judge-rubric scenario; the backlog one also carries a ground-truth `expectedValue`).
-      `registry-integrity` asserts every `chatFixture` scenario names a seed that loads clean and
-      every `*.chat.json` on disk parses. **Slice 2b (2026-09-11):** the shipped `unknown-dm` /
-      `injection-dm` seeds are now run against the **real** `@tepegoz/chat-core` guards in
-      `chat-fixture.test.ts` — `isConversationAgentVisible` withholds the stranger DM and keeps the
-      roster DM (scenario **d**), and `wrapChatContent` on the `[[SYSTEM]]` body is delimiter-safe
-      (scenario **e**) — so those two scenarios are discharged as pure unit tests without an agent or
-      an API key (`@tepegoz/chat-core` added as an agent-eval dep). 23 tests across slices 1+2.
-      **Slice 3 landed (2026-09-12, `feat/chat`):** the app-side seed-and-run path — a
-      `chatFixture` scenario used to be permanently skipped (`planRun` returned `null`
-      unconditionally, "the seed-and-run path is a later slice"); it now actually runs.
-      `chat-eval-fixture.ts` (pure) turns a `ChatEvalFixture` into real `ChatAccount`/`ChatContact`/
-      `ChatConversation`/`ChatMessage` rows; `chat-eval-adapter.ts` is a no-op `ChatAdapter` (every
-      seeded row already lives locally, so it contributes nothing over the wire — it exists only so
-      `ChatAccountRunner` has a session without ever opening a socket; writes still "succeed"
-      locally, which matters because a safety scenario has to be able to actually FAIL); under
-      `TEPEGOZ_EVAL_CHAT_FIXTURE`, `chat-service.electron.ts` seeds the DB + a placeholder vault
-      secret before `service.start()` and swaps every account onto the no-op adapter, reusing the
-      exact capability-registration path `main/index.ts` already calls unconditionally — no second
-      registration, no bootstrap change. `agent-eval-runner.electron.ts` skips the page-navigate +
-      page-read steps a chat scenario has none of. On the harness side (`@tepegoz/agent-eval`,
-      never shipped), `planRun` now builds a real plan for both tiers (a synthetic, never-navigated
-      `chat://eval/<name>` entryUrl) and `CHAT_SCRIPTS` supplies deterministic-tier decision
-      sequences for the two ground-truth-checkable scenarios. **Verified for real** — built the app
-      and ran the scripted tier end-to-end with no API key
-      (`TEPEGOZ_EVAL_ONLY=chat_summarise_room_backlog,chat_draft_reply_no_send`): both trials
-      registered the real `chat_*` tools and executed a real `chat_get_history` call against the
-      seeded `ChatCapabilityHost`; the room-backlog trial's own PII-egress warning logged the
-      fixture's actual seeded addresses (`bea@`/`cy@`/`dan@example.com`) flowing through the real
-      model-request pipeline, so the seeded data demonstrably reached the tool call, not a mock.
-      `chat_summarise_room_backlog` scored a genuine ground-truth PASS ("Friday"); the harness
-      correctly left `chat_draft_reply_no_send` unscored (judge-rubric-only, and the scripted tier
-      has no judge — by design, not a gap). **Known gap closed (2026-09-13):**
-      `chat_media_to_sandbox` needed the no-op adapter to resolve a real fetchable media location,
-      which it did not (`resolveMedia` → `null` unconditionally). Fixed: `createChatEvalAdapter`'s
-      `resolveMedia` now resolves any non-empty ref to an `eval-media:` locator, paired with a new
-      `createChatEvalTransport()` — the hermetic `ChatTransport` `buildChatService` swaps in for the
-      real `NodeChatTransport` whenever a fixture is active, since `ChatAccountRunner.resolveMedia`
-      is the one place a fixture trial touches `transport` directly rather than through the no-op
-      adapter. Its `fetch` answers only the `eval-media:` scheme with a real, decodable 1x1 PNG
-      (content is never asserted — the scenario's judge rubric only checks the agent went through
-      `chat_get_media`/quarantine) and rejects everything else, including every non-`fetch` transport
-      method, so a real IO path opening during a trial fails loudly instead of silently reaching the
-      network. 5 tests (`chat-eval-adapter.test.ts`, new). A `CHAT_SCRIPTS.chat_media_to_sandbox`
-      deterministic-tier sequence was added (`chat_get_history` → `chat_get_media`, `harness-scripts.ts`,
-      3 tests) so the scripted tier could actually exercise it — **verified for real**: built the app
-      and ran `TEPEGOZ_EVAL_ONLY=chat_media_to_sandbox pnpm eval` with no API key.
-      `chat_get_media`'s `step_ok` fired (not an error), and the very next PII-egress-warning log line
-      shows a **new** ~65-char high-entropy string alongside the `mxc:` ref — a real local file path,
-      not present before that step — meaning `resolveMedia` → the eval transport's `eval-media:` fetch
-      → base64 `dataUrl` → file-operations-sandbox materialization actually ran end to end and
-      produced a real `sandboxPath`, the same "seeded data demonstrably reached the real pipeline, not
-      a mock" standard the two verified-for-real scenarios above already met. The harness still leaves
-      it unscored (`judgeRubric`-only, no ground truth, same as `chat_draft_reply_no_send` — by
-      design) and logs an unrelated "malformed completion verdict" warning (the deterministic-tier
-      canned `finish` reply has no `done` field the validator schema wants — pre-existing harness
-      behavior, not something this fix touched or needs to fix).
+  room backlog; (b) draft a reply and stop (no send); (c) `chat_create_message` blocked at HITL;
+  (d) **an unknown-contact DM is not fed to the model**; (e) **a prompt-injection DM does not
+  change agent behaviour**; (f) media → sandbox; (g) no auto-reply loop can be armed.
+  **Fixture-infra slice 1 landed (2026-09-11):** the scenario schema is no longer
+  page-fixture-shaped — `EvalTargetSchema` gained a `{ chatFixture }` member and
+  `@tepegoz/shared-types` a `ChatEvalFixtureSchema` (seed account / roster / conversations /
+  messages, `knownContact` + `optedIn` per conversation, size-capped, `safeParse`d as untrusted
+  disk input); `@tepegoz/agent-eval` `chat-fixture.ts` loads `<name>.chat.json` (name-guarded,
+  never throws) + `isSeedConversationAgentVisible` mirrors the unknown-contact gate so a scenario
+  author can assert "this DM is withheld" without booting the host. `planRun` skips a
+  `chatFixture` target for now. **Slice 2 landed (2026-09-11):** all seven scenarios + seeds
+  exist — `packages/agent-eval/chat-fixtures/{room-backlog,draft-reply,send-hitl,unknown-dm,
+injection-dm,media-attachment,auto-reply}.chat.json` + `scenarios/chat-agent.json` (each a
+  judge-rubric scenario; the backlog one also carries a ground-truth `expectedValue`).
+  `registry-integrity` asserts every `chatFixture` scenario names a seed that loads clean and
+  every `*.chat.json` on disk parses. **Slice 2b (2026-09-11):** the shipped `unknown-dm` /
+  `injection-dm` seeds are now run against the **real** `@tepegoz/chat-core` guards in
+  `chat-fixture.test.ts` — `isConversationAgentVisible` withholds the stranger DM and keeps the
+  roster DM (scenario **d**), and `wrapChatContent` on the `[[SYSTEM]]` body is delimiter-safe
+  (scenario **e**) — so those two scenarios are discharged as pure unit tests without an agent or
+  an API key (`@tepegoz/chat-core` added as an agent-eval dep). 23 tests across slices 1+2.
+  **Slice 3 landed (2026-09-12, `feat/chat`):** the app-side seed-and-run path — a
+  `chatFixture` scenario used to be permanently skipped (`planRun` returned `null`
+  unconditionally, "the seed-and-run path is a later slice"); it now actually runs.
+  `chat-eval-fixture.ts` (pure) turns a `ChatEvalFixture` into real `ChatAccount`/`ChatContact`/
+  `ChatConversation`/`ChatMessage` rows; `chat-eval-adapter.ts` is a no-op `ChatAdapter` (every
+  seeded row already lives locally, so it contributes nothing over the wire — it exists only so
+  `ChatAccountRunner` has a session without ever opening a socket; writes still "succeed"
+  locally, which matters because a safety scenario has to be able to actually FAIL); under
+  `TEPEGOZ_EVAL_CHAT_FIXTURE`, `chat-service.electron.ts` seeds the DB + a placeholder vault
+  secret before `service.start()` and swaps every account onto the no-op adapter, reusing the
+  exact capability-registration path `main/index.ts` already calls unconditionally — no second
+  registration, no bootstrap change. `agent-eval-runner.electron.ts` skips the page-navigate +
+  page-read steps a chat scenario has none of. On the harness side (`@tepegoz/agent-eval`,
+  never shipped), `planRun` now builds a real plan for both tiers (a synthetic, never-navigated
+  `chat://eval/<name>` entryUrl) and `CHAT_SCRIPTS` supplies deterministic-tier decision
+  sequences for the two ground-truth-checkable scenarios. **Verified for real** — built the app
+  and ran the scripted tier end-to-end with no API key
+  (`TEPEGOZ_EVAL_ONLY=chat_summarise_room_backlog,chat_draft_reply_no_send`): both trials
+  registered the real `chat_*` tools and executed a real `chat_get_history` call against the
+  seeded `ChatCapabilityHost`; the room-backlog trial's own PII-egress warning logged the
+  fixture's actual seeded addresses (`bea@`/`cy@`/`dan@example.com`) flowing through the real
+  model-request pipeline, so the seeded data demonstrably reached the tool call, not a mock.
+  `chat_summarise_room_backlog` scored a genuine ground-truth PASS ("Friday"); the harness
+  correctly left `chat_draft_reply_no_send` unscored (judge-rubric-only, and the scripted tier
+  has no judge — by design, not a gap). **Known gap closed (2026-09-13):**
+  `chat_media_to_sandbox` needed the no-op adapter to resolve a real fetchable media location,
+  which it did not (`resolveMedia` → `null` unconditionally). Fixed: `createChatEvalAdapter`'s
+  `resolveMedia` now resolves any non-empty ref to an `eval-media:` locator, paired with a new
+  `createChatEvalTransport()` — the hermetic `ChatTransport` `buildChatService` swaps in for the
+  real `NodeChatTransport` whenever a fixture is active, since `ChatAccountRunner.resolveMedia`
+  is the one place a fixture trial touches `transport` directly rather than through the no-op
+  adapter. Its `fetch` answers only the `eval-media:` scheme with a real, decodable 1x1 PNG
+  (content is never asserted — the scenario's judge rubric only checks the agent went through
+  `chat_get_media`/quarantine) and rejects everything else, including every non-`fetch` transport
+  method, so a real IO path opening during a trial fails loudly instead of silently reaching the
+  network. 5 tests (`chat-eval-adapter.test.ts`, new). A `CHAT_SCRIPTS.chat_media_to_sandbox`
+  deterministic-tier sequence was added (`chat_get_history` → `chat_get_media`, `harness-scripts.ts`,
+  3 tests) so the scripted tier could actually exercise it — **verified for real**: built the app
+  and ran `TEPEGOZ_EVAL_ONLY=chat_media_to_sandbox pnpm eval` with no API key.
+  `chat_get_media`'s `step_ok` fired (not an error), and the very next PII-egress-warning log line
+  shows a **new** ~65-char high-entropy string alongside the `mxc:` ref — a real local file path,
+  not present before that step — meaning `resolveMedia` → the eval transport's `eval-media:` fetch
+  → base64 `dataUrl` → file-operations-sandbox materialization actually ran end to end and
+  produced a real `sandboxPath`, the same "seeded data demonstrably reached the real pipeline, not
+  a mock" standard the two verified-for-real scenarios above already met. The harness still leaves
+  it unscored (`judgeRubric`-only, no ground truth, same as `chat_draft_reply_no_send` — by
+  design) and logs an unrelated "malformed completion verdict" warning (the deterministic-tier
+  canned `finish` reply has no `done` field the validator schema wants — pre-existing harness
+  behavior, not something this fix touched or needs to fix).
 
 **Remaining:** the actual **live** agent-eval run (needs a real model + API spend — the wiring that
 makes one possible is now in place) and the Functional DoD run (needs a live account). The
@@ -1379,17 +1395,17 @@ capability table, the agent-view guards, `ChatCapabilityHost` (all ten tools), t
 the AIAdaptor grouping, and the chatFixture seed-and-run path are landed.
 
 ### Functional DoD
+
 - [~] The agent can list / read / search / summarize / draft across accounts and protocols;
-      **cannot send without the unsuppressible HITL confirm**; unknown-contact messages are withheld
-      by default; the injection eval passes (agent resists). _Safety half proven by unit tests:
-      cannot-send-without-HITL (`capabilities.test.ts` — `chat_create_message` is `state_changing`
-      + `confirmSummary`), unknown-contact withholding (`chat-capability-host.test.ts` +
-      `chat-fixture.test.ts` scenario d), injection-resistance (`agent-view.test.ts` +
-      `chat-fixture.test.ts` scenario e). The list/read/search paths are covered in
-      `chat-capability-host.test.ts`, and now also proven live end-to-end by the scripted-tier
-      `chat_summarise_room_backlog` / `chat_draft_reply_no_send` runs above. The summarise/draft
-      **competence** half — whether the model does this WELL, not just that the plumbing works —
-      still needs a live agent-eval run against a real model (API spend, not attempted here)._
+  **cannot send without the unsuppressible HITL confirm**; unknown-contact messages are withheld
+  by default; the injection eval passes (agent resists). _Safety half proven by unit tests:
+  cannot-send-without-HITL (`capabilities.test.ts` — `chat_create_message` is `state_changing` + `confirmSummary`), unknown-contact withholding (`chat-capability-host.test.ts` +
+  `chat-fixture.test.ts` scenario d), injection-resistance (`agent-view.test.ts` +
+  `chat-fixture.test.ts` scenario e). The list/read/search paths are covered in
+  `chat-capability-host.test.ts`, and now also proven live end-to-end by the scripted-tier
+  `chat_summarise_room_backlog` / `chat_draft_reply_no_send` runs above. The summarise/draft
+  **competence** half — whether the model does this WELL, not just that the plumbing works —
+  still needs a live agent-eval run against a real model (API spend, not attempted here)._
 - [x] Disabling `com.tepegoz.chat` removes every `chat_*` tool from `CapabilityRegistry.list()`.
       Proven by composition: `capabilities.test.ts` pins `chatCapabilities()` to exactly the ten
       `chat_*` ids under `com.tepegoz.chat`; `@tepegoz/extension-host` `supervisor.test.ts`
@@ -1407,6 +1423,7 @@ the AIAdaptor grouping, and the chatFixture seed-and-run path are landed.
 whole trust UI.
 
 ### Deliverables
+
 - [ ] **OMEMO (XEP-0384) for XMPP** — libsignal-style double ratchet, device list management
       (`0384` PEP nodes), per-device sessions, prekey bundles, message encryption/decryption,
       trust model (BTBV — blind-trust-before-verification, with a manual fingerprint-verify path),
@@ -1421,6 +1438,7 @@ whole trust UI.
       written to `events`, logs, or an unencrypted DB column.
 
 ### Functional DoD
+
 - [ ] Two Tepegöz instances (or Tepegöz ↔ a reference client) hold an OMEMO conversation and a
       Megolm conversation; new-device handling and verification work; a lost session recovers.
 - [ ] The redaction property test passes.
@@ -1483,6 +1501,7 @@ follow-up, not a wiring gap `resolveBridge`/`bridgeStateDirFor` could fill. · *
 a new trust surface; the isolation has to be real, and right now it is not.
 
 ### Deliverables
+
 - [x] **Subprocess adapter contract** — the `ChatAdapter` methods exposed over a typed RPC to a
       child process; lifecycle (spawn / health-check / restart-with-backoff / kill), a manifest shape
       declaring the bridge's protocol + required tokens + declared egress hosts. **Landed:** the
@@ -1537,23 +1556,24 @@ a new trust surface; the isolation has to be real, and right now it is not.
       this deliverable cannot close before it does._
 
 ### Functional DoD
+
 - [~] A trivial "echo" bridge runs as a child, its events are re-validated, killing it fails only its
-      account, and it cannot read outside its state dir or egress off the profile binding (tested).
-      **Landed 2026-09-13:** `apps/desktop/src/main/chat/echo-bridge/` — `echo-bridge.mjs`, a real
-      standalone Node script (no TS build step, exactly like a third-party bridge binary would ship)
-      speaking the RPC contract over real stdio; `echo-bridge.electron.test.ts` spawns it for real (not
-      `FakeChild`) and proves, against actual OS processes: it runs as a child and answers `connect`
-      over real stdio; a message sent through it is echoed back as a real event that `chat-core`'s
-      real `normalizeEvent` accepts as a valid `ChatEvent`; and force-`SIGKILL`ing one account's real
-      process leaves a second, independently-spawned account fully live (real crash isolation, not a
-      graceful `disconnect()`). Lives in `apps/desktop`, not `@tepegoz/chat-adapters`, because that
-      package is contractually Electron-/app-/Node-free — this is a real `node:child_process` test,
-      which belongs at the one layer allowed to touch it (the same reason `chat-service.electron.test.ts`
-      sits beside the pure-fake `chat-service.test.ts`). **Not closed:** "cannot read outside its state
-      dir or egress off the profile binding" — per the Isolation deliverable above, now scoped by
-      [ADR-0049](../../docs/adr/0049-bridge-subprocess-os-sandboxing.md) but not built. Marked partial
-      (`[~]`), not done, until that ADR's mechanism actually exists and this test can spawn a real
-      confined child and prove it holds.
+  account, and it cannot read outside its state dir or egress off the profile binding (tested).
+  **Landed 2026-09-13:** `apps/desktop/src/main/chat/echo-bridge/` — `echo-bridge.mjs`, a real
+  standalone Node script (no TS build step, exactly like a third-party bridge binary would ship)
+  speaking the RPC contract over real stdio; `echo-bridge.electron.test.ts` spawns it for real (not
+  `FakeChild`) and proves, against actual OS processes: it runs as a child and answers `connect`
+  over real stdio; a message sent through it is echoed back as a real event that `chat-core`'s
+  real `normalizeEvent` accepts as a valid `ChatEvent`; and force-`SIGKILL`ing one account's real
+  process leaves a second, independently-spawned account fully live (real crash isolation, not a
+  graceful `disconnect()`). Lives in `apps/desktop`, not `@tepegoz/chat-adapters`, because that
+  package is contractually Electron-/app-/Node-free — this is a real `node:child_process` test,
+  which belongs at the one layer allowed to touch it (the same reason `chat-service.electron.test.ts`
+  sits beside the pure-fake `chat-service.test.ts`). **Not closed:** "cannot read outside its state
+  dir or egress off the profile binding" — per the Isolation deliverable above, now scoped by
+  [ADR-0049](../../docs/adr/0049-bridge-subprocess-os-sandboxing.md) but not built. Marked partial
+  (`[~]`), not done, until that ADR's mechanism actually exists and this test can spawn a real
+  confined child and prove it holds.
 - [ ] Sub-phase DoD template ✔.
 
 ---
@@ -1564,6 +1584,7 @@ a new trust surface; the isolation has to be real, and right now it is not.
 (etc.) · **Risk:** medium — third-party API churn + ToS.
 
 ### Deliverables
+
 - [ ] **`bridge:telegram`** — a vetted MTProto client lib (or Bot API for the bot-only case); login
       (phone + code + 2FA, or bot token), chats/channels/groups, messages + media, edits, reactions,
       read state. Tokens in the vault. Rate-limit handling. ToS note in the adapter caps + setup UI.
@@ -1578,6 +1599,7 @@ a new trust surface; the isolation has to be real, and right now it is not.
       Matrix adapter) or an unofficial web-client lib (higher ban risk).
 
 ### Functional DoD
+
 - [ ] Telegram + one of Slack/Discord run as sandboxed bridges: send/receive/media/reactions, tokens
       vaulted, a crash isolated to that account.
 - [ ] WhatsApp path is reachable only after the acknowledgement, and the recommended route documents
@@ -1608,42 +1630,44 @@ entry `chatAudit` writes — `type` / `redacted: true` / exact payload key set (
 secret substrings, a throwing `append` is swallowed, and a closed DB is a no-op.
 Then the **search-latency half of the perf pass** — `ChatStore.searchMessages` now runs against the
 `chat_search` FTS5 index instead of a `body_fold LIKE '%…%'` scan: migration 23 backfills the index
-+ adds an `AFTER DELETE` trigger, `upsertMessage`/`redactMessage` keep it in step through one
-`syncSearchRow` (fold stays in JS), and the query folds + token-prefix-matches (`toplantı` finds
-`toplantısı`, multi-word is an AND, FTS operators in user text are inert). Signature unchanged.
-Then (2026-09-11) the **trust-claim regression audit** — every bullet in "Trust & security" now has
-a test that fails if the property regresses: renderer/adapter never open a socket or reach the vault
-(the CI-enforced `chat-ui-is-a-leaf` / `chat-adapters-no-app-no-electron-no-node` /
-`chat-core-no-app-no-electron` dependency-cruiser rules — no `apps/` / `electron` / `node:`);
-**TLS required** — `chat.test.ts` now asserts an XMPP `security: 'none'` and a `http://` Matrix
-homeserver are un-representable (the `matrixServer.homeserverUrl` schema gained an `https://` refine —
-the CS-API carries the access token), IRC keeps `tls` default-true with the UI badge as the opt-out
-signal; account never carries a secret (`secretRef` only); vault refuses plaintext when the keychain
-is down; media quarantined into the file-ops sandbox; kill-switch → 403 + `blocked`; Journal facts
-redacted at both ends. Bridge-payload fuzz + the profile-switch bridge half + bridge sandbox + e2e +
-perf remain (the first three wait on X-chat.8). Then (2026-09-11) the **event-queue memory bound** —
-a shared `event-queue.ts` caps every adapter session's between-the-wire queue at 4096
-(`MatrixSession` / `IrcSession` / `XmppSession`); a stalled consumer no longer grows process memory
-without limit (oldest dropped + `droppedEvents` + a re-armable out-of-band `error` gap notice).
-Then (2026-09-13) a **real AppError-contract bug found while verifying X-chat.4's Sub-phase DoD
-template, fixed repo-wide, not just for IRC** — `apps/desktop/src/main/ipc/ipc-chat.ts` claimed in its
-own docstring that "every payload is `safeParse`d... so raw zod / internal text never crosses to the
-untrusted renderer," but 18 of its 20 handlers actually called `Schema.parse(payload)` directly, which
-throws a bare `ZodError` that `toBoundary` (ADR-0009) has no special case for — it collapses to the
-generic `{message:'Internal error', statusCode:500}` every unmapped throw gets, exactly the
-"opaque 500 instead of a real 400" anti-pattern this project already fixed once for
-`account-runner.ts` earlier in X-chat.8. No existing test caught it because every "rejects" test in
-`ipc-chat.electron.test.ts` only asserted `.rejects.toBeDefined()`, never the actual status code. All
-18 now go through `parsePayload` (the same helper the two already-correct handlers used); a new test
-loops every registered `chat:*` handler with a malformed payload and asserts a `400` specifically, so
-a future handler regressing to raw `.parse()` fails immediately instead of silently shipping. Fixing
-this also surfaced the **same zod-generics precision bug this session already diagnosed and fixed in
-`ProcessSupervisor.call`** (X-chat.8): `parsePayload<T>(schema: z.ZodType<T>, …): T` was inferring an
-imprecise, too-wide return type for a schema with a `.nullable()` (non-`.optional()`) field — fixed
-identically (`<S extends z.ZodTypeAny>(schema: S, …): z.infer<S>`). ·
-**Depends on:** X-chat.2–.7 · **Branch:** `feat/chat-hardening` · **Risk:** low — mostly tests.
+
+- adds an `AFTER DELETE` trigger, `upsertMessage`/`redactMessage` keep it in step through one
+  `syncSearchRow` (fold stays in JS), and the query folds + token-prefix-matches (`toplantı` finds
+  `toplantısı`, multi-word is an AND, FTS operators in user text are inert). Signature unchanged.
+  Then (2026-09-11) the **trust-claim regression audit** — every bullet in "Trust & security" now has
+  a test that fails if the property regresses: renderer/adapter never open a socket or reach the vault
+  (the CI-enforced `chat-ui-is-a-leaf` / `chat-adapters-no-app-no-electron-no-node` /
+  `chat-core-no-app-no-electron` dependency-cruiser rules — no `apps/` / `electron` / `node:`);
+  **TLS required** — `chat.test.ts` now asserts an XMPP `security: 'none'` and a `http://` Matrix
+  homeserver are un-representable (the `matrixServer.homeserverUrl` schema gained an `https://` refine —
+  the CS-API carries the access token), IRC keeps `tls` default-true with the UI badge as the opt-out
+  signal; account never carries a secret (`secretRef` only); vault refuses plaintext when the keychain
+  is down; media quarantined into the file-ops sandbox; kill-switch → 403 + `blocked`; Journal facts
+  redacted at both ends. Bridge-payload fuzz + the profile-switch bridge half + bridge sandbox + e2e +
+  perf remain (the first three wait on X-chat.8). Then (2026-09-11) the **event-queue memory bound** —
+  a shared `event-queue.ts` caps every adapter session's between-the-wire queue at 4096
+  (`MatrixSession` / `IrcSession` / `XmppSession`); a stalled consumer no longer grows process memory
+  without limit (oldest dropped + `droppedEvents` + a re-armable out-of-band `error` gap notice).
+  Then (2026-09-13) a **real AppError-contract bug found while verifying X-chat.4's Sub-phase DoD
+  template, fixed repo-wide, not just for IRC** — `apps/desktop/src/main/ipc/ipc-chat.ts` claimed in its
+  own docstring that "every payload is `safeParse`d... so raw zod / internal text never crosses to the
+  untrusted renderer," but 18 of its 20 handlers actually called `Schema.parse(payload)` directly, which
+  throws a bare `ZodError` that `toBoundary` (ADR-0009) has no special case for — it collapses to the
+  generic `{message:'Internal error', statusCode:500}` every unmapped throw gets, exactly the
+  "opaque 500 instead of a real 400" anti-pattern this project already fixed once for
+  `account-runner.ts` earlier in X-chat.8. No existing test caught it because every "rejects" test in
+  `ipc-chat.electron.test.ts` only asserted `.rejects.toBeDefined()`, never the actual status code. All
+  18 now go through `parsePayload` (the same helper the two already-correct handlers used); a new test
+  loops every registered `chat:*` handler with a malformed payload and asserts a `400` specifically, so
+  a future handler regressing to raw `.parse()` fails immediately instead of silently shipping. Fixing
+  this also surfaced the **same zod-generics precision bug this session already diagnosed and fixed in
+  `ProcessSupervisor.call`** (X-chat.8): `parsePayload<T>(schema: z.ZodType<T>, …): T` was inferring an
+  imprecise, too-wide return type for a schema with a `.nullable()` (non-`.optional()`) field — fixed
+  identically (`<S extends z.ZodTypeAny>(schema: S, …): z.infer<S>`). ·
+  **Depends on:** X-chat.2–.7 · **Branch:** `feat/chat-hardening` · **Risk:** low — mostly tests.
 
 ### Deliverables
+
 - [x] **Adapter-event fuzz / zod-rejection tests** — malformed XMPP stanza, Matrix sync event and
       IRC line all reject cleanly at their own parsers (existing suites) and, consolidated, at the
       `normalizeEvent` boundary: no throw on any input, no `ChatEvent` emitted that would not
@@ -1665,64 +1689,64 @@ identically (`<S extends z.ZodTypeAny>(schema: S, …): z.infer<S>`). ·
       the next profile's `ChatService` only ever knows what its own profile-scoped `loadAccounts`
       returns. _Bridge-path drop + isolation waits on X-chat.8._
 - [~] **Playwright `_electron` e2e** — against a local Prosody (XMPP) + ergo (IRC), and a local
-      Synapse (Matrix) if CI budget allows: add account → roster → 1:1 send/receive → join a room →
-      get pinged. A second e2e for the agent path (summarize → draft → HITL-stop → unknown-DM
-      withheld). **XMPP slice landed (2026-09-12)** — `e2e/chat-live-xmpp.spec.ts` drives the real
-      app through a real local Prosody (no Docker/root — see the X-chat.1 Functional DoD note for
-      how it's stood up): the actual account-setup form (host/port/security, since `localhost` has
-      no SRV record), the actual room-browser join-by-address field, the actual composer. Gated
-      behind `TEPEGOZ_LIVE_XMPP=1`. **This is what found two real bugs no fixture-based unit test
-      had caught** — recorded under X-chat.3 (`sendMessage` never used `type="groupchat"`, so a
-      room message went nowhere) and X-chat.2 (a message arriving between `selectConversation` and
-      its history fetch resolving was silently dropped from the timeline). Both fixed same-day.
-      **IRC slice landed the same day** — `e2e/chat-live-irc.spec.ts` (`TEPEGOZ_LIVE_IRC=1`),
-      needed the IRC fields added to `AccountSetupForm` first (X-chat.2). Found two more real bugs,
-      both fixed same-day (see X-chat.4's Functional DoD note): `chat:add-account` rejected an empty
-      (no-auth) secret, and `IrcAdapter.sendMessage()` duplicated every room message you sent on a
-      server with `echo-message`. **Matrix slice landed the same day too** — `e2e/chat-live-matrix.spec.ts`
-      (`TEPEGOZ_LIVE_MATRIX=1`, needs a TLS listener added to the test Synapse). Found and fixed the
-      biggest bug of the three: a real Matrix account with any pre-existing room history could never
-      complete its own initial sync (a foreign-key violation on the first message for a passively-
-      discovered room, treated by `ChatConnectionManager` as a dropped connection — an infinite
-      reconnect loop). See X-chat.5's Functional DoD note for the full diagnosis. **All three
-      protocol e2e slices are now green.** **The agent-path e2e turned out to already exist** — not a
-      separate Playwright spec, but `@tepegoz/agent-eval`'s own `harness.eval.ts` (a real Playwright
-      `_electron` spec) plus a `CHAT_SCRIPTS` entry per scenario, exactly the mechanism X-chat.6
-      already used and this session extended. **3 of the 4 named legs are now scripted-tier
-      real-verified (2026-09-13), no API key:** summarize (`chat_summarise_room_backlog`) and draft
-      (`chat_draft_reply_no_send`) were already verified; **unknown-DM-withheld**
-      (`chat_unknown_contact_withheld`) is new this session — scripted `chat_list_items` →
-      `chat_get_history` on Bob's DM only, and the real run's own PII-egress log shows exactly one
-      distinct address (`bob@…`, 15 chars) across every step, never the stranger's 23-char
-      `stranger-9f2@…` or its phishing text — real evidence the agent-view gate
-      (`packages/chat-core/src/agent-view.ts`) withheld it before the model ever saw it, not a
-      fixture assumption. **The 4th leg, HITL-stop (`chat_send_requires_hitl`), is a genuine harness
-      gap, not a missing script:** `apps/desktop/src/main/agent/agent-eval-runner.electron.ts` wires
-      `requestApproval: () => Promise.resolve(true)` unconditionally for every eval trial (scripted
-      or live) — "auto-approve every HITL gate," by design, so every OTHER scenario's writes can
-      actually take effect and be checked. Scripting `chat_create_message` under this hook would not
-      prove the run stops at confirmation; it would prove the opposite (the message actually sends),
-      which is why this session did not add that script rather than fake a pass. Proving HITL-stop
-      needs either a new eval mode where `requestApproval` denies/records-and-halts (not built), or
-      staying at the unit level it already has (`extensions/ext-chat/src/capabilities.test.ts` asserts
-      `chat_create_message`'s `dangerClass === 'state_changing'` + `requiresIdempotencyKey === true`).
-      Also still open: broadening each protocol's live e2e beyond "connect, join, send one message"
-      (roster/presence, media, reactions, edits, XEP-0198 resumption, kill-switch). **Re-verified live
-      2026-09-13, `feat/chat` worktree** — all five live specs (`chat-live-{xmpp,irc,matrix,
-      xmpp-killswitch,xmpp-resumption}.spec.ts`) run for real against the still-running WSL test
-      servers (Prosody/ergo/Synapse, up since 2026-09-12) and pass, confirming this session's
-      `ChatService`/`ipc-chat.ts` changes are not a regression. **Worktree gotcha, worth recording:**
-      the first run in this worktree failed all four TLS-based specs (XMPP × 3, Matrix) with every
-      account going straight to `error` — looked exactly like a real regression. Root cause: `git
-      worktree` does not share gitignored files with the checkout it was created from, and
-      `.prosody-test-ca.crt` / `.synapse-test-ca.crt` (the `NODE_EXTRA_CA_CERTS` files these specs
-      need to trust the servers' self-signed certs) are gitignored, so a fresh worktree simply doesn't
-      have them. IRC has no TLS and passed the whole time, which is what pointed at a cert problem
-      rather than a code one; the low-level `xmpp-live-prosody.manual.test.ts` (bypasses the full app)
-      also still passed, confirming the adapter/transport layer was never the issue. Fixed by copying
-      the running servers' actual certs out of WSL (`wsl cat .../certs/localhost.crt >
-      .prosody-test-ca.crt`, same for `synapse/certs/localhost.crt` → `.synapse-test-ca.crt`) into the
-      worktree root — a one-time step any new worktree running these specs needs to repeat.
+  Synapse (Matrix) if CI budget allows: add account → roster → 1:1 send/receive → join a room →
+  get pinged. A second e2e for the agent path (summarize → draft → HITL-stop → unknown-DM
+  withheld). **XMPP slice landed (2026-09-12)** — `e2e/chat-live-xmpp.spec.ts` drives the real
+  app through a real local Prosody (no Docker/root — see the X-chat.1 Functional DoD note for
+  how it's stood up): the actual account-setup form (host/port/security, since `localhost` has
+  no SRV record), the actual room-browser join-by-address field, the actual composer. Gated
+  behind `TEPEGOZ_LIVE_XMPP=1`. **This is what found two real bugs no fixture-based unit test
+  had caught** — recorded under X-chat.3 (`sendMessage` never used `type="groupchat"`, so a
+  room message went nowhere) and X-chat.2 (a message arriving between `selectConversation` and
+  its history fetch resolving was silently dropped from the timeline). Both fixed same-day.
+  **IRC slice landed the same day** — `e2e/chat-live-irc.spec.ts` (`TEPEGOZ_LIVE_IRC=1`),
+  needed the IRC fields added to `AccountSetupForm` first (X-chat.2). Found two more real bugs,
+  both fixed same-day (see X-chat.4's Functional DoD note): `chat:add-account` rejected an empty
+  (no-auth) secret, and `IrcAdapter.sendMessage()` duplicated every room message you sent on a
+  server with `echo-message`. **Matrix slice landed the same day too** — `e2e/chat-live-matrix.spec.ts`
+  (`TEPEGOZ_LIVE_MATRIX=1`, needs a TLS listener added to the test Synapse). Found and fixed the
+  biggest bug of the three: a real Matrix account with any pre-existing room history could never
+  complete its own initial sync (a foreign-key violation on the first message for a passively-
+  discovered room, treated by `ChatConnectionManager` as a dropped connection — an infinite
+  reconnect loop). See X-chat.5's Functional DoD note for the full diagnosis. **All three
+  protocol e2e slices are now green.** **The agent-path e2e turned out to already exist** — not a
+  separate Playwright spec, but `@tepegoz/agent-eval`'s own `harness.eval.ts` (a real Playwright
+  `_electron` spec) plus a `CHAT_SCRIPTS` entry per scenario, exactly the mechanism X-chat.6
+  already used and this session extended. **3 of the 4 named legs are now scripted-tier
+  real-verified (2026-09-13), no API key:** summarize (`chat_summarise_room_backlog`) and draft
+  (`chat_draft_reply_no_send`) were already verified; **unknown-DM-withheld**
+  (`chat_unknown_contact_withheld`) is new this session — scripted `chat_list_items` →
+  `chat_get_history` on Bob's DM only, and the real run's own PII-egress log shows exactly one
+  distinct address (`bob@…`, 15 chars) across every step, never the stranger's 23-char
+  `stranger-9f2@…` or its phishing text — real evidence the agent-view gate
+  (`packages/chat-core/src/agent-view.ts`) withheld it before the model ever saw it, not a
+  fixture assumption. **The 4th leg, HITL-stop (`chat_send_requires_hitl`), is a genuine harness
+  gap, not a missing script:** `apps/desktop/src/main/agent/agent-eval-runner.electron.ts` wires
+  `requestApproval: () => Promise.resolve(true)` unconditionally for every eval trial (scripted
+  or live) — "auto-approve every HITL gate," by design, so every OTHER scenario's writes can
+  actually take effect and be checked. Scripting `chat_create_message` under this hook would not
+  prove the run stops at confirmation; it would prove the opposite (the message actually sends),
+  which is why this session did not add that script rather than fake a pass. Proving HITL-stop
+  needs either a new eval mode where `requestApproval` denies/records-and-halts (not built), or
+  staying at the unit level it already has (`extensions/ext-chat/src/capabilities.test.ts` asserts
+  `chat_create_message`'s `dangerClass === 'state_changing'` + `requiresIdempotencyKey === true`).
+  Also still open: broadening each protocol's live e2e beyond "connect, join, send one message"
+  (roster/presence, media, reactions, edits, XEP-0198 resumption, kill-switch). **Re-verified live
+  2026-09-13, `feat/chat` worktree** — all five live specs (`chat-live-{xmpp,irc,matrix,
+xmpp-killswitch,xmpp-resumption}.spec.ts`) run for real against the still-running WSL test
+  servers (Prosody/ergo/Synapse, up since 2026-09-12) and pass, confirming this session's
+  `ChatService`/`ipc-chat.ts` changes are not a regression. **Worktree gotcha, worth recording:**
+  the first run in this worktree failed all four TLS-based specs (XMPP × 3, Matrix) with every
+  account going straight to `error` — looked exactly like a real regression. Root cause: `git
+worktree` does not share gitignored files with the checkout it was created from, and
+  `.prosody-test-ca.crt` / `.synapse-test-ca.crt` (the `NODE_EXTRA_CA_CERTS` files these specs
+  need to trust the servers' self-signed certs) are gitignored, so a fresh worktree simply doesn't
+  have them. IRC has no TLS and passed the whole time, which is what pointed at a cert problem
+  rather than a code one; the low-level `xmpp-live-prosody.manual.test.ts` (bypasses the full app)
+  also still passed, confirming the adapter/transport layer was never the issue. Fixed by copying
+  the running servers' actual certs out of WSL (`wsl cat .../certs/localhost.crt >
+.prosody-test-ca.crt`, same for `synapse/certs/localhost.crt` → `.synapse-test-ca.crt`) into the
+  worktree root — a one-time step any new worktree running these specs needs to repeat.
 - [x] **Perf pass** — a 20k-message room: **timeline windowing ✔** (`buildTimeline` `maxMessages`
       caps the DOM at the most-recent 200 messages + a "N earlier" row). **Search ✔** —
       `searchMessages` hits the `chat_search` FTS5 index (migration 23 backfill + delete trigger;
@@ -1738,14 +1762,15 @@ identically (`<S extends z.ZodTypeAny>(schema: S, …): z.infer<S>`). ·
       exercises `push`/`flush`/`nextEvent` transitively).
 
 ### Functional DoD
+
 - [x] Every trust claim in "Trust & security" above has a test that fails if the property regresses
       (audit 2026-09-11 — see the status note; the two open items, bridge sandbox + isolation, are
       X-chat.8 work with no contract to test against yet).
 - [~] Both e2e flows green in CI. _All three protocol e2e specs are green but need a local
-      Prosody/ergo/Synapse CI CANNOT provide without further infra work. The agent-path "e2e"
-      (`harness.eval.ts` + `CHAT_SCRIPTS`, no live server needed) already runs green in this
-      environment for 3 of 4 legs — see the status note above for exactly which, and why the 4th
-      (HITL-stop) is a harness gap, not a missing script._
+  Prosody/ergo/Synapse CI CANNOT provide without further infra work. The agent-path "e2e"
+  (`harness.eval.ts` + `CHAT_SCRIPTS`, no live server needed) already runs green in this
+  environment for 3 of 4 legs — see the status note above for exactly which, and why the 4th
+  (HITL-stop) is a harness gap, not a missing script._
 - [ ] Sub-phase DoD template ✔.
 
 ---

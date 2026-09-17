@@ -43,7 +43,9 @@ describe('chatCapabilities — table', () => {
   });
 
   it('danger classes are fail-safe', () => {
-    const danger = Object.fromEntries(set.capabilities.map((c) => [c.descriptor.id, c.descriptor.dangerClass]));
+    const danger = Object.fromEntries(
+      set.capabilities.map((c) => [c.descriptor.id, c.descriptor.dangerClass]),
+    );
     expect(danger).toMatchObject({
       chat_list_items: 'read',
       chat_get_item: 'read',
@@ -69,7 +71,9 @@ describe('chatCapabilities — table', () => {
 describe('chatCapabilities — argument validation', () => {
   it('chat_create_message rejects an empty body and a missing conversation', () => {
     const schema = byId.get('chat_create_message')!.inputSchema;
-    expect(schema.safeParse({ accountId: 'a', conversationId: 'c', body: 'hi' }).success).toBe(true);
+    expect(schema.safeParse({ accountId: 'a', conversationId: 'c', body: 'hi' }).success).toBe(
+      true,
+    );
     expect(schema.safeParse({ accountId: 'a', conversationId: 'c', body: '' }).success).toBe(false);
     expect(schema.safeParse({ accountId: 'a', body: 'hi' }).success).toBe(false);
   });
@@ -83,17 +87,18 @@ describe('chatCapabilities — argument validation', () => {
   it('chat_get_history caps the page limit', () => {
     const schema = byId.get('chat_get_history')!.inputSchema;
     expect(schema.safeParse({ accountId: 'a', conversationId: 'c', limit: 50 }).success).toBe(true);
-    expect(schema.safeParse({ accountId: 'a', conversationId: 'c', limit: 5000 }).success).toBe(false);
+    expect(schema.safeParse({ accountId: 'a', conversationId: 'c', limit: 5000 }).success).toBe(
+      false,
+    );
   });
 });
 
 describe('chatCapabilities — handlers delegate to the host', () => {
   it('chat_create_message forwards args and returns the protocol id', async () => {
     const { mocks, host } = fakeHost();
-    const out = await byId.get('chat_create_message')!.handler(
-      { accountId: 'a', conversationId: 'c', body: 'hi', replyToId: '$0' },
-      host,
-    );
+    const out = await byId
+      .get('chat_create_message')!
+      .handler({ accountId: 'a', conversationId: 'c', body: 'hi', replyToId: '$0' }, host);
     expect(mocks.createMessage).toHaveBeenCalledWith({
       accountId: 'a',
       conversationId: 'c',
@@ -132,7 +137,10 @@ describe('chat_create_message — confirmSummary', () => {
       topic: null,
       participants: [],
     } as unknown as null);
-    const text = await summary({ accountId: 'work', conversationId: 'c1', body: 'running late' }, host);
+    const text = await summary(
+      { accountId: 'work', conversationId: 'c1', body: 'running late' },
+      host,
+    );
     expect(text).toBe('Send this message to room “Weekly Sync” · account work:\n\nrunning late');
   });
 

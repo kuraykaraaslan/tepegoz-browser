@@ -129,7 +129,11 @@ export function useAgentActions(deps: AgentActionsDeps) {
           ...s,
           turns: s.turns.map((turn) =>
             turn.id === id
-              ? { ...turn, completionOutcome: outcome, ...(evidence !== undefined ? { evidence } : {}) }
+              ? {
+                  ...turn,
+                  completionOutcome: outcome,
+                  ...(evidence !== undefined ? { evidence } : {}),
+                }
               : turn,
           ),
         }));

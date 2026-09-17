@@ -14,9 +14,21 @@ function MuteIcon({ muted }: Readonly<{ muted: boolean }>) {
         strokeWidth="1.5"
         strokeLinecap="round"
       />
-      <path d="M6 16.2h7M9.5 13.3v2.9" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+      <path
+        d="M6 16.2h7M9.5 13.3v2.9"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+      />
       {muted && (
-        <path d="M3.5 3.5l13 13" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+        <path
+          d="M3.5 3.5l13 13"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.6"
+          strokeLinecap="round"
+        />
       )}
     </svg>
   );

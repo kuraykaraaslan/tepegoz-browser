@@ -14,6 +14,8 @@ describe('DataRightsExportRequestSchema', () => {
   });
 
   it('rejects a subject over 200 characters', () => {
-    expect(DataRightsExportRequestSchema.safeParse({ subject: 'x'.repeat(201) }).success).toBe(false);
+    expect(DataRightsExportRequestSchema.safeParse({ subject: 'x'.repeat(201) }).success).toBe(
+      false,
+    );
   });
 });

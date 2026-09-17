@@ -90,7 +90,10 @@ describe('MessageTimeline', () => {
       value: 4000,
     });
     const { container } = wrap(
-      <MessageTimeline messages={[msg({ id: 'a' }), msg({ id: 'b', originTs: T0 + 1000 })]} now={T0} />,
+      <MessageTimeline
+        messages={[msg({ id: 'a' }), msg({ id: 'b', originTs: T0 + 1000 })]}
+        now={T0}
+      />,
     );
     const list = container.querySelector('.chat-timeline') as HTMLOListElement;
     expect(list.scrollTop).toBe(4000);
@@ -180,7 +183,9 @@ describe('MessageTimeline', () => {
   });
 
   it('does not render attachments when no resolveMedia is supplied', () => {
-    wrap(<MessageTimeline messages={[msg({ body: '', kind: 'media', mediaRef: 'ref' })]} now={T0} />);
+    wrap(
+      <MessageTimeline messages={[msg({ body: '', kind: 'media', mediaRef: 'ref' })]} now={T0} />,
+    );
     expect(screen.queryByText('Loading attachment…')).toBeNull();
   });
 
@@ -245,7 +250,11 @@ describe('MessageTimeline', () => {
 
   it('a new message of your own always follows to the bottom, even mid-history-scroll', () => {
     const { rerender } = wrap(
-      <MessageTimeline messages={[msg({ id: 'a', protocolId: 'p1' })]} now={T0} isOwn={() => false} />,
+      <MessageTimeline
+        messages={[msg({ id: 'a', protocolId: 'p1' })]}
+        now={T0}
+        isOwn={() => false}
+      />,
     );
     const list = document.querySelector('.chat-timeline') as HTMLElement;
     simulateScrolledUp(list);
@@ -253,7 +262,10 @@ describe('MessageTimeline', () => {
     rerender(
       <I18nProvider locale="en">
         <MessageTimeline
-          messages={[msg({ id: 'a', protocolId: 'p1' }), msg({ id: 'b', protocolId: 'p2', body: 'sent' })]}
+          messages={[
+            msg({ id: 'a', protocolId: 'p1' }),
+            msg({ id: 'b', protocolId: 'p2', body: 'sent' }),
+          ]}
           now={T0}
           isOwn={(m) => m.protocolId === 'p2'}
         />
@@ -262,9 +274,13 @@ describe('MessageTimeline', () => {
     expect(list.scrollTop).toBe(list.scrollHeight);
   });
 
-  it('someone else\'s new message does not yank a scrolled-up reader back to the bottom', () => {
+  it("someone else's new message does not yank a scrolled-up reader back to the bottom", () => {
     const { rerender } = wrap(
-      <MessageTimeline messages={[msg({ id: 'a', protocolId: 'p1' })]} now={T0} isOwn={() => false} />,
+      <MessageTimeline
+        messages={[msg({ id: 'a', protocolId: 'p1' })]}
+        now={T0}
+        isOwn={() => false}
+      />,
     );
     const list = document.querySelector('.chat-timeline') as HTMLElement;
     simulateScrolledUp(list);
@@ -284,9 +300,13 @@ describe('MessageTimeline', () => {
     expect(list.scrollTop).toBe(200);
   });
 
-  it('someone else\'s new message DOES follow to the bottom when the reader was already there', () => {
+  it("someone else's new message DOES follow to the bottom when the reader was already there", () => {
     const { rerender } = wrap(
-      <MessageTimeline messages={[msg({ id: 'a', protocolId: 'p1' })]} now={T0} isOwn={() => false} />,
+      <MessageTimeline
+        messages={[msg({ id: 'a', protocolId: 'p1' })]}
+        now={T0}
+        isOwn={() => false}
+      />,
     );
     const list = document.querySelector('.chat-timeline') as HTMLElement;
     // Near the bottom: scrollHeight - scrollTop - clientHeight < 80.
@@ -310,7 +330,7 @@ describe('MessageTimeline', () => {
     expect(list.scrollTop).toBe(list.scrollHeight);
   });
 
-  it('no Edit trigger without onEdit, without isOwn, or on someone else\'s message', () => {
+  it("no Edit trigger without onEdit, without isOwn, or on someone else's message", () => {
     const onEdit = vi.fn();
     wrap(<MessageTimeline messages={[msg({ protocolId: 'srv-1' })]} now={T0} isOwn={() => true} />);
     expect(screen.queryByRole('button', { name: 'Edit message' })).toBeNull();
@@ -364,7 +384,9 @@ describe('MessageTimeline', () => {
   });
 
   it('windows a very long conversation and shows an "earlier messages" row', () => {
-    const many = Array.from({ length: 260 }, (_, i) => msg({ id: `m${i}`, body: `line ${i}`, originTs: T0 + i * 1000 }));
+    const many = Array.from({ length: 260 }, (_, i) =>
+      msg({ id: `m${i}`, body: `line ${i}`, originTs: T0 + i * 1000 }),
+    );
     wrap(<MessageTimeline messages={many} now={T0 + 260_000} maxMessages={200} />);
     expect(screen.getByText('60 earlier messages not shown')).toBeDefined();
     // the oldest kept line is 60, line 59 is windowed out
@@ -377,7 +399,14 @@ describe('MessageTimeline', () => {
       <MessageTimeline
         messages={[
           msg({ id: 'a', protocolId: 'orig', senderName: 'Alice', body: 'the original point' }),
-          msg({ id: 'b', protocolId: 'p2', senderName: 'Bob', senderAddress: 'bob@x', body: 'I agree', replyToId: 'orig' }),
+          msg({
+            id: 'b',
+            protocolId: 'p2',
+            senderName: 'Bob',
+            senderAddress: 'bob@x',
+            body: 'I agree',
+            replyToId: 'orig',
+          }),
         ]}
         now={T0}
       />,

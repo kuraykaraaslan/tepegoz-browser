@@ -101,7 +101,10 @@ const matrixServer = z.object({
 const bridgeServer = z.object({
   protocol: z.literal('bridge'),
   /** Which out-of-process bridge adapter (`telegram`, `slack`, `discord`, …). */
-  bridgeId: z.string().regex(/^[a-z0-9-]+$/).max(64),
+  bridgeId: z
+    .string()
+    .regex(/^[a-z0-9-]+$/)
+    .max(64),
   /** Opaque to the core — validated by the bridge subprocess, kept as bounded strings here. */
   config: z.record(z.string().max(64), z.string().max(4096)).default({}),
 });

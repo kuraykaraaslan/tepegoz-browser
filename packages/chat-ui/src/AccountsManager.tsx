@@ -79,7 +79,9 @@ export function AccountsManager({
                   <span className="chat-accounts-manager__label">{account.label}</span>
                   <span className="chat-presence" data-tone={tone}>
                     <span className="chat-presence__dot" aria-hidden="true" />
-                    <span className="chat-presence__label">{s.accountsManager.connState[connState]}</span>
+                    <span className="chat-presence__label">
+                      {s.accountsManager.connState[connState]}
+                    </span>
                   </span>
                 </span>
                 {onEdit !== undefined &&

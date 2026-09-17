@@ -154,7 +154,12 @@ describe('agent conversation history', () => {
     });
 
     it('returns turns across MULTIPLE conversations, ordered oldest first', () => {
-      AgentConversationStore.ensure(db, { id: uuid(30), groupId: GROUP, prompt: 'first', ts: 1_000 });
+      AgentConversationStore.ensure(db, {
+        id: uuid(30),
+        groupId: GROUP,
+        prompt: 'first',
+        ts: 1_000,
+      });
       AgentConversationStore.addTurn(db, {
         id: uuid(31),
         conversationId: uuid(30),
@@ -163,7 +168,12 @@ describe('agent conversation history', () => {
         attachments: [],
         ts: 1_000,
       });
-      AgentConversationStore.ensure(db, { id: uuid(32), groupId: GROUP, prompt: 'second', ts: 2_000 });
+      AgentConversationStore.ensure(db, {
+        id: uuid(32),
+        groupId: GROUP,
+        prompt: 'second',
+        ts: 2_000,
+      });
       AgentConversationStore.addTurn(db, {
         id: uuid(33),
         conversationId: uuid(32),

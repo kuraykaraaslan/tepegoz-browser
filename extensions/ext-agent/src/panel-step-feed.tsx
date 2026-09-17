@@ -119,10 +119,7 @@ export function StepFeed({
                   aria-hidden
                 />
                 <div className="min-w-0 flex-1">
-                  <span
-                    className="text-text-primary [overflow-wrap:anywhere]"
-                    title={e.message}
-                  >
+                  <span className="text-text-primary [overflow-wrap:anywhere]" title={e.message}>
                     {humanizeStepMessage(e.kind, e.message, a)}
                   </span>
                   {e.detail !== undefined && e.detail.length > 0 && (

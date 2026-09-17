@@ -47,15 +47,24 @@ describe('chat account contract', () => {
 
   it('discriminates server config by protocol', () => {
     expect(
-      ChatServerConfigSchema.safeParse({ protocol: 'irc', server: 'irc.libera.chat', port: 6697, nick: 'ada' })
-        .success,
+      ChatServerConfigSchema.safeParse({
+        protocol: 'irc',
+        server: 'irc.libera.chat',
+        port: 6697,
+        nick: 'ada',
+      }).success,
     ).toBe(true);
     // an xmpp row carrying an irc field is not representable
     expect(
-      ChatServerConfigSchema.safeParse({ protocol: 'xmpp', jid: 'ada@x.com', server: 'irc.libera.chat' })
-        .success,
+      ChatServerConfigSchema.safeParse({
+        protocol: 'xmpp',
+        jid: 'ada@x.com',
+        server: 'irc.libera.chat',
+      }).success,
     ).toBe(true); // extra keys are stripped, not fatal
-    expect(ChatServerConfigSchema.safeParse({ protocol: 'irc', jid: 'ada@x.com' }).success).toBe(false);
+    expect(ChatServerConfigSchema.safeParse({ protocol: 'irc', jid: 'ada@x.com' }).success).toBe(
+      false,
+    );
   });
 
   it('irc SASL mechanism is optional (defaults to PLAIN) and enum-checked', () => {
@@ -157,8 +166,11 @@ describe('chat account contract', () => {
   it('bridge config values are bounded strings', () => {
     const big = 'x'.repeat(5000);
     expect(
-      ChatServerConfigSchema.safeParse({ protocol: 'bridge', bridgeId: 'telegram', config: { token: big } })
-        .success,
+      ChatServerConfigSchema.safeParse({
+        protocol: 'bridge',
+        bridgeId: 'telegram',
+        config: { token: big },
+      }).success,
     ).toBe(false);
   });
 });
@@ -220,7 +232,11 @@ describe('chat event contract', () => {
   });
 
   it('accepts a room-topic event and defaults setBy / ts to null', () => {
-    const res = ChatEventSchema.safeParse({ type: 'room-topic', conversationId: 'c1', topic: 'Weekly' });
+    const res = ChatEventSchema.safeParse({
+      type: 'room-topic',
+      conversationId: 'c1',
+      topic: 'Weekly',
+    });
     expect(res.success).toBe(true);
     if (res.success && res.data.type === 'room-topic') {
       expect(res.data.setBy).toBe(null);

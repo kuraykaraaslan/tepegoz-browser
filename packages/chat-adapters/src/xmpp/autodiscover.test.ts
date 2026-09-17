@@ -25,11 +25,7 @@ const srv = (target: string, port: number, priority = 10, weight = 0): SrvRecord
 
 describe('sortSrv', () => {
   it('orders by priority asc then weight desc', () => {
-    const sorted = sortSrv([
-      srv('c', 1, 20, 5),
-      srv('a', 1, 10, 1),
-      srv('b', 1, 10, 9),
-    ]);
+    const sorted = sortSrv([srv('c', 1, 20, 5), srv('a', 1, 10, 1), srv('b', 1, 10, 9)]);
     expect(sorted.map((r) => r.target)).toEqual(['b', 'a', 'c']);
   });
 });
@@ -101,9 +97,7 @@ describe('discoverXmpp', () => {
 
   it('falls back to the domain A record on port 5222 when nothing else resolves', async () => {
     const candidates = await discoverXmpp('example.com', ports());
-    expect(candidates).toEqual([
-      { kind: 'tcp', host: 'example.com', port: 5222, tls: false },
-    ]);
+    expect(candidates).toEqual([{ kind: 'tcp', host: 'example.com', port: 5222, tls: false }]);
   });
 
   it('tolerates SRV rejection and malformed host-meta JSON', async () => {

@@ -321,7 +321,9 @@ export default class Reactor {
           visionEscalations,
           stoppedReason: 'completed',
           summary: verdict.finalAnswer ?? summary,
-          ...(verdict.outcome !== undefined ? { completionOutcome: verdict.outcome, evidence } : {}),
+          ...(verdict.outcome !== undefined
+            ? { completionOutcome: verdict.outcome, evidence }
+            : {}),
         };
       }
       lastOutcome = verdict.outcome;
@@ -335,7 +337,9 @@ export default class Reactor {
           visionEscalations,
           stoppedReason: 'completed',
           summary,
-          ...(verdict.outcome !== undefined ? { completionOutcome: verdict.outcome, evidence } : {}),
+          ...(verdict.outcome !== undefined
+            ? { completionOutcome: verdict.outcome, evidence }
+            : {}),
         };
       }
       const reason =
@@ -473,7 +477,10 @@ export default class Reactor {
           visionEscalations,
           stoppedReason: 'max_steps',
           ...(lastOutcome !== undefined
-            ? { completionOutcome: lastOutcome, ...(lastEvidence !== undefined ? { evidence: lastEvidence } : {}) }
+            ? {
+                completionOutcome: lastOutcome,
+                ...(lastEvidence !== undefined ? { evidence: lastEvidence } : {}),
+              }
             : {}),
         };
       }

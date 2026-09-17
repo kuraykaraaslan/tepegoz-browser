@@ -10,9 +10,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const getDb = vi.hoisted(() => vi.fn((): unknown => ({ tag: 'db' })));
 vi.mock('../db/database.electron', () => ({ getDb }));
 
-const route = vi.hoisted(
-  (): { current: { mode: string; socksPort?: number } } => ({ current: { mode: 'direct' } }),
-);
+const route = vi.hoisted((): { current: { mode: string; socksPort?: number } } => ({
+  current: { mode: 'direct' },
+}));
 vi.mock('@tepegoz/http', () => ({ currentEgressRoute: () => route.current }));
 
 const win = vi.hoisted(() => ({ isDestroyed: () => false, webContents: { send: vi.fn() } }));
@@ -26,7 +26,9 @@ vi.mock('@tepegoz/chat-transport-node', () => ({ NodeChatTransport: vi.fn(() => 
 const notificationPush = vi.hoisted(() => vi.fn());
 vi.mock('../notifications/notification-host', () => ({ default: { push: notificationPush } }));
 vi.mock('./egress-dialer', () => ({ createChatDialer: () => vi.fn() }));
-vi.mock('./chat-secrets.electron', () => ({ default: { get: vi.fn(), set: vi.fn(), delete: vi.fn() } }));
+vi.mock('./chat-secrets.electron', () => ({
+  default: { get: vi.fn(), set: vi.fn(), delete: vi.fn() },
+}));
 
 const store = vi.hoisted(() => ({
   listAccounts: vi.fn(() => []),
@@ -147,7 +149,12 @@ describe('helpers', () => {
   it('chatNotify pushes a redacted chat notification', () => {
     mod.chatNotify({ accountId: 'a', conversationId: 'c', title: 'Bea', body: 'yo' });
     expect(notificationPush).toHaveBeenCalledWith(
-      expect.objectContaining({ source: 'chat', title: 'Bea', body: 'yo', channels: ['center', 'native'] }),
+      expect.objectContaining({
+        source: 'chat',
+        title: 'Bea',
+        body: 'yo',
+        channels: ['center', 'native'],
+      }),
     );
   });
 
@@ -169,7 +176,11 @@ describe('helpers', () => {
     expect(entry.type).toBe('ChatMessageSent');
     expect(entry.redacted).toBe(true);
     expect(entry.correlationId).toBe('0123456789abcdef');
-    expect(Object.keys(entry.payload).sort()).toEqual(['accountId', 'conversationHash', 'protocolId']);
+    expect(Object.keys(entry.payload).sort()).toEqual([
+      'accountId',
+      'conversationHash',
+      'protocolId',
+    ]);
     // nothing anywhere in the entry that could be a body, an address or a secret
     const blob = JSON.stringify(entry);
     for (const forbidden of ['MEETME', '@', 'password', 'token', 'secret']) {
@@ -195,7 +206,13 @@ describe('helpers', () => {
       throw new Error('journal down');
     });
     expect(() =>
-      mod.chatAudit({ kind: 'message-sent', accountId: 'a', conversationHash: 'h', protocolId: 'p', ts: 1 }),
+      mod.chatAudit({
+        kind: 'message-sent',
+        accountId: 'a',
+        conversationHash: 'h',
+        protocolId: 'p',
+        ts: 1,
+      }),
     ).not.toThrow();
   });
 
@@ -238,10 +255,14 @@ describe('chatIpcService — db-absent fallbacks', () => {
 
 describe('chatIpcService — the "not initialised" guard', () => {
   it('actions throw before init() (the async IPC boundary catches this in production)', () => {
-    expect(() => mod.chatIpcService.sendMessage('a', 'c', { body: 'x' })).toThrow(/not initialised/);
+    expect(() => mod.chatIpcService.sendMessage('a', 'c', { body: 'x' })).toThrow(
+      /not initialised/,
+    );
     expect(() => mod.chatIpcService.markRead('a', 'c', 'm1')).toThrow(/not initialised/);
     expect(() => mod.chatIpcService.getHistory('a', 'c', null)).toThrow(/not initialised/);
-    expect(() => mod.chatIpcService.updateAccount('a', null, { id: 'a' })).toThrow(/not initialised/);
+    expect(() => mod.chatIpcService.updateAccount('a', null, { id: 'a' })).toThrow(
+      /not initialised/,
+    );
   });
 
   it('every action delegates once a service is set', async () => {
@@ -266,7 +287,11 @@ describe('chatIpcService — the "not initialised" guard', () => {
     await mod.chatIpcService.leaveRoom('a', 'room@conf.example');
     expect(fakeService.leaveRoom).toHaveBeenCalledWith('a', 'room@conf.example');
     await mod.chatIpcService.setRoomNotifyLevel('a', 'room@conf.example', 'mentions');
-    expect(fakeService.setRoomNotifyLevel).toHaveBeenCalledWith('a', 'room@conf.example', 'mentions');
+    expect(fakeService.setRoomNotifyLevel).toHaveBeenCalledWith(
+      'a',
+      'room@conf.example',
+      'mentions',
+    );
     await mod.chatIpcService.react('a', 'c', 'm1', '👍', true);
     expect(fakeService.react).toHaveBeenCalledWith('a', 'c', 'm1', '👍', true);
     expect(mod.chatIpcService.accountStates()).toEqual({ a: 'online' });

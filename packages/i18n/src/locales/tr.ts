@@ -56,7 +56,7 @@ export const tr: Resources = {
     },
     eu_ai_act_high_risk_read: {
       title: 'Okumadan önce onay',
-      why: 'Bu site biyometrik tanımlama, sosyal puanlama veya otomatik uygunluk kararları veriyor — Tepegöz\'ün asla harekete geçmeyeceğini taahhüt ettiği bir kategori, bu yüzden okumak bile önce size sorulur.',
+      why: "Bu site biyometrik tanımlama, sosyal puanlama veya otomatik uygunluk kararları veriyor — Tepegöz'ün asla harekete geçmeyeceğini taahhüt ettiği bir kategori, bu yüzden okumak bile önce size sorulur.",
       whatYouCanDo:
         'Bunu siz istediyseniz onaylayın. İstemediyseniz reddedin — ajanın bu sitede olmaması gerekir.',
     },

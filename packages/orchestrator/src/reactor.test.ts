@@ -724,7 +724,12 @@ describe('Reactor.run — streaming transport + failure-return paths', () => {
                 toolCalls: [
                   {
                     name: 'agent_emit_decision',
-                    input: { action: 'act', tool: 'browser_get_elements', args: {}, rationale: 'r' },
+                    input: {
+                      action: 'act',
+                      tool: 'browser_get_elements',
+                      args: {},
+                      rationale: 'r',
+                    },
                   },
                 ],
               }

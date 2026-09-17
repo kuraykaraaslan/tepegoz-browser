@@ -19,8 +19,7 @@ export interface DiscoveryPorts {
 }
 
 export type ConnectionCandidate =
-  | { kind: 'tcp'; host: string; port: number; tls: boolean }
-  | { kind: 'websocket'; url: string };
+  { kind: 'tcp'; host: string; port: number; tls: boolean } | { kind: 'websocket'; url: string };
 
 const DEFAULT_STARTTLS_PORT = 5222;
 const DEFAULT_TLS_PORT = 5223;

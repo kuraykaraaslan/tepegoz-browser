@@ -48,7 +48,9 @@ describe('linkifySegments', () => {
   });
 
   it('ignores a scheme with no host once trailing punctuation is stripped', () => {
-    expect(linkifySegments('look: https://.')).toEqual([{ kind: 'text', value: 'look: https://.' }]);
+    expect(linkifySegments('look: https://.')).toEqual([
+      { kind: 'text', value: 'look: https://.' },
+    ]);
   });
 
   it('caps the segment count for a pathological body', () => {

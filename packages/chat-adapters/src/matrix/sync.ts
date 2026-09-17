@@ -17,7 +17,9 @@ import {
  */
 
 function rec(v: unknown): Record<string, unknown> {
-  return v !== null && typeof v === 'object' && !Array.isArray(v) ? (v as Record<string, unknown>) : {};
+  return v !== null && typeof v === 'object' && !Array.isArray(v)
+    ? (v as Record<string, unknown>)
+    : {};
 }
 function arr(v: unknown): unknown[] {
   return Array.isArray(v) ? v : [];
@@ -73,10 +75,7 @@ export interface SyncResult {
 
 function roomSummary(roomId: string, joined: Record<string, unknown>): SyncRoom {
   const timeline = rec(joined.timeline);
-  const stateEvents = [
-    ...arr(rec(joined.state).events),
-    ...arr(timeline.events),
-  ]
+  const stateEvents = [...arr(rec(joined.state).events), ...arr(timeline.events)]
     .map(asRoomEvent)
     .filter((e): e is MatrixRoomEvent => e !== null);
 
@@ -132,7 +131,9 @@ export function parseSyncResponse(body: unknown, ctx: MatrixContext): SyncResult
     }
     for (const raw2 of arr(rec(joined.ephemeral).events)) {
       const o = rec(raw2);
-      out.events.push(...matrixEphemeralEvents({ type: str(o.type), content: rec(o.content) }, roomId, ctx));
+      out.events.push(
+        ...matrixEphemeralEvents({ type: str(o.type), content: rec(o.content) }, roomId, ctx),
+      );
     }
   }
 

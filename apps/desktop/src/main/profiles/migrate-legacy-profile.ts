@@ -79,7 +79,8 @@ function renameLegacyPartitionDirs(partitionsDir: string): void {
     let target: string | null = null;
     if (name === 'tepegoz-web') target = scoped;
     else if (name === 'tepegoz-app') target = `${scoped}--app`;
-    else if (name.startsWith('tepegoz-web--conn-')) target = `${scoped}${name.slice('tepegoz-web'.length)}`;
+    else if (name.startsWith('tepegoz-web--conn-'))
+      target = `${scoped}${name.slice('tepegoz-web'.length)}`;
     if (target === null || target === name) continue;
     const from = join(partitionsDir, name);
     const to = join(partitionsDir, target);

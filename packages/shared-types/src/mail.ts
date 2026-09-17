@@ -366,8 +366,6 @@ export const MailSyncCursorSchema = z.object({
 export type MailSyncCursor = z.infer<typeof MailSyncCursorSchema>;
 
 /** Parse-at-the-boundary convenience, mirroring `parseChatEvent`. */
-export function parseMailMessage(
-  input: unknown,
-): z.SafeParseReturnType<unknown, MailMessage> {
+export function parseMailMessage(input: unknown): z.SafeParseReturnType<unknown, MailMessage> {
   return MailMessageSchema.safeParse(input);
 }

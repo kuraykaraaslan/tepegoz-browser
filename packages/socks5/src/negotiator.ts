@@ -69,7 +69,8 @@ export class Socks5Negotiator {
       const method = this.buffer[1] as number;
       this.buffer = this.buffer.slice(2);
       if (ver !== VERSION) return this.fail(`bad version 0x${ver.toString(16)} in method reply`);
-      if (method !== NO_AUTH) return this.fail(`proxy demands auth method 0x${method.toString(16)}`);
+      if (method !== NO_AUTH)
+        return this.fail(`proxy demands auth method 0x${method.toString(16)}`);
       this.phase = 'reply';
       return { send: this.connectRequest() };
     }
@@ -93,15 +94,21 @@ export class Socks5Negotiator {
     if (ver !== VERSION) return this.fail(`bad version 0x${ver.toString(16)} in reply`);
 
     const addrLen =
-      atyp === ATYP_IPV4 ? 4
-      : atyp === ATYP_IPV6 ? 16
-      : atyp === ATYP_DOMAIN ? (this.buffer.length >= 5 ? (this.buffer[4] as number) + 1 : Infinity)
-      : NaN;
+      atyp === ATYP_IPV4
+        ? 4
+        : atyp === ATYP_IPV6
+          ? 16
+          : atyp === ATYP_DOMAIN
+            ? this.buffer.length >= 5
+              ? (this.buffer[4] as number) + 1
+              : Infinity
+            : NaN;
     if (Number.isNaN(addrLen)) return this.fail(`unknown ATYP 0x${atyp.toString(16)} in reply`);
     const total = 4 + addrLen + 2;
     if (this.buffer.length < total) return {};
 
-    if (rep !== 0x00) return this.fail(`CONNECT failed: ${REPLY[rep] ?? `code 0x${rep.toString(16)}`}`);
+    if (rep !== 0x00)
+      return this.fail(`CONNECT failed: ${REPLY[rep] ?? `code 0x${rep.toString(16)}`}`);
     this.buffer = this.buffer.slice(total);
     this.phase = 'done';
     return { done: true };

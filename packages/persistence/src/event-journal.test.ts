@@ -75,7 +75,11 @@ describe('EventJournal', () => {
     const HASH_B = 'b'.repeat(64);
 
     it('round-trips prevHash/selfHash when a caller supplies them', () => {
-      const e = EventJournal.append(db, { ...makeEvent('run-1'), prevHash: HASH_A, selfHash: HASH_B });
+      const e = EventJournal.append(db, {
+        ...makeEvent('run-1'),
+        prevHash: HASH_A,
+        selfHash: HASH_B,
+      });
       expect(e.prevHash).toBe(HASH_A);
       expect(e.selfHash).toBe(HASH_B);
       const read = EventJournal.readFrom(db, e.lsn - 1)[0];
