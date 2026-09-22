@@ -384,11 +384,19 @@ the decision; the code still enforces the old absolute deny, which is the honest
       [Phase 2](../product/phase-2-adapters-safe-browsing.md) L10 — is the narrow version of WebBrain's
       `/allow-api`. Deny by default; never a standing capability.
       [`../tracks/webbrain-agent-parity.md`](../../docs/parities/webbrain-agent-parity.md) P6.
-- [ ] **Read-only Dev diagnostics — explicitly not DevTools, explicitly not `execute_js`.** A narrow trio for
+- [x] **Read-only Dev diagnostics — explicitly not DevTools, explicitly not `execute_js`.** A narrow trio for
       debugging a page the user is already looking at: console messages, network-request summaries
       (method/status/timing — **not bodies by default**, sensitive header names redacted) and a bounded
       DOM/style inspector. [ADR-0029](../../docs/adr/0029-devtools-expose-boundary.md) stays exactly as
-      decided; this is a read carve-out with its own danger class, not an opening of that boundary.
+      decided; this is a read carve-out with its own danger class, not an opening of that boundary. _All
+      three landed as `dangerClass: 'read'` tools through the one `CapabilityRegistry`, none needing a
+      `webContents.debugger`/CDP attachment (ADR-0029 untouched): `browser_get_console`
+      (`console-recorder.electron.ts`), `browser_get_network` (`cdp-driver-network.electron.ts`'s
+      `networkRequestsSince`, method/status/timing only, never bodies/headers), and `browser_get_styles`
+      (`style-inspector.electron.ts` + isolated-world `style-probe-script.ts`, a fixed narrow property
+      list distinct from `browser_get_elements`/`browser_analyze_page` — see
+      [phase-2c](../product/phase-2c-classic-browser-essentials.md)'s "Read-only Dev diagnostics for the
+      agent" row for the full evidence). This box was stale against that landed work; corrected 2026-09-22._
       [`../tracks/webbrain-agent-parity.md`](../../docs/parities/webbrain-agent-parity.md) P3-d.
 - [x] **Regression coverage for the file-sandbox traversal guard.** browser-use had a disclosed, patched CVE
       (**GHSA-j9hj-92j8-jv9h**) in exactly this class: an agent-supplied path, naively joined, resolving
