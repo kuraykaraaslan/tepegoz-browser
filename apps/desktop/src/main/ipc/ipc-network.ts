@@ -24,6 +24,7 @@ import {
   SetGeneralBindingSchema,
 } from '@tepegoz/desktop-ipc/schemas';
 import { isValidConnectionId } from '@tepegoz/shared-types';
+import { classifySlowCause } from '@tepegoz/security-policy';
 import PreferenceStore from '@tepegoz/preferences';
 import {
   binDir,
@@ -35,7 +36,7 @@ import VpnSecrets from '../network/vpn-secrets.electron';
 import { parseWireGuardConfig, summarize } from '../network/wireguard-config';
 import TabManager from '../tabs';
 import BindingService from '../network/binding-service.electron';
-import ConnectionPool from '../network/connection-pool.electron';
+import ConnectionPool, { type PoolConnectionView } from '../network/connection-pool.electron';
 import BackgroundConnectionService from '../extensions/background-connection.electron';
 import { handleAsync } from './ipc-helpers';
 
@@ -97,11 +98,31 @@ function tabsByConnection(): Map<string, string[]> {
   return byConnection;
 }
 
+/**
+ * Why a connection likely feels slow right now (Phase 5: "'Slow' needs a cause, not a spinner"), from
+ * signals the pool already tallies on {@link PoolConnectionView} — nothing new is measured here.
+ *
+ * `recentExitStatusClass` is always `null` today: nothing in this codebase tallies a per-connection HTTP
+ * response-status history yet (that would be new `webRequest` plumbing, deliberately out of this box's
+ * scope — see `slow-cause-classifier.ts`'s module doc). `exit_blocked_by_site` is therefore reachable
+ * only once something produces that signal; every other cause is live now.
+ */
+function slowCauseFor(c: PoolConnectionView): ReturnType<typeof classifySlowCause> {
+  return classifySlowCause({
+    status: c.status,
+    msSinceLastHealthCheck: c.lastCheckedAt === null ? null : Date.now() - c.lastCheckedAt,
+    drops: c.drops,
+    reconnects: c.reconnects,
+    recentExitStatusClass: null,
+  });
+}
+
 /** The pool's views, each carrying how many tabs are currently riding on it. */
 function connectionViews(): NetworkConnectionView[] {
   const byConnection = tabsByConnection();
   return ConnectionPool.list().map((c) => ({
     ...c,
+    slowCause: slowCauseFor(c),
     boundTabs: byConnection.get(c.id)?.length ?? 0,
   }));
 }

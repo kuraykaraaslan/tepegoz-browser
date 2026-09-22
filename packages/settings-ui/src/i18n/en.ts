@@ -910,6 +910,20 @@ export const en = {
       unknown:
         'This connection could not be established. Try connecting again; if it keeps failing, remove it and add it back.',
     },
+    // "Slow" needs a cause, not a spinner (Phase 5) — one localized sentence naming the likely reason a
+    // currently-up tunnel feels slow, computed in main from signals the pool already tracks.
+    slowCauseLabel: 'Why it might feel slow',
+    slowCause: {
+      relay_latency:
+        'The tunnel is healthy — this is the normal overhead of routing through it, not a fault.',
+      bridge_or_bootstrap:
+        'Still establishing the tunnel. This can take longer than connecting directly.',
+      exit_blocked_by_site:
+        'The tunnel is healthy, but this site appears to be challenging or limiting the exit address — not you.',
+      tunnel_degraded:
+        'The tunnel itself looks unstable right now — dropping, or not answering its health checks.',
+      insufficient_signal: 'Not enough information yet to say why.',
+    },
     binaryMissing:
       '{name} was not found. Put it in {dir}, or give its full path below. Tepegöz does not ship it.',
     helpersHint:

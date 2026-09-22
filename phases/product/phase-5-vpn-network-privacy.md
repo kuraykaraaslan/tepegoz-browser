@@ -464,11 +464,37 @@ endpoint** (one loopback port per active connection), never an OS-level system p
   fallback, failures name a fix). Cross-links `threat-model.md` and ADR-0011 §7; `threat-model.md`
   links back. **Turkish half owed** — the repo has no bilingual-docs mechanism and inventing one is
   out of this box's scope; box kept `[~]`._
-- [ ] **"Slow" needs a cause, not a spinner.** When a tunnelled tab is slow the user cannot tell whether it
+- [~] **"Slow" needs a cause, not a spinner.** When a tunnelled tab is slow the user cannot tell whether it
       is relay latency, a bridge, the site blocking the exit, or the tunnel itself half-down — and the Tor
       corpus shows that ambiguity is what turns a slow session into an abandoned product. Attribute it: the
       connection panel names the likely cause from what is already measured (handshake time, health poll,
       HTTP status class from the exit).
+      _Landed 2026-09-22: a pure, main-computed classifier
+      ([slow-cause-classifier.ts](../../packages/security-policy/src/slow-cause-classifier.ts), 15 tests)
+      resolves one of a closed set — `relay_latency`, `bridge_or_bootstrap`, `exit_blocked_by_site`,
+      `tunnel_degraded`, `insufficient_signal` (`SLOW_CAUSES` in
+      [`shared-types/network-privacy.ts`](../../packages/shared-types/src/network-privacy.ts), the only
+      schema source per this repo's rule) — from signals the pool already tallies: live status, the
+      health-poll heartbeat (stale-vs-never distinguished), and this session's drop/reconnect counts. A
+      connection that is simultaneously slow AND unhealthy always reports `tunnel_degraded`, never
+      `relay_latency` — the more actionable explanation wins by construction, not by luck of evaluation
+      order (pinned by a dedicated boundary-case test group). Computed in
+      [`ipc-network.ts`](../../apps/desktop/src/main/ipc/ipc-network.ts)'s `connectionViews()` — no new
+      code in the pool itself, so this cannot touch how a tunnel connects, is health-polled, or fails
+      closed — and pushed over the existing `network:get-state` read, `safeParse`d at the renderer
+      boundary (`parseSlowCause`, degrading an unrecognised code to the same text as
+      `insufficient_signal` rather than throwing or showing a raw identifier). Surfaced as one localized
+      (en+tr) sentence, `network.slowCause.*`, in the Connections overview's health card
+      ([settings-network-health.tsx](../../apps/desktop/src/renderer/src/components/settings-network-health.tsx)),
+      shown only while a connection is `up` (a `down`/`connecting` connection already says so via its
+      status badge, so the row would just repeat it). **Honest gap, not silently dropped:** the phase
+      doc's third named signal — HTTP status class from the exit — has no producer anywhere in this
+      codebase; tallying per-connection response codes is new `webRequest` measurement plumbing, out of
+      this box's explicit scope ("do not invent new measurement plumbing"). The classifier accepts
+      `recentExitStatusClass` and `exit_blocked_by_site` is real and independently tested, but production
+      always passes `null` for it today — same stated-not-wired shape as this phase's `setTunnelAgentFactory`
+      seam above. Kept `[~]` for exactly that: two of the three named signals are live, the third is a
+      reachable, tested, but unwired branch._
 - [ ] **A compatibility disclosure layer, because the exit IP is the problem the user will actually hit.**
       CAPTCHA loops, account lockouts and Cloudflare walls are the single most visible complaint cluster
       against Tor — and they arrive here too, since a shared exit address is what triggers them. Say it at

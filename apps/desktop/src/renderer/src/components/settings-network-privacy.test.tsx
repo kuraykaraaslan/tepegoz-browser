@@ -31,6 +31,7 @@ function conn(over: Partial<NetworkConnectionView> = {}): NetworkConnectionView 
     handshakesOk: 0,
     handshakesFailed: 0,
     reconnects: 0,
+    slowCause: 'insufficient_signal',
     boundTabs: 0,
     ...over,
   };

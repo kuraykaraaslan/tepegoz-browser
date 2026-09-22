@@ -136,3 +136,38 @@ export const ConnectionHealthSchema = z.object({
   reconnects: z.number().int().nonnegative(),
 });
 export type ConnectionHealth = z.infer<typeof ConnectionHealthSchema>;
+
+/**
+ * The closed set of causes a tunnelled tab can feel slow for (Phase 5: "'Slow' needs a cause, not a
+ * spinner"). Computed in MAIN by `@tepegoz/security-policy`'s pure `classifySlowCause` from signals the
+ * pool already tallies, and pushed to the renderer over the same `network:get-state` read the health
+ * card uses — never derived client-side, for the same reason the per-tab tunnel shield is main-computed:
+ * a security-adjacent verdict computed in the untrusted renderer is one a page-driven bug could talk into
+ * lying.
+ *
+ * Mirrors the `PolicyReason` / `NetworkErrorKind` pattern used elsewhere in this codebase: a closed union
+ * with one localized (en+tr) sentence per member, a parity test, and an honest catch-all — `unknown code
+ * arrives over IPC` degrades to treating it exactly like `insufficient_signal` rather than throwing or
+ * showing a raw identifier.
+ */
+export const SLOW_CAUSES = [
+  /** The tunnel is up, the health poll is current, and nothing else measured is wrong — the most likely
+   *  explanation left is the tunnel's own relay hop(s), not a fault. */
+  'relay_latency',
+  /** The connection is still establishing (bridge/bootstrap), or has not had its first health check yet. */
+  'bridge_or_bootstrap',
+  /** The tunnel itself is healthy, but recent responses from the exit are shaped like the SITE reacting
+   *  to the exit address (4xx / challenge-shaped) rather than the connection. */
+  'exit_blocked_by_site',
+  /** The connection is down, or is flapping / its health poll has gone stale — the tunnel itself is the
+   *  problem. Wins over every other cause when it applies: see `classifySlowCause`'s own doc for why a
+   *  connection that is simultaneously slow AND unhealthy is reported as unhealthy, never "just latency". */
+  'tunnel_degraded',
+  /** The measured signals do not clearly point at one of the above. Deliberately NOT a guess — this
+   *  codebase's classifiers (`classifyNetworkError`, `classifyRisk`) refuse to force a confident answer
+   *  out of an ambiguous or incomplete input, and this is also the graceful fallback for an unrecognised
+   *  code arriving over IPC. */
+  'insufficient_signal',
+] as const;
+export const SlowCauseSchema = z.enum(SLOW_CAUSES);
+export type SlowCause = z.infer<typeof SlowCauseSchema>;

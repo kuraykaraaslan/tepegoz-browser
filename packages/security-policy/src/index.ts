@@ -101,6 +101,11 @@ export {
   type TabEgressQuery,
 } from './kill-switch';
 export {
+  classifySlowCause,
+  type HttpStatusClass,
+  type SlowCauseSignals,
+} from './slow-cause-classifier';
+export {
   mandateCovers,
   consumeMandate,
   type MandateCoverage,

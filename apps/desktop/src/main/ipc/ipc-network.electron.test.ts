@@ -184,6 +184,45 @@ describe('networkGetState', () => {
   });
 });
 
+describe('connectionViews — the slow-cause verdict (Phase 5: "\'Slow\' needs a cause, not a spinner")', () => {
+  function poolView(over: Record<string, unknown> = {}): Record<string, unknown> {
+    return {
+      id: 'c1',
+      label: 'FRA',
+      note: '',
+      kind: 'wireguard',
+      status: 'up',
+      upstreamConnectionId: null,
+      lastError: null,
+      connectedSince: Date.now(),
+      lastCheckedAt: Date.now(),
+      drops: 0,
+      lastHandshakeAt: Date.now(),
+      lastErrorAt: null,
+      handshakesOk: 1,
+      handshakesFailed: 0,
+      reconnects: 0,
+      ...over,
+    };
+  }
+
+  it('is computed (via the real, un-mocked classifier) from the pool view, not re-derived downstream', async () => {
+    pool.list.mockReturnValue([poolView()]);
+    const state = (await call(IpcChannels.networkGetState)) as {
+      connections: { slowCause: string }[];
+    };
+    expect(state.connections[0]?.slowCause).toBe('relay_latency');
+  });
+
+  it('reports tunnel_degraded for a down connection, without needing a separate signal', async () => {
+    pool.list.mockReturnValue([poolView({ status: 'down' })]);
+    const state = (await call(IpcChannels.networkGetState)) as {
+      connections: { slowCause: string }[];
+    };
+    expect(state.connections[0]?.slowCause).toBe('tunnel_degraded');
+  });
+});
+
 describe('bind + general handlers', () => {
   it('networkBindTab delegates and rebroadcasts', async () => {
     schemas.BindTabNetworkSchema.parse.mockReturnValue({ tabId: 't9', binding: { mode: 'vpn' } });

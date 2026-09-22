@@ -903,6 +903,18 @@ export const tr: SettingsStrings = {
       unknown:
         'Bu bağlantı kurulamadı. Yeniden bağlanmayı deneyin; sürekli başarısız oluyorsa bağlantıyı kaldırıp yeniden ekleyin.',
     },
+    slowCauseLabel: 'Neden yavaş olabilir',
+    slowCause: {
+      relay_latency:
+        'Tünel sağlıklı — bu, üzerinden yönlendirmenin doğal gecikmesi, bir arıza değil.',
+      bridge_or_bootstrap:
+        'Tünel henüz kuruluyor. Bu, doğrudan bağlanmaktan daha uzun sürebilir.',
+      exit_blocked_by_site:
+        'Tünel sağlıklı, ama bu site çıkış adresini zorluyor ya da kısıtlıyor gibi görünüyor — sorun sizde değil.',
+      tunnel_degraded:
+        'Tünelin kendisi şu anda kararsız görünüyor — bağlantı kopuyor ya da sağlık kontrollerine yanıt vermiyor.',
+      insufficient_signal: 'Şu an nedenini söylemek için yeterli bilgi yok.',
+    },
     binaryMissing:
       '{name} bulunamadı. {dir} klasörüne koyun ya da aşağıya tam yolunu yazın. Tepegöz bu dosyayı içinde getirmez.',
     helpersHint:

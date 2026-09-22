@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ConnectionHealth } from '@tepegoz/shared-types';
-import { handshakeSuccessRate, parseConnectionHealth } from './network-health';
+import { handshakeSuccessRate, parseConnectionHealth, parseSlowCause } from './network-health';
 
 /**
  * The renderer's read of a connection's per-session health. The IPC read is `safeParse`d at this
@@ -48,5 +48,26 @@ describe('handshakeSuccessRate', () => {
 
   it('is null when nothing has been attempted — not 0% and not NaN', () => {
     expect(handshakeSuccessRate({ ...ok, handshakesOk: 0, handshakesFailed: 0 })).toBeNull();
+  });
+});
+
+describe('parseSlowCause', () => {
+  it.each([
+    'relay_latency',
+    'bridge_or_bootstrap',
+    'exit_blocked_by_site',
+    'tunnel_degraded',
+    'insufficient_signal',
+  ])('accepts every member of the closed set: %s', (cause) => {
+    expect(parseSlowCause(cause)).toBe(cause);
+  });
+
+  it.each([
+    ['an unrecognised string', 'some_future_cause'],
+    ['not a string', 42],
+    ['null', null],
+    ['undefined', undefined],
+  ])('rejects %s → null, never throws', (_label, raw) => {
+    expect(parseSlowCause(raw)).toBeNull();
   });
 });

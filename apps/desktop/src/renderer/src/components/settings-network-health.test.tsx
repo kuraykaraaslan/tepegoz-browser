@@ -32,6 +32,7 @@ function conn(over: Partial<NetworkConnectionView> = {}): NetworkConnectionView 
     handshakesOk: 0,
     handshakesFailed: 0,
     reconnects: 0,
+    slowCause: 'insufficient_signal',
     boundTabs: 0,
     ...over,
   };
@@ -157,5 +158,59 @@ describe('NetworkHealthCard', () => {
     const row = rowFor('FRA');
     expect(within(row).getByText(s.network.healthUnavailable)).toBeTruthy();
     expect(within(row).queryByText(s.network.healthReconnects)).toBeNull();
+  });
+
+  describe('"Slow" needs a cause, not a spinner — the slow-cause row', () => {
+    it('renders the localized sentence for the main-computed cause when the connection is up', () => {
+      render(
+        <NetworkHealthCard
+          s={s}
+          state={netState([conn({ label: 'FRA', status: 'up', slowCause: 'relay_latency' })])}
+        />,
+      );
+      const row = rowFor('FRA');
+      expect(within(row).getByText(s.network.slowCauseLabel)).toBeTruthy();
+      expect(within(row).getByText(s.network.slowCause.relay_latency)).toBeTruthy();
+    });
+
+    it.each(['bridge_or_bootstrap', 'exit_blocked_by_site', 'tunnel_degraded', 'insufficient_signal'] as const)(
+      'renders the %s sentence too',
+      (cause) => {
+        render(
+          <NetworkHealthCard
+            s={s}
+            state={netState([conn({ label: 'FRA', status: 'up', slowCause: cause })])}
+          />,
+        );
+        expect(within(rowFor('FRA')).getByText(s.network.slowCause[cause])).toBeTruthy();
+      },
+    );
+
+    it('is hidden while the connection is down or connecting — the status badge already says so', () => {
+      render(
+        <NetworkHealthCard
+          s={s}
+          state={netState([
+            conn({ id: 'a', label: 'FRA', status: 'down', slowCause: 'tunnel_degraded' }),
+            conn({ id: 'b', label: 'Onion', status: 'connecting', slowCause: 'bridge_or_bootstrap' }),
+          ])}
+        />,
+      );
+      expect(within(rowFor('FRA')).queryByText(s.network.slowCauseLabel)).toBeNull();
+      expect(within(rowFor('Onion')).queryByText(s.network.slowCauseLabel)).toBeNull();
+    });
+
+    it('degrades gracefully to the "insufficient signal" sentence for a code this build does not recognise', () => {
+      // Forward-compat: main could be a newer build than the renderer, or the value could be malformed —
+      // either way this must never throw or print a raw identifier.
+      const bad: NetworkConnectionView = {
+        ...conn({ label: 'FRA', status: 'up' }),
+        // @ts-expect-error — deliberately not a member of the closed SlowCause union, to prove the
+        // safeParse boundary (not the type system) is what protects the render.
+        slowCause: 'some_future_cause',
+      };
+      render(<NetworkHealthCard s={s} state={netState([bad])} />);
+      expect(within(rowFor('FRA')).getByText(s.network.slowCause.insufficient_signal)).toBeTruthy();
+    });
   });
 });

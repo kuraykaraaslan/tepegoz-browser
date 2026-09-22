@@ -4,7 +4,7 @@ import { formatRelativeTime } from '@tepegoz/i18n';
 import { useLocale } from '@tepegoz/i18n/react';
 import type { NetworkConnectionView, NetworkState } from '@tepegoz/desktop-ipc';
 import { classifyNetworkError } from './network-error';
-import { handshakeSuccessRate, parseConnectionHealth } from './network-health';
+import { handshakeSuccessRate, parseConnectionHealth, parseSlowCause } from './network-health';
 
 /**
  * Connection health over time (Phase 5) — a READ-ONLY view of how each configured connection has held
@@ -18,6 +18,13 @@ import { handshakeSuccessRate, parseConnectionHealth } from './network-health';
  * Every number is session-scoped and resets when Tepegöz restarts; the subtitle says so. The last
  * error is shown as the same localized "what happened + what to do" sentence the manager uses (never
  * the raw provider stderr — that stays one hover away), paired with how long ago it happened.
+ *
+ * Also here (Phase 5: "'Slow' needs a cause, not a spinner"): a connection that is currently `up` shows
+ * ONE localized sentence naming the likely reason a tunnelled tab on it feels slow — relay latency, a
+ * still-bootstrapping tunnel, the exit being challenged by a site, or the tunnel itself degraded. The
+ * cause is computed in MAIN (`classifySlowCause`) and only rendered here; this component never re-derives
+ * it from the raw health numbers, same rule as everywhere else a security-adjacent verdict crosses into
+ * this untrusted renderer.
  */
 
 function statusBadge(status: NetworkConnectionView['status'], s: SettingsStrings) {
@@ -88,6 +95,19 @@ function HealthRow({ c, s }: { c: NetworkConnectionView; s: SettingsStrings }) {
               <dd className="text-error-fg" title={c.lastError ?? undefined}>
                 {formatRelativeTime(health.lastErrorAt, locale, now)} ·{' '}
                 {s.network.connError[classifyNetworkError(c.lastError)]}
+              </dd>
+            </>
+          )}
+
+          {/* "Slow needs a cause, not a spinner": shown only while the connection is UP — `down` and
+              `connecting` already say what is happening via the status badge above, and the classifier's
+              own `tunnel_degraded` line would just repeat that in different words. Never color-only: this
+              is plain text next to its own label, same as every other row in this card. */}
+          {c.status === 'up' && (
+            <>
+              <dt>{s.network.slowCauseLabel}</dt>
+              <dd className="text-text-primary">
+                {s.network.slowCause[parseSlowCause(c.slowCause) ?? 'insufficient_signal']}
               </dd>
             </>
           )}

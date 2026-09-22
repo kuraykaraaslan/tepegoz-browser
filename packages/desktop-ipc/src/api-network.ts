@@ -2,6 +2,7 @@ import type {
   LiveConnectionStatus,
   NetworkConnection,
   NetworkGeneralBinding,
+  SlowCause,
 } from '@tepegoz/shared-types';
 
 /**
@@ -45,6 +46,14 @@ export interface NetworkConnectionView {
   handshakesFailed: number;
   /** Times this connection came back `up` after having been up earlier this session. */
   reconnects: number;
+  /**
+   * Why this connection likely feels slow right now, if it does (Phase 5: "'Slow' needs a cause, not a
+   * spinner"). Computed in MAIN by `@tepegoz/security-policy`'s pure `classifySlowCause` from the health
+   * fields already on this view — never derived in the renderer, same rule as every other security-
+   * adjacent indicator here. Always one of the closed `SlowCause` set; `insufficient_signal` is the
+   * honest "cannot tell" answer, not an error state.
+   */
+  slowCause: SlowCause;
   /**
    * How many tabs resolve to this connection right now, across EVERY window.
    *
