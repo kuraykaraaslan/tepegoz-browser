@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useState } from 'react';
-import { settingsDict } from '@tepegoz/settings-ui';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { settingsDict, type SettingsStrings } from '@tepegoz/settings-ui';
 import { Button, Card, Input } from '@tepegoz/ui';
 import { coreDict } from '@tepegoz/i18n';
 import { useT } from '@tepegoz/i18n/react';
@@ -28,6 +28,81 @@ import { Select } from './settings-shared';
  *    it, and the form's own regex was ASCII-only, so a Turkish user could not retype `köşe.com.tr`.
  */
 
+/**
+ * Export every live trust profile's domain + level to a JSON file, or restore profiles from one.
+ *
+ * The renderer stays untrusted: main only ever hands over (export) or receives (import) a STRING — the
+ * Blob download and the `<input type=file>` + `File.text()` read happen here, in the trusted chrome
+ * document, exactly like the tasks/macros/preferences backup controls. No sync metadata and no
+ * tombstoned (revoked) row ever leaves via export; every imported entry is applied through the exact
+ * same `setTrustProfile` this screen's own "Add"/"Update" button already calls, so the tighten-only
+ * invariant applies identically to an imported level and a hand-set one.
+ */
+function TrustProfileBackupControls({
+  t,
+  onImported,
+}: Readonly<{ t: SettingsStrings['siteTrust']; onImported: () => void }>) {
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [status, setStatus] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  async function handleExport(): Promise<void> {
+    setBusy(true);
+    setStatus(null);
+    try {
+      const json = await window.tepegoz.exportTrustProfiles();
+      const url = URL.createObjectURL(new Blob([json], { type: 'application/json' }));
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'tepegoz-trust-profiles.json';
+      a.click();
+      URL.revokeObjectURL(url);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleImport(file: File): Promise<void> {
+    setBusy(true);
+    setStatus(null);
+    try {
+      const { imported, skipped } = await window.tepegoz.importTrustProfiles(await file.text());
+      const parts = [t.importDone.replace('{imported}', String(imported))];
+      if (skipped > 0) parts.push(t.importSkipped.replace('{skipped}', String(skipped)));
+      setStatus(parts.join(' '));
+      onImported();
+    } catch {
+      setStatus(t.importFailed);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <Button size="sm" variant="outline" disabled={busy} onClick={() => void handleExport()}>
+        {t.exportButton}
+      </Button>
+      <Button size="sm" variant="outline" disabled={busy} onClick={() => fileRef.current?.click()}>
+        {t.importButton}
+      </Button>
+      <input
+        ref={fileRef}
+        type="file"
+        accept="application/json,.json"
+        className="hidden"
+        aria-label={t.importButton}
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          if (file) void handleImport(file);
+          e.target.value = '';
+        }}
+      />
+      {status !== null && <span className="text-xs text-text-secondary">{status}</span>}
+    </div>
+  );
+}
+
 export function SiteTrustSection() {
   const s = useT(settingsDict);
   const c = useT(coreDict);
@@ -45,9 +120,13 @@ export function SiteTrustSection() {
     [c.errors.upstreamDown],
   );
 
-  useEffect(() => {
+  const refresh = useCallback((): void => {
     void window.tepegoz.listTrustProfiles().then(setProfiles, fail);
   }, [fail]);
+
+  useEffect(() => {
+    refresh();
+  }, [refresh]);
 
   function add(): void {
     const host = normalizeHostInput(domain);
@@ -78,7 +157,11 @@ export function SiteTrustSection() {
   const alreadyListed = preview !== null && profiles.some((profile) => profile.domain === preview);
 
   return (
-    <Card title={t.title} subtitle={t.subtitle}>
+    <Card
+      title={t.title}
+      subtitle={t.subtitle}
+      headerRight={<TrustProfileBackupControls t={t} onImported={refresh} />}
+    >
       <div className="space-y-5">
         <div>
           <div className="flex items-end gap-2">

@@ -34,15 +34,25 @@ function profile(over: Partial<TrustProfile> = {}): TrustProfile {
 const listTrustProfiles = vi.fn();
 const setTrustProfile = vi.fn();
 const removeTrustProfile = vi.fn();
+const exportTrustProfiles = vi.fn();
+const importTrustProfiles = vi.fn();
 
 beforeEach(() => {
   vi.clearAllMocks();
   listTrustProfiles.mockResolvedValue([]);
   setTrustProfile.mockResolvedValue([]);
   removeTrustProfile.mockResolvedValue([]);
+  exportTrustProfiles.mockResolvedValue('{"format":"tepegoz.trust-profiles","version":1,"profiles":[]}');
+  importTrustProfiles.mockResolvedValue({ imported: 0, skipped: 0 });
   Object.defineProperty(window, 'tepegoz', {
     configurable: true,
-    value: { listTrustProfiles, setTrustProfile, removeTrustProfile },
+    value: {
+      listTrustProfiles,
+      setTrustProfile,
+      removeTrustProfile,
+      exportTrustProfiles,
+      importTrustProfiles,
+    },
   });
 });
 afterEach(cleanup);
@@ -130,5 +140,63 @@ describe('SiteTrustSection', () => {
     const confirm = screen.getAllByRole('button', { name: t.remove });
     fireEvent.click(confirm[confirm.length - 1]!);
     expect(removeTrustProfile).toHaveBeenCalledWith('example.com');
+  });
+
+  it('downloads the JSON the bridge returns via a blob link named tepegoz-trust-profiles.json', async () => {
+    exportTrustProfiles.mockResolvedValue(
+      '{"format":"tepegoz.trust-profiles","version":1,"profiles":[{"domain":"a.example","level":"trusted"}]}',
+    );
+    const createObjectURL = vi.fn(() => 'blob:fake');
+    const revokeObjectURL = vi.fn();
+    vi.stubGlobal('URL', { ...URL, createObjectURL, revokeObjectURL });
+    const click = vi.fn();
+    const realCreate = document.createElement.bind(document);
+    let anchor: HTMLAnchorElement | undefined;
+    vi.spyOn(document, 'createElement').mockImplementation((tag: string) => {
+      const el = realCreate(tag);
+      if (tag === 'a') {
+        el.click = click;
+        anchor = el as HTMLAnchorElement;
+      }
+      return el;
+    });
+
+    renderSection();
+    fireEvent.click(screen.getByRole('button', { name: t.exportButton }));
+
+    await waitFor(() => expect(exportTrustProfiles).toHaveBeenCalledTimes(1));
+    expect(createObjectURL).toHaveBeenCalledWith(expect.any(Blob));
+    expect(click).toHaveBeenCalled();
+    expect(anchor?.download).toBe('tepegoz-trust-profiles.json');
+    expect(revokeObjectURL).toHaveBeenCalledWith('blob:fake');
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
+
+  it('sends the picked file text to the bridge, reports imported + skipped, and refreshes the list', async () => {
+    importTrustProfiles.mockResolvedValue({ imported: 2, skipped: 1 });
+    renderSection();
+    await screen.findByText(t.empty);
+
+    listTrustProfiles.mockResolvedValue([profile({ domain: 'new.example' })]);
+    const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+    const file = { text: () => Promise.resolve('{"profiles":[]}') } as File;
+    fireEvent.change(input, { target: { files: [file] } });
+
+    await waitFor(() => expect(importTrustProfiles).toHaveBeenCalledWith('{"profiles":[]}'));
+    await screen.findByText(/Imported 2/);
+    expect(screen.getByText(/1 skipped/)).toBeTruthy();
+    // Import triggers a refresh — the list is not left showing the pre-import snapshot.
+    await screen.findByText('new.example');
+  });
+
+  it('shows the failure string when the import bridge rejects a bad file', async () => {
+    importTrustProfiles.mockRejectedValue(new Error('bad request'));
+    renderSection();
+    const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+    const file = { text: () => Promise.resolve('not json') } as File;
+    fireEvent.change(input, { target: { files: [file] } });
+
+    await screen.findByText(t.importFailed);
   });
 });

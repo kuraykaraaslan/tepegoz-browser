@@ -362,7 +362,7 @@ export function privacyAndAdvancedSections(ctx: SettingsSectionsCtx): SettingsSe
       group: s.groupPrivacy,
       label: s.siteTrust.title,
       icon: <IconLock />,
-      searchText: `${s.siteTrust.title} ${s.siteTrust.subtitle} ${s.siteTrust.levels.trusted} ${s.siteTrust.levels.restricted}`,
+      searchText: `${s.siteTrust.title} ${s.siteTrust.subtitle} ${s.siteTrust.levels.trusted} ${s.siteTrust.levels.restricted} ${s.siteTrust.exportButton} ${s.siteTrust.importButton}`,
       content: <SiteTrustSection />,
     },
     {

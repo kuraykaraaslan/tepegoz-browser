@@ -35,6 +35,13 @@ export const IpcChannels = {
   trustProfilesList: 'trust-profiles:list',
   trustProfilesSet: 'trust-profiles:set',
   trustProfilesRemove: 'trust-profiles:remove',
+  /** A profile's reusable part only (domain + level, no sync metadata, no tombstoned rows) as one JSON
+   *  string the renderer downloads via Blob — same split as `tasksExport`/`macrosExport`. */
+  trustProfilesExport: 'trust-profiles:export',
+  /** Renderer→main: the JSON text of a previously exported trust-profiles file. Main validates every
+   *  entry (`TrustProfileImportEntrySchema`) and applies the ones that pass through the exact same
+   *  `setTrustProfile` a manual level change uses — never a parallel write. */
+  trustProfilesImport: 'trust-profiles:import',
   // Chrome-style multi-profile identities (ADR-0045). `getActive` is this process's own profile
   // (process-per-profile); `switch` and `create`-then-switch spawn / focus that profile's process.
   profilesList: 'profiles:list',

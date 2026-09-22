@@ -19,3 +19,11 @@ export const TrustProfileSetSchema = z.object({
   domain: TrustDomainSchema,
   level: TrustLevelEnum,
 });
+
+/**
+ * `trust-profiles:import` payload — the raw JSON text of a previously exported trust-profiles file.
+ * Bounded like the tasks/macros counterparts (`TasksImportJsonSchema`/`MacrosImportJsonSchema`); the
+ * handler `JSON.parse`s it and validates every entry against `TrustProfileImportEntrySchema`
+ * individually (`@tepegoz/shared-types`).
+ */
+export const TrustProfilesImportJsonSchema = z.string().max(10_485_760);

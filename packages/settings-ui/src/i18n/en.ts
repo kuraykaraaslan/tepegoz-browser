@@ -505,6 +505,11 @@ export const en = {
     ceiling:
       'Even on a trusted site: deleting, spending money, anything driven by the page’s own content, and every banking, crypto, password or health site still ask — or stay blocked.',
     invalidDomain: 'Enter a domain like example.com — no scheme, no path.',
+    exportButton: 'Export',
+    importButton: 'Import',
+    importDone: 'Imported {imported} trust profile(s).',
+    importSkipped: '{skipped} skipped (not a valid trust profile).',
+    importFailed: 'That file is not a valid trust profiles export.',
   },
 
   // --- Keyboard shortcuts ---

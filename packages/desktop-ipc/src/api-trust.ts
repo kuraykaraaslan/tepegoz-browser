@@ -1,4 +1,8 @@
-import type { TrustLevel, TrustProfile } from '@tepegoz/shared-types';
+import type {
+  TrustLevel,
+  TrustProfile,
+  TrustProfilesImportResult,
+} from '@tepegoz/shared-types';
 
 /**
  * Scoped Trust Profiles over the bridge.
@@ -13,4 +17,11 @@ export interface TrustApi {
   setTrustProfile(domain: string, level: TrustLevel): Promise<TrustProfile[]>;
   /** Remove a site's profile — it goes back to `default`. Returns the resulting list. */
   removeTrustProfile(domain: string): Promise<TrustProfile[]>;
+  /** Every live profile's domain + level (no sync metadata, no tombstoned rows) as one JSON string for
+   *  the user to save. */
+  exportTrustProfiles(): Promise<string>;
+  /** Restore profiles from a previously exported JSON string; invalid entries are skipped, not fatal.
+   *  Every entry is applied through the same `setTrustProfile` a manual level change uses, so the
+   *  tighten-only invariant applies identically to an imported one. */
+  importTrustProfiles(json: string): Promise<TrustProfilesImportResult>;
 }

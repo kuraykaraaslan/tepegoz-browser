@@ -1,6 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { PolicyKernel } from '@tepegoz/security-policy';
-import { TrustProfileStore, migrate, openDatabase, type Db } from '@tepegoz/persistence';
+import { PolicyKernel, applyTrust } from '@tepegoz/security-policy';
+import {
+  parseTrustProfilesImport,
+  TrustProfileStore,
+  migrate,
+  openDatabase,
+  type Db,
+} from '@tepegoz/persistence';
 
 /**
  * Scoped Trust Profiles, main-process half.
@@ -27,8 +33,14 @@ vi.mock('../db/database.electron', () => ({
   getDb: () => h.db,
 }));
 
-const { initTrustProfiles, listTrustProfiles, removeTrustProfile, setTrustProfile } =
-  await import('./trust-profile-host.electron');
+const {
+  exportTrustProfilesJson,
+  importTrustProfiles,
+  initTrustProfiles,
+  listTrustProfiles,
+  removeTrustProfile,
+  setTrustProfile,
+} = await import('./trust-profile-host.electron');
 
 /** Capture what the kernel is told, since the published set is private to it. */
 let published: { domain: string; level: string }[][];
@@ -80,6 +92,71 @@ describe('with a working database', () => {
 
     expect(published.at(-1)).toEqual([{ domain: 'shop.example', level: 'restricted' }]);
   });
+
+  it('exports only the live profiles, as domain + level', () => {
+    setTrustProfile('a.example', 'trusted');
+    setTrustProfile('b.example', 'restricted');
+    removeTrustProfile('b.example'); // tombstoned — must not appear in the export
+
+    const parsed = JSON.parse(exportTrustProfilesJson()) as { profiles: unknown[] };
+    expect(parsed.profiles).toEqual([{ domain: 'a.example', level: 'trusted' }]);
+  });
+
+  it('imports through the SAME setTrustProfile path a manual change uses, re-publishing immediately', () => {
+    const { profiles } = parseTrustProfilesImport(
+      JSON.stringify([{ domain: 'shop.example', level: 'restricted' }]),
+    );
+
+    const count = importTrustProfiles(profiles);
+
+    expect(count).toBe(1);
+    // Re-published like any other write here — the kernel sees an imported change on the very next
+    // decision, exactly like a hand-set one (same assertion style as the "re-publishes immediately"
+    // case above for a manual setTrustProfile call).
+    expect(published.at(-1)).toEqual([{ domain: 'shop.example', level: 'restricted' }]);
+    expect(listTrustProfiles().map((p) => p.domain)).toEqual(['shop.example']);
+  });
+
+  it('an imported "trusted" level still asks for a destructive action — the tighten-only invariant survives import exactly like a manual set', () => {
+    // Pins the exact concern this task exists to preserve: import must not be a way around
+    // `applyTrust`'s "a profile can only ever tighten" guarantee. It isn't, here, for the unremarkable
+    // reason that `importTrustProfiles` calls the identical `setTrustProfile` a manual level change
+    // calls — there is no second write path to keep in sync.
+    const { profiles } = parseTrustProfilesImport(
+      JSON.stringify([{ domain: 'shop.example', level: 'trusted' }]),
+    );
+    importTrustProfiles(profiles);
+
+    const [imported] = listTrustProfiles();
+    expect(imported?.level).toBe('trusted');
+
+    const destructive = applyTrust(
+      { decision: 'ask', reason: 'destructive_confirm' },
+      imported!.level,
+      { risk: 'destructive', taintedArgs: false },
+    );
+    expect(destructive.decision).toBe('ask');
+
+    const deny = applyTrust({ decision: 'deny', reason: 'sensitive_site_lockout' }, imported!.level, {
+      risk: 'read',
+      taintedArgs: false,
+    });
+    expect(deny.decision).toBe('deny');
+  });
+
+  it('skips a malformed entry on import rather than applying it', () => {
+    const { profiles, skipped } = parseTrustProfilesImport(
+      JSON.stringify([
+        { domain: 'ok.example', level: 'trusted' },
+        { domain: 'bad.example', level: 'admin' },
+      ]),
+    );
+    expect(skipped).toBe(1);
+
+    importTrustProfiles(profiles);
+
+    expect(listTrustProfiles().map((p) => p.domain)).toEqual(['ok.example']);
+  });
 });
 
 describe('with the database unavailable — the degraded state must ASK, never assume', () => {
@@ -108,5 +185,19 @@ describe('with the database unavailable — the degraded state must ASK, never a
     setTrustProfile('bank.example', 'trusted');
 
     expect(published.flat()).toEqual([]);
+  });
+
+  it('exports an empty profile list rather than throwing', () => {
+    const parsed = JSON.parse(exportTrustProfilesJson()) as { profiles: unknown[] };
+    expect(parsed.profiles).toEqual([]);
+  });
+
+  it('does not pretend an import applied anything', () => {
+    expect(importTrustProfiles([{ domain: 'bank.example', level: 'trusted' }])).toBe(1);
+    // "1" is the entry count, not a written-row count — setTrustProfile itself returns [] when the
+    // database is unavailable (see "does not pretend a write succeeded" above), so nothing was actually
+    // persisted or published.
+    expect(published.flat()).toEqual([]);
+    expect(listTrustProfiles()).toEqual([]);
   });
 });

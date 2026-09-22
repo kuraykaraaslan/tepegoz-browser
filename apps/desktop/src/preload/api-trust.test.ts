@@ -2,7 +2,7 @@ import { beforeEach, expect, it, vi } from 'vitest';
 import { IpcChannels } from '@tepegoz/desktop-ipc';
 
 /**
- * The Scoped Trust Profiles slice of the preload bridge — three stateless read/write calls. The
+ * The Scoped Trust Profiles slice of the preload bridge — read/write calls plus export/import. The
  * renderer expresses a domain + level; every interpretation happens in main.
  */
 
@@ -30,4 +30,14 @@ it('sends the {domain, level} pair on set', () => {
 it('sends the bare domain string on remove', () => {
   void trustApi.removeTrustProfile('example.com');
   expect(invoke).toHaveBeenCalledWith(IpcChannels.trustProfilesRemove, 'example.com');
+});
+
+it('exports with no payload', () => {
+  void trustApi.exportTrustProfiles();
+  expect(invoke).toHaveBeenCalledWith(IpcChannels.trustProfilesExport);
+});
+
+it('sends the raw JSON text on import', () => {
+  void trustApi.importTrustProfiles('{"profiles":[]}');
+  expect(invoke).toHaveBeenCalledWith(IpcChannels.trustProfilesImport, '{"profiles":[]}');
 });

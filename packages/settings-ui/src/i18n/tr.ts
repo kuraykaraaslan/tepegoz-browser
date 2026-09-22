@@ -492,6 +492,11 @@ export const tr: SettingsStrings = {
     ceiling:
       'Güvenilir bir sitede bile: silme, para harcama, sayfanın kendi içeriğinden gelen her şey ve tüm bankacılık, kripto, parola veya sağlık siteleri yine sorulur — ya da engelli kalır.',
     invalidDomain: 'ornek.com gibi bir alan adı girin — şema ve yol olmadan.',
+    exportButton: 'Dışa aktar',
+    importButton: 'İçe aktar',
+    importDone: '{imported} güven profili içe aktarıldı.',
+    importSkipped: '{skipped} tanesi atlandı (geçerli bir güven profili değil).',
+    importFailed: 'Bu dosya geçerli bir güven profili dışa aktarımı değil.',
   },
 
   // --- Klavye kısayolları ---

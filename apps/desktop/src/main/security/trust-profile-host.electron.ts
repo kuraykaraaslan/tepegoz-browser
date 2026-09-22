@@ -1,7 +1,7 @@
 import { PolicyKernel } from '@tepegoz/security-policy';
-import { TrustProfileStore } from '@tepegoz/persistence';
+import { TrustProfileStore, serializeTrustProfilesJson } from '@tepegoz/persistence';
 import { Logger } from '@tepegoz/libs';
-import type { TrustLevel, TrustProfile } from '@tepegoz/shared-types';
+import type { TrustLevel, TrustProfile, TrustProfileImportEntry } from '@tepegoz/shared-types';
 import { getDb } from '../db/database.electron';
 
 /**
@@ -53,4 +53,26 @@ export function removeTrustProfile(domain: string): TrustProfile[] {
   if (db === null) return [];
   TrustProfileStore.remove(db, domain);
   return publish();
+}
+
+/** Every LIVE trust profile's domain + level as one JSON document, for a user-initiated backup. */
+export function exportTrustProfilesJson(): string {
+  const db = getDb();
+  return serializeTrustProfilesJson(db === null ? [] : TrustProfileStore.list(db));
+}
+
+/**
+ * Apply a batch of already-validated import entries through the EXACT same {@link setTrustProfile}
+ * used by a manual Settings → Privacy → Site trust level change — never `TrustProfileStore.put`
+ * directly. That is what makes the tighten-only invariant (`applyTrust`, `@tepegoz/security-policy`)
+ * and the immediate kernel re-publish apply identically to an imported entry: `setTrustProfile` is the
+ * one function that does both, and an imported row asks it to do exactly what the Settings screen asks
+ * it to do — set this domain to this level — nothing about it is a different code path.
+ *
+ * Returns how many were written; the caller (`registerTrustIpc`) already parsed + validated the
+ * untrusted file with `parseTrustProfilesImport` first — this only applies the writes.
+ */
+export function importTrustProfiles(entries: readonly TrustProfileImportEntry[]): number {
+  for (const entry of entries) setTrustProfile(entry.domain, entry.level);
+  return entries.length;
 }
