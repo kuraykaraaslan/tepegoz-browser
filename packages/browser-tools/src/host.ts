@@ -1,6 +1,7 @@
 import type { RawInteractable } from '@tepegoz/tool-executor';
 import type { NetworkObservation } from './network-verify';
 import type { ConsoleMessage } from './console-log';
+import type { StyleProbe } from './style-inspector';
 
 /**
  * A JS dialog auto-declined, or a `beforeunload` prompt suppressed, on a tab (S3 PR4). Never a
@@ -295,4 +296,19 @@ export interface BrowserHost {
    * registered — never a claim of an empty sitemap when discovery was never attempted.
    */
   discoverSitemap?(url: string): Promise<readonly string[]>;
+  /**
+   * Computed style + box model for ONE element identified by `ref` (from the tab's latest
+   * {@link snapshotElements}) — P3-d read-only diagnostics, the style half. `null` means the ref could
+   * not be resolved: unknown/stale, or read while the host has no non-CDP way to address it (the
+   * accessibility-tree fallback perception carries no such path) — never a fabricated style.
+   *
+   * Deliberately addressed by the SAME `ref` space `browser_update_page` acts on, not a second
+   * addressing scheme. Must not require a `webContents.debugger`/CDP attachment (ADR-0029's discipline,
+   * matched by `consoleSince` above): the host is expected to resolve this via an isolated-world script
+   * injection over the ref's already-recorded DOM address, not a DOM/CSS CDP domain.
+   *
+   * OPTIONAL, and its absence is honest silence: a host that cannot resolve refs this way omits it,
+   * `browser_get_styles` is then not registered, and no run is ever told an element has no style.
+   */
+  styleOfRef?(ref: number, tabId?: string): Promise<StyleProbe | null>;
 }

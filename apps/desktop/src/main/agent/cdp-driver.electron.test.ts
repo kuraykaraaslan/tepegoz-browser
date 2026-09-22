@@ -50,6 +50,10 @@ const consoleRec = vi.hoisted(() => ({
   consoleSince: vi.fn(() => ['log']),
 }));
 vi.mock('./console-recorder.electron.js', () => consoleRec);
+const styleInspector = vi.hoisted(() => ({
+  styleOfRef: vi.fn((): Promise<unknown> => Promise.resolve({ display: 'block' })),
+}));
+vi.mock('./style-inspector.electron.js', () => styleInspector);
 const sessionMod = vi.hoisted(() => ({ waitForPageSettled: vi.fn(() => Promise.resolve()) }));
 vi.mock('./cdp-driver-session.electron.js', () => sessionMod);
 
@@ -339,5 +343,45 @@ describe('pass-through observers', () => {
     expect(CdpDriver.consoleSince(cast(wc), 0)).toEqual(['log']);
     await CdpDriver.waitForPageSettled(cast(wc));
     expect(sessionMod.waitForPageSettled).toHaveBeenCalled();
+  });
+});
+
+describe('refTargetFor / styleOfRef (P3-d) — no CDP attach required', () => {
+  it('refTargetFor is a plain data read: undefined before any snapshot, no debugger call', () => {
+    const wc = mkWc();
+    expect(CdpDriver.refTargetFor(cast(wc), 1)).toBeUndefined();
+    expect(dbg(wc).sendCommand).not.toHaveBeenCalled();
+    expect(dbg(wc).attach).not.toHaveBeenCalled();
+  });
+
+  it('refTargetFor reads back exactly what the last snapshot stored for that ref', async () => {
+    const wc = mkWc();
+    await CdpDriver.snapshotElements(cast(wc));
+    expect(CdpDriver.refTargetFor(cast(wc), 1)).toEqual({ backendNodeId: 5 });
+    expect(CdpDriver.refTargetFor(cast(wc), 2)).toEqual({
+      path: ['0'],
+      locators: { tag: 'a', role: 'link', name: 'x' },
+    });
+    expect(CdpDriver.refTargetFor(cast(wc), 99)).toBeUndefined();
+  });
+
+  it('styleOfRef delegates to style-inspector.electron.js with the stored target, never touching wc.debugger', async () => {
+    const wc = mkWc();
+    await CdpDriver.snapshotElements(cast(wc));
+    dbg(wc).sendCommand.mockClear();
+
+    const result = await CdpDriver.styleOfRef(cast(wc), 2);
+    expect(result).toEqual({ display: 'block' });
+    expect(styleInspector.styleOfRef).toHaveBeenCalledWith(wc, {
+      path: ['0'],
+      locators: { tag: 'a', role: 'link', name: 'x' },
+    });
+    expect(dbg(wc).sendCommand).not.toHaveBeenCalled();
+  });
+
+  it('styleOfRef still delegates (with an undefined target) for an unknown ref', async () => {
+    const wc = mkWc();
+    await CdpDriver.styleOfRef(cast(wc), 404);
+    expect(styleInspector.styleOfRef).toHaveBeenCalledWith(wc, undefined);
   });
 });

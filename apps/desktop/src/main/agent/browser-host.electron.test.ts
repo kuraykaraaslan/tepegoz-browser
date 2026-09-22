@@ -65,6 +65,9 @@ const h = vi.hoisted(() => {
       networkRequestsSince: vi.fn<(wc: WebContents, since: number) => unknown[]>(() => []),
       interceptionsSince: vi.fn<(wc: WebContents, since: number) => unknown[]>(() => []),
       consoleSince: vi.fn<(wc: WebContents, since: number) => unknown[]>(() => []),
+      styleOfRef: vi.fn<(wc: WebContents, ref: number) => Promise<unknown>>(() =>
+        Promise.resolve(null),
+      ),
       selectOption: vi.fn<(wc: WebContents, ref: number, value: string) => Promise<unknown>>(() =>
         Promise.resolve({ ok: true }),
       ),
@@ -109,6 +112,7 @@ vi.mock('./cdp-driver.electron', () => ({
     networkRequestsSince: h.cdp.networkRequestsSince,
     interceptionsSince: h.cdp.interceptionsSince,
     consoleSince: h.cdp.consoleSince,
+    styleOfRef: h.cdp.styleOfRef,
     selectOption: h.cdp.selectOption,
   },
 }));
@@ -741,6 +745,7 @@ describe('networkSince / interceptionsSince / consoleSince / networkRequestsSinc
     await expect(browserHost.interceptionsSince!(0, 'gone')).resolves.toEqual([]);
     await expect(browserHost.consoleSince!(0, 'gone')).resolves.toEqual([]);
     await expect(browserHost.networkRequestsSince!(0, 'gone')).resolves.toEqual([]);
+    await expect(browserHost.styleOfRef!(3, 'gone')).resolves.toBeNull();
   });
 
   it('an undefined tabId reads the active tab', async () => {
@@ -754,5 +759,17 @@ describe('networkSince / interceptionsSince / consoleSince / networkRequestsSinc
     await expect(browserHost.networkRequestsSince!(0)).resolves.toEqual([
       { url: 'y', status: 200 },
     ]);
+  });
+
+  it('styleOfRef threads the ref + tabId to CdpDriver.styleOfRef', async () => {
+    const wc = richWc();
+    h.tabs.webContentsForTab.mockReturnValue(wc);
+    h.cdp.styleOfRef.mockResolvedValue({ display: 'block', visible: true });
+
+    await expect(browserHost.styleOfRef!(5, 't1')).resolves.toEqual({
+      display: 'block',
+      visible: true,
+    });
+    expect(h.cdp.styleOfRef).toHaveBeenCalledWith(wc, 5);
   });
 });

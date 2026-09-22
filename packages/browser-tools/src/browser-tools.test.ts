@@ -227,6 +227,66 @@ describe('registerBrowserTools', () => {
     expect(result.content).toContain('no XHR/fetch/document requests observed');
   });
 
+  it('does NOT register browser_get_styles when the host cannot resolve a ref this way', () => {
+    // Honest absence, same shape as the console/network siblings: a host without a non-CDP resolution
+    // path gets no tool rather than one that can only ever answer "not found".
+    registerBrowserTools({ host: fakeHost() });
+    expect(CapabilityRegistry.get('browser_get_styles')).toBeUndefined();
+  });
+
+  it('registers browser_get_styles as a read tool and shapes a probe into structured fields + content', async () => {
+    const styleOfRef = vi.fn(() =>
+      Promise.resolve({
+        display: 'block',
+        visibility: 'visible',
+        opacity: '1',
+        position: 'static',
+        zIndex: 'auto',
+        color: 'rgb(0, 0, 0)',
+        backgroundColor: 'rgba(0, 0, 0, 0)',
+        x: 10,
+        y: 20,
+        width: 100,
+        height: 30,
+        visible: true,
+      }),
+    );
+    registerBrowserTools({ host: fakeHost({ styleOfRef }) });
+
+    const descriptor = CapabilityRegistry.list().find((d) => d.id === 'browser_get_styles');
+    expect(descriptor?.dangerClass).toBe('read');
+
+    const result = (await CapabilityRegistry.get('browser_get_styles')!.handler({
+      ref: 3,
+      tabId: 't1',
+    })) as { found: boolean; visible: boolean; display: string; content: string };
+    expect(styleOfRef).toHaveBeenCalledWith(3, 't1');
+    expect(result.found).toBe(true);
+    expect(result.visible).toBe(true);
+    expect(result.display).toBe('block');
+    expect(result.content).toContain('display: block');
+  });
+
+  it('browser_get_styles reports found:false, never a fabricated style, when the host cannot resolve the ref', async () => {
+    const styleOfRef = vi.fn(() => Promise.resolve(null));
+    registerBrowserTools({ host: fakeHost({ styleOfRef }) });
+    const result = (await CapabilityRegistry.get('browser_get_styles')!.handler({
+      ref: 9,
+    })) as { found: boolean; display?: string; content: string };
+    expect(result.found).toBe(false);
+    expect(result.display).toBeUndefined();
+    expect(result.content).toContain('no such element');
+  });
+
+  it('browser_get_styles degrades to found:false when the host read throws', async () => {
+    const styleOfRef = vi.fn(() => Promise.reject(new Error('tab gone')));
+    registerBrowserTools({ host: fakeHost({ styleOfRef }) });
+    const result = (await CapabilityRegistry.get('browser_get_styles')!.handler({
+      ref: 1,
+    })) as { found: boolean };
+    expect(result.found).toBe(false);
+  });
+
   it('registers the browser_* tools as always-on builtins', () => {
     registerBrowserTools({ host: fakeHost() });
     const ids = CapabilityRegistry.list()

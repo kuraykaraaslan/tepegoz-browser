@@ -90,7 +90,7 @@ phase needed." **NEW** means no existing phase owns it and this track proposes o
 | 7   | `read_pdf` (agent-callable PDF text extraction)                                                                   | PDF viewer ships (Phase 2c, human-facing only); no agent tool                                                       | One small `browser_read_pdf` on top of the existing viewer                                 | **P3-a (NEW, small)**                                                                                                          |
 | 8   | `get_frames`/`iframe_read`/`iframe_click`/`iframe_type`/`promote_iframe`, Chrome shadow-DOM piercing              | Light-DOM-only perception (ADR-0008/S2)                                                                             | Frame + shadow-DOM reach                                                                   | **P3-b (extends S2 perception-v2)**                                                                                            |
 | 9   | `download_social_media` / `resolve_public_media` (skill-first, browser-fallback)                                  | `download_*` tools manage already-started downloads; nothing resolves a media URL                                   | A resolver tool, same trust gate as any download                                           | **P3-c (NEW, small — extends `@tepegoz/downloads`)**                                                                           |
-| 10  | Dev-mode `read_console`/`inspect_network_requests`/`inspect_event_listeners` (read-only diagnostics)              | None as agent tools (ADR-0029 keeps DevTools user-only)                                                             | A narrow **read-only** carve-out distinct from `execute_js`                                | **P3-d — console + network halves shipped (`browser_get_console` / `browser_get_network`, 2026-09-07/08); DOM inspector open** |
+| 10  | Dev-mode `read_console`/`inspect_network_requests`/`inspect_event_listeners` (read-only diagnostics)              | None as agent tools (ADR-0029 keeps DevTools user-only)                                                             | A narrow **read-only** carve-out distinct from `execute_js`                                | **P3-d — all three halves shipped (`browser_get_console` / `browser_get_network` / `browser_get_styles`, 2026-09-07/08 + 2026-09-22)** |
 | 11  | Slash commands (`/ask /act /plan /schedule /watch /export /compact …`) in the panel                               | Command palette (Chat/Do/Make/Tasks); no typed slash-command grammar                                                | A structured command surface with `/help` + autocomplete                                   | **P7-a (extends S8 assistant-ux)**                                                                                             |
 | 12  | Selection quick-actions (Summarize/Explain/Quiz/Proofread/Translate/Humanize)                                     | Translate ships (`ext-translate`); Proofread partially (`ext-typo`); no unified selection menu                      | A small selection-action registry reusing existing extensions                              | **P7-b (extends S8, reuses `ext-translate`/`ext-typo`)**                                                                       |
 | 13  | Ask-mode token streaming to the panel, per-provider SSE parsers                                                   | `ModelGateway.generateStream`/`onDelta` exists (ADR-0025)                                                           | Wiring the interactive Ask path in `ext-agent`, not new plumbing                           | **P7-c (extends S1/S8, "wire the last mile")**                                                                                 |
@@ -273,11 +273,12 @@ at. This is _not_ `execute_js` and is _not_ DevTools access (ADR-0029 stays exac
 mutation, no script execution, output goes through the same untrusted-content wrapper as any other page
 read. If this can't be built without touching the ADR-0029 boundary, drop it rather than reopen that ADR.
 
-> **Console + network halves shipped** (2026-09-07/08) as `browser_get_console` and `browser_get_network`
-> (`read` is not an approved `ToolNameSchema` verb; `get` is — matching the
-> `browser_get_page`/`browser_get_article` family). Both `dangerClass: 'read'`, registered through the one
-> `CapabilityRegistry`, only when the host observes that channel; both fenced as untrusted (AI-5); both
-> read "empty = nothing observed", never "clean".
+> **All three halves shipped** — console + network (2026-09-07/08), style (2026-09-22) — as
+> `browser_get_console`, `browser_get_network` and `browser_get_styles` (`read` is not an approved
+> `ToolNameSchema` verb; `get` is — matching the `browser_get_page`/`browser_get_article` family). All
+> three `dangerClass: 'read'`, registered through the one `CapabilityRegistry`, only when the host
+> observes/can resolve that channel; all three fenced as untrusted (AI-5); all three read
+> "empty/not-found = nothing observed", never "clean".
 >
 > - **Console** — `console-recorder.electron.ts` subscribes to the ordinary `webContents`
 >   `console-message` event (NOT the `debugger`/DevTools protocol, so ADR-0029 is untouched), bounded
@@ -288,9 +289,16 @@ read. If this can't be built without touching the ADR-0029 boundary, drop it rat
 >   only — never bodies or headers. Pure `summarizeNetwork` renders `METHOD path → status (Nms)`. Still
 >   read-only, still not DevTools. The image/script/font traffic a page generates stays out of the ring
 >   so a debugging read is not drowned and cannot be used to flush the failure ring.
+> - **Style** — `browser_get_styles` reads ONE element's computed style + box model, addressed by the
+>   SAME `ref` `browser_update_page` acts on: a fixed small property list (display/visibility/opacity/
+>   position/zIndex/color/backgroundColor/box/`visible`), deliberately narrower than full
+>   `getComputedStyle()`, which is what keeps it distinct from `browser_get_elements`/
+>   `browser_analyze_page` instead of a near-duplicate. The odd one out of the three: no CDP at all —
+>   `style-inspector.electron.ts` reads the ref's already-recorded child-index path via
+>   `webContents.executeJavaScriptInIsolatedWorld` (`style-probe-script.ts`), never
+>   `webContents.debugger`. A `backendNodeId`-only ref (accessibility-tree fallback) has no such path and
+>   honestly reports "not found" rather than reaching for CDP — the one stated scope limit.
 >
-> **The DOM/style inspector is the remaining third** — it overlaps `browser_get_elements` /
-> `browser_analyze_page` heavily, so it is left as a documented follow-up rather than a near-duplicate.
 > `docs/adding-a-tool.md` still does not exist in this repo, so that DoD-shape clause stays a repo-wide
 > gap rather than one invented here (as with P3-c). No new user-facing surface ⇒ no new i18n strings.
 

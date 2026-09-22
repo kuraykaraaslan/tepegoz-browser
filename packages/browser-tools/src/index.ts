@@ -36,3 +36,4 @@ export {
   type ConsoleMessage,
   type ConsoleReport,
 } from './console-log';
+export { summarizeStyle, type StyleProbe, type StyleReport } from './style-inspector';

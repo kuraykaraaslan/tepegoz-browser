@@ -1,7 +1,12 @@
 import type { WebContents } from 'electron';
 import { AppError, Logger } from '@tepegoz/libs';
 import { HumanInputAdapter } from '@tepegoz/human-input';
-import type { ConsoleMessage, InterceptedDialog, NetworkObservation } from '@tepegoz/browser-tools';
+import type {
+  ConsoleMessage,
+  InterceptedDialog,
+  NetworkObservation,
+  StyleProbe,
+} from '@tepegoz/browser-tools';
 import {
   LOAD_TIMEOUT_MS,
   type DriverCore,
@@ -24,6 +29,7 @@ import {
   networkSince,
 } from './cdp-driver-network.electron.js';
 import { attachConsoleRecorder, consoleSince } from './console-recorder.electron.js';
+import { styleOfRef as styleOfRefImpl } from './style-inspector.electron.js';
 import { waitForPageSettled } from './cdp-driver-session.electron.js';
 import { snapshotElements as snapshotElementsImpl } from './cdp-driver-snapshot.electron.js';
 import {
@@ -365,6 +371,24 @@ export default class CdpDriver {
    */
   static consoleSince(wc: WebContents, sinceMs: number): ConsoleMessage[] {
     return consoleSince(wc, sinceMs);
+  }
+
+  /**
+   * The stored `ref → node` target from `wc`'s latest snapshot, or `undefined` when unset/unknown —
+   * plain data read, no CDP call. Lets `styleOfRef` (P3-d, the style diagnostics tool) resolve a ref
+   * without requiring a debugger attachment at all.
+   */
+  static refTargetFor(wc: WebContents, ref: number): RefTarget | undefined {
+    return CdpDriver.refMaps.get(wc)?.get(ref);
+  }
+
+  /**
+   * Computed style + box model for the element at `ref` (P3-d, `browser_get_styles`) — resolved via
+   * `executeJavaScriptInIsolatedWorld`, never `wc.debugger`/CDP. `null` means the ref could not be
+   * resolved this way (unknown/stale, or an accessibility-tree-fallback ref with no child-index path).
+   */
+  static async styleOfRef(wc: WebContents, ref: number): Promise<StyleProbe | null> {
+    return styleOfRefImpl(wc, CdpDriver.refTargetFor(wc, ref));
   }
 
   /** Wait for a load triggered by an interaction to settle, then network and DOM quiescence. */

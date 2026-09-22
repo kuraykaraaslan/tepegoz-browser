@@ -13,6 +13,7 @@ import { CredentialFillIntentSchema, type ToolDescriptor } from '@tepegoz/shared
 import { buildElementsSnapshot, buildPageSnapshot, type ElementsDiffMemory } from './perception';
 import { describeNetworkFailures, selectActionFailures, summarizeNetwork } from './network-verify';
 import { levelsAtOrAbove, summarizeConsole } from './console-log';
+import { summarizeStyle } from './style-inspector';
 import type { BrowserHost } from './host';
 
 /**
@@ -50,6 +51,9 @@ const WaitConditionArgs = TargetTabArgs.extend({
 // Coerce so a weak model that sends the ref as a string ("2") still validates — same value space, one
 // fewer way for the JSON-in-text decision path to trip on a shape nit. Non-numeric strings still reject.
 const Ref = z.coerce.number().int().positive().max(10_000);
+/** P3-d style/box-model diagnostics: the SAME ref space `browser_update_page` acts on — no second
+ *  addressing scheme for the agent to learn. */
+const GetStylesArgs = TargetTabArgs.extend({ ref: Ref });
 /** One page interaction, discriminated by `action` so each variant validates its own args. */
 const UpdatePageArgs = z.discriminatedUnion('action', [
   TargetTabArgs.extend({ action: z.literal('click'), ref: Ref }),
@@ -793,6 +797,39 @@ export function registerBrowserTools(deps: { host: BrowserHost }): void {
         const observations = await networkRequestsSince(0, args.tabId).catch(() => []);
         const page = await host.readPage(args.tabId).catch(() => ({ url: '' }));
         return summarizeNetwork(observations, page.url);
+      },
+    });
+  }
+
+  // P3-d read-only diagnostics — the style/box-model half, and the ONLY one of the three that needs no
+  // CDP at all (not even the `Network`/console-event plumbing the other two piggyback on). Registered
+  // ONLY when the host can resolve a ref this way; a host without it gets no tool rather than one that
+  // can only ever answer "not found".
+  if (host.styleOfRef !== undefined) {
+    const styleOfRef = host.styleOfRef.bind(host);
+    CapabilityRegistry.register({
+      descriptor: descriptor(
+        'browser_get_styles',
+        'read',
+        "Read ONE element's computed CSS + box model, to debug why it looks wrong (invisible, " +
+          'misplaced, wrong color) — NOT a general page or DOM dump. args: { ref: number, tabId?: ' +
+          'string }; `ref` is from browser_get_elements on the same tab. Returns a fixed set of ' +
+          'properties: display, visibility, opacity, position, zIndex, color, backgroundColor, a ' +
+          'bounding box { x, y, width, height }, and `visible` (rendered AND on-screen — check ' +
+          'display/visibility/opacity/the box yourself to see which half is false). `found: false` ' +
+          'means the ref could not be resolved (stale, or read while a different perception mode is ' +
+          'active) — re-read browser_get_elements and try again; it is never a fabricated style. Use ' +
+          'browser_get_elements for what is on the page and how to act on it, and browser_analyze_page ' +
+          'to pull values out of MANY elements at once; use this only to diagnose one element.',
+        { aiTask: 'read_understand' },
+      ),
+      inputSchema: GetStylesArgs,
+      handler: async (args) => {
+        // Tolerant like the console/network siblings: a stale ref or an unreachable tab yields "not
+        // found", never an error that fails an otherwise-fine diagnostic read.
+        const probe = await styleOfRef(args.ref, args.tabId).catch(() => null);
+        const page = await host.readPage(args.tabId).catch(() => ({ url: '' }));
+        return summarizeStyle(probe, args.ref, page.url);
       },
     });
   }

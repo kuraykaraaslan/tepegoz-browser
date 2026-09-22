@@ -557,11 +557,11 @@ permissions reuse the single Policy/PermissionGuard (no parallel permission flow
         a coding gap. Sources:
         [`../tracks/webbrain-agent-parity.md`](../../docs/parities/webbrain-agent-parity.md) P3-a and
         [`../tracks/playwright-mcp-agent-parity.md`](../../docs/parities/playwright-mcp-agent-parity.md) P4.
-  - [~] **Read-only Dev diagnostics for the agent — console + network halves shipped.** _Two `read`
-        tools, `browser_get_console` and `browser_get_network` (`read` is not an approved
-        `ToolNameSchema` verb; `get` is), both `dangerClass: 'read'`, both through the one
-        `CapabilityRegistry`, both registered only when the host observes that channel, both fenced as
-        untrusted (AI-5), both "empty = nothing observed" not "clean"._
+  - [x] **Read-only Dev diagnostics for the agent — console + network + style halves shipped.** _Three
+        `read` tools, `browser_get_console`, `browser_get_network` and `browser_get_styles` (`read` is
+        not an approved `ToolNameSchema` verb; `get` is), all `dangerClass: 'read'`, all through the one
+        `CapabilityRegistry`, all registered only when the host observes/can resolve that channel, all
+        fenced as untrusted (AI-5), all "empty/not-found = nothing observed" not "clean"._
         - _**Console:** `console-recorder.electron.ts` subscribes to the ordinary `webContents`
           `console-message` event — NOT the `debugger`/DevTools protocol, so **ADR-0029 is untouched** —
           bounded ring 200/tab; pure `summarizeConsole` shapes it. `level` filters by minimum severity;
@@ -571,9 +571,32 @@ permissions reuse the single Policy/PermissionGuard (no parallel permission flow
           method/status/timing only (never bodies or headers); pure `summarizeNetwork` renders
           `METHOD path → status (Nms)`. Image/script/font traffic stays out so a debugging read is not
           drowned and cannot flush the failure ring._
-        - _**The DOM/style inspector is the remaining third** — it overlaps
-          `browser_get_elements`/`browser_analyze_page`, so it is left as a documented follow-up rather
-          than a near-duplicate. Box kept `[~]`. Captured:
+        - _**Style:** `browser_get_styles` reads ONE element's computed style + box model — a fixed,
+          small property list (`display`, `visibility`, `opacity`, `position`, `zIndex`, `color`,
+          `backgroundColor`, the box `{x,y,width,height}`, and a single `visible` verdict), never
+          `getComputedStyle()`'s full surface, which is what keeps it distinct from
+          `browser_get_elements`/`browser_analyze_page` rather than a near-duplicate. The element is
+          addressed by the SAME `ref` `browser_update_page` acts on — no second addressing scheme.
+          **This is the odd one out of the three: it needs no CDP at all.** `style-inspector.electron.ts`
+          resolves the ref's already-recorded child-index path (`CdpDriver.refTargetFor`, a plain data
+          read — no `wc.debugger` call) and reads it via `webContents.executeJavaScriptInIsolatedWorld`
+          (`style-probe-script.ts`, injecting the same `resolveNodePath` the stale-ref re-click path
+          already re-resolves with, unit-tested independently in `dom-path.test.ts`) — never
+          `webContents.debugger`/CDP `DOM.*`/`CSS.*`. A `backendNodeId`-only ref (the accessibility-tree
+          fallback, `TEPEGOZ_PERCEPTION=a11y`) carries no such path and honestly reports "not found"
+          rather than reaching for CDP to resolve it — the one stated scope limit. `visible` combines
+          CSS-rendered AND in-viewport (`build-dom-tree-script.ts`'s own `isVisible`/`isInViewport`
+          notion, reused rather than reinvented) into one verdict; the individual fields say which half
+          failed. Pure `summarizeStyle` sanitizes/caps every field (not just the rendered `content`
+          block) before it reaches the model, same AI-5 discipline as its siblings even though the CSS
+          value grammars behind these properties are narrow. 34 new tests: 8 (`style-inspector.test.ts`,
+          pure shaping — visible/hidden/zero-opacity/off-screen/missing-ref), 9
+          (`style-probe-script.test.ts`, the real injected script run in a `vm` over a fake DOM), 7
+          (`style-inspector.electron.ts`, no-CDP + a11y-fallback + malformed-result degradation), plus
+          registration/gating/threading coverage added to `browser-tools.test.ts`,
+          `cdp-driver.electron.test.ts` and `browser-host.electron.test.ts`. Box now `[x]` — all three
+          siblings are code-complete and tested; only live on-harness measurement (how often an agent
+          actually reaches for this) remains open, same as the rest of this phase's `[x]` boxes. Captured:
           [`../tracks/webbrain-agent-parity.md`](../../docs/parities/webbrain-agent-parity.md) P3-d._
 - [x] **Reader mode** (Readability extraction → clean, localized reading view; opt-in per page)
       — _`@tepegoz/reader`: Readability-style scoring (paragraph density, discounted by link density,
