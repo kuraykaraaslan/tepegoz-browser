@@ -2,6 +2,7 @@ import type { RawInteractable } from '@tepegoz/tool-executor';
 import type { NetworkObservation } from './network-verify';
 import type { ConsoleMessage } from './console-log';
 import type { StyleProbe } from './style-inspector';
+import type { QueryProbe } from './dom-query';
 
 /**
  * A JS dialog auto-declined, or a `beforeunload` prompt suppressed, on a tab (S3 PR4). Never a
@@ -311,4 +312,20 @@ export interface BrowserHost {
    * `browser_get_styles` is then not registered, and no run is ever told an element has no style.
    */
   styleOfRef?(ref: number, tabId?: string): Promise<StyleProbe | null>;
+  /**
+   * S2/PR7 P3-a — a bounded CSS-selector/XPath query against a tab's live DOM, behind
+   * `browser_search_nodes`. Broader than {@link snapshotElements}'s actionable-element set: it can match
+   * anything the native `querySelectorAll`/`document.evaluate` reaches, not just buttons/links/inputs.
+   *
+   * `query` is DATA passed to a fixed, contributor-authored script — never evaluated as model-authored
+   * code (ADR-0026 is untouched, exactly like `browser_search_elements`'s own carve-out). Results are
+   * capped (~200) and ref-resolved: a match that is already a tracked ref keeps it, an untracked match
+   * gets a freshly minted ref in the SAME `ref` space `browser_update_page` acts on, and a match neither
+   * of those can address reports `ref: null` — never a fabricated ref.
+   *
+   * OPTIONAL, and its absence is honest silence: a host that cannot resolve this without CDP (mirroring
+   * `styleOfRef`'s isolated-world-only discipline) simply omits it, and `browser_search_nodes` is then
+   * not registered — never a claim that the page has no matching nodes.
+   */
+  queryElements?(query: string, queryType: 'css' | 'xpath', tabId?: string): Promise<QueryProbe>;
 }

@@ -37,3 +37,10 @@ export {
   type ConsoleReport,
 } from './console-log';
 export { summarizeStyle, type StyleProbe, type StyleReport } from './style-inspector';
+export {
+  summarizeQuery,
+  MAX_QUERY_MATCHES,
+  type QueryProbe,
+  type QueryReport,
+  type QueryElementMatch,
+} from './dom-query';

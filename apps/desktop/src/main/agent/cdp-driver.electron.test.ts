@@ -54,6 +54,10 @@ const styleInspector = vi.hoisted(() => ({
   styleOfRef: vi.fn((): Promise<unknown> => Promise.resolve({ display: 'block' })),
 }));
 vi.mock('./style-inspector.electron.js', () => styleInspector);
+const domQuery = vi.hoisted(() => ({
+  queryElements: vi.fn((): Promise<unknown> => Promise.resolve({ ok: true, total: 0, matches: [] })),
+}));
+vi.mock('./dom-query.electron.js', () => domQuery);
 const sessionMod = vi.hoisted(() => ({ waitForPageSettled: vi.fn(() => Promise.resolve()) }));
 vi.mock('./cdp-driver-session.electron.js', () => sessionMod);
 
@@ -383,5 +387,21 @@ describe('refTargetFor / styleOfRef (P3-d) — no CDP attach required', () => {
     const wc = mkWc();
     await CdpDriver.styleOfRef(cast(wc), 404);
     expect(styleInspector.styleOfRef).toHaveBeenCalledWith(wc, undefined);
+  });
+});
+
+describe('queryElements (S2/PR7 P3-a) — no CDP attach required', () => {
+  it('delegates to dom-query.electron.js with the query/queryType and the SAME refMaps CdpDriver holds', async () => {
+    const wc = mkWc();
+    domQuery.queryElements.mockResolvedValue({
+      ok: true,
+      total: 1,
+      matches: [{ tag: 'div', ref: 1, attributes: {} }],
+    });
+
+    const result = await CdpDriver.queryElements(cast(wc), '#x', 'css');
+    expect(result).toEqual({ ok: true, total: 1, matches: [{ tag: 'div', ref: 1, attributes: {} }] });
+    expect(domQuery.queryElements).toHaveBeenCalledWith(wc, '#x', 'css', expect.any(WeakMap));
+    expect(dbg(wc).sendCommand).not.toHaveBeenCalled();
   });
 });

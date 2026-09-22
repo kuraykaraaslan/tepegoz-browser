@@ -14,6 +14,7 @@ import { buildElementsSnapshot, buildPageSnapshot, type ElementsDiffMemory } fro
 import { describeNetworkFailures, selectActionFailures, summarizeNetwork } from './network-verify';
 import { levelsAtOrAbove, summarizeConsole } from './console-log';
 import { summarizeStyle } from './style-inspector';
+import { summarizeQuery, MAX_QUERY_MATCHES } from './dom-query';
 import type { BrowserHost } from './host';
 
 /**
@@ -54,6 +55,13 @@ const Ref = z.coerce.number().int().positive().max(10_000);
 /** P3-d style/box-model diagnostics: the SAME ref space `browser_update_page` acts on — no second
  *  addressing scheme for the agent to learn. */
 const GetStylesArgs = TargetTabArgs.extend({ ref: Ref });
+/** S2/PR7 P3-a bounded DOM query: the query text is untrusted model input like any other tool arg, so
+ *  it is length-capped here at the trust boundary — the actual selector/XPath GRAMMAR is validated by
+ *  the browser's own querySelectorAll/document.evaluate throwing, caught host-side. */
+const SearchNodesArgs = TargetTabArgs.extend({
+  query: z.string().min(1).max(500),
+  queryType: z.enum(['css', 'xpath']).optional(),
+});
 /** One page interaction, discriminated by `action` so each variant validates its own args. */
 const UpdatePageArgs = z.discriminatedUnion('action', [
   TargetTabArgs.extend({ action: z.literal('click'), ref: Ref }),
@@ -830,6 +838,50 @@ export function registerBrowserTools(deps: { host: BrowserHost }): void {
         const probe = await styleOfRef(args.ref, args.tabId).catch(() => null);
         const page = await host.readPage(args.tabId).catch(() => ({ url: '' }));
         return summarizeStyle(probe, args.ref, page.url);
+      },
+    });
+  }
+
+  // S2/PR7 P3-a — a bounded DOM query, broader than browser_search_elements: it runs the query through
+  // the browser's NATIVE querySelectorAll/document.evaluate rather than filtering the actionable-element
+  // set, so it can find a node with no interactable role at all. Registered ONLY when the host can
+  // resolve this without CDP (mirrors browser_get_styles's isolated-world-only discipline) — a host
+  // without it gets no tool rather than a claim that the page has no matching nodes.
+  if (host.queryElements !== undefined) {
+    const queryElements = host.queryElements.bind(host);
+    CapabilityRegistry.register({
+      descriptor: descriptor(
+        'browser_search_nodes',
+        'read',
+        "Find DOM nodes on the page by a CSS selector or an XPath expression — broader than " +
+          'browser_search_elements: it searches the whole native DOM, not just actionable ' +
+          '(button/link/input) elements, so it can find a plain container, a landmark, or a table cell ' +
+          `that has no interactable role. args: { query: string, queryType?: 'css' | 'xpath', tabId? } ` +
+          "— queryType defaults to 'css'; omit tabId for the active tab. Returns { url, query, " +
+          'queryType, ok, count, totalMatches, truncated, matches: [{ tag, ref, attributes }], content }. ' +
+          `Matches are capped at ${String(MAX_QUERY_MATCHES)} (truncated reports whether more exist); no ` +
+          'innerHTML or text content is ever returned — only the tag and its attributes. `ref` is in the ' +
+          'SAME space as browser_get_elements/browser_update_page: an already-known element keeps its ' +
+          'ref, a newly-found one gets a fresh ref you can act on immediately, and `ref: null` means the ' +
+          'node was found but cannot be addressed (rare). `ok: false` means the selector/XPath itself was ' +
+          'invalid (see `error`) — never a thrown error. Use browser_get_elements for what you can click ' +
+          'or fill; use this to check whether specific markup/text-bearing structure exists at all.',
+        { aiTask: 'read_understand' },
+      ),
+      inputSchema: SearchNodesArgs,
+      handler: async (args) => {
+        const queryType = args.queryType ?? 'css';
+        // Tolerant like the console/network/style siblings: an infra failure (destroyed tab, isolated
+        // world rejecting) degrades to a clean ok:false result, never an error that fails an otherwise
+        // fine read.
+        const probe = await queryElements(args.query, queryType, args.tabId).catch(() => ({
+          ok: false as const,
+          error: 'the query could not be run',
+          total: 0,
+          matches: [],
+        }));
+        const page = await host.readPage(args.tabId).catch(() => ({ url: '' }));
+        return summarizeQuery(probe, args.query, queryType, page.url);
       },
     });
   }

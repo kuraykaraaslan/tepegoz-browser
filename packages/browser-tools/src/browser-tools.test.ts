@@ -287,6 +287,67 @@ describe('registerBrowserTools', () => {
     expect(result.found).toBe(false);
   });
 
+  it('does NOT register browser_search_nodes when the host cannot resolve queries this way', () => {
+    // Same honest-absence shape as browser_get_styles: no isolated-world query resolution, no tool.
+    registerBrowserTools({ host: fakeHost() });
+    expect(CapabilityRegistry.get('browser_search_nodes')).toBeUndefined();
+  });
+
+  it('registers browser_search_nodes as a read tool, defaults queryType to css, and shapes matches + content', async () => {
+    const queryElements = vi.fn(() =>
+      Promise.resolve({
+        ok: true,
+        total: 1,
+        matches: [{ tag: 'div', ref: 3, attributes: { id: 'x' } }],
+      }),
+    );
+    registerBrowserTools({ host: fakeHost({ queryElements }) });
+
+    const descriptor = CapabilityRegistry.list().find((d) => d.id === 'browser_search_nodes');
+    expect(descriptor?.dangerClass).toBe('read');
+
+    const result = (await CapabilityRegistry.get('browser_search_nodes')!.handler({
+      query: '#x',
+      tabId: 't1',
+    })) as { ok: boolean; count: number; matches: unknown[]; content: string };
+    expect(queryElements).toHaveBeenCalledWith('#x', 'css', 't1');
+    expect(result.ok).toBe(true);
+    expect(result.count).toBe(1);
+    expect(result.matches).toEqual([{ tag: 'div', ref: 3, attributes: { id: 'x' } }]);
+    expect(result.content).toContain('<div ref=3 id="x">');
+  });
+
+  it('browser_search_nodes forwards an explicit queryType: xpath', async () => {
+    const queryElements = vi.fn(() => Promise.resolve({ ok: true, total: 0, matches: [] }));
+    registerBrowserTools({ host: fakeHost({ queryElements }) });
+    await CapabilityRegistry.get('browser_search_nodes')!.handler({
+      query: '//div',
+      queryType: 'xpath',
+    });
+    expect(queryElements).toHaveBeenCalledWith('//div', 'xpath', undefined);
+  });
+
+  it('browser_search_nodes reports ok:false, never a thrown error, for an invalid selector', async () => {
+    const queryElements = vi.fn(() =>
+      Promise.resolve({ ok: false, error: "'#(' is not a valid selector", total: 0, matches: [] }),
+    );
+    registerBrowserTools({ host: fakeHost({ queryElements }) });
+    const result = (await CapabilityRegistry.get('browser_search_nodes')!.handler({
+      query: '#(',
+    })) as { ok: boolean; error?: string };
+    expect(result.ok).toBe(false);
+    expect(result.error).toContain('not a valid selector');
+  });
+
+  it('browser_search_nodes degrades to ok:false when the host read throws', async () => {
+    const queryElements = vi.fn(() => Promise.reject(new Error('tab gone')));
+    registerBrowserTools({ host: fakeHost({ queryElements }) });
+    const result = (await CapabilityRegistry.get('browser_search_nodes')!.handler({
+      query: 'div',
+    })) as { ok: boolean };
+    expect(result.ok).toBe(false);
+  });
+
   it('registers the browser_* tools as always-on builtins', () => {
     registerBrowserTools({ host: fakeHost() });
     const ids = CapabilityRegistry.list()

@@ -68,6 +68,9 @@ const h = vi.hoisted(() => {
       styleOfRef: vi.fn<(wc: WebContents, ref: number) => Promise<unknown>>(() =>
         Promise.resolve(null),
       ),
+      queryElements: vi.fn<(wc: WebContents, query: string, queryType: string) => Promise<unknown>>(
+        () => Promise.resolve({ ok: true, total: 0, matches: [] }),
+      ),
       selectOption: vi.fn<(wc: WebContents, ref: number, value: string) => Promise<unknown>>(() =>
         Promise.resolve({ ok: true }),
       ),
@@ -113,6 +116,7 @@ vi.mock('./cdp-driver.electron', () => ({
     interceptionsSince: h.cdp.interceptionsSince,
     consoleSince: h.cdp.consoleSince,
     styleOfRef: h.cdp.styleOfRef,
+    queryElements: h.cdp.queryElements,
     selectOption: h.cdp.selectOption,
   },
 }));
@@ -746,6 +750,9 @@ describe('networkSince / interceptionsSince / consoleSince / networkRequestsSinc
     await expect(browserHost.consoleSince!(0, 'gone')).resolves.toEqual([]);
     await expect(browserHost.networkRequestsSince!(0, 'gone')).resolves.toEqual([]);
     await expect(browserHost.styleOfRef!(3, 'gone')).resolves.toBeNull();
+    await expect(browserHost.queryElements!('div', 'css', 'gone')).resolves.toMatchObject({
+      ok: false,
+    });
   });
 
   it('an undefined tabId reads the active tab', async () => {
@@ -771,5 +778,22 @@ describe('networkSince / interceptionsSince / consoleSince / networkRequestsSinc
       visible: true,
     });
     expect(h.cdp.styleOfRef).toHaveBeenCalledWith(wc, 5);
+  });
+
+  it('queryElements threads the query/queryType/tabId to CdpDriver.queryElements', async () => {
+    const wc = richWc();
+    h.tabs.webContentsForTab.mockReturnValue(wc);
+    h.cdp.queryElements.mockResolvedValue({
+      ok: true,
+      total: 1,
+      matches: [{ tag: 'div', ref: 1, attributes: {} }],
+    });
+
+    await expect(browserHost.queryElements!('#x', 'css', 't1')).resolves.toEqual({
+      ok: true,
+      total: 1,
+      matches: [{ tag: 'div', ref: 1, attributes: {} }],
+    });
+    expect(h.cdp.queryElements).toHaveBeenCalledWith(wc, '#x', 'css');
   });
 });

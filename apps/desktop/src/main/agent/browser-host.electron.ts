@@ -796,6 +796,16 @@ export const browserHost: BrowserHost & TabHost & ScreenshotToolsHost = {
     if (wc === null || wc.isDestroyed()) return Promise.resolve(null);
     return CdpDriver.styleOfRef(wc, ref);
   },
+  queryElements: (query, queryType, tabId) => {
+    // S2/PR7 P3-a — same tolerant shape as styleOfRef: a missing/destroyed tab is a clean ok:false
+    // result, never an error that fails an otherwise-fine read.
+    const wc =
+      tabId === undefined ? TabManager.activeWebContents() : TabManager.webContentsForTab(tabId);
+    if (wc === null || wc.isDestroyed()) {
+      return Promise.resolve({ ok: false, error: 'no active tab', total: 0, matches: [] });
+    }
+    return CdpDriver.queryElements(wc, query, queryType);
+  },
   captureScreenshot,
   setDeviceEmulation: (device, tabId) => {
     setDeviceEmulation(requireWc(tabId), device);

@@ -5,6 +5,7 @@ import type {
   ConsoleMessage,
   InterceptedDialog,
   NetworkObservation,
+  QueryProbe,
   StyleProbe,
 } from '@tepegoz/browser-tools';
 import {
@@ -30,6 +31,7 @@ import {
 } from './cdp-driver-network.electron.js';
 import { attachConsoleRecorder, consoleSince } from './console-recorder.electron.js';
 import { styleOfRef as styleOfRefImpl } from './style-inspector.electron.js';
+import { queryElements as queryElementsImpl } from './dom-query.electron.js';
 import { waitForPageSettled } from './cdp-driver-session.electron.js';
 import { snapshotElements as snapshotElementsImpl } from './cdp-driver-snapshot.electron.js';
 import {
@@ -389,6 +391,20 @@ export default class CdpDriver {
    */
   static async styleOfRef(wc: WebContents, ref: number): Promise<StyleProbe | null> {
     return styleOfRefImpl(wc, CdpDriver.refTargetFor(wc, ref));
+  }
+
+  /**
+   * S2/PR7 P3-a — a bounded CSS-selector/XPath query against `wc`'s live DOM (`browser_search_nodes`),
+   * resolved via `executeJavaScriptInIsolatedWorld`, never `wc.debugger`/CDP. Mints fresh refs into the
+   * SAME per-tab `refMaps` a snapshot populates for any match not already tracked — see
+   * `dom-query.electron.ts` for the full ref-resolution contract.
+   */
+  static async queryElements(
+    wc: WebContents,
+    query: string,
+    queryType: 'css' | 'xpath',
+  ): Promise<QueryProbe> {
+    return queryElementsImpl(wc, query, queryType, CdpDriver.refMaps);
   }
 
   /** Wait for a load triggered by an interaction to settle, then network and DOM quiescence. */

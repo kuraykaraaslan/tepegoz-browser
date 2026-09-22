@@ -165,10 +165,52 @@ Prior art gives us the shape of the win without the claim: browser-use's TSV ser
       must keep working when a `debugger`/CDP attach is slow, contested, or unavailable. AIPex ships exactly
       this as a separate package for that reason.
       [`../tracks/aipex-agent-parity.md`](../../docs/parities/aipex-agent-parity.md) P4-b.
-- [ ] **A bounded DOM query tool.** Plain text, a CSS selector, or an XPath, run through the browser's native
-      DOM search, returning **at most ~200** matches as `{tag, ref, attributes}` — no HTML, no `innerText`, no
-      arbitrary code, so it does not reopen ADR-0026. Cheap targeting on a large page without serializing the
-      whole tree. [`../tracks/browseros-agent-agent-parity.md`](../../docs/parities/browseros-agent-agent-parity.md) P3-a.
+- [x] **A bounded DOM query tool.** [`../tracks/browseros-agent-agent-parity.md`](../../docs/parities/browseros-agent-agent-parity.md) P3-a.
+      — _Landed as `browser_search_nodes` (CSS or XPath — `queryType`, defaulting to `css`), a distinct
+      capability from `browser_search_elements` above: it runs the browser's NATIVE
+      `document.querySelectorAll`/`document.evaluate` against the whole light DOM, not a filter over the
+      actionable-element list, so it can match a node with no interactable role at all (a plain `<div>`,
+      a landmark, a table cell). The query text is DATA passed to a FIXED, contributor-authored script
+      (`apps/desktop/src/main/agent/dom-query-script.ts`), injected via
+      `executeJavaScriptInIsolatedWorld` exactly like the P3-d style-probe tool — never a model-authored
+      expression evaluated as code — so ADR-0026 is not reopened. Output is `{tag, ref, attributes}` only:
+      no `innerHTML`, no `innerText`, capped at **200** (`MAX_QUERY_MATCHES`, matching
+      `MAX_INTERACTABLE_ELEMENTS`), with an honest uncapped `totalMatches`/`truncated` pair. A malformed
+      selector/invalid XPath is caught in-page and returned as `{ ok: false, error }` — never a thrown
+      exception.
+      **Ref-resolution (the design decision the task called out as the hardest part):** refs are minted
+      into the SAME per-tab registry `browser_update_page`/`browser_get_styles` already act on
+      (`CdpDriver`'s `refMaps`, passed by reference to `dom-query.electron.ts` exactly like
+      `SnapshotDeps.refMaps` is passed to the snapshot path) — not a second addressing scheme. A match
+      that is already a tracked ref (resolved by DOM node identity inside the injected script) keeps
+      that SAME ref; an untracked match gets a FRESH ref one past the highest ref the tab currently
+      holds, computed via `computeNodePath` — the light-DOM-only INVERSE of `resolveNodePath` (walk up
+      from the element to `document`, recording its index among each ancestor's `.children`). This is
+      deliberately **light-DOM-only in v1**: `computeNodePath` bails to `null` at a shadow-root boundary
+      (no `.parentNode` continuity across it) rather than guess, and native
+      `querySelectorAll`/`document.evaluate` from `document` never reach into an open shadow root or a
+      same-origin iframe's document anyway — so in practice every match a query finds is addressable this
+      way, and the `ref: null` fallback (an honest "seen but not addressable", never a fabricated ref) is
+      a defensive case, not the common one. Shadow/iframe reach for THIS tool is left to the PR7
+      frame/shadow work above, which already owns that scope for the actionable-element path.
+      Registered as `read`-class through `CapabilityRegistry`, gated on an OPTIONAL `host.queryElements`
+      — the same isolated-world-only, no-CDP-attach discipline `browser_get_styles` uses (not
+      `browser_get_elements`'s always-on shape), because the underlying mechanism is identical to the
+      style probe's, not to the free-text filter's. New files: `packages/browser-tools/src/dom-query.ts`
+      (pure result shaping — `summarizeQuery`, sanitize+cap every attribute value, AI-5), `dom-query.test.ts`
+      (8 tests); `apps/desktop/src/main/agent/dom-query-script.ts` (the injected probe),
+      `dom-query-script.test.ts` (14 tests, `vm.runInContext` over a fake DOM — the
+      `style-probe-script.test.ts` technique); `dom-query.electron.ts` (host-side resolve + ref-mint),
+      `dom-query.electron.test.ts` (11 tests). Wired through `CdpDriver.queryElements`
+      (`cdp-driver.electron.test.ts`, +1 test), `browser-host.electron.ts`
+      (`browser-host.electron.test.ts`, +1 test plus one assertion added to the existing
+      destroyed-tab-tolerance test), and `registerBrowserTools` (`browser-tools.test.ts`, +5 tests). 40
+      new tests total; `pnpm exec turbo run typecheck lint test --filter=@tepegoz/browser-tools
+      --filter=@tepegoz/desktop` green (one unrelated flake seen once in the full-suite run — a stray
+      `setTimeout` in `PermissionsCenter.tsx` firing during `SettingsPage.test.tsx`, in files this PR
+      never touches; it passed both in isolation and on an immediate full-suite re-run). On-harness
+      measurement (does this tool actually reduce steps/tokens vs. a `browser_get_elements` full read on
+      a large page) is, like the rest of S2, funding-blocked — not attempted here._
 - [x] **In-page free-text search at zero model cost.** A fixed, **contributor-authored** script (not
       model-authored — this is not `evaluate` and does not reopen ADR-0026) that answers "does this page
       contain X, and where" without spending a model call, so the agent can decide cheaply whether a page is
