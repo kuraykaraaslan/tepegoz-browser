@@ -10,10 +10,12 @@ function renderBar(over: Partial<Parameters<typeof FindBar>[0]> = {}) {
     activeMatch: 1,
     totalMatches: 3,
     matchCase: false,
+    wholeWord: false,
     onQueryChange: vi.fn(),
     onNext: vi.fn(),
     onPrevious: vi.fn(),
     onToggleMatchCase: vi.fn(),
+    onToggleWholeWord: vi.fn(),
     onClose: vi.fn(),
     ...over,
   };
@@ -76,5 +78,19 @@ describe('FindBar', () => {
     expect(toggle.getAttribute('aria-pressed')).toBe('true');
     fireEvent.click(toggle);
     expect(props.onToggleMatchCase).toHaveBeenCalledTimes(1);
+  });
+
+  it('exposes whole-word as its own toggle button, independent of match-case', () => {
+    const props = renderBar({ wholeWord: true });
+    const toggle = screen.getByLabelText('Whole word');
+    expect(toggle.getAttribute('aria-pressed')).toBe('true');
+    fireEvent.click(toggle);
+    expect(props.onToggleWholeWord).toHaveBeenCalledTimes(1);
+    expect(props.onToggleMatchCase).not.toHaveBeenCalled();
+  });
+
+  it('whole-word toggle starts unpressed', () => {
+    renderBar({ wholeWord: false });
+    expect(screen.getByLabelText('Whole word').getAttribute('aria-pressed')).toBe('false');
   });
 });

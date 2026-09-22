@@ -103,6 +103,24 @@ test('Ctrl+F finds text in the active tab and reports Chromium\u2019s match coun
       })
       .toBe('2/3');
 
+    // Whole-word toggle (phase-2c): the additive DOM matcher, not `webContents.findInPage`. "hay" is a
+    // SUBSTRING of "haystack" but never a standalone word in this fixture, so turning the toggle on
+    // must drop it to zero matches — the thing the native path could never do (Electron dropped
+    // `wordStart` years ago).
+    await findInput.fill('hay');
+    const wholeWordToggle = window.getByLabel('Whole word');
+    await wholeWordToggle.click();
+    await expect(window.getByText('No results')).toBeVisible();
+
+    // "needle" IS a standalone word in every fixture occurrence, so the same toggle still finds it —
+    // proof this is a second engine, not a broken one.
+    await findInput.fill('needle');
+    await expect
+      .poll(async () => (await window.getByText(/^\d+\/\d+$/).allInnerTexts()).join(''), {
+        timeout: 30_000,
+      })
+      .toBe('1/3');
+
     await findInput.press('Escape');
     await expect(findInput).toBeHidden();
   } finally {

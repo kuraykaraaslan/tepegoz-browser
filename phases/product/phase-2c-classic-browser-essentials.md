@@ -423,14 +423,43 @@ permissions reuse the single Policy/PermissionGuard (no parallel permission flow
       navigating away zeroes the counters. Match-case toggle included. 10 unit tests.
   - [x] The bar, the shortcut and the plumbing landed: `@tepegoz/find-bar` + `main/find-in-page.ts` +
         `ipc/ipc-find.ts`, 10 unit tests, plus a stale-query guard and a navigation reset.
-  - [ ] **"Match whole word" — investigated 2026-09-09, NOT built (dead end via the obvious route).**
-        The plan was to forward it to `webContents.findInPage` as `wordStart` beside the existing
-        `matchCase` flag. **Chromium removed word-start matching upstream years ago** — Electron
-        deprecated `wordStart` / `medialCapitalAsWordStart` in v4 and dropped them by v5; they are not
-        in Electron 43's `FindInPageOptions`, so the option is silently ignored. A real whole-word (and
-        the "highlight all matches" / regex asks) needs a DOM-level matcher — injected `\b`-anchored
-        search plus our own highlight overlay — replacing `webContents.findInPage`. That is a genuine
-        feature, not a toggle; deferred. Do not re-attempt the `wordStart` route.
+  - [x] **"Match whole word" — built 2026-09-22, additively, without touching the native path.**
+        2026-09-09's investigation was right that `wordStart` is a dead end (Electron dropped it by v5;
+        not in 43's `FindInPageOptions`) but wrong that the only fix is "replace `webContents.findInPage`"
+        — that path is untouched, still owns case-sensitive/-insensitive search for every OTHER mode, and
+        its own `find-in-page.ts` test suite is unchanged in behavior (still 15 tests; the only diff is
+        the new required `wholeWord: false` field on its fixtures). Whole-word instead runs a SECOND, independent
+        engine, selected per-request by a new `wholeWord` flag on the existing `find:start` schema (no
+        parallel IPC shape): `main/whole-word-pattern.ts` builds a `\b`-anchored regex from the query —
+        every metacharacter escaped (`escapeRegExpLiteral`), length-capped at 1024 (mirrors the schema's
+        own cap; the ReDoS guard, since an escaped-literal `\b...\b` pattern has no nested quantifiers to
+        blow up on) — and `main/whole-word-find-script.ts` is injected into an ISOLATED WORLD via
+        `executeJavaScriptInIsolatedWorld` (the `extraction-sandbox.electron.ts` mechanism, not the
+        CDP-attached perception world — no debugger attach) to text-node-scan, wrap matches in `<mark>`,
+        and step/clear, with its own match-count + active-index state kept OUT of the page's own JS realm.
+        `main/whole-word-find.ts` is the session/navigation-reset half, mirroring `find-in-page.ts`'s own
+        stale-query and navigate-away-zeroes-counters guards rather than reintroducing either bug in the
+        new path; `ipc-find.ts` stops whichever engine ISN'T selected before running the other, so
+        toggling mid-search can't leave both highlighting the page at once. The find bar's existing
+        match-case toggle got a sibling (`@tepegoz/find-bar`, own en/tr dict, same aria-pressed pattern) —
+        `useFindInPage` threads `wholeWord` through search/step/tab-switch-resync exactly like `matchCase`
+        already was. **48 new unit/component tests**: 12 pattern-escaping (`whole-word-pattern.test.ts`)
+        + 16 running the REAL injected script via `vm.runInContext` against a hand-built fake DOM
+        (`whole-word-find-script.test.ts` — main's own tsconfig deliberately has no DOM lib, so no real
+        `document`/`window`; same discipline `build-dom-tree-script.test.ts` already uses for the same
+        reason) + 13 main-process session/navigation-reset/IPC-echo (`whole-word-find.test.ts`) + 3
+        `app-find` hook + 2 find-bar component + 1 each extending `ipc-find.electron.test.ts` and
+        `schemas-tabs.test.ts` in place for the branch. **Verified
+        end to end too**: `e2e/find-in-page.spec.ts` now also drives the real toggle — "hay" (a substring
+        of "haystack", never a standalone word there) reports "No results" once whole-word is on, and
+        "needle" (a real standalone word in the fixture) still finds it — without touching the file's
+        original passing assertions. **Known, recorded limitation, not silently accepted:** JS regex `\b`
+        is ASCII-`\w` only, not Unicode-aware, so a query or surrounding text using a Turkish-specific
+        letter (ı/ş/ğ/ü/ö/ç) right at a word edge can under/over-match there; a correct fix needs
+        `\p{L}`-based custom boundary logic, not attempted here. **"Highlight all matches" and regex
+        search remain unbuilt — out of this task's scope on purpose**, not merely deferred by omission;
+        the highlight-overlay/match-marking machinery this whole-word engine now has makes "highlight
+        all" for the NATIVE path a much smaller follow-up than it was, but that follow-up is not this one.
   - [x] **Verified end to end.** `e2e/find-in-page.spec.ts` passes against the real app: the bar
         opens, the counter reads 1/3, Enter steps to 2/3, Escape closes.
   - [x] It did not work when first written, and the cause was ours. Electron's `findNext` option means

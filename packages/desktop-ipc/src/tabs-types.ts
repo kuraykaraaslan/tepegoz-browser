@@ -168,12 +168,16 @@ export interface TabStripGeometry {
 /** Payload for `find:start` — one find-in-page request against the sender window's ACTIVE tab.
  *  `findNext` marks the OPENING request of a find session (true), versus a follow-up step within the
  *  session already open (false) — it is not "go to the next match". Chromium answers a follow-up that
- *  has no open session with silence: no event, no error. */
+ *  has no open session with silence: no event, no error.
+ *
+ *  `wholeWord` selects the additive DOM matcher (`main/whole-word-find.ts`) instead of
+ *  `webContents.findInPage`; `findNext`/`forward` keep the same open/step meaning there too. */
 export interface FindInPageQuery {
   query: string;
   forward: boolean;
   findNext: boolean;
   matchCase: boolean;
+  wholeWord: boolean;
 }
 
 /** Payload for `find:result` — Chromium's `found-in-page` counts, echoed with the query they belong to

@@ -162,11 +162,33 @@ describe('navigate / create / find / zoom / process-end', () => {
         forward: true,
         findNext: false,
         matchCase: false,
+        wholeWord: false,
       }),
     ).toMatchObject({ query: 'x' });
     expect(
       FindInPageQuerySchema.safeParse({
         query: '',
+        forward: true,
+        findNext: false,
+        matchCase: false,
+        wholeWord: false,
+      }).success,
+    ).toBe(false);
+  });
+
+  it('FindInPageQuerySchema requires wholeWord — it selects the additive DOM matcher (phase-2c)', () => {
+    expect(
+      FindInPageQuerySchema.parse({
+        query: 'x',
+        forward: true,
+        findNext: false,
+        matchCase: false,
+        wholeWord: true,
+      }),
+    ).toMatchObject({ wholeWord: true });
+    expect(
+      FindInPageQuerySchema.safeParse({
+        query: 'x',
         forward: true,
         findNext: false,
         matchCase: false,

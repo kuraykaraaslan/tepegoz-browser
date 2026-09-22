@@ -69,7 +69,9 @@ describe('useFindInPage — tab-switch resync', () => {
     act(() => {
       result.current.setQuery('needle');
     });
-    expect(calls).toEqual([{ query: 'needle', forward: true, findNext: true, matchCase: false }]);
+    expect(calls).toEqual([
+      { query: 'needle', forward: true, findNext: true, matchCase: false, wholeWord: false },
+    ]);
     act(() => {
       onResult?.({ query: 'needle', activeMatchOrdinal: 2, matches: 5 });
     });
@@ -79,8 +81,8 @@ describe('useFindInPage — tab-switch resync', () => {
     rerender({ tabId: 'tab-b' });
 
     expect(calls).toEqual([
-      { query: 'needle', forward: true, findNext: true, matchCase: false },
-      { query: 'needle', forward: true, findNext: true, matchCase: false },
+      { query: 'needle', forward: true, findNext: true, matchCase: false, wholeWord: false },
+      { query: 'needle', forward: true, findNext: true, matchCase: false, wholeWord: false },
     ]);
   });
 
@@ -196,8 +198,8 @@ describe('useFindInPage — the controller actions', () => {
     act(() => result.current.next());
     act(() => result.current.previous());
     expect(calls).toEqual([
-      { query: 'needle', forward: true, findNext: false, matchCase: false },
-      { query: 'needle', forward: false, findNext: false, matchCase: false },
+      { query: 'needle', forward: true, findNext: false, matchCase: false, wholeWord: false },
+      { query: 'needle', forward: false, findNext: false, matchCase: false, wholeWord: false },
     ]);
   });
 
@@ -214,6 +216,34 @@ describe('useFindInPage — the controller actions', () => {
     act(() => result.current.toggleMatchCase());
     expect(result.current.matchCase).toBe(true);
     expect(calls.at(-1)).toMatchObject({ query: 'Needle', findNext: true, matchCase: true });
+  });
+
+  it('toggleWholeWord flips the flag and restarts the search with it', () => {
+    const { result } = mount();
+    act(() => result.current.setQuery('needle'));
+    calls = [];
+    act(() => result.current.toggleWholeWord());
+    expect(result.current.wholeWord).toBe(true);
+    expect(calls.at(-1)).toMatchObject({ query: 'needle', findNext: true, wholeWord: true });
+  });
+
+  it('toggleWholeWord back off restarts with the flag cleared, not just a local state flip', () => {
+    const { result } = mount();
+    act(() => result.current.setQuery('needle'));
+    act(() => result.current.toggleWholeWord());
+    calls = [];
+    act(() => result.current.toggleWholeWord());
+    expect(result.current.wholeWord).toBe(false);
+    expect(calls.at(-1)).toMatchObject({ query: 'needle', findNext: true, wholeWord: false });
+  });
+
+  it('every findInPage call carries the CURRENT wholeWord flag, including step requests', () => {
+    const { result } = mount();
+    act(() => result.current.setQuery('needle'));
+    act(() => result.current.toggleWholeWord());
+    calls = [];
+    act(() => result.current.next());
+    expect(calls.at(-1)).toMatchObject({ wholeWord: true });
   });
 
   it('close() ends the session and resets the counters', () => {

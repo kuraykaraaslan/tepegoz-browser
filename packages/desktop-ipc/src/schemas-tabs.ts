@@ -146,12 +146,19 @@ export const CreateBackgroundTabSchema = z.string().min(1).max(4096);
 export const ContentVisibleSchema = z.boolean();
 
 /** `find:start` payload. The query is length-capped like every other renderer-supplied string; an empty
- *  query is rejected here rather than handed to Chromium, which throws on it. */
+ *  query is rejected here rather than handed to Chromium, which throws on it.
+ *
+ *  `wholeWord` does NOT reach `webContents.findInPage` — Electron dropped the `wordStart` option it
+ *  would have mapped to (see `phases/product/phase-2c-classic-browser-essentials.md`, "Match whole
+ *  word"). When true, main runs a separate DOM-level matcher instead of the native path; the flag rides
+ *  on the same request/result shape as `matchCase` rather than a parallel schema so the renderer keeps
+ *  one code path for both modes. */
 export const FindInPageQuerySchema = z.object({
   query: z.string().min(1).max(1024),
   forward: z.boolean(),
   findNext: z.boolean(),
   matchCase: z.boolean(),
+  wholeWord: z.boolean(),
 });
 
 /** `zoom:command` payload — one omnibox zoom-indicator button press against the active tab. */

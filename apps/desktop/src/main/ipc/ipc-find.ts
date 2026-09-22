@@ -3,6 +3,7 @@ import { IpcChannels } from '@tepegoz/desktop-ipc';
 import { FindInPageQuerySchema, ZoomCommandSchema } from '@tepegoz/desktop-ipc/schemas';
 import TabManager from '../tabs';
 import { runFindInPage, stopFindInPage } from '../find-in-page';
+import { runWholeWordFind, stopWholeWordFind } from '../whole-word-find';
 import { handle, onWindowAction, onWindowSignal } from './ipc-helpers';
 
 /**
@@ -13,15 +14,30 @@ import { handle, onWindowAction, onWindowSignal } from './ipc-helpers';
  * Every channel here is window-scoped and fire-and-forget: it always targets the SENDER window's
  * active tab, so one window's find bar or zoom control can never reach into another window's page.
  * Internal (`tepegoz://`) tabs have no WebContents of their own and are simply a no-op.
+ *
+ * `find:start` picks ONE of two independent engines by `query.wholeWord` — the native
+ * `webContents.findInPage` path (`../find-in-page.ts`, untouched by this feature) or the additive
+ * isolated-world DOM matcher (`../whole-word-find.ts`) — and stops the OTHER one first, so toggling
+ * whole-word mid-search can never leave the previous engine's highlight/selection on screen alongside
+ * the new one's. `find:stop` always clears both; only one of them ever has anything to clear.
  */
 export function registerFindIpc(): void {
   onWindowAction(IpcChannels.findStart, FindInPageQuerySchema, (win, query) => {
     const wc = TabManager.forSenderWindow(win)?.activeWebContents() ?? null;
-    if (wc !== null) runFindInPage(win, wc, query);
+    if (wc === null) return;
+    if (query.wholeWord) {
+      stopFindInPage(wc);
+      void runWholeWordFind(win, wc, query);
+    } else {
+      stopWholeWordFind(wc);
+      runFindInPage(win, wc, query);
+    }
   });
 
   onWindowSignal(IpcChannels.findStop, (win) => {
-    stopFindInPage(TabManager.forSenderWindow(win)?.activeWebContents() ?? null);
+    const wc = TabManager.forSenderWindow(win)?.activeWebContents() ?? null;
+    stopFindInPage(wc);
+    stopWholeWordFind(wc);
   });
 
   // The zoom indicator's −, +, Reset. The new factor is not pushed on its own channel — `zoomActive`

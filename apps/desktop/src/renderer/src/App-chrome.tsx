@@ -248,10 +248,12 @@ export function AppChrome({
             activeMatch={find.activeMatch}
             totalMatches={find.totalMatches}
             matchCase={find.matchCase}
+            wholeWord={find.wholeWord}
             onQueryChange={find.setQuery}
             onNext={find.next}
             onPrevious={find.previous}
             onToggleMatchCase={find.toggleMatchCase}
+            onToggleWholeWord={find.toggleWholeWord}
             onClose={find.close}
           />
         </div>

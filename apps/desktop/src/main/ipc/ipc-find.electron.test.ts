@@ -48,6 +48,17 @@ vi.mock('../find-in-page', () => ({
   },
 }));
 
+const wholeWord = vi.hoisted(() => ({ run: vi.fn(), stop: vi.fn() }));
+vi.mock('../whole-word-find', () => ({
+  runWholeWordFind: (win: unknown, wc: unknown, query: unknown) => {
+    wholeWord.run(win, wc, query);
+    return Promise.resolve();
+  },
+  stopWholeWordFind: (wc: unknown) => {
+    wholeWord.stop(wc);
+  },
+}));
+
 const wt = vi.hoisted(() => ({
   // Set for real in `beforeEach`; starts null so the property type is `FakeWc | null`.
   wc: null as FakeWc | null,
@@ -72,13 +83,16 @@ const { registerFindIpc } = await import('./ipc-find');
 
 const ev = { senderFrame: { url: TRUSTED }, sender: {} };
 const evil = { senderFrame: { url: 'https://evil/' }, sender: {} };
-const QUERY = { query: 'hi', forward: true, findNext: true, matchCase: false };
+const QUERY = { query: 'hi', forward: true, findNext: true, matchCase: false, wholeWord: false };
+const WHOLE_WORD_QUERY = { ...QUERY, wholeWord: true };
 
 beforeEach(() => {
   h.handlers.clear();
   h.listeners.clear();
   find.run.mockClear();
   find.stop.mockClear();
+  wholeWord.run.mockClear();
+  wholeWord.stop.mockClear();
   wt.zoomActive.mockClear();
   wt.wc = { isDestroyed: () => false, getZoomFactor: () => 1.25 };
   wt.resolve = true;
@@ -93,20 +107,32 @@ describe('registerFindIpc', () => {
     expect([...h.handlers.keys()]).toEqual([IpcChannels.zoomGet]);
   });
 
-  it('find:start runs the query against the sender window active tab', () => {
+  it('find:start runs the query against the sender window active tab, stopping the whole-word engine first', () => {
     h.listeners.get(IpcChannels.findStart)?.(ev, QUERY);
     expect(find.run).toHaveBeenCalledWith(h.window, wt.wc, QUERY);
+    expect(wholeWord.stop).toHaveBeenCalledWith(wt.wc);
+    expect(wholeWord.run).not.toHaveBeenCalled();
+  });
+
+  it('find:start with wholeWord runs the DOM matcher instead, stopping the native engine first', () => {
+    h.listeners.get(IpcChannels.findStart)?.(ev, WHOLE_WORD_QUERY);
+    expect(wholeWord.run).toHaveBeenCalledWith(h.window, wt.wc, WHOLE_WORD_QUERY);
+    expect(find.stop).toHaveBeenCalledWith(wt.wc);
+    expect(find.run).not.toHaveBeenCalled();
   });
 
   it('find:start is a no-op when the active tab has no WebContents (internal page)', () => {
     wt.wc = null;
     h.listeners.get(IpcChannels.findStart)?.(ev, QUERY);
     expect(find.run).not.toHaveBeenCalled();
+    h.listeners.get(IpcChannels.findStart)?.(ev, WHOLE_WORD_QUERY);
+    expect(wholeWord.run).not.toHaveBeenCalled();
   });
 
-  it('find:stop clears the sender window active tab', () => {
+  it('find:stop clears both engines on the sender window active tab', () => {
     h.listeners.get(IpcChannels.findStop)?.(ev, undefined);
     expect(find.stop).toHaveBeenCalledWith(wt.wc);
+    expect(wholeWord.stop).toHaveBeenCalledWith(wt.wc);
   });
 
   it('zoom:command routes a valid direction to zoomActive', () => {
@@ -130,11 +156,14 @@ describe('registerFindIpc', () => {
 
   it('ignores an untrusted sender on every channel', () => {
     h.listeners.get(IpcChannels.findStart)?.(evil, QUERY);
+    h.listeners.get(IpcChannels.findStart)?.(evil, WHOLE_WORD_QUERY);
     h.listeners.get(IpcChannels.findStop)?.(evil, undefined);
     h.listeners.get(IpcChannels.zoomCommand)?.(evil, { direction: 'in' });
     expect(() => h.handlers.get(IpcChannels.zoomGet)?.(evil, undefined)).toThrow();
     expect(find.run).not.toHaveBeenCalled();
     expect(find.stop).not.toHaveBeenCalled();
+    expect(wholeWord.run).not.toHaveBeenCalled();
+    expect(wholeWord.stop).not.toHaveBeenCalled();
     expect(wt.zoomActive).not.toHaveBeenCalled();
   });
 });

@@ -8,4 +8,5 @@ export const tr: FindBarStrings = {
   next: 'Sonraki eşleşme',
   close: 'Bul çubuğunu kapat',
   matchCase: 'Büyük/küçük harf duyarlı',
+  wholeWord: 'Tam sözcük',
 };

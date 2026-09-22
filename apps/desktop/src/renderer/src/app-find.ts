@@ -8,12 +8,16 @@ export interface FindInPageController {
   focusKey: number;
   query: string;
   matchCase: boolean;
+  /** Runs the additive DOM matcher (`main/whole-word-find.ts`) instead of `webContents.findInPage` —
+   *  Electron dropped the native `wordStart` option this would otherwise have forwarded to. */
+  wholeWord: boolean;
   activeMatch: number;
   totalMatches: number;
   setQuery: (query: string) => void;
   next: () => void;
   previous: () => void;
   toggleMatchCase: () => void;
+  toggleWholeWord: () => void;
   close: () => void;
 }
 
@@ -35,6 +39,7 @@ export function useFindInPage(activeTabId: string | null): FindInPageController 
   const [focusKey, setFocusKey] = useState(0);
   const [query, setQueryState] = useState('');
   const [matchCase, setMatchCase] = useState(false);
+  const [wholeWord, setWholeWord] = useState(false);
   const [activeMatch, setActiveMatch] = useState(0);
   const [totalMatches, setTotalMatches] = useState(0);
 
@@ -43,6 +48,8 @@ export function useFindInPage(activeTabId: string | null): FindInPageController 
   queryRef.current = query;
   const matchCaseRef = useRef(matchCase);
   matchCaseRef.current = matchCase;
+  const wholeWordRef = useRef(wholeWord);
+  wholeWordRef.current = wholeWord;
 
   useEffect(() => {
     const offOpen = window.tepegoz.onFindOpen(() => {
@@ -61,13 +68,14 @@ export function useFindInPage(activeTabId: string | null): FindInPageController 
   }, []);
 
   /**
-   * Start a fresh search (typing, or flipping match-case) — resets to the first match.
+   * Start a fresh search (typing, or flipping match-case/whole-word) — resets to the first match.
    *
    * `findNext: true` OPENS a session; it does not mean "step to the next match". Chromium answers a
    * `findNext: false` request that has no open session with nothing at all — no `found-in-page`, no
-   * error — which is exactly how this shipped broken.
+   * error — which is exactly how this shipped broken. Main reuses the same `findNext` meaning for the
+   * whole-word engine's own `search` vs. `step` commands, so this one restart covers both.
    */
-  const restart = useCallback((next: string, nextMatchCase: boolean) => {
+  const restart = useCallback((next: string, nextMatchCase: boolean, nextWholeWord: boolean) => {
     if (next === '') {
       window.tepegoz.stopFindInPage();
       setActiveMatch(0);
@@ -79,13 +87,14 @@ export function useFindInPage(activeTabId: string | null): FindInPageController 
       forward: true,
       findNext: true,
       matchCase: nextMatchCase,
+      wholeWord: nextWholeWord,
     });
   }, []);
 
   const setQuery = useCallback(
     (next: string) => {
       setQueryState(next);
-      restart(next, matchCaseRef.current);
+      restart(next, matchCaseRef.current, wholeWordRef.current);
     },
     [restart],
   );
@@ -101,7 +110,7 @@ export function useFindInPage(activeTabId: string | null): FindInPageController 
       return;
     }
     if (openRef.current && queryRef.current !== '') {
-      restart(queryRef.current, matchCaseRef.current);
+      restart(queryRef.current, matchCaseRef.current, wholeWordRef.current);
     }
     // Re-runs the OPEN query against the newly active tab, not a mere state read — intentionally
     // depends on `activeTabId` alone (`restart`/refs are stable across renders, so omitting them
@@ -117,13 +126,20 @@ export function useFindInPage(activeTabId: string | null): FindInPageController 
       forward,
       findNext: false,
       matchCase: matchCaseRef.current,
+      wholeWord: wholeWordRef.current,
     });
   }, []);
 
   const toggleMatchCase = useCallback(() => {
     const next = !matchCaseRef.current;
     setMatchCase(next);
-    restart(queryRef.current, next);
+    restart(queryRef.current, next, wholeWordRef.current);
+  }, [restart]);
+
+  const toggleWholeWord = useCallback(() => {
+    const next = !wholeWordRef.current;
+    setWholeWord(next);
+    restart(queryRef.current, matchCaseRef.current, next);
   }, [restart]);
 
   const close = useCallback(() => {
@@ -138,6 +154,7 @@ export function useFindInPage(activeTabId: string | null): FindInPageController 
     focusKey,
     query,
     matchCase,
+    wholeWord,
     activeMatch,
     totalMatches,
     setQuery,
@@ -148,6 +165,7 @@ export function useFindInPage(activeTabId: string | null): FindInPageController 
       step(false);
     }, [step]),
     toggleMatchCase,
+    toggleWholeWord,
     close,
   };
 }

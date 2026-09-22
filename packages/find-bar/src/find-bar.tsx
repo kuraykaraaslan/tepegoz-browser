@@ -17,10 +17,14 @@ export interface FindBarProps {
   activeMatch: number;
   totalMatches: number;
   matchCase: boolean;
+  /** The host runs a separate DOM matcher for this mode (native `findInPage` has no whole-word option
+   *  left in current Electron) — same controlled-toggle shape as `matchCase`, nothing else changes. */
+  wholeWord: boolean;
   onQueryChange: (query: string) => void;
   onNext: () => void;
   onPrevious: () => void;
   onToggleMatchCase: () => void;
+  onToggleWholeWord: () => void;
   onClose: () => void;
 }
 
@@ -38,10 +42,12 @@ export function FindBar({
   activeMatch,
   totalMatches,
   matchCase,
+  wholeWord,
   onQueryChange,
   onNext,
   onPrevious,
   onToggleMatchCase,
+  onToggleWholeWord,
   onClose,
 }: FindBarProps) {
   const t = useT(findBarDict);
@@ -108,6 +114,18 @@ export function FindBar({
       >
         <span aria-hidden className="text-xs font-semibold">
           {'Aa'}
+        </span>
+      </button>
+
+      <button
+        type="button"
+        aria-label={t.wholeWord}
+        aria-pressed={wholeWord}
+        className={BTN + (wholeWord ? ' bg-surface-overlay text-text-primary' : '')}
+        onClick={onToggleWholeWord}
+      >
+        <span aria-hidden className="text-xs font-semibold underline underline-offset-2">
+          {'ab'}
         </span>
       </button>
 

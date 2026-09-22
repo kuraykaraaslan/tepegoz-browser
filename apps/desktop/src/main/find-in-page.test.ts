@@ -60,7 +60,10 @@ describe('runFindInPage', () => {
       forward: false,
       findNext: true,
       matchCase: true,
+      wholeWord: false,
     });
+    // `wholeWord` never reaches Chromium's own `findInPage` — it only selects which engine runs
+    // (`ipc-find.ts`), and this module's own call to Chromium stays exactly as it was.
     expect(wc.findInPage).toHaveBeenCalledWith('alpha', {
       forward: false,
       findNext: true,
@@ -74,6 +77,7 @@ describe('runFindInPage', () => {
       forward: true,
       findNext: false,
       matchCase: false,
+      wholeWord: false,
     });
     wc.emit('found-in-page', {}, { activeMatchOrdinal: 2, matches: 7 });
 
@@ -91,6 +95,7 @@ describe('runFindInPage', () => {
         forward: true,
         findNext: false,
         matchCase: false,
+        wholeWord: false,
       });
     };
     run('alp');
@@ -109,6 +114,7 @@ describe('runFindInPage', () => {
         forward: true,
         findNext: false,
         matchCase: false,
+        wholeWord: false,
       });
     }
     expect(wc.listenerCount('found-in-page')).toBe(1);
@@ -125,6 +131,7 @@ describe('findNext semantics (the bug this feature shipped with)', () => {
       forward: true,
       findNext: false,
       matchCase: false,
+      wholeWord: false,
     });
     expect(wc.findInPage).toHaveBeenCalledWith(
       'alpha',
@@ -133,7 +140,13 @@ describe('findNext semantics (the bug this feature shipped with)', () => {
   });
 
   it('passes a follow-up through once a session is open, so stepping keeps the match set', () => {
-    const open = { query: 'alpha', forward: true, findNext: true, matchCase: false };
+    const open = {
+      query: 'alpha',
+      forward: true,
+      findNext: true,
+      matchCase: false,
+      wholeWord: false,
+    };
     runFindInPage(asWin(win), asWc(wc), open);
     runFindInPage(asWin(win), asWc(wc), { ...open, findNext: false });
 
@@ -149,6 +162,7 @@ describe('findNext semantics (the bug this feature shipped with)', () => {
       forward: true,
       findNext: true,
       matchCase: false,
+      wholeWord: false,
     });
     stopFindInPage(asWc(wc));
     runFindInPage(asWin(win), asWc(wc), {
@@ -156,6 +170,7 @@ describe('findNext semantics (the bug this feature shipped with)', () => {
       forward: true,
       findNext: false,
       matchCase: false,
+      wholeWord: false,
     });
 
     expect(wc.findInPage).toHaveBeenLastCalledWith(
@@ -170,6 +185,7 @@ describe('findNext semantics (the bug this feature shipped with)', () => {
       forward: true,
       findNext: true,
       matchCase: false,
+      wholeWord: false,
     });
     wc.emit('did-start-navigation');
     runFindInPage(asWin(win), asWc(wc), {
@@ -177,6 +193,7 @@ describe('findNext semantics (the bug this feature shipped with)', () => {
       forward: true,
       findNext: false,
       matchCase: false,
+      wholeWord: false,
     });
 
     expect(wc.findInPage).toHaveBeenLastCalledWith(
@@ -193,6 +210,7 @@ describe('navigation', () => {
       forward: true,
       findNext: false,
       matchCase: false,
+      wholeWord: false,
     });
     win.webContents.send.mockClear();
     wc.emit('did-start-navigation');
@@ -210,6 +228,7 @@ describe('navigation', () => {
       forward: true,
       findNext: false,
       matchCase: false,
+      wholeWord: false,
     });
     wc.emit('did-start-navigation');
     win.webContents.send.mockClear();
@@ -237,6 +256,7 @@ describe('stopFindInPage', () => {
       forward: true,
       findNext: false,
       matchCase: false,
+      wholeWord: false,
     });
     stopFindInPage(asWc(wc));
     win.webContents.send.mockClear();
@@ -254,6 +274,7 @@ describe('releaseFindSession', () => {
       forward: true,
       findNext: false,
       matchCase: false,
+      wholeWord: false,
     });
     releaseFindSession(asWc(wc));
 
@@ -264,7 +285,7 @@ describe('releaseFindSession', () => {
 
 describe('view teardown', () => {
   it("the view's own 'destroyed' event drops the session so a later find re-subscribes", () => {
-    const q = { query: 'a', forward: true, findNext: false, matchCase: false };
+    const q = { query: 'a', forward: true, findNext: false, matchCase: false, wholeWord: false };
     runFindInPage(asWin(win), asWc(wc), q);
     expect(wc.listenerCount('found-in-page')).toBe(1);
 

@@ -9,6 +9,7 @@ export const en = {
   next: 'Next match',
   close: 'Close find bar',
   matchCase: 'Match case',
+  wholeWord: 'Whole word',
 };
 
 export type FindBarStrings = typeof en;
