@@ -204,6 +204,17 @@ export interface TokenUsageSnapshot {
    * on a build where the runtime does not report it.
    */
   contextTokens: number;
+  /**
+   * Peak resident memory (bytes) attributed to the CURRENT run's lifetime — the main process plus
+   * whichever renderer hosted the run's working tab at each sample (S7 PR6 "Resource accounting per
+   * run"). Undefined before any run has completed, or on a snapshot fetched outside a run's own
+   * `finally` (e.g. the on-demand `getTokenUsage()` read) — display-only, main-authored telemetry, not
+   * itself a decision input.
+   */
+  peakRssBytes?: number;
+  /** CPU-seconds attributed to the current run's lifetime (main process only — see the tracker's own
+   *  doc for why). Same availability as {@link peakRssBytes}. */
+  cpuSeconds?: number;
 }
 
 /**

@@ -127,6 +127,13 @@ const bh = vi.hoisted(() => ({
 }));
 vi.mock('../agent/browser-host.electron', () => bh);
 
+const resourceTracker = vi.hoisted(() => ({
+  startRunResourceTracking: vi.fn(() => ({ __tracker: true })),
+  sampleRunResource: vi.fn(),
+  finishRunResourceTracking: vi.fn(() => ({ peakRssBytes: 123, cpuSeconds: 4.5 })),
+}));
+vi.mock('../agent/run-resource-tracker.electron', () => resourceTracker);
+
 vi.mock('../tabs', () => ({
   default: { getState: vi.fn(() => ({ tabs: [] as unknown[], activeId: null })) },
 }));
@@ -268,6 +275,8 @@ beforeEach(() => {
   PlanGrantStore.mint.mockReturnValue({ domains: [], tiers: [] });
   planGrantScopeMock.mockReturnValue({ urls: [], tiers: [] });
   bh.browserHost.listTabs.mockReturnValue([]);
+  resourceTracker.startRunResourceTracking.mockReturnValue({ __tracker: true });
+  resourceTracker.finishRunResourceTracking.mockReturnValue({ peakRssBytes: 123, cpuSeconds: 4.5 });
   send = vi.fn();
   event = { sender: { isDestroyed: () => false, send } };
   registerAgentRunIpc();
@@ -340,6 +349,39 @@ describe('a real run', () => {
     const res = await run();
     expect(res.completionOutcome).toBe('verified');
     expect(res).not.toHaveProperty('evidence');
+  });
+
+  it('tracks resource usage across the run and folds it into the token-usage push', async () => {
+    await run();
+    expect(resourceTracker.startRunResourceTracking).toHaveBeenCalledTimes(1);
+    hooksArg().onEvent('step_start', 'step 1');
+    hooksArg().onEvent('step_ok', 'clicked');
+    expect(resourceTracker.sampleRunResource).toHaveBeenCalledTimes(2);
+    expect(resourceTracker.sampleRunResource).toHaveBeenCalledWith({ __tracker: true });
+    expect(resourceTracker.finishRunResourceTracking).toHaveBeenCalledWith({ __tracker: true });
+    expect(shared.tokenUsage).toHaveBeenCalledWith({ peakRssBytes: 123, cpuSeconds: 4.5 });
+  });
+
+  it('does not sample on a non-step event (e.g. an input_action)', async () => {
+    await run();
+    resourceTracker.sampleRunResource.mockClear();
+    hooksArg().onEvent('grant', 'used a remembered grant');
+    expect(resourceTracker.sampleRunResource).not.toHaveBeenCalled();
+  });
+
+  it('still sends a token-usage push (without a resource fields crash) when the resource finish throws', async () => {
+    resourceTracker.finishRunResourceTracking.mockImplementationOnce(() => {
+      throw new Error('resourceUsage unavailable');
+    });
+    await run();
+    expect(Logger.warn).toHaveBeenCalledWith(
+      'Run resource finish failed',
+      expect.objectContaining({
+        err: expect.stringContaining('resourceUsage unavailable') as string,
+      }),
+    );
+    expect(shared.tokenUsage).toHaveBeenLastCalledWith(undefined);
+    expect(send).toHaveBeenLastCalledWith(IpcChannels.tokenUsage, expect.anything());
   });
 
   it('throws 429 at the pre-flight quota gate, still refunds and releases', async () => {

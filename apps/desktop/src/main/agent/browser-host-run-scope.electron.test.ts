@@ -220,6 +220,49 @@ describe('runActiveTabUrl', () => {
   });
 });
 
+describe('runWorkingTabPid', () => {
+  it('is null when there is no active tab', async () => {
+    const mod = await load();
+    expect(mod.runWorkingTabPid()).toBeNull();
+  });
+
+  it("returns the active tab's OS pid, resolved through the SAME latch as runActiveTabUrl", async () => {
+    const mod = await load();
+    const wc = {
+      isDestroyed: () => false,
+      getURL: () => 'https://site.test/page',
+      getOSProcessId: () => 4242,
+    };
+    TabManager.activeWebContents.mockReturnValue(wc);
+    mod.setCurrentAgentRun('r1', 'g1', vi.fn());
+
+    const pid = await mod.withAgentRunScope('r1', () => Promise.resolve(mod.runWorkingTabPid()));
+    expect(pid).toBe(4242);
+  });
+
+  it('is null when reading the pid throws (mirrors the Task Manager pid try/catch)', async () => {
+    const mod = await load();
+    TabManager.activeWebContents.mockReturnValue({
+      isDestroyed: () => false,
+      getURL: () => 'https://site.test/',
+      getOSProcessId: () => {
+        throw new Error('destroyed mid-read');
+      },
+    });
+    expect(mod.runWorkingTabPid()).toBeNull();
+  });
+
+  it('is null when the reported pid is not positive', async () => {
+    const mod = await load();
+    TabManager.activeWebContents.mockReturnValue({
+      isDestroyed: () => false,
+      getURL: () => 'https://site.test/',
+      getOSProcessId: () => 0,
+    });
+    expect(mod.runWorkingTabPid()).toBeNull();
+  });
+});
+
 describe('the browserHost object', () => {
   const wc = () => ({
     isDestroyed: () => false,

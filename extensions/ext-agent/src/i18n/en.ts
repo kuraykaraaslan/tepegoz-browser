@@ -162,6 +162,15 @@ export const en = {
     tooltip:
       "The model's working memory for this task — about {used} of ~{max} tokens. As it fills, the agent summarises earlier steps to keep going, which is why a long run can suddenly compact. This is not your token quota; the window size is an estimate for this model.",
   },
+  // Resource chip (S7 PR6 "Resource accounting per run") — peak memory + CPU time the run itself cost,
+  // shown next to the token chip (which measures $ cost, a different thing). {mem}/{cpu} are filled by
+  // the caller. Hidden entirely until a run has completed and reported a measurement.
+  resourceUsage: {
+    label: 'Peak memory: {mem} · CPU: {cpu}',
+    aria: 'Peak memory used by this run: {mem}. CPU time: {cpu}.',
+    tooltip:
+      "Resident memory and CPU time attributed to this run's whole lifetime — the main process, plus whichever tab it drove. A cost signal for whether this run made your browser slow, not a security or token-quota measure.",
+  },
   // The agentic command palette (Chat/Do/Make/Tasks) — this extension owns the surface.
   commandPalette: {
     modes: 'Modes',

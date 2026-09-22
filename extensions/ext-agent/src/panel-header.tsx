@@ -4,6 +4,7 @@ import type { AIProvider } from '@tepegoz/shared-types/providers';
 import type { AgentStrings } from './i18n';
 import type { AgentConversationDetail, AgentHostApi, TokenUsageSnapshot } from './types';
 import { ContextGauge } from './panel-context-gauge';
+import { ResourceChip } from './panel-resource-chip';
 import { ConversationHistoryDropdown } from './conversation-history-dropdown';
 import { CheckIcon, CloseIcon, NewTaskIcon, ScheduleIcon, SparkIcon } from './panel-icons';
 import { ICON_BTN } from './panel-styles';
@@ -107,6 +108,9 @@ export function PanelHeader({
                 {a.tokens}: {tokens.totalTokens.toLocaleString()}
               </span>
             )
+          )}
+          {tokens !== null && (
+            <ResourceChip peakRssBytes={tokens.peakRssBytes} cpuSeconds={tokens.cpuSeconds} a={a} />
           )}
           <ConversationHistoryDropdown
             api={api}

@@ -84,9 +84,19 @@ export function requireAgentEnabled(): void {
   if (!agentEnabled()) throw new AppError('Agent extension is disabled', 403, 'extensionDisabled');
 }
 
+/** Peak RSS + CPU-seconds attributed to one run's lifetime (S7 PR6) — built by the caller from
+ *  `run-resource-tracker.electron.ts` and folded into {@link tokenUsage}'s snapshot so the resource
+ *  chip renders in the SAME push as the token chip, never a second channel. */
+export interface RunResourceUsageFields {
+  peakRssBytes: number;
+  cpuSeconds: number;
+}
+
 /** Live token snapshot: this run's counter (in-memory ledger) + the account quota and persisted
- *  lifetime usage (SQLite Token Ledger), so the panel can render the quota indicator + 80% warning. */
-export function tokenUsage(): TokenUsageSnapshot {
+ *  lifetime usage (SQLite Token Ledger), so the panel can render the quota indicator + 80% warning.
+ *  `resourceUsage` is supplied only by the run's own `finally` (see `ipc-agent-run.ts`) — a generic
+ *  on-demand read (`getTokenUsage()`) has no run to attribute resource cost to and omits the fields. */
+export function tokenUsage(resourceUsage?: RunResourceUsageFields): TokenUsageSnapshot {
   const t = TokenLedger.totals();
   const db = getDb();
   const quota = PreferenceStore.getAll().agentTokenQuota;
@@ -100,6 +110,7 @@ export function tokenUsage(): TokenUsageSnapshot {
     // Peak prompt size of any one model call this run — the run's real context-window pressure,
     // which the cumulative counter above cannot show. Feeds the panel's context-fullness gauge.
     contextTokens: TokenLedger.peakContextTokens(),
+    ...(resourceUsage !== undefined ? resourceUsage : {}),
   };
 }
 

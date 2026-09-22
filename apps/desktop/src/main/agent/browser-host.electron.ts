@@ -421,6 +421,25 @@ export function runActiveTabUrl(): string | undefined {
   return url.length > 0 ? url : undefined;
 }
 
+/**
+ * OS pid of the tab THIS run is working in, for resource-sampling attribution (S7 PR6 "Resource
+ * accounting per run"). Reuses the SAME tab-to-process resolution `runActiveTabUrl` does
+ * ({@link resolveRunTab}, the run's latched working tab) rather than a second lookup, so "which renderer
+ * is this run's cost" and "which page is this run's site context" always agree. Null when the run has
+ * no working tab yet, or its OS pid cannot be read (mirrors the try/catch in the Task Manager's own
+ * `liveTabs()`, `process-metrics.electron.ts`, which the same call can fail the same way).
+ */
+export function runWorkingTabPid(): number | null {
+  const wc = resolveRunTab();
+  if (wc === null || wc.isDestroyed()) return null;
+  try {
+    const pid = wc.getOSProcessId();
+    return pid > 0 ? pid : null;
+  } catch {
+    return null;
+  }
+}
+
 // --- Cursor overlay wiring ---
 
 function sendCursorPosition(x: number, y: number, visible: boolean): void {

@@ -151,6 +151,15 @@ export const tr: AgentStrings = {
     tooltip:
       'Modelin bu görevdeki çalışma belleği — yaklaşık {max} tokenin {used} kadarı. Doldukça ajan devam edebilmek için önceki adımları özetler; uzun bir çalışmanın aniden sıkışmasının nedeni budur. Bu, token kotanız değildir; pencere boyutu bu model için bir tahmindir.',
   },
+  // Kaynak rozeti (S7 PR6 "Çalışma başına kaynak muhasebesi") — çalışmanın kendisine mal olan en yüksek
+  // bellek + CPU süresi, token rozetinin (o, $ maliyetini ölçer — farklı bir şey) yanında gösterilir.
+  // {mem}/{cpu} çağıran tarafından doldurulur. Bir çalışma tamamlanıp bir ölçüm bildirene kadar gizlidir.
+  resourceUsage: {
+    label: 'En yüksek bellek: {mem} · CPU: {cpu}',
+    aria: 'Bu çalışmanın kullandığı en yüksek bellek: {mem}. CPU süresi: {cpu}.',
+    tooltip:
+      'Bu çalışmanın tüm ömrü boyunca kullandığı bellek ve CPU süresi — ana süreç ile çalıştığı sekmenin toplamı. Bu çalışmanın tarayıcınızı yavaşlatıp yavaşlatmadığına dair bir maliyet göstergesidir; bir güvenlik ya da token kotası ölçütü değildir.',
+  },
   // Agentic komut paleti (Sohbet/Yap/Üret/Görevler) — bu yüzeyin sahibi bu eklenti.
   commandPalette: {
     modes: 'Modlar',

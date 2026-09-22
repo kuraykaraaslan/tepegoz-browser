@@ -150,8 +150,29 @@ Targets are **derived from S0's baseline** and **pre-registered in PR1 before an
       true or marketing.**
 - [ ] **Idle cost is zero.** No polling, no held sockets, no CDP attachment, no wake-ups while no run is
       active — measured as CPU% and wake-ups per minute on an idle window, not asserted.
-- [ ] **Resource accounting per run** — peak RSS and CPU-seconds attributed to an agent run and visible next to
+- [x] **Resource accounting per run** — peak RSS and CPU-seconds attributed to an agent run and visible next to
       its token cost, so "the agent made my browser slow" becomes a number instead of an argument.
+      **Landed.** CPU-seconds is a single `process.resourceUsage()` before/after diff on the MAIN process
+      (exact, zero polling); peak RSS samples `app.getAppMetrics()` — the Task Manager's own source
+      (`process-metrics.electron.ts`), no second mechanism — but only on step transitions
+      (`step_start`/`step_ok`/`step_error`/`done`/`error`) inside `ipc-agent-run.ts`'s `onEvent`, never on
+      an interval, so idle cost stays zero exactly as this section's own adjacent line demands. Each sample
+      is attributed to the main pid plus whichever renderer the run's working tab resolves to AT THAT
+      MOMENT, via a new `runWorkingTabPid()` in `browser-host.electron.ts` that reuses the SAME latch
+      (`resolveRunTab`) `runActiveTabUrl` already uses — a run that switches tabs mid-run is attributed to
+      its new tab's renderer on later samples, not a pid frozen at run start. Pure accumulator
+      (`@tepegoz/tab-engine`'s `run-resource-metrics.ts`: peak-is-a-high-water-mark not the latest sample,
+      a pid missing from a snapshot contributes 0 not a throw, zero-sample run reports 0 — 10 tests) +
+      Electron glue (`apps/desktop/src/main/agent/run-resource-tracker.electron.ts`, started at run start
+      and closed in the run's `finally`). Surfaced by extending `TokenUsageSnapshot` with optional
+      `peakRssBytes`/`cpuSeconds` — the SAME main→renderer push the token chip already uses, no new IPC
+      channel or zod boundary (same precedent as `contextTokens`, S8 PR8 A2) — rendered by a new
+      `ResourceChip` (`panel-resource-chip.tsx`) beside the token chip in `PanelHeader`, hidden until a run
+      has actually reported a measurement. en+tr strings (`resourceUsage.*`) with i18n parity; 7 component
+      tests + 3 new `browser-host-run-scope.electron.test.ts` cases + 3 new
+      `ipc-agent-run.electron.test.ts` wiring cases. Kept ephemeral (like the live token indicator, not
+      persisted the way `TokenStore` persists tokens) — a debugging number nobody asked to survive a
+      restart, per this doc's own steer against overbuilding it.
 - [ ] **Dependency-aware parallelism** stays owned by [Phase 1b](../product/phase-1b-agentic-deepening.md)
       (parallel DAG) — recorded here only so the speed phase does not claim a win that another phase must
       deliver.

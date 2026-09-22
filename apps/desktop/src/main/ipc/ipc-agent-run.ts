@@ -39,6 +39,11 @@ import {
   setCurrentAgentRun,
   withAgentRunScope,
 } from '../agent/browser-host.electron';
+import {
+  finishRunResourceTracking,
+  sampleRunResource,
+  startRunResourceTracking,
+} from '../agent/run-resource-tracker.electron';
 import TabManager from '../tabs';
 import { planGrantScope } from '../agent/plan-grant-scope';
 import {
@@ -260,6 +265,10 @@ export function registerAgentRunIpc(): void {
     // something that by definition happens once.
     const runStartedAt = Date.now();
     let sentFirstDelta = false;
+    // S7 PR6 "Resource accounting per run": started here (run start) and closed out in the `finally`
+    // below (run end) — never on an interval, so an idle app never samples. See the tracker module's
+    // own doc for the idle-cost-zero argument.
+    const resourceState = startRunResourceTracking();
     const onModelDelta = (text: string): void => {
       if (sender.isDestroyed()) return;
       const payload = {
@@ -276,7 +285,18 @@ export function registerAgentRunIpc(): void {
       sentFirstDelta = true;
       sender.send(IpcChannels.agentDelta, parsed.data);
     };
+    // Sample on step transitions only — bounded by how many steps the run actually takes, not a timer.
+    // 'done'/'error' catch the terminal sample so the run's very last state is reflected, not only its
+    // last step.
+    const RESOURCE_SAMPLE_KINDS = new Set<AgentEventKind>([
+      'step_start',
+      'step_ok',
+      'step_error',
+      'done',
+      'error',
+    ]);
     const onEvent = (kind: AgentEventKind, message: string, detail?: string): void => {
+      if (RESOURCE_SAMPLE_KINDS.has(kind)) sampleRunResource(resourceState);
       sendEvent({
         runId,
         groupId,
@@ -727,7 +747,17 @@ export function registerAgentRunIpc(): void {
           // by key, and the locks are map deletes. A crash or a cancel cannot leave any of them claimed —
           // which is also why grants never need to be persisted.
           releaseClaims();
-          if (!sender.isDestroyed()) sender.send(IpcChannels.tokenUsage, tokenUsage());
+          // Close out resource tracking with the run — the peak/CPU numbers ride the SAME push as the
+          // token snapshot so the panel renders them together, never a second event. Best-effort like
+          // the ledger persist above: a failed read must never break the run's teardown.
+          let resourceUsage: { peakRssBytes: number; cpuSeconds: number } | undefined;
+          try {
+            resourceUsage = finishRunResourceTracking(resourceState);
+          } catch (err) {
+            Logger.warn('Run resource finish failed', { err: String(err) });
+          }
+          if (!sender.isDestroyed())
+            sender.send(IpcChannels.tokenUsage, tokenUsage(resourceUsage));
         }
       }),
     );
