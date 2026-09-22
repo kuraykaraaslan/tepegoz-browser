@@ -932,6 +932,24 @@ export const en = {
     binaryBrowse: 'Browse…',
     binaryChange: 'Change…',
     binaryClear: 'Clear',
+    // First-run "test this connection" (Phase 5 onboarding): config parse → handshake → a coarse
+    // reachability read-out, each stage's pass/fail/skip stated in words, never colour alone.
+    test: {
+      run: 'Test connection',
+      running: 'Testing…',
+      resultTitle: 'Test result',
+      stageConfig: 'Checking the configuration',
+      stageHandshake: 'Connecting',
+      stageReachability: 'Confirming it reaches the internet',
+      stagePass: 'Succeeded',
+      stageFailed: 'Failed',
+      stageSkipped: 'Not attempted',
+      stageSkippedDetail: 'An earlier step failed first, so this was not attempted.',
+      reachabilityUnverified:
+        'Connected. Tepegöz cannot yet independently confirm that DNS lookups and sites are reached through the tunnel — treat a successful connection as a good sign, not final proof.',
+      reachabilityNotReached: 'Not reached, because an earlier step failed.',
+      unreadable: 'The test result could not be read.',
+    },
   },
 };
 

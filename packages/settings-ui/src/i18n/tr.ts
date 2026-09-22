@@ -923,5 +923,24 @@ export const tr: SettingsStrings = {
     binaryBrowse: 'Gözat…',
     binaryChange: 'Değiştir…',
     binaryClear: 'Temizle',
+    // İlk kullanımda "bu bağlantıyı test et" (Faz 5): yapılandırma kontrolü → el sıkışma → kaba bir
+    // erişilebilirlik sonucu; her adımın başarılı/başarısız/denenmedi durumu sözcüklerle belirtilir,
+    // yalnızca renkle değil.
+    test: {
+      run: 'Bağlantıyı test et',
+      running: 'Test ediliyor…',
+      resultTitle: 'Test sonucu',
+      stageConfig: 'Yapılandırma kontrol ediliyor',
+      stageHandshake: 'Bağlanılıyor',
+      stageReachability: 'İnternete ulaştığı doğrulanıyor',
+      stagePass: 'Başarılı',
+      stageFailed: 'Başarısız',
+      stageSkipped: 'Denenmedi',
+      stageSkippedDetail: 'Önceki adım başarısız olduğu için bu adım denenmedi.',
+      reachabilityUnverified:
+        'Bağlandı. Tepegöz, DNS aramalarının ve sitelere erişimin tünelden geçtiğini henüz bağımsız olarak doğrulayamıyor — başarılı bir bağlantıyı iyi bir işaret say, kesin kanıt olarak değil.',
+      reachabilityNotReached: 'Önceki bir adım başarısız olduğu için buraya ulaşılamadı.',
+      unreadable: 'Test sonucu okunamadı.',
+    },
   },
 };

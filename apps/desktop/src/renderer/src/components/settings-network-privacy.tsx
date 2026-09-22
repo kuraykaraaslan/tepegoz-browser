@@ -12,6 +12,7 @@ import { AlertBanner, Badge, Button, Card, cn } from '@tepegoz/ui';
 import { AddConnectionRow } from './settings-network-forms';
 import { ConfirmAction } from './settings-confirm';
 import { NetworkHealthCard } from './settings-network-health';
+import { ConnectionTestAction } from './settings-network-test';
 import { NetworkRoutesCard } from './settings-network-routes';
 import { CrossLink, Select } from './settings-shared';
 import { classifyNetworkError } from './network-error';
@@ -201,6 +202,12 @@ function ConnectionRow({
             void window.tepegoz.removeNetworkConnection(c.id).then(onChanged, () => undefined);
           }}
         />
+      </div>
+      {/* First-run "test this connection" (Phase 5 onboarding): a plain-language, per-stage result the
+          user can run right after saving a connection, or any time later. Below the row rather than
+          inside its flex, same reasoning as `identityOutcome` — this can grow to several lines. */}
+      <div className="mt-1.5">
+        <ConnectionTestAction c={c} s={s} />
       </div>
       {identityOutcome !== null && (
         <p

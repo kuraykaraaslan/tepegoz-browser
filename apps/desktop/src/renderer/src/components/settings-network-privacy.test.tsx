@@ -65,6 +65,7 @@ const bridge = {
   setNetworkBinaryPath: vi.fn(() => Promise.resolve()),
   addNetworkConnection: vi.fn(() => Promise.resolve()),
   pickWireguardProfile: vi.fn(),
+  testNetworkConnection: vi.fn(),
 };
 
 beforeEach(() => {

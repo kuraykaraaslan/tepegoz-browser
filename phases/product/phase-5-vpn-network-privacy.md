@@ -421,9 +421,33 @@ endpoint** (one loopback port per active connection), never an OS-level system p
 > install/usability, versus 10% about anonymity itself. Phase 5a currently expects the user to bring a
 > WireGuard config and read status words. That is the same cliff.
 
-- [ ] **First-run flow for a tunnel** — import a config, name it, test it, and see a plain-language result;
+- [~] **First-run flow for a tunnel** — import a config, name it, test it, and see a plain-language result;
       a failed test says which step failed (config parse / handshake / DNS / exit reachability), not "not
-      connected"
+      connected". _Landed 2026-09-22 as a "Test connection" action on the EXISTING add-connection row
+      (`ConnectionTestAction`, [settings-network-test.tsx](../../apps/desktop/src/renderer/src/components/settings-network-test.tsx))
+      rather than a separate wizard, so it runs immediately after saving a connection or any time later.
+      Main-process stage classification ([connection-test.electron.ts](../../apps/desktop/src/main/network/connection-test.electron.ts),
+      11 tests) over a new `network:test-connection` IPC (zod-validated request, `ConnectionTestResultSchema`
+      in `@tepegoz/shared-types`, `safeParse`d again at the renderer boundary — degrades to "could not be
+      read" rather than trusting a malformed shape). **Two stages are real and independently distinguished:**
+      `configParse` re-runs the EXACT synchronous checks a connection already passed at add time (WireGuard
+      secret decrypt + `parseWireGuardConfig`, a Tor upstream's continued existence) with no network attempt;
+      `handshake` is the connection pool's own `ensureUp` — the same call the manual Connect button makes,
+      not a second way to bring a tunnel up. Every failed stage renders the SAME localized sentence
+      `classifyNetworkError` already produces for the connections overview's `lastError`, never raw
+      provider text as the primary message (kept on `title=`). **DNS and exit reachability are NOT built
+      as independent stages, and stay `[~]` for that reason.** The only reusable signal past a successful
+      handshake is `ensureTunnelSession`'s `resolveProxy` check (already inside `ensureUp`) — proof the
+      session's proxy config took effect, not that the tunnel can resolve a name or reach a real
+      destination. Turning either into a real, distinct check would mean adding new probing logic inside
+      the connection pool's connect path, which this change deliberately does not touch (scoped down per
+      this task's own instruction rather than fabricating a pass). Both fold into one coarse `reachability`
+      result (`unverified` on a successful handshake, `notReached` otherwise), shown as its own honest
+      sentence rather than a third stage. en+tr, `keyPaths`-parity tested; each stage's pass/fail/skip
+      state is named in text next to its icon, never colour alone. 6 test files touched (3 new: the
+      main-process stage classifier, the renderer's `parseConnectionTestResult`, and the component;
+      3 extended: `ipc-network`, the preload bridge, the connections overview), 26 new tests across
+      main, preload, and renderer._
 - [x] **Connection health over time** — keep-alive, reconnect, and per-connection metrics (handshake
       success rate, reconnect count, last error) surfaced in the connections overview, so a tunnel that dies
       quietly is visible instead of being discovered through a leak. _Landed 2026-09-08: the pool tracks

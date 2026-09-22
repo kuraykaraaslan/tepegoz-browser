@@ -29,6 +29,7 @@ const IpcChannels = {
   networkPickBinaryFolder: 'network:pick-binary-folder',
   networkRemoveConnection: 'network:remove-connection',
   networkNewIdentity: 'network:new-identity',
+  networkTestConnection: 'network:test-connection',
   networkState: 'network:state',
 };
 vi.mock('@tepegoz/desktop-ipc', () => ({ IpcChannels }));
@@ -43,6 +44,7 @@ const schemas = vi.hoisted(() => ({
   VpnBinarySchema: { parse: vi.fn() },
   SetConnectionActiveSchema: { parse: vi.fn() },
   SetGeneralBindingSchema: { parse: vi.fn() },
+  TestNetworkConnectionSchema: { parse: vi.fn() },
 }));
 vi.mock('@tepegoz/desktop-ipc/schemas', () => schemas);
 vi.mock('@tepegoz/shared-types', () => ({ isValidConnectionId: (s: string) => s.length > 0 }));
@@ -120,6 +122,28 @@ const pool = vi.hoisted(() => ({
   newIdentity: vi.fn(() => Promise.resolve({ reconnected: true })),
 }));
 vi.mock('../network/connection-pool.electron', () => ({ default: pool }));
+
+interface TestStage {
+  status: 'pass' | 'fail' | 'skipped';
+  detail: string | null;
+}
+interface TestResult {
+  connectionId: string;
+  configParse: TestStage;
+  handshake: TestStage;
+  reachability: 'notReached' | 'unverified';
+}
+const connectionTest = vi.hoisted(() => ({
+  testConnection: vi.fn<(id: string) => Promise<TestResult>>(() =>
+    Promise.resolve({
+      connectionId: 'c1',
+      configParse: { status: 'pass', detail: null },
+      handshake: { status: 'pass', detail: null },
+      reachability: 'unverified',
+    }),
+  ),
+}));
+vi.mock('../network/connection-test.electron', () => ({ default: connectionTest }));
 const backgroundConnections = vi.hoisted(() => ({ notifyEgressChange: vi.fn() }));
 vi.mock('../extensions/background-connection.electron', () => ({
   default: backgroundConnections,
@@ -165,6 +189,12 @@ beforeEach(() => {
     throw new Error('not found');
   });
   bins.findBinaryInFolder.mockReturnValue(null);
+  connectionTest.testConnection.mockResolvedValue({
+    connectionId: 'c1',
+    configParse: { status: 'pass', detail: null },
+    handshake: { status: 'pass', detail: null },
+    reachability: 'unverified',
+  });
   mod.registerNetworkIpc();
 });
 
@@ -390,6 +420,22 @@ describe('the remaining setters', () => {
     expect(binding.releaseConnection.mock.invocationCallOrder[0]).toBeLessThan(
       pool.remove.mock.invocationCallOrder[0]!,
     );
+  });
+});
+
+describe('networkTestConnection', () => {
+  it('delegates to ConnectionTest.testConnection and rebroadcasts', async () => {
+    schemas.TestNetworkConnectionSchema.parse.mockReturnValue('c1');
+    connectionTest.testConnection.mockResolvedValue({
+      connectionId: 'c1',
+      configParse: { status: 'pass', detail: null },
+      handshake: { status: 'fail', detail: 'wireproxy did not come up: bad key material' },
+      reachability: 'notReached',
+    });
+    const result = await call(IpcChannels.networkTestConnection, 'c1');
+    expect(connectionTest.testConnection).toHaveBeenCalledWith('c1');
+    expect(result).toMatchObject({ reachability: 'notReached' });
+    expect(bw.getAllWindows).toHaveBeenCalled();
   });
 });
 

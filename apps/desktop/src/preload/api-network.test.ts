@@ -58,6 +58,11 @@ describe('connection + binary management', () => {
     expect(invoke).toHaveBeenCalledWith(IpcChannels.networkRemoveConnection, 'c1');
   });
 
+  it('testNetworkConnection sends the bare id', () => {
+    void networkApi.testNetworkConnection('c1');
+    expect(invoke).toHaveBeenCalledWith(IpcChannels.networkTestConnection, 'c1');
+  });
+
   it('setNetworkConnectionActive → { id, active }', () => {
     void networkApi.setNetworkConnectionActive('c1', false);
     expect(invoke).toHaveBeenCalledWith(IpcChannels.networkSetActive, { id: 'c1', active: false });

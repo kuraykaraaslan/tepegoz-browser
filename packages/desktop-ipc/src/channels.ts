@@ -235,6 +235,8 @@ export const IpcChannels = {
   networkRemoveConnection: 'network:remove-connection',
   /** Tor "new identity": new circuits AND a wipe of that connection's site state, in one action. */
   networkNewIdentity: 'network:new-identity',
+  /** The manual "test this connection" flow: config parse → handshake → a coarse reachability signal. */
+  networkTestConnection: 'network:test-connection',
   // Browser downloads (`tepegoz://downloads`). State is pushed live from the main-process DownloadService.
   downloadsList: 'downloads:list',
   downloadsCommand: 'downloads:command',

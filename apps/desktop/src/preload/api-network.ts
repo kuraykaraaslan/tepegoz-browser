@@ -8,6 +8,7 @@ import {
   type ScopeBindingInput,
   type TepegozApi,
 } from '@tepegoz/desktop-ipc';
+import type { ConnectionTestResult } from '@tepegoz/shared-types';
 import { invoke } from './ipc-invoke';
 
 /** Network-privacy (Phase 5) bridge methods. The renderer names scopes and connections by id and never
@@ -22,6 +23,7 @@ export const networkApi: Pick<
   | 'addNetworkConnection'
   | 'removeNetworkConnection'
   | 'newNetworkIdentity'
+  | 'testNetworkConnection'
   | 'pickWireguardProfile'
   | 'setNetworkConnectionActive'
   | 'setNetworkBinaryPath'
@@ -48,6 +50,8 @@ export const networkApi: Pick<
   removeNetworkConnection: (id: string) => invoke<void>(IpcChannels.networkRemoveConnection, id),
   newNetworkIdentity: (id: string) =>
     invoke<{ reconnected: boolean }>(IpcChannels.networkNewIdentity, id),
+  testNetworkConnection: (id: string) =>
+    invoke<ConnectionTestResult>(IpcChannels.networkTestConnection, id),
   pickWireguardProfile: () =>
     invoke<PickedWireguardProfile | null>(IpcChannels.networkPickWireguard),
   setNetworkConnectionActive: (id: string, active: boolean) =>

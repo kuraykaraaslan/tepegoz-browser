@@ -1,4 +1,5 @@
 import type {
+  ConnectionTestResult,
   LiveConnectionStatus,
   NetworkConnection,
   NetworkGeneralBinding,
@@ -165,6 +166,12 @@ export interface NetworkApi {
    * came back up, which is not the same question as whether the identity is clean.
    */
   newNetworkIdentity(id: string): Promise<{ reconnected: boolean }>;
+  /**
+   * Run the manual "test this connection" flow on a SAVED connection: config parse, then a real
+   * handshake attempt (the same attempt the manual Connect button and the kill-switch's `ensureUp`
+   * already make). Rejects with `networkNoSuchConnection` for an unknown id.
+   */
+  testNetworkConnection(id: string): Promise<ConnectionTestResult>;
   /** Open a file picker for a WireGuard `.conf` and parse it. `null` when the user cancelled; rejects
    *  with the parser's own message when the file is not a usable profile. */
   pickWireguardProfile(): Promise<PickedWireguardProfile | null>;

@@ -22,8 +22,9 @@ import {
   VpnBinarySchema,
   SetConnectionActiveSchema,
   SetGeneralBindingSchema,
+  TestNetworkConnectionSchema,
 } from '@tepegoz/desktop-ipc/schemas';
-import { isValidConnectionId } from '@tepegoz/shared-types';
+import { isValidConnectionId, type ConnectionTestResult } from '@tepegoz/shared-types';
 import { classifySlowCause } from '@tepegoz/security-policy';
 import PreferenceStore from '@tepegoz/preferences';
 import {
@@ -37,6 +38,7 @@ import { parseWireGuardConfig, summarize } from '../network/wireguard-config';
 import TabManager from '../tabs';
 import BindingService from '../network/binding-service.electron';
 import ConnectionPool, { type PoolConnectionView } from '../network/connection-pool.electron';
+import ConnectionTest from '../network/connection-test.electron';
 import BackgroundConnectionService from '../extensions/background-connection.electron';
 import { handleAsync } from './ipc-helpers';
 
@@ -413,6 +415,18 @@ export function registerNetworkIpc(): void {
         tabs: affected.length,
         reconnected: result.reconnected,
       });
+      broadcastNetworkState();
+      return result;
+    },
+  );
+
+  handleAsync(
+    IpcChannels.networkTestConnection,
+    async (_event, payload): Promise<ConnectionTestResult> => {
+      const id = TestNetworkConnectionSchema.parse(payload);
+      const result = await ConnectionTest.testConnection(id);
+      // A test that reaches the handshake stage can change the connection's live status (a successful
+      // test brings it up, same as the manual Connect button) — the chrome's indicators must see that.
       broadcastNetworkState();
       return result;
     },

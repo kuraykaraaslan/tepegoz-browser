@@ -171,3 +171,49 @@ export const SLOW_CAUSES = [
 ] as const;
 export const SlowCauseSchema = z.enum(SLOW_CAUSES);
 export type SlowCause = z.infer<typeof SlowCauseSchema>;
+
+/**
+ * The manual "test this connection" flow (Phase 5 onboarding: "import a config, name it, test it, and
+ * see a plain-language result; a failed test says which step failed").
+ *
+ * Three stages, in the order a connection actually comes up: `configParse` (synchronous, no network
+ * attempt — a malformed WireGuard profile, a missing/undecryptable secret, or a Tor upstream that no
+ * longer exists), then `handshake` (the SAME attempt `ensureUp`/the manual Connect button already make —
+ * this does not invent a second way to bring a tunnel up). A stage after a failed one is `skipped`,
+ * never silently omitted, so the UI can say "not attempted" rather than nothing.
+ *
+ * **`reachability` is deliberately coarser than the doc's "DNS / exit reachability" split.** The only
+ * signal past a successful handshake that this codebase already produces is `ensureTunnelSession`'s
+ * `resolveProxy` check — proof that Chromium's session-level proxy config took effect, not that the
+ * tunnel can resolve a name or reach a real destination. Turning DNS-through-the-tunnel and exit
+ * reachability into two independently-verified stages would mean adding new probing logic inside the
+ * connection pool's connect path, which this change does not do. So a successful handshake reports
+ * `unverified` here — "connected, not independently proven reachable" — rather than a fabricated pass on
+ * either the DNS or the exit-reachability question.
+ */
+export const NETWORK_TEST_STAGE_STATUSES = ['pass', 'fail', 'skipped'] as const;
+export const NetworkTestStageStatusSchema = z.enum(NETWORK_TEST_STAGE_STATUSES);
+export type NetworkTestStageStatus = z.infer<typeof NetworkTestStageStatusSchema>;
+
+export const NetworkTestStageSchema = z.object({
+  status: NetworkTestStageStatusSchema,
+  /** The raw failure message — the SAME shape `lastError` already carries, classified by the renderer's
+   *  existing `classifyNetworkError` into one localized sentence rather than shown verbatim. `null`
+   *  unless `status` is `'fail'`. */
+  detail: z.string().max(2000).nullable(),
+});
+export type NetworkTestStage = z.infer<typeof NetworkTestStageSchema>;
+
+/** `notReached` when the handshake never succeeded (config parse or the handshake itself failed);
+ *  `unverified` when it did, and reachability past that point is simply not independently checked. */
+export const NETWORK_REACHABILITY_KINDS = ['notReached', 'unverified'] as const;
+export const NetworkReachabilitySchema = z.enum(NETWORK_REACHABILITY_KINDS);
+export type NetworkReachability = z.infer<typeof NetworkReachabilitySchema>;
+
+export const ConnectionTestResultSchema = z.object({
+  connectionId: ConnectionIdSchema,
+  configParse: NetworkTestStageSchema,
+  handshake: NetworkTestStageSchema,
+  reachability: NetworkReachabilitySchema,
+});
+export type ConnectionTestResult = z.infer<typeof ConnectionTestResultSchema>;
