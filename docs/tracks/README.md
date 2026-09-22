@@ -101,9 +101,10 @@ affordances), **S9 PR7** (skills that declare tools), plus single sections in S1
 A mechanical audit over track headings → phase citations reports zero unhomed leaves; the umbrella headings
 (`P3`, `P7`, `P9` and friends) carry no content of their own and are homed through their children.
 
-> ⚠️ **The 25 competitor-parity tracks and `browser-settings-feature-gap.md` are untracked in git** — they
-> exist on disk only. Until they are committed, every citation added to a phase file above is a link to a
-> file that is not in the repository.
+> The 25 competitor-parity tracks and `browser-settings-feature-gap.md` are committed
+> (`02464f7e`, 2026-09-02, the same day this note was first written) — every citation added to a phase
+> file above resolves to a real file in the repository. This note used to warn otherwise; corrected
+> 2026-09-22 on inspection (`git ls-files docs/parities` lists all 25).
 
 Companion comparisons (the input to these tracks) are in [`../versus/`](../versus/) (formerly
 `docs/others/`, renamed when this folder moved under `docs/`); closed-source rivals that could not be
