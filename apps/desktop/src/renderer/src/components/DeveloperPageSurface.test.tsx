@@ -46,6 +46,21 @@ beforeEach(() => {
         settingsChangedCb = cb;
         return () => undefined;
       },
+      // Read by the Tier D `MirroredSettingsCard` the Developer surface now renders (ADR-0041).
+      getNetworkState: () =>
+        Promise.resolve({
+          connections: [],
+          general: { kind: 'direct' },
+          tabs: {},
+          groups: {},
+          binaries: {
+            wireproxy: { found: false, path: '', isOverride: false, dropInDir: '' },
+            tor: { found: false, path: '', isOverride: false, dropInDir: '' },
+          },
+          secretsAvailable: false,
+        }),
+      onNetworkState: () => () => undefined,
+      navigateTab: vi.fn(),
     },
   });
 });

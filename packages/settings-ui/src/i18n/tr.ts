@@ -738,6 +738,18 @@ export const tr: SettingsStrings = {
   webContentDefaultsReloadHint:
     'Değişikliğin bir sekmede etkili olması için sekmeyi yeniden yükleyin.',
 
+  // --- Yansıtılan ayarlar (ADR-0041 Tier D) — salt okunur, sahibi olan bölüme derin bağlantı verir ---
+  developerMirroredTitle: 'Yansıtılan ayarlar',
+  developerMirroredDesc:
+    'Zaten kendi Ayarlar bölümünde bulunan birkaç ayar, burada başvuru amacıyla salt okunur olarak gösterilir. Bu kart hiçbir şey yazmaz — değiştirmek için "Ayarlarda aç"ı kullanın.',
+  developerMirroredOpenInSettings: 'Ayarlarda aç',
+  developerMirroredTelemetry: 'Telemetri',
+  developerMirroredSafeBrowsing: 'Güvenli Gezinme',
+  developerMirroredNetworkRoute: 'Varsayılan ağ yolu',
+  developerMirroredEnabled: 'Etkin',
+  developerMirroredDisabled: 'Devre dışı',
+  developerMirroredLoading: 'Yükleniyor…',
+
   // --- Erişilebilirlik (ürün WCAG 2.2 AA iddia ederken yer tutucuydu) ---
   accessibility: {
     title: 'Erişilebilirlik',

@@ -10,6 +10,7 @@ import {
 import { ChromiumFlagsCard } from './settings-developer-flags';
 import { PreferenceEditModal } from './settings-developer-edit-modal';
 import { WebContentDefaultsCard } from './settings-developer-web-content';
+import { MirroredSettingsCard } from './settings-developer-mirrored';
 
 export interface DeveloperSectionProps {
   prefs: Preferences;
@@ -103,6 +104,7 @@ export function DeveloperSection({ prefs, onUpdatePrefs }: DeveloperSectionProps
       <Card title={s.developerTitle} subtitle={s.developerDesc} />
       <ChromiumFlagsCard prefs={prefs} onUpdatePrefs={onUpdatePrefs} />
       <WebContentDefaultsCard prefs={prefs} onUpdatePrefs={onUpdatePrefs} />
+      <MirroredSettingsCard prefs={prefs} />
       <DataTable
         caption={s.developerTitle}
         rows={rows}

@@ -35,6 +35,22 @@ const bridge = {
   clearHistory: vi.fn(() => Promise.resolve()),
   listClientCertificateChoices: vi.fn(() => Promise.resolve([])),
   listAgentCapabilities: vi.fn(() => Promise.resolve([])),
+  // Read by the Tier D `MirroredSettingsCard` the developer section now also renders (ADR-0041).
+  getNetworkState: vi.fn(() =>
+    Promise.resolve({
+      connections: [],
+      general: { kind: 'direct' },
+      tabs: {},
+      groups: {},
+      binaries: {
+        wireproxy: { found: false, path: '', isOverride: false, dropInDir: '' },
+        tor: { found: false, path: '', isOverride: false, dropInDir: '' },
+      },
+      secretsAvailable: false,
+    }),
+  ),
+  onNetworkState: vi.fn(() => () => undefined),
+  navigateTab: vi.fn(),
 };
 
 beforeEach(() => {

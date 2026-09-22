@@ -1,6 +1,7 @@
 # ADR-0041: Developer settings surface — one place for every knob, with a locked core
 
-- **Status:** Accepted (Tier B shipped; Tiers A/C/D owed)
+- **Status:** Accepted (Tier B shipped 2026-08-28; Tiers A/C shipped 2026-09-08; Tier D shipped
+  2026-09-22 for an initial 3-row set — see Implementation status below)
 - **Date:** 2026-08-28
 - **Refines:** [ADR-0012](0012-browser-tab-model.md) (isolated `WebContentsView` per tab) ·
   **complements** [ADR-0010](0010-ts-tooling-conventions.md) (conventions) ·
@@ -141,6 +142,30 @@ fields are populated from day one. Per-site `webPreferences` overrides are out o
   `e2e/tepegoz-internal-pages.spec.ts`.
 - The `tepegoz://settings` → Developer section is unchanged (still `env === 'development'`).
 
-**Tiers A / C / D owed.** The `Preferences` table is still the flat pre-existing editor (no
-nested-object drill-down, no metadata registry). No `webContentDefaults`. No Tier-D mirroring. Tracked
-in [tracks/developer-settings-surface.md](../tracks/developer-settings-surface.md).
+**Tiers A / C / D owed** as of the date in this section's heading. Superseded by the two updates below —
+left in place because it is what shipped on that date, not a live status.
+
+### Tiers A and C (added 2026-09-08)
+
+Per-key metadata registry + schema-derived pre-save validation + nested-object drill-down (Tier A), and
+`WebContentDefaultsCard` + `Preferences.webContentDefaults` (Tier C). Full detail in
+[tracks/developer-settings-surface.md](../tracks/developer-settings-surface.md), which is kept current;
+this ADR is not duplicating it line for line.
+
+### Tier D (added 2026-09-22)
+
+**Landed for three rows, not the tier's full described scope.** `settings-developer-mirrored.tsx`
+(`MirroredSettingsCard`), rendered inside `DeveloperSection` alongside the Tier B/C cards: telemetry
+(`prefs.telemetryEnabled`), Safe Browsing (`prefs.safeBrowsingEnabled`), and the default network route
+(`getNetworkState().general`) — each shown read-only with an "Open in Settings" button that calls
+`window.tepegoz.navigateTab('tepegoz://settings#<section>')` (telemetry/Safe Browsing → `#privacy`,
+network route → `#network-privacy`). No new preference, no new IPC channel, no new write path — every
+value is read through a channel the owning Settings section already uses, matching this ADR's own "does
+not become a second write path" rule for the tier.
+
+Spellcheck languages, cache size/location, and DNS-over-HTTPS — all named in this tier's original
+description — are deliberately **not** mirrored: none has an owning Settings UI in this codebase today,
+so there is no honest deep-link destination for any of them. Mirroring one anyway would mean either
+inventing a destination or quietly becoming the second write path this tier exists to avoid. Tracked as
+owed in [tracks/developer-settings-surface.md](../tracks/developer-settings-surface.md) § 4, to be added
+the day each gets its own Settings section.

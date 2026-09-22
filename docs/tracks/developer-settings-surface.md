@@ -1,12 +1,19 @@
 # Track — Developer settings surface: every browser + web-content knob in one place
 
-- **Status:** In progress — **Tier B + the `tepegoz://developer` page shipped 2026-08-28**; **Tiers A, C,
-  D landed 2026-09-08.** Tier A: per-key metadata registry (`@tepegoz/preferences/developer-registry`),
-  schema-derived pre-save validation (`validatePreferenceValue`), nested-object drill-down. Tier C/D: the
-  `WebContentDefaultsCard` — locked isolation keys read-only, `plugins`/`backgroundThrottling` editable
-  via a new `webContentDefaults` preference merged at browsed-view creation. **Owed:** Tier A per-key
-  label/description text (editor shows raw keys — deprioritized, low value), and Tier D's deep-links from
-  session-mirrored rows to the owning Settings sections.
+- **Status:** In progress — **Tier B + the `tepegoz://developer` page shipped 2026-08-28**; **Tiers A and
+  C landed 2026-09-08**; **Tier D landed 2026-09-22, for an initial 3-row set (below), not the full
+  `spellcheck / cache / DoH / permission defaults` list this doc's table names.** The 2026-09-08 status
+  line here previously read "Tiers A, C, D landed" — that was wrong for D: no deep-link component existed
+  yet (grep confirmed no `session-mirrored`/`SessionDefaults`/DoH/spellcheck-language content anywhere in
+  `settings-developer*.tsx` at the time), and the "Shape" section below only ever described three
+  surfaces. Corrected here rather than left standing. Tier A: per-key metadata registry
+  (`@tepegoz/preferences/developer-registry`), schema-derived pre-save validation
+  (`validatePreferenceValue`), nested-object drill-down. Tier C: the `WebContentDefaultsCard` — locked
+  isolation keys read-only, `plugins`/`backgroundThrottling` editable via a new `webContentDefaults`
+  preference merged at browsed-view creation. Tier D: `MirroredSettingsCard` — telemetry, Safe Browsing,
+  and the default network route, each read-only with an "Open in Settings" deep-link. **Owed:** Tier A
+  per-key label/description text (editor shows raw keys — deprioritized, low value); Tier D rows beyond
+  the initial 3 (see § 4 below for what was considered and why it's deferred, not silently dropped).
 - **Owner decisions taken (2026-08-28):** Chromium flags are **allowlist-only** · this document + an ADR
   land **before any code** · **revised same day:** a dedicated **`tepegoz://developer`** page, unlisted
   (no menu entry) but openable by any user and **not** dev-gated — the `chrome://flags` shape. The
@@ -21,7 +28,13 @@
     badge for non-`stable` keys, indexes it for search, and shows a "relaunch to apply" hint in the edit
     modal for the three startup-only keys. `Preferences.webContentDefaults` + `WEB_CONTENT_DEFAULTS` /
     `applyWebContentDefaults` in `@tepegoz/shared-types/web-content-defaults` +
-    `settings-developer-web-content.tsx` (Tier C/D card) + the `browsedViewWebPreferences()` merge. See
+    `settings-developer-web-content.tsx` (Tier C card) + the `browsedViewWebPreferences()` merge. Tier D:
+    `settings-developer-mirrored.tsx` (`MirroredSettingsCard`) — three read-only rows (telemetry, Safe
+    Browsing, default network route), each with an "Open in Settings" button calling the existing
+    `window.tepegoz.navigateTab('tepegoz://settings#<section>')` deep-link (the same one
+    `SiteInfoPopup.tsx` already used). No new IPC channel, no new preference, no new write path — telemetry
+    and Safe Browsing read off the `prefs` the Developer page already fetches, the network route off the
+    existing `getNetworkState()`/`onNetworkState()` pair `settings-network-privacy.tsx` uses. See
     [ADR-0041 § Implementation status](../../docs/adr/0041-developer-settings-surface.md).
 - **Companion ADR:** [ADR-0041](../../docs/adr/0041-developer-settings-surface.md) — the security
   carve-out (what is exposable, what is permanently locked) is decided there, not here.
@@ -44,7 +57,7 @@ That phrase is four different surfaces, and only some of them can safely become 
 | **A. Preferences**                  | the zod schema — ~60 top-level keys ([`preferences.model.ts`](../../packages/preferences/src/preferences.model.ts)) | Developer table already lists **all** of them, flat                                             | ✅ present — needs enrichment                                                      |
 | **B. Chromium switches / features** | `--enable-features`, `chrome://flags`-style toggles                                                                 | only `KEEP_RENDERING_SWITCHES`, hardcoded in [`index.ts`](../../apps/desktop/src/main/index.ts) | ✅ new `chromiumFlags` pref — **the real `chrome://flags` analog**, allowlist-only |
 | **C. Per-tab `webPreferences`**     | [`browsedViewWebPreferences()`](../../apps/desktop/src/main/tabs-shared.ts) — a hardened constant                   | fixed at creation                                                                               | ⚠️ **safe subset only**; four keys permanently locked (ADR-0041)                   |
-| **D. `session.*` defaults**         | spellcheck languages, cache, DoH, permission defaults                                                               | some have their own settings sections already                                                   | ✅ mirror (read) + deep-link to the owning section                                 |
+| **D. `session.*` defaults**         | spellcheck languages, cache, DoH, permission defaults                                                               | telemetry, Safe Browsing, default network route mirrored (2026-09-22); the rest has no owning Settings UI yet | ✅ mirror (read) + deep-link to the owning section — **3 rows landed, not the full list in "What"** |
 
 ## The security line (non-negotiable — CLAUDE.md, ADR-0041)
 
@@ -57,7 +70,7 @@ Safe-to-expose `webPreferences` / `session` subset: `backgroundThrottling`, `plu
 (+ languages), `defaultFontSize`, `minimumFontSize`, `defaultFontFamily`, `defaultEncoding`, `images`,
 `javascript`, `webgl`, `autoplayPolicy`, `disableDialogs`. Final list is fixed in ADR-0041.
 
-## Shape — Developer becomes three grouped surfaces
+## Shape — Developer becomes four grouped surfaces
 
 1. **Preferences** — the existing table, plus:
    - nested-object drill-down (a nested object was one opaque JSON blob — e.g. `adblock`, `translate`,
@@ -79,9 +92,9 @@ Safe-to-expose `webPreferences` / `session` subset: `backgroundThrottling`, `plu
    **allowlist registry** of known-safe switches/features. Applied in `index.ts` **before**
    `app.whenReady()` (Chromium reads switches only at startup). "Relaunch to apply" banner. No free-form
    entry — an unknown switch key is rejected at the boundary.
-3. **Web Content Defaults** — the safe `webPreferences` / `session` subset. New tabs get it baked into
-   `browsedViewWebPreferences()`; open tabs get `webContents.setWebPreferences()` + the matching
-   `session` call pushed at save time. Locked keys shown, disabled, with the ADR link.
+3. **Web Content Defaults (Tier C)** — the safe `webPreferences` / `session` subset. New tabs get it
+   baked into `browsedViewWebPreferences()`; open tabs get `webContents.setWebPreferences()` + the
+   matching `session` call pushed at save time. Locked keys shown, disabled, with the ADR link.
    - **Landed 2026-09-08.** `WEB_CONTENT_DEFAULTS` in `@tepegoz/shared-types/web-content-defaults` is
      the single description of the baseline (drift-tested against `browsedViewWebPreferences()`).
      `WebContentDefaultsCard` on the Developer surface: the four isolation keys read-only with a
@@ -90,6 +103,30 @@ Safe-to-expose `webPreferences` / `session` subset: `backgroundThrottling`, `plu
      non-locked keys at view creation (a locked key in the pref / a hand-edited `preferences.json` is
      ignored by construction), so an open tab picks up a change on its next reload — a "reload a tab"
      hint shows once the selection diverges from what the window booted with.
+4. **Mirrored settings (Tier D)** — read-only rows for a settings that already lives in its own Settings
+   section, each with an "Open in Settings" deep-link. Never a second write path (ADR-0041's own words
+   for this tier) — this card has no `onUpdatePrefs` prop and calls no write-capable bridge method at
+   all.
+   - **Landed 2026-09-22**, for three rows, chosen because each was already readable through an
+     existing read-only channel with no new plumbing: `settings-developer-mirrored.tsx`
+     (`MirroredSettingsCard`).
+     - **Telemetry** (`prefs.telemetryEnabled`) → deep-links to `tepegoz://settings#privacy`.
+     - **Safe Browsing** (`prefs.safeBrowsingEnabled`) → deep-links to `tepegoz://settings#privacy`.
+     - **Default network route** (`getNetworkState().general`, direct vs. a named connection) →
+       deep-links to `tepegoz://settings#network-privacy`.
+     All three read off IPC the owning Settings page already calls (`getPreferences` for the first two —
+     `prefs` the Developer page already fetches, no read even needed on this card's part — and
+     `getNetworkState`/`onNetworkState` for the third, the same pair `settings-network-privacy.tsx`
+     uses). The deep-link itself is `window.tepegoz.navigateTab('tepegoz://settings#<section>')`, the
+     same call `SiteInfoPopup.tsx`'s "Site settings" row already made — no new navigation primitive.
+   - **Considered and deferred**, because none has an owning Settings UI to deep-link to today (mirroring
+     one would mean fabricating a destination, which this tier exists to refuse to do):
+     - **Spellcheck languages** — grep of the renderer and `apps/desktop/src/main` confirms no spellcheck
+       settings section exists anywhere in the app yet. Nothing to deep-link to.
+     - **Cache size/location** and **DNS-over-HTTPS** — same: no dedicated Settings UI for either.
+   - Not attempted: exhaustive coverage of every `session.*` knob. The task this landed under asked for a
+     small, honestly-scoped set over a sprawling one; a future session can add a row the day its owning
+     section ships, without touching this card's shape.
 
 ## Work items (indicative — not a DoD)
 

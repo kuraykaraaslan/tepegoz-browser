@@ -749,6 +749,18 @@ export const en = {
   webContentDefaultsLocked: 'Locked by security policy',
   webContentDefaultsReloadHint: 'Reload a tab for the change to take effect there.',
 
+  // --- Mirrored settings (ADR-0041 Tier D) — read-only, deep-links to the owning section ---
+  developerMirroredTitle: 'Mirrored settings',
+  developerMirroredDesc:
+    'A few settings that already live in their own Settings section, shown here read-only for reference. This card never writes — use "Open in Settings" to change one.',
+  developerMirroredOpenInSettings: 'Open in Settings',
+  developerMirroredTelemetry: 'Telemetry',
+  developerMirroredSafeBrowsing: 'Safe Browsing',
+  developerMirroredNetworkRoute: 'Default network route',
+  developerMirroredEnabled: 'Enabled',
+  developerMirroredDisabled: 'Disabled',
+  developerMirroredLoading: 'Loading…',
+
   // --- Accessibility (was a placeholder while the product claimed WCAG 2.2 AA) ---
   accessibility: {
     title: 'Accessibility',

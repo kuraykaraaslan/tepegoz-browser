@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { I18nProvider } from '@tepegoz/i18n/react';
 import { settingsDict } from '@tepegoz/settings-ui';
@@ -18,6 +18,31 @@ import { DeveloperSection } from './settings-developer';
  */
 
 const s = settingsDict.en;
+
+// The `MirroredSettingsCard` (Tier D, ADR-0041) that `DeveloperSection` now also renders reads the
+// default network route the same way `settings-network-privacy.tsx` does; stub that read so every test
+// in this file — none of which are about Tier D — keeps working unchanged.
+beforeEach(() => {
+  Object.defineProperty(window, 'tepegoz', {
+    configurable: true,
+    value: {
+      getNetworkState: () =>
+        Promise.resolve({
+          connections: [],
+          general: { kind: 'direct' },
+          tabs: {},
+          groups: {},
+          binaries: {
+            wireproxy: { found: false, path: '', isOverride: false, dropInDir: '' },
+            tor: { found: false, path: '', isOverride: false, dropInDir: '' },
+          },
+          secretsAvailable: false,
+        }),
+      onNetworkState: () => () => undefined,
+      navigateTab: vi.fn(),
+    },
+  });
+});
 
 function renderSection(over: Partial<Preferences> = {}, onUpdate?: () => Promise<void>) {
   const onUpdatePrefs = vi.fn<(patch: Partial<Preferences>) => Promise<void>>(
