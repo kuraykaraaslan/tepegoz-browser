@@ -39,7 +39,16 @@ const tm = vi.hoisted(() => ({
   activeWebContents: () => null,
 }));
 vi.mock('../tabs', () => ({ default: tm }));
-const binding = vi.hoisted(() => ({ mayEgress: vi.fn(() => true) }));
+type FakeResolvedBinding = {
+  resolved: { connectionId: string | null };
+  source: 'tab' | 'group' | 'general';
+};
+const binding = vi.hoisted(() => ({
+  mayEgress: vi.fn(() => true),
+  resolveFor: vi.fn(
+    (): FakeResolvedBinding => ({ resolved: { connectionId: null }, source: 'general' }),
+  ),
+}));
 vi.mock('../network/binding-service.electron', () => ({ default: binding }));
 vi.mock('./browser-host.electron', () => ({ runActiveTabUrl: () => 'https://active.test/' }));
 vi.mock('../web/web-tools-host.electron', () => ({ discoverSitemap: vi.fn() }));
@@ -52,7 +61,7 @@ vi.mock('../model-catalog/model-manager.electron', () => ({
 vi.mock('../lib/i18n-main', () => ({
   mainStrings: () => ({
     agent: {
-      handoff: { captcha: 'c', twofa: 't', login: 'l' },
+      handoff: { captcha: 'c', twofa: 't', login: 'l', captchaTunnelDisclosure: 'exit-ip' },
       tabSpawn: { opened: 'o', followBlocked: 'fb', returnedToOrigin: 'r' },
     },
   }),
@@ -73,6 +82,7 @@ beforeEach(() => {
   store.get.mockReturnValue(null);
   tm.getState.mockReturnValue({ tabs: [], activeId: null });
   binding.mayEgress.mockReturnValue(true);
+  binding.resolveFor.mockReturnValue({ resolved: { connectionId: null }, source: 'general' });
 });
 
 describe('run', () => {
@@ -85,12 +95,14 @@ describe('run', () => {
       'activeTabUrl',
       'tabUrl',
       'tabEgressBlocked',
+      'tabTunneled',
       'listTabs',
       'discoverSitemap',
     ]) {
       expect(typeof deps[fn]).toBe('function');
     }
     expect(deps.handoffStrings).toEqual({ captcha: 'c', twofa: 't', login: 'l' });
+    expect(deps.captchaTunnelDisclosure).toBe('exit-ip');
     expect(deps.tabSpawnStrings).toEqual({
       opened: 'o',
       followBlocked: 'fb',
@@ -107,6 +119,7 @@ describe('run', () => {
       activeTabUrl: () => string | undefined;
       tabUrl: (id: string) => string | undefined;
       tabEgressBlocked: (id: string) => boolean;
+      tabTunneled: (id: string) => boolean;
       listTabs: () => { id: string; url: string; title: string; active: boolean }[];
     };
 
@@ -133,6 +146,11 @@ describe('run', () => {
     expect(deps.tabEgressBlocked('t1')).toBe(true);
     binding.mayEgress.mockReturnValue(true);
     expect(deps.tabEgressBlocked('t1')).toBe(false);
+
+    binding.resolveFor.mockReturnValue({ resolved: { connectionId: null }, source: 'general' });
+    expect(deps.tabTunneled('t1')).toBe(false); // Direct
+    binding.resolveFor.mockReturnValue({ resolved: { connectionId: 'tor-1' }, source: 'tab' });
+    expect(deps.tabTunneled('t1')).toBe(true); // routed through a connection (VPN/Tor/chained)
   });
 
   it('the injected localInference wires the llama engine and resolveModel', async () => {

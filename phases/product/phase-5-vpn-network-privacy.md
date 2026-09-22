@@ -495,13 +495,34 @@ endpoint** (one loopback port per active connection), never an OS-level system p
       always passes `null` for it today — same stated-not-wired shape as this phase's `setTunnelAgentFactory`
       seam above. Kept `[~]` for exactly that: two of the three named signals are live, the third is a
       reachable, tested, but unwired branch._
-- [ ] **A compatibility disclosure layer, because the exit IP is the problem the user will actually hit.**
+- [~] **A compatibility disclosure layer, because the exit IP is the problem the user will actually hit.**
       CAPTCHA loops, account lockouts and Cloudflare walls are the single most visible complaint cluster
       against Tor — and they arrive here too, since a shared exit address is what triggers them. Say it at
       the moment it happens ("this site is challenging the exit address, not you"), and connect it to the
       existing [ADR-0039](../../docs/adr/0039-user-granted-sensitive-capabilities.md) Human Handoff path
       rather than letting an agent run grind against a wall it cannot pass. Also worth stating: an
       **agent** run on a Tor-routed tab will hit these far more often than a human will.
+      _**Agent path landed 2026-09-22:** the existing Human Handoff Controller (`detectHandoff` →
+      Executor `guard` → `'handoff'` StopReason, phase-1a) now appends the exit-IP clause to the
+      **CAPTCHA-shaped** handoff message ONLY when the triggering tab's resolved binding is non-Direct
+      (VPN, Tor, or chained — read via the same `BindingService.resolveFor`/`resolveBinding` the per-tab
+      tunnel badge reads, never re-derived or renderer-trusted). 2FA/OTP and login-wall handoffs, and a
+      CAPTCHA on a Direct tab, are byte-for-byte unchanged. New seam: `AgentRunDeps.tabTunneled` +
+      `.captchaTunnelDisclosure` (`packages/agent-runtime/src/agent-runtime-types.ts`), consumed by
+      `handoffMessageFor` (`packages/agent-runtime/src/agent-runtime-loop.ts`) and wired in
+      `apps/desktop/src/main/agent/agent-service.electron.ts` via a `tabTunneled` reader over
+      `BindingService.resolveFor(tabId).resolved.connectionId !== null`. The clause also states the
+      "an agent hits this more than a human" point inline (no second UI surface). en/tr in
+      `extensions/ext-agent/src/i18n/{en,tr}.ts` (`handoff.captchaTunnelDisclosure`), i18n-parity test
+      green. 8 new `handoffMessageFor` unit tests (captcha×tunneled/direct/no-dep matrix, 2fa/login
+      unaffected, explicit-tabId resolution) in `agent-runtime-loop.test.ts`; `agent-service.electron.test.ts`
+      extended to assert the wiring. Detection logic, the StopReason/journal mechanism, and tunnel
+      routing/kill-switch code are untouched — this is messaging/attribution only, no auto-solve.
+      **Not done:** the human-facing surface for a person's OWN manual CAPTCHA encounter on a tunneled
+      tab (the phase's "user will actually hit" framing). There is no existing browser-chrome CAPTCHA/
+      challenge signal to hook into today (checked: nothing in `apps/desktop/src/renderer` detects a
+      CAPTCHA) — building one would be a second, standalone detection surface, which is out of this box's
+      scope. Left as `[~]` pending that surface or an owner call that the agent path is sufficient for now._
 - [ ] _Independent confirmation:_ the Tor complaint corpus reaches the **same** conclusion Freenet's does —
       the heaviest user pain is not anonymity theory, it is installing, connecting and staying connected.
       Two unrelated anonymity products failing the same way is the strongest evidence this section has.

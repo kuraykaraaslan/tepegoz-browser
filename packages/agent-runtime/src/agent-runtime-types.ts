@@ -72,6 +72,22 @@ export interface AgentRunDeps {
   discoverSitemap?: (pageUrl: string) => Promise<readonly string[]>;
   /** Localized human-handoff copy, one message per {@link HandoffKind} (captcha / twofa / login). */
   handoffStrings: Record<HandoffKind, string>;
+  /**
+   * Whether a tab's traffic is currently routed through a tunnel (Phase 5: VPN, Tor, or a chained
+   * Tor-over-VPN — anything the resolved binding did NOT resolve to Direct). Host-computed from the same
+   * `BindingService.resolveFor`/`resolveBinding` the per-tab tunnel-exit badge already reads — the
+   * runtime never re-derives or trusts a renderer-reported route. Used only to decide whether a
+   * CAPTCHA-shaped handoff gets the exit-IP disclosure appended (see {@link captchaTunnelDisclosure});
+   * absent ⇒ never reported tunneled, so a host that hasn't wired Phase 5 degrades to the plain message.
+   */
+  tabTunneled?: (tabId: string) => boolean;
+  /**
+   * Phase 5 compatibility-disclosure clause ("this site is challenging the exit address, not you"),
+   * appended after {@link handoffStrings}.captcha when the triggering tab is tunneled (see
+   * {@link tabTunneled}). 2FA/OTP and login-wall handoffs never get this — the exit address is not why
+   * those trigger. Absent ⇒ the plain captcha message is used unchanged.
+   */
+  captchaTunnelDisclosure?: string;
   /** Localized tab-spawn console copy (S3 PR3) — see {@link AgentRunDeps.listTabs}. */
   tabSpawnStrings: { opened: string; followBlocked: string; returnedToOrigin: string };
   /** Localized terminal-line copy for a run that stopped without its own summary (S8) — one plain

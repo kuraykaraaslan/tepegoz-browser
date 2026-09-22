@@ -87,6 +87,32 @@ export function perceivedHandoffSignal(o: StepOutcome): HandoffSignal | null {
   return detectHandoff(content, urlFromResult(o.result));
 }
 
+/**
+ * The Human Handoff console/notification message for a detected signal (Phase 5 compatibility
+ * disclosure). A CAPTCHA hit on a tab routed through a tunnel (VPN/Tor/chained — any non-Direct
+ * resolved binding) gets {@link AgentRunDeps.captchaTunnelDisclosure} appended: the shared exit address,
+ * not the user, is the likely reason the site is challenging it, and an agent run reuses that same
+ * address far more repetitively than a human browsing normally does.
+ *
+ * Deliberately narrow: 2FA/OTP and login-wall handoffs are unrelated to the exit IP and are NEVER
+ * touched, and a CAPTCHA on a Direct tab is left exactly as it reads today — appending the disclosure
+ * there would misattribute an ordinary challenge to a tunnel the tab isn't even using. Absent
+ * `deps.tabTunneled` / `deps.captchaTunnelDisclosure` (host hasn't wired Phase 5) degrades to today's
+ * plain message, same as every other optional {@link AgentRunDeps} seam.
+ */
+export function handoffMessageFor(
+  signal: HandoffSignal,
+  o: StepOutcome,
+  deps: AgentRunDeps,
+): string {
+  const base = deps.handoffStrings[signal.kind];
+  if (signal.kind !== 'captcha') return base;
+  if (deps.tabTunneled === undefined || deps.captchaTunnelDisclosure === undefined) return base;
+  const tabId = tabIdFromArgs(o.args) ?? listTabs(deps).find((t) => t.active)?.id;
+  if (tabId === undefined || !deps.tabTunneled(tabId)) return base;
+  return `${base} ${deps.captchaTunnelDisclosure}`;
+}
+
 /** The tab a `browser_update_page` interaction just opened (its `openedTabs[0]`), if any (S3 PR3). Only
  *  the first is followed — a single interaction spawning more than one tab is not a case any fixture or
  *  real site exercises today. */
@@ -405,7 +431,7 @@ export function runReactiveLoop(args: {
           guard: (o: StepOutcome) => {
             const signal = perceivedHandoffSignal(o);
             if (signal === null) return null;
-            hooks.onEvent('handoff', deps.handoffStrings[signal.kind]);
+            hooks.onEvent('handoff', handoffMessageFor(signal, o, deps));
             if (signal.kind === 'login' && hooks.control !== undefined) {
               hooks.control.enterHandoffHold(RESUME_AFTER_LOGIN);
               hooks.onEvent('paused', 'paused'); // surface the Resume affordance while we wait for sign-in

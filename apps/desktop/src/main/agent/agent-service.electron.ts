@@ -48,6 +48,15 @@ function tabEgressBlocked(tabId: string): boolean {
   return !BindingService.mayEgress(tabId);
 }
 
+/** Whether a tab's traffic is currently routed through a tunnel (Phase 5: VPN, Tor, or a chained
+ *  Tor-over-VPN) rather than Direct — the same resolved binding the per-tab tunnel-exit badge reads
+ *  (`BindingService.resolveFor`), never re-derived or trusted from the renderer. Feeds the Human Handoff
+ *  Controller's CAPTCHA exit-IP disclosure (Phase 5 compatibility-disclosure layer); it decides nothing
+ *  about routing itself. */
+function tabTunneled(tabId: string): boolean {
+  return BindingService.resolveFor(tabId).resolved.connectionId !== null;
+}
+
 /** All open tabs + which is active (S3 PR3 tab-spawn world model — origin/return-to-origin bookkeeping). */
 function listTabs(): { id: string; url: string; title: string; active: boolean }[] {
   const state = TabManager.getState();
@@ -88,9 +97,11 @@ export default class AgentService {
           activeTabUrl,
           tabUrl,
           tabEgressBlocked,
+          tabTunneled,
           listTabs,
           discoverSitemap,
           handoffStrings: { captcha: handoff.captcha, twofa: handoff.twofa, login: handoff.login },
+          captchaTunnelDisclosure: handoff.captchaTunnelDisclosure,
           tabSpawnStrings: {
             opened: tabSpawn.opened,
             followBlocked: tabSpawn.followBlocked,

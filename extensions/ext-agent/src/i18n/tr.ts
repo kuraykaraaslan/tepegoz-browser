@@ -83,6 +83,14 @@ export const tr: AgentStrings = {
       'Bir doğrulama adımı (2FA / tek kullanımlık kod) algılandı. Tepegöz durdu ve kontrolü size geri verdi — girişi kendiniz tamamlayın, sonra yeni bir görev başlatın.',
     login:
       'Bir giriş ekranı algılandı. Tepegöz duraklattı ve sizin yerinize giriş yapmayacak. Sayfada giriş yapın, sonra “Devam et”e basın — görevi oradan sürdürür.',
+    // Faz 5 uyumluluk-uyarısı katmanı: yukarıdaki `captcha` mesajına SADECE tetikleyen sekme bir
+    // VPN/Tor/zincirli tünel üzerinden yönlendirilmişse eklenir (Direct sekmede asla, twofa/login için
+    // de asla — çıkış adresi onların tetiklenme nedeni değildir).
+    captchaTunnelDisclosure:
+      'Bu sekme bir tünel (VPN/Tor) üzerinden yönlendiriliyor; bu yüzden burada sorgulanan muhtemelen ' +
+      'siz değil, paylaşılan çıkış adresidir. Tünelli bağlantılarda bu tür CAPTCHA ve erişim kontrolleri ' +
+      'yaygındır — bir ajan çalışması aynı adresi tekrar tekrar kullandığından bunlarla normal bir ' +
+      'kullanıcıdan çok daha sık karşılaşır.',
   },
   // Çalışma zamanının kendi yaşam döngüsü Konsol satırları (S8): hiçbir şey çalışmadan önce plan
   // reddedildi, plan önizlemesinde her adım atlandı ve tavsiye niteliğindeki egress uyarısı (PII /

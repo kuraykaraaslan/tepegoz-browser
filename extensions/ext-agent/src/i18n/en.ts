@@ -89,6 +89,14 @@ export const en = {
       'A verification step (2FA / one-time code) was detected. Tepegöz has stopped and handed control back to you — finish signing in yourself, then start a new task.',
     login:
       'A login screen was detected. Tepegöz has paused and will not sign in for you. Log in on the page, then press Resume — it will continue the task from there.',
+    // Phase 5 compatibility-disclosure layer: appended to `captcha` above ONLY when the tab that
+    // triggered it is routed through a VPN/Tor/chained tunnel (never on a Direct tab, and never for
+    // twofa/login — the exit address is not why those trigger).
+    captchaTunnelDisclosure:
+      'This tab is routed through a tunnel, so the shared exit address — not you — is likely what is ' +
+      'being challenged. CAPTCHA and access checks like this are common on a tunneled connection, and ' +
+      'an agent run hits them far more often than a human browsing normally, since it reuses the same ' +
+      'address repeatedly.',
   },
   // The runtime's own lifecycle Console lines (S8): plan rejected before anything ran, every step
   // skipped in the plan preview, and the advisory egress warning (PII / encoded blob — still sent).
