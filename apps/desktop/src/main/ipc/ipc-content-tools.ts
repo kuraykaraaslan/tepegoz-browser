@@ -1,4 +1,3 @@
-import { BrowserWindow } from 'electron';
 import { z } from 'zod';
 import {
   IpcChannels,
@@ -23,6 +22,7 @@ import ModelManager from '../model-catalog/model-manager.electron';
 import MacroService, { type MacroCursorOpts } from '../macro/macro-service.electron';
 import PreferenceStore from '@tepegoz/preferences';
 import TabManager from '../tabs';
+import { broadcastToAppSurfaces } from '../lib/app-surfaces';
 import { handle, handleAsync, onAction } from './ipc-helpers';
 
 /**
@@ -34,9 +34,7 @@ import { handle, handleAsync, onAction } from './ipc-helpers';
 export function registerToolsIpc(): void {
   // On-device model management. Progress/install changes are pushed to every window via models:state.
   ModelManager.setProgressListener((models) => {
-    for (const w of BrowserWindow.getAllWindows()) {
-      if (!w.isDestroyed()) w.webContents.send(IpcChannels.modelsState, models);
-    }
+    broadcastToAppSurfaces(IpcChannels.modelsState, models);
   });
   const ModelIdSchema = z.string().min(1).max(64);
   handle(IpcChannels.modelsList, (): LocalModelInfo[] => ModelManager.list());

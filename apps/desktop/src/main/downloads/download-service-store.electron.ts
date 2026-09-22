@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { mkdirSync } from 'node:fs';
-import { app, BrowserWindow } from 'electron';
+import { app } from 'electron';
 import type {
   DownloadProvenance,
   DownloadRate,
@@ -13,6 +13,7 @@ import { Logger } from '@tepegoz/libs';
 import PreferenceStore from '@tepegoz/preferences';
 import { DownloadStore, EventJournal } from '@tepegoz/persistence';
 import { IpcChannels } from '@tepegoz/desktop-ipc';
+import { broadcastToAppSurfaces } from '../lib/app-surfaces';
 import { getDb } from '../db/database.electron';
 import {
   publicRecord,
@@ -93,10 +94,7 @@ function persist(record: ActiveDownload): void {
 }
 
 export function broadcast(state: DownloadState): void {
-  const next = snapshot(state);
-  for (const w of BrowserWindow.getAllWindows()) {
-    if (!w.isDestroyed()) w.webContents.send(IpcChannels.downloadsState, next);
-  }
+  broadcastToAppSurfaces(IpcChannels.downloadsState, snapshot(state));
 }
 
 export function upsert(state: DownloadState, record: ActiveDownload): void {

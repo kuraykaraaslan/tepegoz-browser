@@ -23,7 +23,14 @@ const lifecycle = vi.hoisted(() => ({
 }));
 const commands = vi.hoisted(() => ({ runCommand: vi.fn(() => Promise.resolve()) }));
 
-vi.mock('electron', () => ({ BrowserWindow: { getAllWindows: () => [] } }));
+vi.mock('electron', () => ({
+  BrowserWindow: { getAllWindows: () => [] },
+  // `download-service-store.electron`'s `broadcast()` now goes through `broadcastToAppSurfaces`
+  // (`../lib/app-surfaces`), which also reads `webContents.getAllWebContents()` for the trusted
+  // `tepegoz://` app-page half of the broadcast — not mocked out separately here, so the real
+  // `electron` surface it touches needs a stub.
+  webContents: { getAllWebContents: () => [] },
+}));
 vi.mock('@tepegoz/persistence', () => persistence);
 vi.mock('../db/database.electron', () => db);
 vi.mock('../network/browsing-sessions.electron', () => ({ default: sessions }));

@@ -1,4 +1,3 @@
-import { BrowserWindow } from 'electron';
 import {
   IpcChannels,
   type AdblockSettings,
@@ -50,6 +49,7 @@ import videoPlayerHost from '../extensions/video-player-host.electron';
 import VideoPlayerPageInjector, {
   getVideoPlayerPageState,
 } from '../extensions/video-player-page-injector.electron';
+import { broadcastToAppSurfaces } from '../lib/app-surfaces';
 import { handle, handleAsync, onAction } from './ipc-helpers';
 
 /**
@@ -109,9 +109,7 @@ export function registerExtensionsIpc(): void {
     TypoDictionaryManager.list(),
   );
   TypoDictionaryManager.setProgressListener((dictionaries) => {
-    for (const w of BrowserWindow.getAllWindows()) {
-      if (!w.isDestroyed()) w.webContents.send(IpcChannels.typoDictionariesState, dictionaries);
-    }
+    broadcastToAppSurfaces(IpcChannels.typoDictionariesState, dictionaries);
   });
   handleAsync(IpcChannels.typoDictionaryDownload, async (_event, payload): Promise<void> => {
     await TypoDictionaryManager.download(TypoDictionaryIdSchema.parse(payload));

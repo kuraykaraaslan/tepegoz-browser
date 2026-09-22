@@ -9,12 +9,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
  *   - `attach` wires the store→renderer broadcast exactly once.
  */
 
-const getAllWindows = vi.hoisted(() => vi.fn(() => [] as unknown[]));
 const notificationShow = vi.hoisted(() => vi.fn());
 const notificationCtor = vi.hoisted(() => vi.fn());
 const notificationSupported = vi.hoisted(() => vi.fn(() => true));
 vi.mock('electron', () => ({
-  BrowserWindow: { getAllWindows },
   Notification: Object.assign(
     class {
       constructor(opts: unknown) {
@@ -26,6 +24,8 @@ vi.mock('electron', () => ({
   ),
 }));
 vi.mock('@tepegoz/libs', () => ({ Logger: { warn: vi.fn(), info: vi.fn(), error: vi.fn() } }));
+const broadcastToAppSurfaces = vi.hoisted(() => vi.fn());
+vi.mock('../lib/app-surfaces', () => ({ broadcastToAppSurfaces }));
 
 const storeAdd = vi.hoisted(() => vi.fn());
 const storeSubscribe = vi.hoisted(() => vi.fn());
@@ -52,7 +52,7 @@ beforeEach(async () => {
   notificationCtor.mockClear();
   notificationShow.mockClear();
   notificationSupported.mockReturnValue(true);
-  getAllWindows.mockReturnValue([]);
+  broadcastToAppSurfaces.mockClear();
   focusedWindow.mockReset().mockReturnValue(null); // TabManager.focusedWindow() → BrowserWindow | null
   prefs.notificationsEnabled = true;
   NotificationHost = (await import('./notification-host')).default;
@@ -144,17 +144,11 @@ describe('attach', () => {
     expect(storeSubscribe).toHaveBeenCalledTimes(1);
   });
 
-  it('the wired broadcast pushes the center snapshot to every live app window', () => {
-    const live = liveWindow();
-    const deadSend = vi.fn();
-    const dead = { isDestroyed: () => true, webContents: { send: deadSend } };
-    getAllWindows.mockReturnValue([dead, live.win]);
-
+  it('the wired broadcast pushes the center snapshot to every app surface', () => {
     NotificationHost.attach();
     const broadcast = storeSubscribe.mock.calls[0]![0] as () => void;
     broadcast();
 
-    expect(live.send).toHaveBeenCalledWith(expect.anything(), []); // state() → []
-    expect(deadSend).not.toHaveBeenCalled();
+    expect(broadcastToAppSurfaces).toHaveBeenCalledWith(expect.anything(), []); // state() → []
   });
 });

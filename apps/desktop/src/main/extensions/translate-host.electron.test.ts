@@ -123,6 +123,10 @@ const prefs = vi.hoisted(() => ({
 vi.mock('@tepegoz/preferences', () => ({ default: prefs }));
 
 const bw = vi.hoisted(() => ({
+  // `getAllWindows` stays mocked: `requestCloudFallback` still uses `BrowserWindow.getFocusedWindow() ??
+  // BrowserWindow.getAllWindows()[0]` to pick the native dialog's PARENT window — a window-management
+  // pick, not the broadcast this file's other two loops were (those now go through
+  // `broadcastToAppSurfaces`, mocked below).
   getAllWindows: vi.fn((): unknown[] => []),
   getFocusedWindow: vi.fn((): unknown => null),
 }));
@@ -134,6 +138,8 @@ vi.mock('electron', () => ({
   BrowserWindow: bw,
   dialog,
 }));
+const broadcastToAppSurfaces = vi.hoisted(() => vi.fn());
+vi.mock('../lib/app-surfaces', () => ({ broadcastToAppSurfaces }));
 
 const llama = vi.hoisted(() =>
   vi.fn<() => { isAvailable: () => boolean }>(() => ({ isAvailable: () => false })),
@@ -179,6 +185,7 @@ beforeEach(() => {
   vault.getFirstKeyForProvider.mockReturnValue(null);
   llama.mockReturnValue({ isAvailable: () => false });
   modelManager.resolveModel.mockReturnValue(null);
+  broadcastToAppSurfaces.mockClear();
   bw.getAllWindows.mockReturnValue([]);
   bw.getFocusedWindow.mockReturnValue(null);
   isRunnableProvider.mockReturnValue(false);
@@ -352,8 +359,6 @@ describe('the batch runners', () => {
 
 describe('requestCloudFallback', () => {
   it('broadcasts the request and resolves the native dialog answer', async () => {
-    const w = { isDestroyed: () => false, webContents: { send: vi.fn() } };
-    bw.getAllWindows.mockReturnValue([w]);
     dialog.showMessageBox.mockResolvedValue({ response: 0 } as never);
     await load();
     const res = await o().requestCloudFallback({
@@ -362,7 +367,7 @@ describe('requestCloudFallback', () => {
       targetLanguage: 'tr',
       textCharCount: 42,
     });
-    expect(w.webContents.send).toHaveBeenCalledWith(
+    expect(broadcastToAppSurfaces).toHaveBeenCalledWith(
       'translate:cloud-req',
       expect.objectContaining({ requestId: 'r1' }),
     );
@@ -382,7 +387,6 @@ describe('requestCloudFallback', () => {
   });
 
   it('times out to allow:false remember:false after 120s with no answer', async () => {
-    bw.getAllWindows.mockReturnValue([]);
     dialog.showMessageBox.mockReturnValue(new Promise<never>(() => undefined));
     await load();
     vi.useFakeTimers();
@@ -416,13 +420,11 @@ describe('the module surface', () => {
     });
   });
 
-  it('setTranslatePageState forwards to the host and broadcasts to every window', async () => {
-    const win = { isDestroyed: () => false, webContents: { send: vi.fn() } };
-    bw.getAllWindows.mockReturnValue([win]);
+  it('setTranslatePageState forwards to the host and broadcasts to every app surface', async () => {
     const mod = await load();
     mod.setTranslatePageState({ active: true } as never);
     expect(cap.host.setPageState).toHaveBeenCalledWith({ active: true });
-    expect(win.webContents.send).toHaveBeenCalledWith('translate:page-state', { active: true });
+    expect(broadcastToAppSurfaces).toHaveBeenCalledWith('translate:page-state', { active: true });
   });
 
   it('respondTranslateCloudFallback settles a pending native cloud-fallback request', async () => {

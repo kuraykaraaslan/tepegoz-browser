@@ -1,7 +1,7 @@
-import { BrowserWindow } from 'electron';
 import { IpcChannels, type TasksState } from '@tepegoz/desktop-ipc';
 import type { TaskArtifactRecord, TaskDefinition, TaskRunRecord } from '@tepegoz/tasks';
 import { TaskStore } from '@tepegoz/persistence';
+import { broadcastToAppSurfaces } from '../lib/app-surfaces';
 import { getDb } from '../db/database.electron';
 import type { QueuedTaskRun, TaskRunLauncher } from './task-service-support.electron';
 
@@ -55,8 +55,5 @@ export function tasksState(): TasksState {
 }
 
 export function broadcast(): void {
-  const state = tasksState();
-  for (const win of BrowserWindow.getAllWindows()) {
-    if (!win.isDestroyed()) win.webContents.send(IpcChannels.tasksState, state);
-  }
+  broadcastToAppSurfaces(IpcChannels.tasksState, tasksState());
 }

@@ -45,6 +45,7 @@ import { z } from 'zod';
 import { join } from 'node:path';
 import { llamaEngine } from '../local-inference/llama-engine.electron';
 import ModelManager from '../model-catalog/model-manager.electron';
+import { broadcastToAppSurfaces } from '../lib/app-surfaces';
 import { mainLocale, mainStrings } from '../lib/i18n-main';
 import { formatNumber } from '@tepegoz/i18n';
 import { IpcChannels } from '@tepegoz/desktop-ipc';
@@ -194,15 +195,11 @@ async function runCloudBatch(input: TranslateRunBatchInput): Promise<TranslateBa
 }
 
 function broadcastPageState(state: TranslatePageState | null): void {
-  for (const w of BrowserWindow.getAllWindows()) {
-    if (!w.isDestroyed()) w.webContents.send(IpcChannels.translatePageState, state);
-  }
+  broadcastToAppSurfaces(IpcChannels.translatePageState, state);
 }
 
 function broadcastCloudRequest(request: TranslateCloudFallbackRequest): void {
-  for (const w of BrowserWindow.getAllWindows()) {
-    if (!w.isDestroyed()) w.webContents.send(IpcChannels.translateCloudFallbackRequest, request);
-  }
+  broadcastToAppSurfaces(IpcChannels.translateCloudFallbackRequest, request);
 }
 
 async function requestCloudFallback(

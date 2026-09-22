@@ -4,7 +4,7 @@ import { IpcChannels } from '@tepegoz/desktop-ipc';
 /**
  * `ipc-content-extensions.ts` — user-agent / popup-blocker / adblock / typo / translate / video IPC.
  * Pure delegation; what's pinned is that each payload is schema-checked before the host is touched,
- * the typo-dictionary progress listener broadcasts to every live window, and an untrusted sender frame
+ * the typo-dictionary progress listener broadcasts to every app surface, and an untrusted sender frame
  * reaches nothing.
  */
 
@@ -12,15 +12,16 @@ const h = vi.hoisted(() => ({
   handlers: new Map<string, (event: unknown, payload: unknown) => unknown>(),
   listeners: new Map<string, (event: unknown, payload: unknown) => void>(),
 }));
-const bw = vi.hoisted(() => ({ windows: [] as unknown[] }));
 vi.mock('electron', () => ({
-  BrowserWindow: { getAllWindows: () => bw.windows, fromWebContents: () => ({ id: 'w' }) },
+  BrowserWindow: { fromWebContents: () => ({ id: 'w' }) },
   ipcMain: {
     handle: (c: string, fn: (e: unknown, p: unknown) => unknown) => h.handlers.set(c, fn),
     on: (c: string, fn: (e: unknown, p: unknown) => void) => h.listeners.set(c, fn),
     removeHandler: () => undefined,
   },
 }));
+const broadcastToAppSurfaces = vi.hoisted(() => vi.fn());
+vi.mock('../lib/app-surfaces', () => ({ broadcastToAppSurfaces }));
 
 const TRUSTED = 'app://tepegoz/chrome.html';
 vi.mock('../lib/trusted-origin', () => ({ isTrustedAppUrl: (u: string) => u === TRUSTED }));
@@ -113,7 +114,7 @@ const fire = (c: string, p?: unknown, e: unknown = ev) => h.listeners.get(c)?.(e
 beforeEach(() => {
   h.handlers.clear();
   h.listeners.clear();
-  bw.windows = [];
+  broadcastToAppSurfaces.mockClear();
   [
     uaHost,
     popupHost,
@@ -163,15 +164,10 @@ describe('schema-gated delegation', () => {
 });
 
 describe('typo-dictionary progress broadcast', () => {
-  it('pushes dictionary state to every live window', () => {
-    const send = vi.fn();
-    bw.windows = [
-      { isDestroyed: () => false, webContents: { send } },
-      { isDestroyed: () => true, webContents: { send: vi.fn() } },
-    ];
+  it('pushes dictionary state to every app surface', () => {
     const listener = dictMgr.setProgressListener.mock.calls[0]![0] as (d: unknown) => void;
     listener([{ id: 'en-US', progress: 1 }]);
-    expect(send).toHaveBeenCalledWith(IpcChannels.typoDictionariesState, [
+    expect(broadcastToAppSurfaces).toHaveBeenCalledWith(IpcChannels.typoDictionariesState, [
       { id: 'en-US', progress: 1 },
     ]);
   });

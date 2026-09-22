@@ -4,8 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
  * `task-service-state` — the read side + the mutable process-singleton runtime shared by the
  * task-service concern modules. Pinned: every list reader returns its empty value (never throws)
  * before the DB is ready and otherwise forwards to `TaskStore`; `tasksState` composes the three;
- * `broadcast` pushes that snapshot to every live window and skips destroyed ones; and `runtime`
- * starts empty.
+ * `broadcast` pushes that snapshot to every app surface; and `runtime` starts empty.
  */
 
 const store = vi.hoisted(() => ({
@@ -19,25 +18,15 @@ vi.mock('@tepegoz/persistence', () => ({ TaskStore: store }));
 const db = vi.hoisted((): { value: unknown } => ({ value: { __db: true } }));
 vi.mock('../db/database.electron', () => ({ getDb: () => db.value }));
 
-const windows = vi.hoisted(
-  (): {
-    list: { isDestroyed: () => boolean; webContents: { send: ReturnType<typeof vi.fn> } }[];
-  } => ({ list: [] }),
-);
-vi.mock('electron', () => ({ BrowserWindow: { getAllWindows: () => windows.list } }));
+const broadcastToAppSurfaces = vi.hoisted(() => vi.fn());
+vi.mock('../lib/app-surfaces', () => ({ broadcastToAppSurfaces }));
 vi.mock('@tepegoz/desktop-ipc', () => ({ IpcChannels: { tasksState: 'tasks:state' } }));
 
 const state = await import('./task-service-state.electron');
 
-const win = (destroyed = false) => ({
-  isDestroyed: () => destroyed,
-  webContents: { send: vi.fn() },
-});
-
 beforeEach(() => {
   vi.clearAllMocks();
   db.value = { __db: true };
-  windows.list = [];
 });
 
 describe('the readers', () => {
@@ -73,17 +62,13 @@ describe('tasksState', () => {
 });
 
 describe('broadcast', () => {
-  it('sends the snapshot to every live window and skips destroyed ones', () => {
-    const live = win();
-    const dead = win(true);
-    windows.list = [live, dead];
+  it('sends the snapshot to every app surface', () => {
     state.broadcast();
-    expect(live.webContents.send).toHaveBeenCalledWith('tasks:state', {
+    expect(broadcastToAppSurfaces).toHaveBeenCalledWith('tasks:state', {
       tasks: [{ id: 't1' }],
       runs: [{ id: 'r1' }],
       artifacts: [{ id: 'a1' }],
     });
-    expect(dead.webContents.send).not.toHaveBeenCalled();
   });
 });
 

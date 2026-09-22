@@ -15,6 +15,12 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
  * health and a `label → upstreamLabel` when it is chained; `networkBindGroup` delegates to
  * `BindingService.bindGroup`; `networkAddConnection` adds a Tor connection (with or without an upstream);
  * and both file/folder pickers parent their dialog to the sender window when there is one.
+ *
+ * `broadcastNetworkState` also pinned: the per-window loop is unchanged (each chrome window gets its
+ * OWN personalized `networkStateFor(win)`, survives a throwing `send`), and it additionally reaches
+ * trusted `tepegoz://` app-page surfaces (via `appSurfaceContents`) with the profile-wide projection
+ * (empty `tabs`/`groups` — there is no owning window to resolve a per-tab breakdown from), without
+ * double-sending to a chrome window the first loop already reached.
  */
 
 const IpcChannels = {
@@ -160,6 +166,8 @@ const dialog = vi.hoisted(() => ({
   showOpenDialog: vi.fn(() => Promise.resolve({ canceled: true, filePaths: [] as string[] })),
 }));
 vi.mock('electron', () => ({ BrowserWindow: bw, dialog }));
+const appSurfaceContents = vi.hoisted(() => vi.fn((): unknown[] => []));
+vi.mock('../lib/app-surfaces', () => ({ appSurfaceContents }));
 
 const handlers = vi.hoisted(() => new Map<string, (e: unknown, p: unknown) => Promise<unknown>>());
 vi.mock('./ipc-helpers', () => ({
@@ -177,6 +185,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   bw.fromWebContents.mockReturnValue(null);
   bw.getAllWindows.mockReturnValue([]);
+  appSurfaceContents.mockReturnValue([]);
   secrets.isAvailable.mockReturnValue(true);
   pool.has.mockReturnValue(false);
   pool.get.mockReturnValue(undefined);
@@ -612,11 +621,12 @@ describe('pickers parented to the sender window', () => {
 });
 
 describe('broadcastNetworkState', () => {
-  it('pushes the state to every live window and survives a send that throws', () => {
-    const good = { isDestroyed: () => false, webContents: { send: vi.fn() } };
+  it('pushes the per-window state to every live window and survives a send that throws', () => {
+    const good = { isDestroyed: () => false, webContents: { id: 1, send: vi.fn() } };
     const bad = {
       isDestroyed: () => false,
       webContents: {
+        id: 2,
         send: vi.fn(() => {
           throw new Error('gone');
         }),
@@ -628,5 +638,39 @@ describe('broadcastNetworkState', () => {
     }).not.toThrow();
     expect(good.webContents.send).toHaveBeenCalledWith('network:state', expect.anything());
     expect(backgroundConnections.notifyEgressChange).toHaveBeenCalledTimes(1);
+  });
+
+  it('also reaches trusted app-page surfaces (tepegoz:// tabs) with the profile-wide projection', () => {
+    const page = { id: 9, isDestroyed: () => false, send: vi.fn() };
+    bw.getAllWindows.mockReturnValue([]);
+    appSurfaceContents.mockReturnValue([page]);
+    mod.broadcastNetworkState();
+    expect(page.send).toHaveBeenCalledWith(
+      'network:state',
+      expect.objectContaining({ tabs: {}, groups: {} }),
+    );
+  });
+
+  it('does not double-send to a chrome window already reached by the per-window loop', () => {
+    const win = { isDestroyed: () => false, webContents: { id: 5, send: vi.fn() } };
+    bw.getAllWindows.mockReturnValue([win]);
+    appSurfaceContents.mockReturnValue([win.webContents]);
+    mod.broadcastNetworkState();
+    expect(win.webContents.send).toHaveBeenCalledTimes(1);
+  });
+
+  it('survives a send that throws on an app-page surface', () => {
+    const page = {
+      id: 9,
+      isDestroyed: () => false,
+      send: vi.fn(() => {
+        throw new Error('gone');
+      }),
+    };
+    bw.getAllWindows.mockReturnValue([]);
+    appSurfaceContents.mockReturnValue([page]);
+    expect(() => {
+      mod.broadcastNetworkState();
+    }).not.toThrow();
   });
 });

@@ -61,6 +61,7 @@ import {
 } from '@tepegoz/bookmarks';
 import { registerBookmarkProfileIpc } from './ipc-bookmark-profiles';
 import FileOperationsHost from '../file-operations/file-operations-host';
+import { broadcastToAppSurfaces } from '../lib/app-surfaces';
 import { getDb } from '../db/database.electron';
 import { handle, handleAsync, onAction, onSignal, parsePayload } from './ipc-helpers';
 
@@ -69,12 +70,11 @@ import { handle, handleAsync, onAction, onSignal, parsePayload } from './ipc-hel
  * handlers (extracted from `ipc-content.ts`, ADR-0010 250-line cap).
  */
 
-/** Notify every app window that the bookmark tree changed (a popup-window mutation must reach the main
- *  window's bar + manager). Mirrors `broadcastPublicSettings`. */
+/** Notify every app surface that the bookmark tree changed (a popup-window mutation must reach the main
+ *  window's bar + manager, and a `tepegoz://bookmarks` tab must reach it too). Mirrors
+ *  `broadcastPublicSettings`. */
 function broadcastBookmarksChanged(): void {
-  for (const w of BrowserWindow.getAllWindows()) {
-    if (!w.isDestroyed()) w.webContents.send(IpcChannels.bookmarksChanged);
-  }
+  broadcastToAppSurfaces(IpcChannels.bookmarksChanged);
 }
 
 /** Max size for an uploaded new-tab background image (bytes stored in the content-addressed blob store). */

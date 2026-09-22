@@ -12,6 +12,7 @@ import { AgentConversationStore, TokenStore } from '@tepegoz/persistence';
 import { AGENT_HISTORY_EVENT_KINDS, type AgentHistoryEventKind } from '@tepegoz/ext-agent/history';
 import type { EventType } from '@tepegoz/shared-types';
 import { getDb } from '../db/database.electron';
+import { broadcastToAppSurfaces } from '../lib/app-surfaces';
 import { mainStrings } from '../lib/i18n-main';
 import NotificationHost from '../notifications/notification-host';
 import PreferenceStore from '@tepegoz/preferences';
@@ -33,6 +34,11 @@ export const agentRunByGroup = new Map<string, boolean>();
  * PR7 — the tab strip's per-tab "agent active" indicator). Both interactive
  * (`ipc-agent-run.ts`) and background (`task-agent-runner.electron.ts`) runs go through this rather
  * than mutating `agentRunByGroup` directly, so neither call site can forget the broadcast.
+ *
+ * Still `BrowserWindow.getAllWindows()`-only, unlike `broadcastConversationsState` below — tab-strip
+ * active-run state has no `tepegoz://` page consumer today (the tab strip only renders in chrome), the
+ * same reasoning `docs/tracks/protocol-tepegoz-pages.md` §5b gives for the chat/video-player broadcasts
+ * it also left alone. Migrate to `broadcastToAppSurfaces` if a future internal page ever needs this.
  */
 export function setAgentRunForGroup(groupId: string, running: boolean): void {
   if (running) agentRunByGroup.set(groupId, true);
@@ -64,12 +70,7 @@ function listConversationsState(): AgentConversationsState {
 }
 
 export function broadcastConversationsState(): void {
-  const state = listConversationsState();
-  for (const win of BrowserWindow.getAllWindows()) {
-    if (!win.webContents.isDestroyed()) {
-      win.webContents.send(IpcChannels.agentConversationsState, state);
-    }
-  }
+  broadcastToAppSurfaces(IpcChannels.agentConversationsState, listConversationsState());
 }
 
 /** Whether the Agent extension (`com.tepegoz.agent`) is currently enabled. Disabling it is a real

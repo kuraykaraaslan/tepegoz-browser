@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { basename } from 'node:path';
 import { stat } from 'node:fs/promises';
-import { BrowserWindow, type WebContents } from 'electron';
+import type { WebContents } from 'electron';
 import {
   aggregateUploadRisk,
   classifyUploadRisk,
@@ -15,6 +15,7 @@ import {
 import { AppError, Logger } from '@tepegoz/libs';
 import { EventJournal } from '@tepegoz/persistence';
 import { IpcChannels } from '@tepegoz/desktop-ipc';
+import { broadcastToAppSurfaces } from '../lib/app-surfaces';
 import { getDb } from '../db/database.electron';
 import FileOperationsHost from '../file-operations/file-operations-host';
 import CdpDriver from '../agent/cdp-driver.electron';
@@ -286,10 +287,7 @@ class UploadService {
   }
 
   private static broadcast(): void {
-    const state = UploadService.state();
-    for (const w of BrowserWindow.getAllWindows()) {
-      if (!w.isDestroyed()) w.webContents.send(IpcChannels.uploadsState, state);
-    }
+    broadcastToAppSurfaces(IpcChannels.uploadsState, UploadService.state());
   }
 
   private static appendAudit(

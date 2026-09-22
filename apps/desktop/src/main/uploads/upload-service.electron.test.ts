@@ -32,8 +32,8 @@ vi.mock('@tepegoz/uploads', () => ({
 const journal = vi.hoisted(() => ({ append: vi.fn() }));
 vi.mock('@tepegoz/persistence', () => ({ EventJournal: journal }));
 vi.mock('@tepegoz/desktop-ipc', () => ({ IpcChannels: { uploadsState: 'uploads:state' } }));
-const bw = vi.hoisted(() => ({ getAllWindows: vi.fn((): unknown[] => []) }));
-vi.mock('electron', () => ({ BrowserWindow: bw }));
+const broadcastToAppSurfaces = vi.hoisted(() => vi.fn());
+vi.mock('../lib/app-surfaces', () => ({ broadcastToAppSurfaces }));
 
 const db = vi.hoisted((): { value: unknown } => ({ value: { __db: true } }));
 vi.mock('../db/database.electron', () => ({ getDb: () => db.value }));
@@ -74,7 +74,6 @@ beforeEach(() => {
   db.value = { __db: true };
   cdp.setFileInputFiles.mockResolvedValue(undefined);
   fsHost.assertReadableFile.mockImplementation((p: string) => Promise.resolve(`/real/${p}`));
-  bw.getAllWindows.mockReturnValue([]);
 });
 
 describe('init', () => {
@@ -311,17 +310,12 @@ describe('the web-request lifecycle observers', () => {
 });
 
 describe('broadcast', () => {
-  it('pushes the uploads state to every live window', async () => {
+  it('pushes the uploads state to every app surface', async () => {
     const Svc = await load();
-    const send = vi.fn();
-    bw.getAllWindows.mockReturnValue([
-      { isDestroyed: () => false, webContents: { send } },
-      { isDestroyed: () => true, webContents: { send: vi.fn() } },
-    ]);
 
     await Svc.create(input(), wc() as never); // create → broadcast()
 
-    expect(send).toHaveBeenCalledWith('uploads:state', {
+    expect(broadcastToAppSurfaces).toHaveBeenCalledWith('uploads:state', {
       items: expect.any(Array) as unknown[],
     });
   });

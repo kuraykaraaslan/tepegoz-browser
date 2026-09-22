@@ -3,16 +3,14 @@ import type { DownloadProvenance, DownloadStatus } from '@tepegoz/downloads';
 
 /**
  * The desktop DownloadService's shared-state helpers. `getDb` returns null (no persistence side
- * effects) and there are no windows (no broadcast), so this exercises the in-memory logic only:
- * the FIFO provenance queue that matches a `will-download` back to who asked for it, the
+ * effects) and `broadcastToAppSurfaces` is mocked (no real IPC), so this exercises the in-memory logic
+ * only: the FIFO provenance queue that matches a `will-download` back to who asked for it, the
  * newest-first projection, and the live rate join added for the speed/ETA row.
  */
 
-const bw = vi.hoisted(() => ({ windows: [] as unknown[] }));
-vi.mock('electron', () => ({
-  app: { getPath: () => '/tmp/dl' },
-  BrowserWindow: { getAllWindows: () => bw.windows },
-}));
+vi.mock('electron', () => ({ app: { getPath: () => '/tmp/dl' } }));
+const broadcastToAppSurfaces = vi.hoisted(() => vi.fn());
+vi.mock('../lib/app-surfaces', () => ({ broadcastToAppSurfaces }));
 vi.mock('node:fs', () => ({ mkdirSync: vi.fn() }));
 const logger = vi.hoisted(() => ({ warn: vi.fn() }));
 vi.mock('@tepegoz/libs', () => ({ Logger: logger }));
@@ -68,7 +66,6 @@ function activeRecord(o: RecOver = {}): ActiveRecord {
 let ctx: ReturnType<typeof store.createState>;
 beforeEach(() => {
   vi.clearAllMocks();
-  bw.windows = [];
   getDb.mockReturnValue(null);
   prefs.getAll.mockReturnValue({
     downloadDirectory: '',
@@ -185,14 +182,9 @@ describe('persistence side effects (getDb non-null)', () => {
 });
 
 describe('broadcast', () => {
-  it('pushes the newest-first snapshot to every live window on any mutation', () => {
-    const send = vi.fn();
-    bw.windows = [
-      { isDestroyed: () => false, webContents: { send } },
-      { isDestroyed: () => true, webContents: { send: vi.fn() } },
-    ];
+  it('pushes the newest-first snapshot to every app surface on any mutation', () => {
     store.upsert(ctx, activeRecord({ id: 'a', updatedAt: 5 }));
-    expect(send).toHaveBeenCalledWith(
+    expect(broadcastToAppSurfaces).toHaveBeenCalledWith(
       expect.any(String),
       expect.objectContaining({ items: expect.any(Array) as unknown[] }),
     );

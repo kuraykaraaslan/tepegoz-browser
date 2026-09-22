@@ -1,4 +1,4 @@
-import { BrowserWindow, Notification } from 'electron';
+import { Notification } from 'electron';
 import { Logger } from '@tepegoz/libs';
 import NotificationStore, {
   NotificationInputSchema,
@@ -7,6 +7,7 @@ import NotificationStore, {
 } from '@tepegoz/notifications';
 import { IpcChannels, type AppNotification } from '@tepegoz/desktop-ipc';
 import PreferenceStore from '@tepegoz/preferences';
+import { broadcastToAppSurfaces } from '../lib/app-surfaces';
 import TabManager from '../tabs';
 
 /**
@@ -19,13 +20,10 @@ import TabManager from '../tabs';
 let seq = 0;
 let wired = false;
 
-/** Broadcast the center snapshot to every app chrome window (main + open popups). Browsed pages are
- *  WebContentsViews, not BrowserWindows, so they are never reached. */
+/** Broadcast the center snapshot to every app surface (chrome windows AND `tepegoz://` pages, via
+ *  `broadcastToAppSurfaces` — see `app-surfaces.ts`). Browsed pages are untrusted and never reached. */
 function broadcastState(): void {
-  const state = NotificationStore.state();
-  for (const win of BrowserWindow.getAllWindows()) {
-    if (!win.isDestroyed()) win.webContents.send(IpcChannels.notificationsState, state);
-  }
+  broadcastToAppSurfaces(IpcChannels.notificationsState, NotificationStore.state());
 }
 
 export default class NotificationHost {

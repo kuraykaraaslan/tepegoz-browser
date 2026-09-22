@@ -308,10 +308,38 @@ değişimde görünüyordu. Locale'de de aynı sessiz boşluk vardı.
 - `isTrustedAppUrl` doğrulayan `tepegoz://` sayfaları, tekilleştirilmiş). `broadcastPublicSettings`
   artık bunu kullanıyor. Regresyon testi: `e2e/tepegoz-page-live-prefs.spec.ts`.
 
-**Kapatılmadı (aynı şekil, ölçülmedi):** `download-service-store`, `upload-service`, `translate-host`,
-`notification-host`, `task-service-state`, `ipc-network`, `ipc-agent-shared` ve `ipc-content-*`
-yayınları hâlâ yalnızca `BrowserWindow.getAllWindows()` geziyor. `tepegoz://downloads` gibi sayfaların
-canlı güncellenip güncellenmediği ölçülmedi.
+**2026-09-22'de kapatıldı (kodda, ölçülmedi):** `download-service-store` (`downloadsState`),
+`upload-service` (`uploadsState`), `translate-host` (`translatePageState` VE
+`translateCloudFallbackRequest` — iki ayrı döngü), `notification-host` (`notificationsState`),
+`task-service-state` (`tasksState`), `ipc-agent-shared` (`agentConversationsState` — dosyada
+şüphelenilenin aksine döngü İKİ değil TEK taneydi), `ipc-content-browsing`'in `bookmarksChanged`'i,
+`ipc-content-extensions`'ın `typoDictionariesState`'i ve `ipc-content-tools`'un `modelsState`'i artık
+`broadcastToAppSurfaces` kullanıyor. `tepegoz://downloads` gibi sayfaların canlı güncellenip
+güncellenmediği hâlâ ölçülmedi (e2e ölçümü ayrı iş).
+
+`ipc-network`'ün `broadcastNetworkState`'i FARKLI bir şekilde düzeltildi: payload'u paylaşılan tek bir
+değer değil, her chrome penceresi için `networkStateFor(win)` ile AYRI hesaplanıyor (`TabManager.
+forWindow` o pencerenin kendi tab/group listesini okuyor) — `broadcastToAppSurfaces`'in tek-payload
+varsayımı burada tutmuyor. Pencere döngüsü AYNEN kaldı (kendi kişiselleştirilmiş görünümünü almaya
+devam ediyor, throw eden `send`'e karşı try/catch korunuyor); `appSurfaceContents()` ile güvenilir
+`tepegoz://` sayfalarına (ör. Settings'in Ağ & Gizlilik paneli) profil-geneli projeksiyon (connections/
+general/binaries/secretsAvailable) gönderiliyor, `tabs`/`groups` boş — Settings kendi başına bir
+`BrowserWindow` olduğu Faz 2/3 öncesinde de bu alanlar hep boştu (TabManager onu hiç izlemiyordu), o
+yüzden bu YENİ bir davranış değil. Bir `sent` id kümesi, zaten pencere döngüsünde ulaşılan chrome
+penceresine ikinci kez (farklı bir payload'la) gönderim yapılmasını engelliyor.
+
+**Kasıtlı olarak dokunulmadı:**
+- `ipc-content-app.ts`'teki `BrowserWindow.getAllWindows()` döngüsü (glass/tema arka planını
+  `applyChromeGlass` ile uyguluyor) bu sınıftan bir hata DEĞİL — `setBackgroundMaterial`/
+  `setBackgroundColor` yalnızca gerçek `BrowserWindow`'larda var olan native pencere-chrome API'leri;
+  bir `tepegoz://` sekmesi zaten bunlardan biri değil. Bu dosyanın gerçek "tüm uygulamaya duyur" yayını
+  (`broadcastPublicSettings`) zaten düzeltilmişti (yukarıdaki 5b girişi).
+- `video-player-page-injector.electron.ts` (`videoPlayerPageState`) ve `chat-service.electron.ts`
+  (`chatState`) incelendi: tüketicileri (`ext-video-player`/`ext-chat` panelleri) chrome içinde render
+  edilen uzantı yan panelleri, `REAL_PAGE_HOSTS`'ta (`settings, extensions, history, downloads, uploads,
+  bookmarks, process, developer, profiles`) ne "chat" ne "video-player" var — yani şu an bu sinyali
+  dinleyen hiçbir `tepegoz://` sekmesi yok. Bu ikisi bırakıldı; `REAL_PAGE_HOSTS`'a böyle bir sayfa
+  eklenirse aynı sınıf hata olarak yeniden değerlendirilmeli.
 
 ## 6. Rollback
 

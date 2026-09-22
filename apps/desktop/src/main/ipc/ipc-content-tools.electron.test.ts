@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 /**
  * `registerToolsIpc` — on-device model management + macros IPC. Pinned: the model-progress listener
- * broadcasts `models:state` to every live window; the `models*` handlers delegate to `ModelManager`;
+ * broadcasts `models:state` to every app surface; the `models*` handlers delegate to `ModelManager`;
  * every macro handler refuses (403 `extensionDisabled`) when `com.tepegoz.macros` is off and otherwise
  * delegates to `MacroService`; and `macrosRun` / `macrosRunDraft` wire the cursor + progress callbacks
  * to `sender.send` (offsetting cursor coords by the content bounds).
@@ -83,8 +83,8 @@ const prefs = vi.hoisted(() => ({ getAll: vi.fn(() => ({ extensions: [] as unkno
 vi.mock('@tepegoz/preferences', () => ({ default: prefs }));
 vi.mock('../tabs', () => ({ default: { getContentBounds: () => ({ x: 100, y: 40 }) } }));
 
-const bw = vi.hoisted(() => ({ getAllWindows: vi.fn(() => [] as unknown[]) }));
-vi.mock('electron', () => ({ BrowserWindow: bw }));
+const broadcastToAppSurfaces = vi.hoisted(() => vi.fn());
+vi.mock('../lib/app-surfaces', () => ({ broadcastToAppSurfaces }));
 
 const H = vi.hoisted(() => ({
   handlers: new Map<string, (e: unknown, p: unknown) => unknown>(),
@@ -105,21 +105,16 @@ const call = (ch: string, p?: unknown): unknown => H.handlers.get(ch)!(event, p)
 beforeEach(() => {
   vi.clearAllMocks();
   isExtensionEnabled.mockReturnValue(true);
-  bw.getAllWindows.mockReturnValue([]);
   send = vi.fn();
   event = { sender: { isDestroyed: () => false, send } };
   mod.registerToolsIpc();
 });
 
 describe('on-device models', () => {
-  it('the progress listener broadcasts models:state to every live window', () => {
+  it('the progress listener broadcasts models:state to every app surface', () => {
     const cb = ModelManager.setProgressListener.mock.calls[0]![0] as (m: unknown) => void;
-    const live = { isDestroyed: () => false, webContents: { send: vi.fn() } };
-    const dead = { isDestroyed: () => true, webContents: { send: vi.fn() } };
-    bw.getAllWindows.mockReturnValue([dead, live]);
     cb([{ id: 'm1' }]);
-    expect(live.webContents.send).toHaveBeenCalledWith('modelsState', [{ id: 'm1' }]);
-    expect(dead.webContents.send).not.toHaveBeenCalled();
+    expect(broadcastToAppSurfaces).toHaveBeenCalledWith('modelsState', [{ id: 'm1' }]);
   });
 
   it('list / download / cancel / select / delete delegate to ModelManager', async () => {

@@ -40,6 +40,7 @@ import BindingService from '../network/binding-service.electron';
 import ConnectionPool, { type PoolConnectionView } from '../network/connection-pool.electron';
 import ConnectionTest from '../network/connection-test.electron';
 import BackgroundConnectionService from '../extensions/background-connection.electron';
+import { appSurfaceContents } from '../lib/app-surfaces';
 import { handleAsync } from './ipc-helpers';
 
 /**
@@ -224,18 +225,42 @@ function binaryStatus(binary: VpnBinary): BinaryStatus {
   }
 }
 
-/** Push the current picture to every open chrome window. Called on any change, including a tunnel drop. */
+/**
+ * Push the current picture to every open chrome window AND every `tepegoz://` app page (Settings'
+ * Network & Privacy panel). Called on any change, including a tunnel drop.
+ *
+ * Unlike the other broadcasts fixed alongside this one, this payload is PERSONALIZED per chrome window
+ * (`networkStateFor(win)` reads that window's own tab/group list via `TabManager.forWindow`), so it
+ * can't be a single shared `broadcastToAppSurfaces` call. A `tepegoz://` page is a `WebContentsView`
+ * inside a tab, not a `BrowserWindow` — there is no window to resolve a per-tab breakdown FROM for it,
+ * the same way there never was for Settings back when it was its own standalone `BrowserWindow`
+ * (untracked by `TabManager` either way). So it gets the profile-wide projection instead —
+ * connections/general/binaries/secretsAvailable, computed the same regardless of which window asked —
+ * with `tabs`/`groups` empty, exactly what this payload always was for Settings before Faz 2/3.
+ * `appSurfaceContents()` is reused for the app-page half; `sent` keeps a chrome window (already pushed
+ * its own per-window picture above) from being sent this second, different payload too.
+ */
 export function broadcastNetworkState(): void {
   // The General binding / a connection's up-down is also every background-connection extension's kill
   // switch (currently just chat): re-evaluate every live account's egress the moment the network
   // picture changes (no-op until a service starts).
   BackgroundConnectionService.notifyEgressChange();
+  const sent = new Set<number>();
   for (const win of BrowserWindow.getAllWindows()) {
     if (win.isDestroyed()) continue;
+    sent.add(win.webContents.id);
     try {
       win.webContents.send(IpcChannels.networkState, networkStateFor(win));
     } catch (err) {
       Logger.warn('Could not push network state to a window', { err: String(err) });
+    }
+  }
+  for (const wc of appSurfaceContents()) {
+    if (sent.has(wc.id)) continue;
+    try {
+      wc.send(IpcChannels.networkState, emptyState());
+    } catch (err) {
+      Logger.warn('Could not push network state to an app surface', { err: String(err) });
     }
   }
 }

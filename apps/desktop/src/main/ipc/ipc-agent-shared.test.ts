@@ -7,11 +7,16 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
  *     when the quota is off, never again once already past;
  *   - `safeArgsPreview` never leaks the full payload (200-char cap, `…` suffix, survives a cyclic arg);
  *   - `tokenUsage` folds the in-memory run ledger with the persisted lifetime total and the quota;
- *   - `broadcastConversationsState` pushes to every live window.
+ *   - `broadcastConversationsState` pushes to every app surface;
+ *   - `broadcastAgentActiveGroups` (S8 PR7) pushes to every live chrome window — not yet migrated to
+ *     `broadcastToAppSurfaces`, since no `tepegoz://` page currently shows tab-strip active-run state.
  */
 
 const getAllWindows = vi.hoisted(() => vi.fn(() => [] as unknown[]));
 vi.mock('electron', () => ({ BrowserWindow: { getAllWindows } }));
+
+const broadcastToAppSurfaces = vi.hoisted(() => vi.fn());
+vi.mock('../lib/app-surfaces', () => ({ broadcastToAppSurfaces }));
 
 vi.mock('@tepegoz/ext-agent/manifest', () => ({ agentManifest: { id: 'com.tepegoz.agent' } }));
 
@@ -51,6 +56,7 @@ const mod = await import('./ipc-agent-shared');
 
 beforeEach(() => {
   getAllWindows.mockReturnValue([]);
+  broadcastToAppSurfaces.mockClear();
   ledgerTotals.mockReturnValue({ inputTokens: 10, outputTokens: 5, totalTokens: 15 });
   ledgerPeakContext.mockReturnValue(1200);
   convList.mockReturnValue([{ id: 'c1' }]);
@@ -174,19 +180,12 @@ describe('tokenUsage', () => {
 });
 
 describe('broadcastConversationsState', () => {
-  it('sends the conversation list to every live window', () => {
-    const send = vi.fn();
-    getAllWindows.mockReturnValue([{ webContents: { isDestroyed: () => false, send } }]);
+  it('sends the conversation list to every app surface', () => {
     mod.broadcastConversationsState();
-    expect(send).toHaveBeenCalledTimes(1);
-    expect(send.mock.calls[0]![1]).toEqual({ items: [{ id: 'c1' }] });
-  });
-
-  it('skips a window whose webContents was destroyed', () => {
-    const send = vi.fn();
-    getAllWindows.mockReturnValue([{ webContents: { isDestroyed: () => true, send } }]);
-    mod.broadcastConversationsState();
-    expect(send).not.toHaveBeenCalled();
+    expect(broadcastToAppSurfaces).toHaveBeenCalledTimes(1);
+    expect(broadcastToAppSurfaces).toHaveBeenCalledWith(expect.anything(), {
+      items: [{ id: 'c1' }],
+    });
   });
 });
 

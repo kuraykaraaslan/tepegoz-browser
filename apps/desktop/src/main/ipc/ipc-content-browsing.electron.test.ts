@@ -125,12 +125,13 @@ vi.mock('./ipc-helpers', () => ({
 
 const bw = vi.hoisted(() => ({
   fromWebContents: vi.fn((): unknown => null),
-  getAllWindows: vi.fn(() => [] as unknown[]),
 }));
 const dialog = vi.hoisted(() => ({
   showOpenDialog: vi.fn(() => Promise.resolve({ canceled: true, filePaths: [] as string[] })),
 }));
 vi.mock('electron', () => ({ BrowserWindow: bw, dialog }));
+const broadcastToAppSurfaces = vi.hoisted(() => vi.fn());
+vi.mock('../lib/app-surfaces', () => ({ broadcastToAppSurfaces }));
 
 const readFile = vi.hoisted(() => vi.fn((): Promise<Buffer> => Promise.resolve(Buffer.from([]))));
 vi.mock('node:fs/promises', () => ({ readFile }));
@@ -143,7 +144,6 @@ beforeEach(() => {
   vi.clearAllMocks();
   getDb.mockReturnValue({ __db: true });
   isBookmarkable.mockReturnValue(true);
-  bw.getAllWindows.mockReturnValue([]);
   bw.fromWebContents.mockReturnValue(null);
   BlobStore.get.mockReturnValue(undefined);
   dialog.showOpenDialog.mockResolvedValue({ canceled: true, filePaths: [] });
@@ -183,11 +183,9 @@ describe('bookmarks', () => {
     expect(call('bookmarksToggle', { url: 'javascript:x', title: 't' })).toBe(false);
 
     isBookmarkable.mockReturnValue(true);
-    const win = { isDestroyed: () => false, webContents: { send: vi.fn() } };
-    bw.getAllWindows.mockReturnValue([win]);
     expect(call('bookmarksToggle', { url: 'https://x/', title: 't', favicon: null })).toBe(true);
     expect(BookmarkTreeStore.toggleAtBar).toHaveBeenCalled();
-    expect(win.webContents.send).toHaveBeenCalledWith('bookmarksChanged');
+    expect(broadcastToAppSurfaces).toHaveBeenCalledWith('bookmarksChanged');
   });
 });
 
