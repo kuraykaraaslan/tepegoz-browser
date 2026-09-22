@@ -145,3 +145,11 @@ export const AgentSkillSaveSchema = z.object({
 export type AgentSkillSaveInput = z.infer<typeof AgentSkillSaveSchema>;
 
 export const AgentSkillIdSchema = z.string().uuid();
+
+/** `permissions:decision-history` payload — the Permission Debug view's query (S8 PR7). Every field is
+ *  optional; the renderer supplies whichever filter the user typed, and main narrows from there. */
+export const PermissionDecisionQuerySchema = z.object({
+  site: z.string().max(255).optional(),
+  tool: z.string().max(200).optional(),
+  limit: z.number().int().min(1).max(500).optional(),
+});

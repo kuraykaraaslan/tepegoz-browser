@@ -62,6 +62,11 @@ export type AgentEventKind =
   // A remembered grant was used or saved (S9). Its own kind because provenance for a PERSISTENT
   // permission has to survive the run: a grant that acts invisibly is one nobody knows to revoke.
   | 'grant'
+  // The run's active tab crossed into a new registrable domain (S8 PR7 second wave) — the SAME
+  // eTLD+1 comparator `plan-grant-scope`/`remembered-grant-scope` use to scope a grant, reused here
+  // only to narrate. Grants are already scoped to the site the user approved; this is what lets the
+  // user SEE the moment a run left it, rather than infer it from a page in the transcript.
+  | 'domain_transition'
   // Run-control (live, ephemeral — NOT journaled as step events; the durable record is the checkpoint):
   | 'paused'
   | 'resumed'

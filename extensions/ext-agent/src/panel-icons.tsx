@@ -173,6 +173,7 @@ export const KIND_DOT: Record<AgentEvent['kind'], string> = {
   handoff: 'bg-amber-500',
   tab_spawn: 'bg-sky-400',
   grant: 'bg-amber-500',
+  domain_transition: 'bg-cyan-400',
   paused: 'bg-amber-500',
   resumed: 'bg-green-500',
   steered: 'bg-indigo-400',

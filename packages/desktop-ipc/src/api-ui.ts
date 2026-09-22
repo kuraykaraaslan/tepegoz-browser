@@ -14,6 +14,8 @@ import type {
   ClientCertificateChoice,
   ClientCertificateRequest,
   ClientCertificateResponse,
+  PermissionDecisionQuery,
+  PermissionDecisionRecord,
 } from './contract';
 import type { PageMenuAction, PageMenuContext, PageMenuContributionActionInput } from './contract';
 import type { HistoryEntry } from './contract';
@@ -118,6 +120,9 @@ export interface UiApi {
   /** The whole collection as Netscape bookmarks HTML. The renderer saves it; main never writes a file. */
   /** The agent permission matrix — a read-only view over the Policy Kernel. */
   listAgentCapabilities(): Promise<AgentCapabilityRow[]>;
+  /** Permission Debug (S8 PR7): past Policy Kernel decisions for a chosen site/tool, read back from
+   *  the Event Journal. A history view, distinct from {@link listAgentCapabilities}'s live baseline. */
+  listPermissionDecisions(query: PermissionDecisionQuery): Promise<PermissionDecisionRecord[]>;
   /**
    * Capture the active tab and store it in the blob store. Resolves null when there is nothing to
    * capture — the caller says so; it is never an exception thrown at a menu click.

@@ -30,6 +30,7 @@ const JOURNAL_TYPE_BY_KIND: Partial<Record<AgentEventKind, EventType>> = {
   step_ok: 'AgentStepExecuted',
   step_error: 'AgentStepExecuted',
   awaiting_approval: 'TaskAwaitingApproval',
+  domain_transition: 'AgentDomainTransition',
   handoff: 'HandoffRequested',
   done: 'TaskSucceeded',
   error: 'TaskFailed',

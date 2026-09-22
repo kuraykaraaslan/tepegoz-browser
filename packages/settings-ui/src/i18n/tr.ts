@@ -409,6 +409,28 @@ export const tr: SettingsStrings = {
     agentLoading: 'Politika okunuyor…',
     agentEmpty: 'Kayıtlı ajan aracı yok.',
     decision: { allow: 'Çalışır', ask: 'Önce sorar', deny: 'Reddedilir' },
+    debug: {
+      title: 'İzin geçmişi',
+      subtitle: 'Ajanın gerçekten aldığı kararlar: ne istendi, ne karar verildi ve neden.',
+      readOnly:
+        'Salt okunur. Bu, zaten verilmiş kararların bir kaydı — burada hiçbir şey değiştirilemez.',
+      siteFilter: 'Siteye göre filtrele',
+      siteFilterPlaceholder: 'example.com',
+      toolFilter: 'Araca göre filtrele',
+      toolFilterPlaceholder: 'browser_update_location',
+      loading: 'Günlük okunuyor…',
+      empty: 'Eşleşen bir karar yok.',
+      site: 'Site',
+      noSite: 'Site yok',
+      outcome: { approved: 'Onaylandı', refused: 'Reddedildi' },
+      rememberedTitle: 'Neden sorulmadı',
+      rememberedBy: {
+        plan_grant: 'Bu çalışma için onayladığın plan kapsıyordu',
+        remembered_grant: 'Bunun için kaydettiğin bir izin kapsıyordu',
+        autonomy: 'Özerklik düzeyin tarafından otomatik onaylandı',
+      },
+      askedLive: 'Bu sefer doğrudan sana soruldu.',
+    },
   },
   clientCerts: {
     unavailable: 'Saklanan kararlar okunamadı; bu liste eksik olabilir.',

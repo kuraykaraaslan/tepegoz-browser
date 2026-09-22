@@ -23,7 +23,7 @@ import {
   IconShield,
 } from './SettingsPage-icons';
 import type { SettingsSectionsCtx } from './SettingsPage-sections';
-import { AgentPermissionMatrix, PermissionsCenter } from './PermissionsCenter';
+import { AgentPermissionMatrix, PermissionDebugView, PermissionsCenter } from './PermissionsCenter';
 
 /**
  * "Forget this site" (Phase 2). Two-step by construction: the first click PLANS, which is what
@@ -353,6 +353,7 @@ export function privacyAndAdvancedSections(ctx: SettingsSectionsCtx): SettingsSe
             onReset={ctx.resetSitePermission}
           />
           <AgentPermissionMatrix s={s} />
+          <PermissionDebugView s={s} />
         </div>
       ),
     },

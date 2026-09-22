@@ -204,6 +204,38 @@ describe('ToolGateway.invoke', () => {
     expect(entries).toContain('browser_get_page:allow');
   });
 
+  it('forwards the call target onto the audit entry (Permission Debug: "for a given site")', async () => {
+    const entries: AuditEntry[] = [];
+    ToolGateway.setAuditHandler((e) => entries.push(e));
+    register({ id: 'browser_get_page', dangerClass: 'read' });
+    await ToolGateway.invoke('browser_get_page', {}, { targetUrl: 'https://a.example/page' });
+    expect(entries).toContainEqual(
+      expect.objectContaining({ toolName: 'browser_get_page', targetUrl: 'https://a.example/page' }),
+    );
+
+    // A call with no site context carries no `targetUrl` at all — never a fabricated one.
+    entries.length = 0;
+    await ToolGateway.invoke('browser_get_page', {});
+    expect(entries[0]?.targetUrl).toBeUndefined();
+  });
+
+  it('forwards the call target on BOTH audit entries of a resolved `ask` (pre- and post-resolution)', async () => {
+    const entries: AuditEntry[] = [];
+    ToolGateway.setAuditHandler((e) => entries.push(e));
+    ToolGateway.setConfirmHandler(() => Promise.resolve(true));
+    register({ id: 'form_update_field', dangerClass: 'state_changing' });
+    await ToolGateway.invoke(
+      'form_update_field',
+      {},
+      { targetUrl: 'https://a.example/checkout' },
+    );
+    expect(entries).toHaveLength(2);
+    expect(entries[0]?.targetUrl).toBe('https://a.example/checkout');
+    expect(entries[0]?.outcome).toBeUndefined();
+    expect(entries[1]?.targetUrl).toBe('https://a.example/checkout');
+    expect(entries[1]?.outcome).toBe('approved');
+  });
+
   it('scopes HITL handlers per async run', async () => {
     register({ id: 'form_update_field', dangerClass: 'state_changing' });
     const seen: string[] = [];

@@ -264,6 +264,7 @@ const EVENT_KIND_LABEL: Record<AgentEvent['kind'], string> = {
   handoff: 'Handoff',
   tab_spawn: 'Tab',
   grant: 'Saved permission',
+  domain_transition: 'Domain',
   paused: 'Paused',
   resumed: 'Resumed',
   steered: 'Steering',

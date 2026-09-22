@@ -99,6 +99,9 @@ export const tr: AgentStrings = {
     planRejected: 'Plan reddedildi — hiçbir şey çalıştırılmadı.',
     allStepsSkipped: 'Tüm adımlar atlandı — çalıştırılacak bir şey yok.',
     egressWarning: 'Egress uyarısı: model isteğinde olası PII/kodlanmış veri',
+    // "Site değişti" satırı (S8 PR7 ikinci dalga) — bir izin kapsamının zaten kullandığı aynı eTLD+1
+    // karşılaştırıcısı, burada sadece anlatım için kullanılıyor.
+    domainTransition: 'Şimdi {domain} üzerinde.',
   },
   // Ajanın kendi özetini yazmadan durduğu bir çalışma için terminal Konsol satırı (S8) — ham bir enum
   // ("Finished: max_steps") yerine her durma nedeni için düz bir cümle.

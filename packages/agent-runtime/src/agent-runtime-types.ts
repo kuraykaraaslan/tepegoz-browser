@@ -1,5 +1,5 @@
 import type { ModelProvider } from '@tepegoz/model-gateway';
-import type { ConfirmRequest } from '@tepegoz/capability-plane';
+import type { AuditEntry, ConfirmRequest } from '@tepegoz/capability-plane';
 import type { RunControl } from '@tepegoz/orchestrator';
 import type { HandoffKind } from '@tepegoz/security-policy';
 import type { AIProvider, Plan } from '@tepegoz/shared-types';
@@ -24,6 +24,13 @@ export interface AgentRunHooks {
   onModelDelta?: (delta: string) => void;
   /** Durable checkpoint seam: hosts may project this into the Event Journal for resume/replay. */
   onCheckpoint?: (checkpoint: AgentRunCheckpoint) => void;
+  /**
+   * Permission Debug seam: every Policy Kernel verdict the gateway records for THIS run, forwarded
+   * verbatim (never re-derived) so a host can project it into the Event Journal for the per-site,
+   * per-tool decision history. Absent ⇒ no such record is kept, exactly as before this hook existed —
+   * it adds a read/journal path only, never changes what the gateway decided or who it asked.
+   */
+  onAudit?: (entry: AuditEntry) => void;
   /** HITL before the loop: user reviews/edits the plan; resolve approved=false to abort. */
   requestPlanApproval: (plan: Plan) => Promise<PlanApprovalDecision>;
   /** HITL: resolve true to allow a gated tool call, false to deny. */
@@ -94,8 +101,14 @@ export interface AgentRunDeps {
    *  sentence per stop reason. See {@link terminalMessageFor}. */
   stopReasonStrings: StopReasonStrings;
   /** Localized Console copy for the runtime's own lifecycle events (plan rejected before anything
-   *  ran, every step skipped, an advisory egress warning). Injected by the host from its dictionary. */
-  runtimeStrings: { planRejected: string; allStepsSkipped: string; egressWarning: string };
+   *  ran, every step skipped, an advisory egress warning, a same-run domain transition). Injected by
+   *  the host from its dictionary. `domainTransition` carries a `{domain}` placeholder. */
+  runtimeStrings: {
+    planRejected: string;
+    allStepsSkipped: string;
+    egressWarning: string;
+    domainTransition: string;
+  };
   /**
    * On-device inference config (engine + selected-model resolver). Injected by the Electron wiring;
    * absent when the app didn't wire a local engine, in which case `'local'` routing is unavailable and

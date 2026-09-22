@@ -223,9 +223,39 @@ Six UI-scoped PRs, each ≤250 lines, sequenced behind their substrate phases. N
         making a REAL call to the provider (spends a token/quota, has rate-limit exposure), which is a
         product decision (how often? on every panel open? cached for how long?) this file should not make
         unilaterally.
-- [ ] **Permission debug view** — for a given site and tool: what was asked, what was decided, which rule
+- [~] **Permission debug view** — for a given site and tool: what was asked, what was decided, which rule
       decided it, and why it was or was not remembered. The reasons already exist in the kernel; they are not
-      yet a surface a user can open.
+      yet a surface a user can open. _Landed 2026-09-22: the Event Journal did NOT retain enough per-decision
+      detail to build this as a pure read — `ToolGateway`'s audit entry never carried the call's `targetUrl`,
+      and no decision was journaled with which standing permission (if any) answered it, so journaling had to
+      be added. `AuditEntry.targetUrl` (`capability-plane/src/types.ts` + `tool-gateway.ts`, forwarded from
+      the SAME `InvokeContext.targetUrl` the kernel already judges — no new resolution) and a new
+      `AgentRunHooks.onAudit` seam (`agent-runtime-types.ts`) forward every kernel verdict to the host
+      unchanged. `apps/desktop/src/main/ipc/ipc-agent-run.ts`'s `onAudit` journals one `ToolInvoked`
+      (ran) or `PolicyBlocked` (denied/refused) record per decision — reusing the `ToolInvoked`/
+      `PolicyBlocked` `EventType`s already reserved in `shared-types/enums.ts` but never wired — carrying
+      `{toolName, targetUrl, reason, riskTier, decision, outcome, rememberedBy}`; a pre-resolution `ask`
+      call is skipped so only the complete record is written. `rememberedBy` (`plan_grant` /
+      `remembered_grant` / `autonomy`) is threaded from `requestApproval`'s three existing coverage
+      branches via a per-run `lastGrantHint`, consumed and cleared by the next `onAudit` call so it can
+      never attach to an unrelated decision. Read side: `EventJournal.readByTypes` (new, type-scoped) +
+      `apps/desktop/src/main/web-permissions/permission-debug.ts`'s `permissionDecisionHistory` (site
+      filter via `registrableDomain`, tool filter, zod-validated payload, skips a foreign-shaped row
+      rather than guessing) behind a new zod-gated `permissions:decision-history` IPC channel. UI:
+      `PermissionDebugView` in `PermissionsCenter.tsx`, next to the existing read-only agent matrix in
+      Settings → Privacy → Site permissions, reusing the SAME reason-code lookup the live approval modal
+      uses — `explainPolicyReason` was extracted out of `panel-modals.tsx`'s local copy into
+      `@tepegoz/i18n` (`packages/i18n/src/permissions.ts`) so both surfaces read one table, never two.
+      EN+TR strings in `@tepegoz/settings-ui`'s dict (`permissionsCenter.debug.*`), parity-tested. Tests:
+      `tool-gateway.test.ts` (+2, `targetUrl` forwarding), `event-journal.test.ts` (+2, `readByTypes`),
+      `permission-debug.test.ts` (new, 7), `ipc-agent-run.electron.test.ts` (+7, `onAudit` incl. the
+      `rememberedBy` hand-off), `PermissionsCenter.test.tsx` (+6, `PermissionDebugView`).
+      **Still owed for `[x]`:** scheduled/background task runs (`task-agent-runner.electron.ts`) share
+      `AgentService.run` but its own hooks never set `onAudit`, so today's Permission Debug history only
+      covers interactive Do-mode runs started from the panel — a scheduled task's decisions are invisible
+      here until that wiring is added. FileOperationsHost's own folder-grant auto-approvals (a separate,
+      pre-existing consent path, not the Policy Kernel's grant stores) are journaled with no
+      `rememberedBy` — an honest "answered live" rather than a wrong label, but not the full picture._
 - [ ] **New tab is the user's, not the assistant's** — an explicit choice between assistant, bookmarks/speed
       dial, and blank. Comet's forced-AI new tab and Neon's "small AI button, confusing surface" are opposite
       failures of the same decision: the product deciding how much AI the user wants.
@@ -290,10 +320,27 @@ breakdownThisRun}` in the parity-tested dict, wired through a placeholder helper
       context." Reachable here with **no new permission** — `tab_list_items` + `browser_get_page`. ⚠️ Boundary:
       each tab's content is wrapped as untrusted **separately**, so one poisoned tab cannot speak for the
       others. Keep it Chat-only; Do already binds to a working tab on purpose.
-- [ ] **A visible "the run changed site" event in the transcript.** Grants are already eTLD+1-scoped
+- [x] **A visible "the run changed site" event in the transcript.** Grants are already eTLD+1-scoped
       (`plan-grant-scope` / `remembered-grant-scope`), but a domain transition is not _shown_. Claude for
       Chrome surfaces it; it is cheap and it is honesty — the user can see the moment the run left the site
       they authorized. Pairs with the periodic domain reminder in [S1](phase-s1-foundation-native-loop.md)/[S7](phase-s7-speed.md).
+      _Landed 2026-09-22: a new `nextDomainState` pure function in `packages/agent-runtime/src/agent-runtime-loop.ts`
+      reuses `isSameSite`/`registrableDomain` — the SAME eTLD+1 comparator `plan-grant-scope` and
+      `remembered-grant-scope` already gate coverage with, not a second parser — to compare the active
+      tab's URL across every successful step (any tool, not only navigation ones, so a followed tab-spawn
+      or a redirect is caught too). A real registrable-domain change emits a new `domain_transition` event
+      kind ("Now on {domain}.") through the same `hooks.onEvent` both `ipc-agent-run.ts` and the scheduled
+      `task-agent-runner.electron.ts` already wire, so it reaches interactive AND scheduled runs alike, and
+      is journaled the same way other run events are (new `AgentDomainTransition` `EventType`, mapped in
+      both hosts' `JOURNAL_TYPE_BY_KIND`) and persisted to conversation history
+      (`AGENT_HISTORY_EVENT_KINDS`). Renders inline in the panel transcript (not collapsed into the Progress
+      feed, matching `tab_spawn`'s own treatment) via a new `KIND_DOT` entry. An unresolvable page
+      (`about:blank`, an internal page) is never itself announced as the "from" or "to" of a transition —
+      tracking only ever advances to a resolvable site. EN+TR in `@tepegoz/ext-agent`'s dict
+      (`runtime.domainTransition`), parity-tested. Tests: 6 new `nextDomainState` unit cases in
+      `agent-runtime-loop.test.ts` (first-site no-announce, same-registrable-domain subdomain hop,
+      cross-domain announce, the `garanti.com.tr`/`evil.com.tr` multi-part-suffix case, an unresolvable
+      current/target page, and no false re-announce on a round trip through one)._
 - [ ] **Name the "prepared, you pay" pattern.** Comet deliberately stops at the cart and asks the user to
       authorize payment. The same line exists here as a **kernel rule** rather than a product decision
       (`financial` danger class + biometric gate + the commerce double-confirm in PR6, unbypassable at any

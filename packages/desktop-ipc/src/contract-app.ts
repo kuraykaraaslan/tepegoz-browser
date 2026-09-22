@@ -87,6 +87,47 @@ export interface AgentCapabilityRow {
   decision: 'allow' | 'ask' | 'deny';
 }
 
+/**
+ * One PAST Policy Kernel decision, read back from the Event Journal (Permission Debug view).
+ *
+ * Distinct from {@link AgentCapabilityRow}: that is the kernel's BASELINE verdict for a tool in the
+ * abstract (a live view, always current). This is a HISTORY record of one concrete call the kernel
+ * actually judged — read-only, never replayed, never re-decided. `reason` is a
+ * `@tepegoz/security-policy` `PolicyReason` code, kept as `string` here so this contract package
+ * (preload-safe, dependency-light) does not have to import the security-policy union just to name it;
+ * the renderer looks its text up in the shared `permissions.*` dictionary the live approval modal
+ * already uses.
+ */
+export interface PermissionDecisionRecord {
+  ts: number;
+  /** The run this decision happened in — correlates back to the conversation/journal for that run. */
+  runId: string;
+  toolName: string;
+  /** The site the call targeted, when it had one. Absent for a call with no site context. */
+  targetUrl?: string;
+  reason: string;
+  riskTier?: string;
+  /** The Policy Kernel's own verdict: `allow` ran, `ask` asked, `deny` refused outright. */
+  decision: 'allow' | 'ask' | 'deny';
+  /** How an `ask` resolved. Absent for `allow`/`deny`, which needed no human. */
+  outcome?: 'approved' | 'refused';
+  /**
+   * Why an `ask` did not need a live prompt — a standing permission answered it instead of the user.
+   * Absent when the answer came from a live human click (or the decision was `allow`/`deny`, which are
+   * never remembered because nobody was asked).
+   */
+  rememberedBy?: 'plan_grant' | 'remembered_grant' | 'autonomy';
+}
+
+/** Query for the Permission Debug view. Every field narrows; omitting all of them returns the most
+ *  recent decisions across every site and tool. */
+export interface PermissionDecisionQuery {
+  /** Registrable-domain match (e.g. "example.com" also matches "www.example.com"). */
+  site?: string | undefined;
+  tool?: string | undefined;
+  limit?: number | undefined;
+}
+
 /** Main → renderer: a site asked for a web capability; the renderer shows the consent prompt. */
 export interface WebPermissionRequest {
   requestId: string;

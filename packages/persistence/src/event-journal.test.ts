@@ -3,10 +3,10 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import type { EventInput } from '@tepegoz/shared-types';
 import { openDatabase, migrate, EventJournal, MetaStore, type Db } from './index';
 
-function makeEvent(correlationId: string): EventInput {
+function makeEvent(correlationId: string, type: EventInput['type'] = 'AgentStepExecuted'): EventInput {
   return {
     id: randomUUID(),
-    type: 'AgentStepExecuted',
+    type,
     ts: 1_700_000_000_000,
     actor: 'agent:worker-1',
     correlationId,
@@ -107,5 +107,20 @@ describe('EventJournal', () => {
       EventJournal.append(db, makeEvent('run-2')); // appended without chaining
       expect(EventJournal.tailHash(db)).toBe(HASH_B);
     });
+  });
+
+  it('reads by type across every correlation id, newest-first (Permission Debug)', () => {
+    EventJournal.append(db, makeEvent('run-1', 'ToolInvoked'));
+    EventJournal.append(db, makeEvent('run-2', 'AgentStepExecuted'));
+    EventJournal.append(db, makeEvent('run-3', 'PolicyBlocked'));
+    EventJournal.append(db, makeEvent('run-4', 'ToolInvoked'));
+    const rows = EventJournal.readByTypes(db, ['ToolInvoked', 'PolicyBlocked'], 10);
+    expect(rows.map((r) => r.correlationId)).toEqual(['run-4', 'run-3', 'run-1']);
+  });
+
+  it('readByTypes returns nothing for an empty type list or a non-positive limit', () => {
+    EventJournal.append(db, makeEvent('run-1', 'ToolInvoked'));
+    expect(EventJournal.readByTypes(db, [], 10)).toHaveLength(0);
+    expect(EventJournal.readByTypes(db, ['ToolInvoked'], 0)).toHaveLength(0);
   });
 });

@@ -214,6 +214,14 @@ type Hooks = {
   onEvent: (k: string, m: string, d?: string) => void;
   onModelDelta: (t: string) => void;
   onCheckpoint: (c: unknown) => void;
+  onAudit: (e: {
+    toolName: string;
+    decision: 'allow' | 'ask' | 'deny';
+    reason: string;
+    riskTier?: string;
+    targetUrl?: string;
+    outcome?: 'approved' | 'refused';
+  }) => void;
   requestApproval: (req: unknown) => Promise<boolean>;
   requestPlanApproval: (plan: unknown) => Promise<{ approved: boolean }>;
 };
@@ -806,6 +814,149 @@ describe('journal + history + token-ledger projections', () => {
       expect.objectContaining({
         err: expect.stringContaining('checkpoint write failed') as string,
       }),
+    );
+  });
+
+  it('onAudit skips a pre-resolution `ask` (no outcome yet) — nothing is journaled', async () => {
+    getDb.mockReturnValue({ __db: true });
+    await run();
+    EventJournal.append.mockClear();
+
+    hooksArg().onAudit({ toolName: 'form_update_field', decision: 'ask', reason: 'state_change_confirm' });
+
+    expect(EventJournal.append).not.toHaveBeenCalled();
+  });
+
+  it('onAudit journals an unconditional allow as ToolInvoked, carrying the target site', async () => {
+    getDb.mockReturnValue({ __db: true });
+    await run();
+    EventJournal.append.mockClear();
+
+    hooksArg().onAudit({
+      toolName: 'browser_get_page',
+      decision: 'allow',
+      reason: 'read_allowed',
+      targetUrl: 'https://a.example/page',
+    });
+
+    expect(EventJournal.append).toHaveBeenCalledWith(
+      { __db: true },
+      expect.objectContaining({
+        type: 'ToolInvoked',
+        actor: 'agent',
+        redacted: true,
+        payload: expect.objectContaining({
+          toolName: 'browser_get_page',
+          targetUrl: 'https://a.example/page',
+          reason: 'read_allowed',
+          decision: 'allow',
+        }) as unknown,
+      }),
+    );
+  });
+
+  it('onAudit journals an outright deny as PolicyBlocked', async () => {
+    getDb.mockReturnValue({ __db: true });
+    await run();
+    EventJournal.append.mockClear();
+
+    hooksArg().onAudit({
+      toolName: 'file_delete_item',
+      decision: 'deny',
+      reason: 'sensitive_site_lockout',
+    });
+
+    expect(EventJournal.append).toHaveBeenCalledWith(
+      { __db: true },
+      expect.objectContaining({
+        type: 'PolicyBlocked',
+        payload: expect.objectContaining({ decision: 'deny' }) as unknown,
+      }),
+    );
+  });
+
+  it('onAudit journals a resolved `ask` as PolicyBlocked when refused, ToolInvoked when approved', async () => {
+    getDb.mockReturnValue({ __db: true });
+    await run();
+    EventJournal.append.mockClear();
+
+    hooksArg().onAudit({
+      toolName: 'form_update_field',
+      decision: 'ask',
+      reason: 'state_change_confirm',
+      outcome: 'refused',
+    });
+    expect(EventJournal.append).toHaveBeenLastCalledWith(
+      { __db: true },
+      expect.objectContaining({ type: 'PolicyBlocked' }),
+    );
+
+    hooksArg().onAudit({
+      toolName: 'form_update_field',
+      decision: 'ask',
+      reason: 'state_change_confirm',
+      outcome: 'approved',
+    });
+    expect(EventJournal.append).toHaveBeenLastCalledWith(
+      { __db: true },
+      expect.objectContaining({ type: 'ToolInvoked' }),
+    );
+  });
+
+  it('onAudit attaches WHICH standing permission answered an ask, then clears it for the next call', async () => {
+    getDb.mockReturnValue({ __db: true });
+    fileOps.consentDecision.mockResolvedValue({ type: 'ask' });
+    PlanGrantStore.covers.mockReturnValue({ covered: true });
+    await run();
+    EventJournal.append.mockClear();
+
+    // The plan-grant coverage check happens in requestApproval; onAudit's SECOND (post-resolution)
+    // call is what the gateway fires right after requestApproval resolves — same sequence as
+    // ToolGateway.invoke's real ordering.
+    await hooksArg().requestApproval({
+      toolName: 'form_update_field',
+      args: {},
+      policy: { reason: 'state_change_confirm', biometric: false, decision: 'ask' },
+      risk: { tier: 'ui-write' },
+      targetUrl: 'https://a.example',
+    });
+    hooksArg().onAudit({
+      toolName: 'form_update_field',
+      decision: 'ask',
+      reason: 'state_change_confirm',
+      outcome: 'approved',
+    });
+    expect(EventJournal.append).toHaveBeenCalledWith(
+      { __db: true },
+      expect.objectContaining({
+        payload: expect.objectContaining({ rememberedBy: 'plan_grant' }) as unknown,
+      }),
+    );
+
+    // A SECOND, unrelated decision must not inherit the hint — it was consumed by the call above.
+    EventJournal.append.mockClear();
+    hooksArg().onAudit({
+      toolName: 'browser_get_page',
+      decision: 'allow',
+      reason: 'read_allowed',
+    });
+    const [, payload] = EventJournal.append.mock.calls[0] as [unknown, { payload: object }];
+    expect(payload.payload).not.toHaveProperty('rememberedBy');
+  });
+
+  it('onAudit swallows and logs a failing journal append', async () => {
+    getDb.mockReturnValue({ __db: true });
+    await run();
+    EventJournal.append.mockImplementationOnce(() => {
+      throw new Error('journal disk full');
+    });
+
+    expect(() =>
+      hooksArg().onAudit({ toolName: 'x', decision: 'allow', reason: 'read_allowed' }),
+    ).not.toThrow();
+    expect(Logger.warn).toHaveBeenCalledWith(
+      'Permission Debug journal append failed',
+      expect.objectContaining({ err: expect.stringContaining('journal disk full') as string }),
     );
   });
 

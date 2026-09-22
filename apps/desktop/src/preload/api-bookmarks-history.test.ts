@@ -58,6 +58,12 @@ const INVOKES: Row[] = [
   ['isBookmarked', () => api.isBookmarked('u'), IpcChannels.bookmarksIsBookmarked, 'u'],
   ['getBookmarkTree', () => api.getBookmarkTree(), IpcChannels.bookmarksTree],
   ['listAgentCapabilities', () => api.listAgentCapabilities(), IpcChannels.agentCapabilitiesList],
+  [
+    'listPermissionDecisions',
+    () => api.listPermissionDecisions({ site: 'example.com' }),
+    IpcChannels.permissionDecisionHistory,
+    { site: 'example.com' },
+  ],
   ['extractArticle', () => api.extractArticle(), IpcChannels.readerExtract],
   [
     'captureScreenshot',

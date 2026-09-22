@@ -11,6 +11,7 @@ export const AGENT_HISTORY_EVENT_KINDS = [
   'input_action',
   'handoff',
   'grant',
+  'domain_transition',
   'done',
   'error',
 ] as const;

@@ -39,6 +39,7 @@ const DEPS: AgentRunDeps = {
     planRejected: 'plan-rejected',
     allStepsSkipped: 'all-skipped',
     egressWarning: 'egress-warning',
+    domainTransition: 'now on {domain}',
   },
 };
 

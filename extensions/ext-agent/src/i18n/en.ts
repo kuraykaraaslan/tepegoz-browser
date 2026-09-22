@@ -104,6 +104,9 @@ export const en = {
     planRejected: 'Plan rejected — nothing was executed.',
     allStepsSkipped: 'All steps skipped — nothing to run.',
     egressWarning: 'Egress warning: possible PII/encoded data in the model request',
+    // A visible "the run changed site" line (S8 PR7 second wave) — the same eTLD+1 comparator a
+    // grant's coverage check already uses, reused here only to narrate.
+    domainTransition: 'Now on {domain}.',
   },
   // Terminal Console line for a run that stopped WITHOUT the agent writing its own summary (S8) — a
   // plain sentence per stop reason instead of a raw enum ("Finished: max_steps").

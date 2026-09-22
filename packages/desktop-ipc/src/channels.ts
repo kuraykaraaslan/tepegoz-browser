@@ -381,6 +381,9 @@ export const IpcChannels = {
    *  permissions need no channel of their own — they are ordinary preferences and go through the
    *  already-validated preferences write path. */
   agentCapabilitiesList: 'permissions:agent-list',
+  /** Permission Debug (S8 PR7): past Policy Kernel decisions read back from the Event Journal, filtered
+   *  by site/tool. Read-only history, distinct from `agentCapabilitiesList`'s live baseline view. */
+  permissionDecisionHistory: 'permissions:decision-history',
   /**
    * User screenshot. `screenshotCapture` is renderer→main (take one); the other two are the WebP
    * re-encode round trip — `NativeImage` cannot encode WebP and Chromium can, but only in a renderer.

@@ -25,6 +25,8 @@ import {
   type ClientCertificateChoice,
   type ClientCertificateRequest,
   type ClientCertificateResponse,
+  type PermissionDecisionQuery,
+  type PermissionDecisionRecord,
   type NotificationPermissionRequest,
   type NotificationPermissionResponse,
   type NotificationState,
@@ -60,6 +62,7 @@ export const bookmarksHistoryApi: Pick<
   | 'sendScreenshotEncoded'
   | 'onReaderToggle'
   | 'listAgentCapabilities'
+  | 'listPermissionDecisions'
   | 'setBookmarkTags'
   | 'listBookmarkTags'
   | 'listClientCertificateChoices'
@@ -110,6 +113,8 @@ export const bookmarksHistoryApi: Pick<
   isBookmarked: (url: string) => invoke<boolean>(IpcChannels.bookmarksIsBookmarked, url),
   getBookmarkTree: () => invoke<BookmarkTreeNode[]>(IpcChannels.bookmarksTree),
   listAgentCapabilities: () => invoke<AgentCapabilityRow[]>(IpcChannels.agentCapabilitiesList),
+  listPermissionDecisions: (query: PermissionDecisionQuery) =>
+    invoke<PermissionDecisionRecord[]>(IpcChannels.permissionDecisionHistory, query),
   captureScreenshot: (mode: 'viewport' | 'fullPage') =>
     invoke<StoredScreenshot | null>(IpcChannels.screenshotCapture, mode),
   /**

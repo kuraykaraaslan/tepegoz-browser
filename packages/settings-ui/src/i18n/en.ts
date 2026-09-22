@@ -417,6 +417,30 @@ export const en = {
     agentLoading: 'Reading the policy…',
     agentEmpty: 'No agent tools are registered.',
     decision: { allow: 'Runs', ask: 'Asks first', deny: 'Refused' },
+    // Permission Debug (S8 PR7): a HISTORY of past decisions, for a chosen site/tool — distinct from
+    // the live baseline matrix above. Read-only for the same reason: a second engine behind a debug
+    // screen would be exactly what `agentReadOnly` already refuses.
+    debug: {
+      title: 'Permission history',
+      subtitle: 'Past decisions the agent actually made: what was asked, what was decided, and why.',
+      readOnly: 'Read-only. This is a record of decisions already made — nothing here can be changed.',
+      siteFilter: 'Filter by site',
+      siteFilterPlaceholder: 'example.com',
+      toolFilter: 'Filter by tool',
+      toolFilterPlaceholder: 'browser_update_location',
+      loading: 'Reading the journal…',
+      empty: 'No matching decisions yet.',
+      site: 'Site',
+      noSite: 'No site',
+      outcome: { approved: 'Approved', refused: 'Refused' },
+      rememberedTitle: 'Why no prompt was needed',
+      rememberedBy: {
+        plan_grant: 'Covered by the plan you approved for this run',
+        remembered_grant: 'Covered by a permission you saved for this',
+        autonomy: 'Auto-approved by your autonomy level',
+      },
+      askedLive: 'You were asked directly, this one time.',
+    },
   },
   clientCerts: {
     unavailable: 'The stored decisions could not be read, so this list may be incomplete.',

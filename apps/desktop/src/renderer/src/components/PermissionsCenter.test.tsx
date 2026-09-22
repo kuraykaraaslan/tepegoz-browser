@@ -2,9 +2,14 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { I18nProvider } from '@tepegoz/i18n/react';
+import { resources } from '@tepegoz/i18n';
 import { settingsDict } from '@tepegoz/settings-ui';
-import type { AgentCapabilityRow, Preferences } from '@tepegoz/desktop-ipc';
-import { AgentPermissionMatrix, PermissionsCenter } from './PermissionsCenter';
+import type {
+  AgentCapabilityRow,
+  PermissionDecisionRecord,
+  Preferences,
+} from '@tepegoz/desktop-ipc';
+import { AgentPermissionMatrix, PermissionDebugView, PermissionsCenter } from './PermissionsCenter';
 
 /**
  * Two halves of one surface: `PermissionsCenter` is the EDITABLE site-permission list (add a site up
@@ -162,5 +167,109 @@ describe('AgentPermissionMatrix (read-only)', () => {
       );
     expect(heading(s.dangerLabels.read)).toBeTruthy();
     expect(heading('irreversible_spend')).toBeTruthy();
+  });
+});
+
+function renderDebug(rows: PermissionDecisionRecord[] | 'reject') {
+  Object.defineProperty(window, 'tepegoz', {
+    configurable: true,
+    value: {
+      listPermissionDecisions: () =>
+        rows === 'reject' ? Promise.reject(new Error('journal down')) : Promise.resolve(rows),
+    },
+  });
+  render(
+    <I18nProvider locale="en">
+      <PermissionDebugView s={s} />
+    </I18nProvider>,
+  );
+}
+
+describe('PermissionDebugView (read-only decision history)', () => {
+  const dbg = pc.debug;
+
+  it('shows the loading line, then the empty line when nothing matches', async () => {
+    renderDebug([]);
+    await waitFor(() => expect(screen.getByText(dbg.empty)).toBeTruthy());
+  });
+
+  it('treats a rejected read as empty rather than staying on "loading" forever', async () => {
+    renderDebug('reject');
+    await waitFor(() => expect(screen.getByText(dbg.empty)).toBeTruthy());
+  });
+
+  it('renders a resolved `ask` with its reason text, outcome, and remembered-by explanation', async () => {
+    renderDebug([
+      {
+        ts: 1_700_000_000_000,
+        runId: 'run-1',
+        toolName: 'browser_update_location',
+        targetUrl: 'https://a.example/page',
+        reason: 'state_change_confirm',
+        decision: 'ask',
+        outcome: 'approved',
+        rememberedBy: 'plan_grant',
+      },
+    ]);
+    await screen.findByText('browser_update_location');
+    expect(screen.getByText(dbg.outcome.approved)).toBeTruthy();
+    expect(screen.getByText(dbg.rememberedBy.plan_grant)).toBeTruthy();
+    expect(screen.getByText('https://a.example/page')).toBeTruthy();
+    // The live approval modal's own reason text (from the shared @tepegoz/i18n lookup) — proof this
+    // view reuses it rather than showing the bare code.
+    expect(screen.getByText(resources.en.permissions.state_change_confirm.title)).toBeTruthy();
+  });
+
+  it('renders an `ask` answered live (no standing grant) distinctly from a remembered one', async () => {
+    renderDebug([
+      {
+        ts: 1_700_000_000_000,
+        runId: 'run-1',
+        toolName: 'browser_update_location',
+        reason: 'state_change_confirm',
+        decision: 'ask',
+        outcome: 'refused',
+      },
+    ]);
+    await screen.findByText('browser_update_location');
+    expect(screen.getByText(dbg.askedLive)).toBeTruthy();
+    expect(screen.getByText(dbg.outcome.refused)).toBeTruthy();
+    expect(screen.getByText(dbg.noSite)).toBeTruthy();
+  });
+
+  it('renders an unconditional `allow`/`deny` verdict without an outcome or remembered-by line', async () => {
+    renderDebug([
+      {
+        ts: 1_700_000_000_000,
+        runId: 'run-1',
+        toolName: 'browser_get_elements',
+        targetUrl: 'https://a.example/page',
+        reason: 'read_allowed',
+        decision: 'allow',
+      },
+    ]);
+    await screen.findByText('browser_get_elements');
+    expect(screen.getByText(pc.decision.allow)).toBeTruthy();
+    expect(screen.queryByText(dbg.askedLive)).toBeNull();
+  });
+
+  it('re-queries the host when the site/tool filter changes', async () => {
+    const listPermissionDecisions = vi.fn().mockResolvedValue([]);
+    Object.defineProperty(window, 'tepegoz', {
+      configurable: true,
+      value: { listPermissionDecisions },
+    });
+    render(
+      <I18nProvider locale="en">
+        <PermissionDebugView s={s} />
+      </I18nProvider>,
+    );
+    await waitFor(() => expect(listPermissionDecisions).toHaveBeenCalledWith({}));
+    fireEvent.change(screen.getByLabelText(dbg.siteFilter), {
+      target: { value: 'example.com' },
+    });
+    await waitFor(() =>
+      expect(listPermissionDecisions).toHaveBeenCalledWith({ site: 'example.com' }),
+    );
   });
 });

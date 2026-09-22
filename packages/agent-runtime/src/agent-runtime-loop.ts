@@ -6,7 +6,13 @@ import {
   Reactor,
   type StepOutcome,
 } from '@tepegoz/orchestrator';
-import { TaintTracker, detectHandoff, type HandoffSignal } from '@tepegoz/security-policy';
+import {
+  TaintTracker,
+  detectHandoff,
+  isSameSite,
+  registrableDomain,
+  type HandoffSignal,
+} from '@tepegoz/security-policy';
 import type { Plan } from '@tepegoz/shared-types';
 import {
   checkpointFromOutcome,
@@ -21,6 +27,34 @@ import type { AgentRunDeps, AgentRunHooks } from './agent-runtime-types';
 const RESUME_AFTER_LOGIN =
   'I have completed the sign-in on this page. Re-read the current page with browser_get_elements, then ' +
   'continue the original task from where you left off — do not start over.';
+
+/** Fill the single `{domain}` placeholder in a localized template (Turkish word order, not concatenation). */
+function fillDomain(template: string, domain: string): string {
+  return template.replace('{domain}', domain);
+}
+
+/**
+ * Pure domain-transition decision (S8 PR7 second wave), exported so it is unit-testable without
+ * spinning up a full run. Reuses `isSameSite`/`registrableDomain` — the SAME eTLD+1 comparator
+ * `plan-grant-scope`/`remembered-grant-scope` already gate coverage with — only to narrate, never to
+ * decide anything.
+ *
+ * `lastUrl` only ever tracks a RESOLVABLE site (never `about:blank`/internal pages), so a transient
+ * internal page can be neither the "from" nor the "to" of an announced transition. `announceDomain` is
+ * the domain to show, or `null` when nothing should be announced this step; `nextUrl` is what the
+ * caller should track forward regardless.
+ */
+export function nextDomainState(
+  lastUrl: string | undefined,
+  currentUrl: string | undefined,
+): { announceDomain: string | null; nextUrl: string | undefined } {
+  if (currentUrl === undefined) return { announceDomain: null, nextUrl: lastUrl };
+  const domain = registrableDomain(currentUrl);
+  if (domain === null) return { announceDomain: null, nextUrl: lastUrl };
+  const announceDomain =
+    lastUrl !== undefined && !isSameSite(lastUrl, currentUrl) ? domain : null;
+  return { announceDomain, nextUrl: currentUrl };
+}
 
 /** Best-effort URL string from a tool call's args (for the sensitive-site lockout). */
 function urlFromArgs(args: unknown): string | undefined {
@@ -270,6 +304,12 @@ export function runReactiveLoop(args: {
   // side-effecting arg that lifts it escalates to HITL (Policy Kernel `taintedArgs`).
   const taint = new TaintTracker();
 
+  // Domain-transition narration (S8 PR7 second wave): the SAME eTLD+1 comparator plan-grant-scope and
+  // remembered-grant-scope already gate coverage with, reused here to NARRATE rather than decide.
+  // Seeded from the run's starting tab so the first step never reads as a "transition" from nothing;
+  // only a REAL registrable-domain change (never a same-site subdomain hop) is ever announced.
+  let lastSiteUrl: string | undefined = deps.activeTabUrl();
+
   // Tab-spawn world model (S3 PR3): which spawned tab the run is currently following, and where to
   // return once it closes. Reactor-owned, not part of the model-visible working state — the follow
   // decision is this loop's own, never something the model declares. `tabLifecycle` serializes the async
@@ -302,6 +342,9 @@ export function runReactiveLoop(args: {
           `${entry.toolName}: ${entry.decision}`,
           `${entry.reason}${divergence}`,
         );
+        // Permission Debug (S8 PR7): forward the verdict verbatim. Purely additive — nothing here reads
+        // the forwarded entry back, so it cannot change what the gateway decided or who it asked.
+        hooks.onAudit?.(entry);
       },
       goal,
     },
@@ -413,6 +456,17 @@ export function runReactiveLoop(args: {
               const content = contentFromResult(o.result);
               if (content !== undefined) taint.record(content);
               hooks.onEvent('step_ok', `${o.tool} ✓`);
+              // A visible "the run changed site" line (S8 PR7 second wave). Checked after EVERY
+              // successful step, not just navigation tools, so it catches a site change however it
+              // happened (a followed tab-spawn, a redirect, a click).
+              const { announceDomain, nextUrl } = nextDomainState(lastSiteUrl, deps.activeTabUrl());
+              if (announceDomain !== null) {
+                hooks.onEvent(
+                  'domain_transition',
+                  fillDomain(deps.runtimeStrings.domainTransition, announceDomain),
+                );
+              }
+              lastSiteUrl = nextUrl;
             } else {
               hooks.onEvent('step_error', `${o.tool} ✗`, o.error?.message ?? 'failed');
             }

@@ -8,7 +8,7 @@ import {
   type AgentRunResult,
 } from '@tepegoz/desktop-ipc';
 import { AgentRunInputSchema } from '@tepegoz/desktop-ipc/schemas';
-import type { ConfirmRequest } from '@tepegoz/capability-plane';
+import type { AuditEntry, ConfirmRequest } from '@tepegoz/capability-plane';
 import {
   classifyRisk,
   PlanGrantStore,
@@ -445,6 +445,11 @@ export function registerAgentRunIpc(): void {
         }, 120_000);
       });
     };
+    // Permission Debug (S8 PR7): which standing permission last answered an `ask` WITHOUT a live
+    // prompt, for `onAudit` below to attach to that same decision's journal record. Set by the three
+    // coverage branches in `requestApproval`, consumed and cleared the moment `onAudit` writes the
+    // record — never left standing, so it cannot attach to a LATER, unrelated call.
+    let lastGrantHint: 'plan_grant' | 'remembered_grant' | 'autonomy' | null = null;
     // File tools self-gate on their folder grant mode: an op within the granted mode runs silently,
     // one outside every grant is refused, and an escalation / grant-management tool falls through to the
     // standard approval modal so the user consents. Every other tool goes straight to the modal.
@@ -468,6 +473,7 @@ export function registerAgentRunIpc(): void {
             toolName: req.toolName,
             riskTier: tier,
           });
+          lastGrantHint = 'plan_grant';
           return true;
         }
       }
@@ -494,6 +500,7 @@ export function registerAgentRunIpc(): void {
             fillSkill(mainStrings().agent.grants.used, skillScope.name),
             'remembered_grant',
           );
+          lastGrantHint = 'remembered_grant';
           return true;
         }
       }
@@ -510,9 +517,47 @@ export function registerAgentRunIpc(): void {
           autonomyReason: gate.reason,
           riskTier: req.risk?.tier ?? 'unclassified',
         });
+        lastGrantHint = 'autonomy';
         return true;
       }
       return promptApproval(req);
+    };
+    /**
+     * Permission Debug (S8 PR7): journal this run's Policy Kernel verdicts for the per-site, per-tool
+     * decision history a user can look up later — read-only, and it changes nothing about what the
+     * kernel decided or who it asked. Two shapes are written: the kernel's own `allow`/`deny` (a
+     * single audit call, nothing to resolve) and an `ask` that finished resolving (`outcome` present).
+     * The PRE-resolution `ask` call is skipped — `awaiting_approval` already journals "we asked" — so
+     * only the complete record is written, which is what lets it also carry `lastGrantHint`.
+     */
+    const onAudit = (entry: AuditEntry): void => {
+      if (entry.decision === 'ask' && entry.outcome === undefined) return;
+      const db = getDb();
+      if (db === null) return;
+      const rememberedBy = lastGrantHint;
+      lastGrantHint = null; // consumed — must never attach to the NEXT unrelated call
+      try {
+        appendChainedEvent(db, {
+          id: randomUUID(),
+          type:
+            entry.decision === 'deny' || entry.outcome === 'refused' ? 'PolicyBlocked' : 'ToolInvoked',
+          ts: Date.now(),
+          actor: 'agent',
+          correlationId: runId,
+          payload: {
+            toolName: Logger.redact(entry.toolName),
+            ...(entry.targetUrl !== undefined ? { targetUrl: Logger.redact(entry.targetUrl) } : {}),
+            reason: entry.reason,
+            ...(entry.riskTier !== undefined ? { riskTier: entry.riskTier } : {}),
+            decision: entry.decision,
+            ...(entry.outcome !== undefined ? { outcome: entry.outcome } : {}),
+            ...(rememberedBy !== null ? { rememberedBy } : {}),
+          },
+          redacted: true,
+        });
+      } catch (err) {
+        Logger.warn('Permission Debug journal append failed', { err: String(err) });
+      }
     };
     /**
      * Approving a plan is a single informed consent covering the ROUTINE steps that plan implies — so
@@ -626,6 +671,7 @@ export function registerAgentRunIpc(): void {
               onEvent,
               onModelDelta,
               onCheckpoint,
+              onAudit,
               requestPlanApproval,
               requestApproval,
               signal: control.signal,

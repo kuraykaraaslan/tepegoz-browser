@@ -119,6 +119,23 @@ export class EventJournal {
     return rows.map(rowToEvent);
   }
 
+  /**
+   * Read the most recent `limit` events of any of the given `types` (newest first), across every
+   * correlation id. Backs the Permission Debug view (S8 PR7): a per-decision journal record is
+   * correlated to a RUN, not a site, so finding "every decision on example.com" has to scan by type
+   * and filter by the payload's site in the caller — this is the type-scoped read that makes that
+   * affordable without adding a payload-shaped SQL column for one read-only debug surface.
+   */
+  static readByTypes(db: Db, types: readonly string[], limit: number): EventRecord[] {
+    const n = Math.max(0, Math.min(Math.trunc(limit), 1000));
+    if (n === 0 || types.length === 0) return [];
+    const placeholders = types.map(() => '?').join(',');
+    const rows = db
+      .prepare(`SELECT * FROM events WHERE type IN (${placeholders}) ORDER BY lsn DESC LIMIT ?`)
+      .all(...types, n) as EventRow[];
+    return rows.map(rowToEvent);
+  }
+
   static count(db: Db): number {
     const row = db.prepare('SELECT COUNT(*) AS n FROM events').get() as { n: number };
     return row.n;

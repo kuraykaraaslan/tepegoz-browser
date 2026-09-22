@@ -160,6 +160,7 @@ export default class ToolGateway {
       decision: policy.decision,
       reason: policy.reason,
       riskTier: risk.tier,
+      ...(ctx.targetUrl !== undefined ? { targetUrl: ctx.targetUrl } : {}),
       ...(critic !== null ? { critic } : {}),
       ...(policy.biometric ? { biometricRequired: true } : {}),
     });
@@ -208,6 +209,7 @@ export default class ToolGateway {
         decision: policy.decision,
         reason: policy.reason,
         riskTier: risk.tier,
+        ...(ctx.targetUrl !== undefined ? { targetUrl: ctx.targetUrl } : {}),
         outcome: allowed ? 'approved' : 'refused',
         ...(policy.biometric ? { biometricRequired: true, biometricVerified } : {}),
       });

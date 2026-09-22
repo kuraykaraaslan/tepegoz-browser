@@ -11,6 +11,7 @@ import {
   type HistoryEntry,
   type NewTabBackgroundImagePick,
   type NotificationState,
+  type PermissionDecisionRecord,
 } from '@tepegoz/desktop-ipc';
 import { AppError } from '@tepegoz/libs';
 import {
@@ -26,6 +27,7 @@ import {
   HistoryPageParamsSchema,
   HistorySearchParamsSchema,
   HistoryUrlSchema,
+  PermissionDecisionQuerySchema,
   CasRefSchema,
   NotificationIdSchema,
   BasicAuthResponseSchema,
@@ -41,6 +43,7 @@ import type { StoredScreenshot } from '@tepegoz/screenshots';
 import { captureAndStore } from '../screenshots/user-screenshot.electron';
 import { readActiveTabArticle } from '../reader/reader.electron';
 import { agentCapabilityMatrix } from '../web-permissions/agent-matrix';
+import { permissionDecisionHistory } from '../web-permissions/permission-debug';
 import { openPrivateWindow } from '../private-window-opener';
 import { resolveBasicAuth, useSavedBasicAuth } from '../auth/basic-auth-broker';
 import { resolveCertificateError } from '../auth/certificate-broker';
@@ -59,7 +62,7 @@ import {
 import { registerBookmarkProfileIpc } from './ipc-bookmark-profiles';
 import FileOperationsHost from '../file-operations/file-operations-host';
 import { getDb } from '../db/database.electron';
-import { handle, handleAsync, onAction, onSignal } from './ipc-helpers';
+import { handle, handleAsync, onAction, onSignal, parsePayload } from './ipc-helpers';
 
 /**
  * File-access picker + new-tab background image + notification center + history + bookmarks IPC
@@ -298,6 +301,13 @@ export function registerBrowsingIpc(): void {
   // The agent permission matrix. Computed here rather than in the renderer because it is the Policy
   // Kernel's own verdict — asking the kernel is what keeps this a VIEW instead of a second opinion.
   handle(IpcChannels.agentCapabilitiesList, (): AgentCapabilityRow[] => agentCapabilityMatrix());
+  // Permission Debug (S8 PR7): past decisions the Policy Kernel actually made, read back from the
+  // Event Journal for a chosen site/tool. A HISTORY view, distinct from the live matrix above.
+  handle(
+    IpcChannels.permissionDecisionHistory,
+    (_event, payload): PermissionDecisionRecord[] =>
+      permissionDecisionHistory(parsePayload(PermissionDecisionQuerySchema, payload ?? {})),
+  );
   handle(IpcChannels.screenshotCapture, (_event, payload): Promise<StoredScreenshot | null> =>
     captureAndStore(ScreenshotModeSchema.parse(payload)),
   );

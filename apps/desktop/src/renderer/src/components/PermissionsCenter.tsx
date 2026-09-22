@@ -7,7 +7,13 @@ import {
   type SitePermissionState,
   type WebPermissionCapability,
 } from '@tepegoz/shared-types';
-import type { AgentCapabilityRow, Preferences } from '@tepegoz/desktop-ipc';
+import { explainPolicyReason, coreDict } from '@tepegoz/i18n';
+import { useT } from '@tepegoz/i18n/react';
+import type {
+  AgentCapabilityRow,
+  PermissionDecisionRecord,
+  Preferences,
+} from '@tepegoz/desktop-ipc';
 import { ConfirmAction } from './settings-confirm';
 import { Select } from './settings-shared';
 
@@ -293,6 +299,133 @@ export function AgentPermissionMatrix({ s }: { s: SettingsStrings }) {
             </div>
           )}
         </>
+      )}
+    </Card>
+  );
+}
+
+/** Decision-kind badge tone, matching the live approval modal's escalation and `AgentPermissionMatrix`'s
+ *  own `decisionVariant` above — the same three colours must mean the same thing everywhere in the app. */
+const DEBUG_DECISION_VARIANT: Record<
+  PermissionDecisionRecord['decision'],
+  'success' | 'warning' | 'error'
+> = {
+  allow: 'success',
+  ask: 'warning',
+  deny: 'error',
+};
+
+/** One past decision: tool + site, the kernel's verdict, its reason (via the SAME lookup the live
+ *  approval modal uses), and — for an `ask` — how it resolved and whether a standing permission
+ *  answered it instead of a live prompt. */
+function DecisionRow({ row, s }: { row: PermissionDecisionRecord; s: SettingsStrings }) {
+  const c = useT(coreDict);
+  const explained = explainPolicyReason(c, row.reason);
+  // `ask` resolved: `outcome` says how. `allow`/`deny` are unconditional kernel verdicts — nobody was
+  // asked, so there is nothing to have been "remembered" and the row says neither.
+  const decisionForBadge = row.outcome === 'refused' ? 'deny' : row.decision;
+
+  return (
+    <li className="rounded-md border border-border px-3 py-2 text-xs">
+      <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
+        <span className="min-w-0 truncate font-mono text-text-primary">{row.toolName}</span>
+        <Badge variant={DEBUG_DECISION_VARIANT[decisionForBadge]} size="sm" dot>
+          {row.outcome !== undefined
+            ? s.permissionsCenter.debug.outcome[row.outcome]
+            : s.permissionsCenter.decision[row.decision]}
+        </Badge>
+      </div>
+      <p className="truncate text-text-secondary">
+        {s.permissionsCenter.debug.site}:{' '}
+        <span className="font-mono">{row.targetUrl ?? s.permissionsCenter.debug.noSite}</span>
+      </p>
+      <p className="mt-1 text-text-primary">{explained?.title ?? row.reason}</p>
+      {row.decision === 'ask' && (
+        <p className="mt-0.5 text-text-secondary">
+          {row.rememberedBy !== undefined
+            ? s.permissionsCenter.debug.rememberedBy[row.rememberedBy]
+            : s.permissionsCenter.debug.askedLive}
+        </p>
+      )}
+      <p className="mt-1 text-[10px] text-text-disabled">
+        {new Date(row.ts).toLocaleString()} · {row.reason}
+      </p>
+    </li>
+  );
+}
+
+/**
+ * Permission Debug view (S8 PR7): for a chosen site/tool, a READ-ONLY history of what the Policy
+ * Kernel decided — what was asked, what it decided, which reason code, and whether/why it did or did
+ * not need a live prompt. Distinct from {@link AgentPermissionMatrix} above, which is the kernel's
+ * live BASELINE verdict for a tool in the abstract; this is a record of concrete calls it already
+ * judged, sourced from the Event Journal via `permissionDecisionHistory` — never a second decision
+ * engine, exactly like the matrix it sits beside.
+ */
+export function PermissionDebugView({ s }: { s: SettingsStrings }) {
+  const [site, setSite] = useState('');
+  const [tool, setTool] = useState('');
+  const [rows, setRows] = useState<PermissionDecisionRecord[] | null>(null);
+
+  useEffect(() => {
+    let live = true;
+    // Debounced so a filter typed character-by-character does not fire an IPC round-trip per keystroke.
+    const t = setTimeout(() => {
+      void window.tepegoz
+        .listPermissionDecisions({
+          ...(site.trim().length > 0 ? { site: site.trim() } : {}),
+          ...(tool.trim().length > 0 ? { tool: tool.trim() } : {}),
+        })
+        .then(
+          (r) => {
+            if (live) setRows(r);
+          },
+          () => {
+            if (live) setRows([]);
+          },
+        );
+    }, 250);
+    return () => {
+      live = false;
+      clearTimeout(t);
+    };
+  }, [site, tool]);
+
+  return (
+    <Card title={s.permissionsCenter.debug.title} subtitle={s.permissionsCenter.debug.subtitle}>
+      <p className="mb-2 text-xs text-text-secondary">{s.permissionsCenter.debug.readOnly}</p>
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+        <Input
+          id="permission-debug-site"
+          label={s.permissionsCenter.debug.siteFilter}
+          placeholder={s.permissionsCenter.debug.siteFilterPlaceholder}
+          value={site}
+          onChange={(e) => {
+            setSite(e.target.value);
+          }}
+        />
+        <Input
+          id="permission-debug-tool"
+          label={s.permissionsCenter.debug.toolFilter}
+          placeholder={s.permissionsCenter.debug.toolFilterPlaceholder}
+          value={tool}
+          onChange={(e) => {
+            setTool(e.target.value);
+          }}
+        />
+      </div>
+      {rows === null ? (
+        <p className="mt-3 text-sm text-text-secondary">{s.permissionsCenter.debug.loading}</p>
+      ) : rows.length === 0 ? (
+        <p className="mt-3 text-sm text-text-secondary">{s.permissionsCenter.debug.empty}</p>
+      ) : (
+        <ul className="mt-3 space-y-1.5">
+          {rows.map((row, i) => (
+            // ts+lsn are not unique alone across a busy run (two calls can share a millisecond); the
+            // index disambiguates within this already-ordered, non-reordering list.
+            <DecisionRow key={`${String(row.ts)}-${String(i)}`} row={row} s={s} />
+          ))}
+        </ul>
       )}
     </Card>
   );

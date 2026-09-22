@@ -51,6 +51,10 @@ import { localeDir as dir } from './direction';
 /** True when EVERY supported locale is LTR — lets callers skip RTL wiring until a first RTL locale lands. */
 export const ALL_SUPPORTED_LTR: boolean = SUPPORTED_LOCALES.every((l) => dir(l) === 'ltr');
 
+/** Permission Debug: the single lookup from a Policy Kernel reason code to its localized explanation,
+ *  shared by the live HITL approval modal and the Permission Debug history view. */
+export { explainPolicyReason } from './permissions';
+
 /** Turkish case-folding + IME/keyboard regression-matrix skeleton. */
 export {
   turkishUpper,

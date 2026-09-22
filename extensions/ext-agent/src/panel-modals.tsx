@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Modal, cn } from '@tepegoz/ui';
-import type { Resources } from '@tepegoz/i18n';
+import { explainPolicyReason, type Resources } from '@tepegoz/i18n';
 import type { AgentStrings } from './i18n';
 import type { AgentApprovalRequest, AgentPlanPreview, RiskLevel, RiskTier } from './types';
 import { BTN_GHOST, BTN_PRIMARY } from './panel-styles';
@@ -8,19 +8,14 @@ import { BTN_GHOST, BTN_PRIMARY } from './panel-styles';
 /** Escalating visual weight, so the six classes are distinguishable at a glance and not just by text.
  *  Token-styled (surface/border/text) rather than raw colours, so both themes stay consistent. */
 /**
- * Look up a reason code's explanation. Returns null for a code this build has no text for — an older
- * journal entry replayed, or a code from a newer policy — so an unknown reason degrades to the bare
- * identifier rather than to an empty box.
+ * Look up a reason code's explanation — the SAME `@tepegoz/i18n` lookup the Permission Debug view
+ * uses, so a live decision and a past one read the same reason the same way.
  */
 function explain(
   c: Resources,
   reason: string,
 ): { title: string; why: string; whatYouCanDo: string } | null {
-  const table = c.permissions as Record<
-    string,
-    { title: string; why: string; whatYouCanDo: string }
-  >;
-  return table[reason] ?? null;
+  return explainPolicyReason(c, reason);
 }
 
 const RISK_TONE: Readonly<Record<RiskTier, string>> = {

@@ -76,6 +76,9 @@ export const EventTypeEnum = z.enum([
   'PolicyBlocked',
   'HitlRequested',
   'HitlResolved',
+  // A run's active tab crossed into a new registrable domain (S8 PR7 second wave) — narration only,
+  // the same eTLD+1 comparator a grant's coverage check already uses.
+  'AgentDomainTransition',
   'HandoffRequested',
   'CheckpointWritten',
   'DownloadStarted',
