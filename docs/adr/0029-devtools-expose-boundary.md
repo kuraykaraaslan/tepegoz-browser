@@ -62,3 +62,33 @@ for it — including a page that asks convincingly.
 wired; only the gate and the toggle behind it are. Device/mobile emulation is not exposed. The
 production-hardening reconciliation with `disableDebugger` is not done. Recording device-emulation state
 as a journal observation is not done, because emulation is not exposed yet.
+
+## Correction (2026-09-22) — the accelerator half of "owed" was stale; the menu entry never was owed
+
+Checked against the running code rather than assumed, because this paragraph had gone stale in two
+different directions at once:
+
+- **Ctrl+Shift+I was already fully wired**, not owed. `@tepegoz/shortcuts` registers it
+  (`{ id: 'devTools', key: 'i', ctrlOrCmd: true, shift: true, scope: 'main' }`), `keyboard-shortcuts.ts`
+  dispatches it straight to `toggleDevToolsGated` — the same gated entry point `mayOpenDevTools` sits
+  behind — and `keyboard-shortcuts.test.ts` ("Ctrl+Shift+I routes to the gated DevTools toggle") has
+  covered the routing since the change that closed the original "Inspect element" hole. This ADR's own
+  Decision section already said as much ("The gate sits at the one place DevTools is opened"); the Owed
+  paragraph below it had simply not been updated to match.
+- **F12 genuinely was unbound** — confirmed by reading `@tepegoz/shortcuts`' registry (no `f12` entry
+  existed) and finding no other binding for it anywhere in the app. Closed in the same change as this
+  correction: `@tepegoz/shortcuts` gained `{ id: 'devToolsF12', key: 'f12', scope: 'main' }`, a second id
+  for the same action rather than a new one — the shape `focusAddressBar`/`focusAddressBarAlt` already
+  uses — and `keyboard-shortcuts.ts` routes both `devTools` and `devToolsF12` to the identical
+  `toggleDevToolsGated` call. No second gate, no second path.
+- **The menu entry was never actually owed; it is an intentional non-goal.** `application-menu.ts`'s own
+  header explains the design: Windows/Linux ship no application menu at all, and macOS keeps only App +
+  Edit (both role-only, editing-focused); "the keys it used to answer are registered in
+  `@tepegoz/shortcuts` ... Nothing that reaches DevTools, zoom, or window lifecycle is in it." One owner
+  per key, on purpose, so a menu row can never become a second, ungated way to reach DevTools. This
+  correction removes the menu entry from "owed" rather than building one.
+
+**What remains owed, unchanged by this correction:** device/mobile emulation is still not exposed, the
+`disableDebugger` production-hardening reconciliation is still not done, and device-emulation state is
+still not recorded as a journal observation (because emulation is still not exposed). None of those three
+were investigated as part of this correction and none should be inferred closed.

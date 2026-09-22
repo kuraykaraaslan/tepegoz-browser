@@ -535,6 +535,7 @@ export const en = {
       viewSource: 'View the page source',
       newPrivateWindow: 'Open a new private window',
       devTools: 'Open developer tools',
+      devToolsF12: 'Open developer tools (alternate)',
       hardReload: 'Reload, ignoring the cache',
       closeTab: 'Close the tab',
       focusAddressBar: 'Focus the address bar',

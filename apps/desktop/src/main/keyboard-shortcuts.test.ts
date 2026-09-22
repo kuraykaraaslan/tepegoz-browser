@@ -146,6 +146,20 @@ describe('page-command shortcuts', () => {
     );
     expect(commands.toggleDevToolsGated).toHaveBeenCalledWith(page);
   });
+
+  /**
+   * F12 is the second key for the same action (see `focusAddressBar`/`focusAddressBarAlt` for the
+   * pattern), so it must reach the exact same gated call as Ctrl+Shift+I — never a parallel path.
+   */
+  it('F12 (no modifiers) routes to the same gated DevTools toggle', () => {
+    expect(handleWindowShortcut(win, press('F12'), { page })).toBe(true);
+    expect(commands.toggleDevToolsGated).toHaveBeenCalledWith(page);
+  });
+
+  it('Ctrl+F12 does NOT toggle DevTools — F12 is bound bare, like F11', () => {
+    expect(handleWindowShortcut(win, press('F12', { control: true }), { page })).toBe(false);
+    expect(commands.toggleDevToolsGated).not.toHaveBeenCalled();
+  });
 });
 
 describe('the window-level shortcuts', () => {
@@ -227,6 +241,7 @@ describe('the window-level shortcuts', () => {
       press('r', { control: true, shift: true }),
       press('u', { control: true }),
       press('i', { control: true, shift: true }),
+      press('F12'),
     ]) {
       expect(handleWindowShortcut(win, p, { page: null })).toBe(false);
     }

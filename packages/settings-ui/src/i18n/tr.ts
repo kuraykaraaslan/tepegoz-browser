@@ -522,6 +522,7 @@ export const tr: SettingsStrings = {
       viewSource: 'Sayfa kaynağını görüntüle',
       newPrivateWindow: 'Yeni bir gizli pencere aç',
       devTools: 'Geliştirici araçlarını aç',
+      devToolsF12: 'Geliştirici araçlarını aç (alternatif)',
       hardReload: 'Önbelleği yok sayarak yenile',
       closeTab: 'Sekmeyi kapat',
       focusAddressBar: 'Adres çubuğuna odaklan',

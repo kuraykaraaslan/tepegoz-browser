@@ -97,6 +97,13 @@ export const SHORTCUTS = [
   //                 TAB, and closing a window full of tabs instead is the kind of mistake a user
   //                 cannot undo from muscle memory.
   { id: 'devTools', key: 'i', ctrlOrCmd: true, shift: true, scope: 'main' },
+  // F12 — the other muscle-memory DevTools key (Chrome, Firefox and Edge all answer it). TWO ids for
+  // one action, same shape as `focusAddressBar`/`focusAddressBarAlt`: both land on the same gated
+  // toggle (`toggleDevToolsGated` in `keyboard-shortcuts.ts`), never a second path. ADR-0029 listed
+  // this as owed ("the menu entry and the F12 / Ctrl+Shift+I accelerator are not wired") — checked
+  // before adding it: no binding anywhere in the app (this registry, Electron's default menu roles, a
+  // renderer listener) answered a bare F12 before this line.
+  { id: 'devToolsF12', key: 'f12', scope: 'main' },
   { id: 'hardReload', key: 'r', ctrlOrCmd: true, shift: true, scope: 'main' },
   { id: 'closeTab', key: 'w', ctrlOrCmd: true, scope: 'main' },
 ] as const satisfies readonly ShortcutSpec[];

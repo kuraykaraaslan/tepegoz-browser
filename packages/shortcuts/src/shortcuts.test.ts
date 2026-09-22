@@ -71,6 +71,11 @@ describe('matching is exact, not "at least"', () => {
     expect(shortcutFor(press({ key: 'F11', ctrlOrCmd: true }), 'main')).toBeNull();
   });
 
+  it('fires F12 with no modifiers and not with them, same shape as F11', () => {
+    expect(shortcutFor(press({ key: 'F12' }), 'main')).toBe('devToolsF12');
+    expect(shortcutFor(press({ key: 'F12', ctrlOrCmd: true }), 'main')).toBeNull();
+  });
+
   it('keeps the scopes apart', () => {
     // Ctrl+F is handled in MAIN because the key usually arrives while the page has focus. The renderer
     // asking for it must get nothing rather than a second handler for the same press.

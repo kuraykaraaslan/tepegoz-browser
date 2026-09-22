@@ -28,6 +28,9 @@ import {
  *   • Ctrl/Cmd+R, Ctrl/Cmd+Shift+R, Ctrl/Cmd+Shift+I, Ctrl/Cmd+W — the four keys ELECTRON'S DEFAULT
  *     application menu used to answer. That menu is gone (`menus/application-menu.ts`), because one of
  *     its roles — `toggleDevTools` — was a way around this app's sensitive-site DevTools gate.
+ *   • F12 — not one of the four above (Electron's default menu never bound it); a second key for the
+ *     same gated DevTools toggle as Ctrl/Cmd+Shift+I, added directly to `@tepegoz/shortcuts` to close
+ *     the "F12 ... not wired" half of ADR-0029's owed paragraph.
  *
  * What a shortcut acts ON is passed IN, exactly as `handleZoomShortcut` takes its webContents.
  * Resolving it here would mean importing the tab model, and `tabs-view-wiring.ts` imports THIS module
@@ -116,8 +119,11 @@ export function handleWindowShortcut(
       reloadPage(pageWc, true);
       return true;
     case 'devTools':
-      // Gated. The verdict is dropped here on purpose: the refusal is already logged, and a keypress
-      // has nowhere to render one. Surfacing it in the chrome is owed work, noted in the phase file.
+    case 'devToolsF12':
+      // Gated, both bindings alike — F12 is a second key for the same action, not a second path (see
+      // `focusAddressBar`/`focusAddressBarAlt` for the pattern). The verdict is dropped here on
+      // purpose: the refusal is already logged, and a keypress has nowhere to render one. Surfacing it
+      // in the chrome is owed work, noted in the phase file.
       if (pageWc === null) return false;
       toggleDevToolsGated(pageWc);
       return true;
