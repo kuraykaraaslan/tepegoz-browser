@@ -35,6 +35,7 @@ import type {
   TaskDefinition,
   TaskRunRecord,
   TaskSaveInput,
+  TasksImportResult,
   TasksState,
 } from './contract';
 import type { McpServerStatusInfo } from './preferences-types';
@@ -147,4 +148,10 @@ export interface ExtensionsApi {
   listTaskRuns(taskId?: string): Promise<TaskRunRecord[]>;
   listTaskArtifacts(taskId?: string): Promise<TaskArtifactRecord[]>;
   onTasksState(callback: (state: TasksState) => void): () => void;
+  /** Every saved task's reusable configuration (no run history/artifacts, no policy) as one JSON string
+   *  for the user to save. */
+  exportTasks(): Promise<string>;
+  /** Restore tasks from a previously exported JSON string; invalid entries are skipped, not fatal. Every
+   *  imported task lands in the safe "notify" autonomy mode — importing never itself grants capability. */
+  importTasks(json: string): Promise<TasksImportResult>;
 }

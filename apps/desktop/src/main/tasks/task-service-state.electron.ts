@@ -1,6 +1,6 @@
 import { IpcChannels, type TasksState } from '@tepegoz/desktop-ipc';
 import type { TaskArtifactRecord, TaskDefinition, TaskRunRecord } from '@tepegoz/tasks';
-import { TaskStore } from '@tepegoz/persistence';
+import { TaskStore, serializeTasksJson } from '@tepegoz/persistence';
 import { broadcastToAppSurfaces } from '../lib/app-surfaces';
 import { getDb } from '../db/database.electron';
 import type { QueuedTaskRun, TaskRunLauncher } from './task-service-support.electron';
@@ -52,6 +52,13 @@ export function tasksState(): TasksState {
     runs: listRuns(),
     artifacts: listArtifacts(),
   };
+}
+
+/** Every saved task's reusable configuration as one pretty-printed JSON document, for a user-initiated
+ *  backup. Unlike {@link listTasks} there is no row cap — a backup must be complete. */
+export function exportTasksJson(): string {
+  const db = getDb();
+  return serializeTasksJson(db === null ? [] : TaskStore.exportAll(db));
 }
 
 export function broadcast(): void {

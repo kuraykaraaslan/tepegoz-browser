@@ -14,6 +14,11 @@ export const tr: TasksStrings = {
   noResults: 'Eşleşen görev yok',
   none: '—',
   sourceChat: 'Sohbetten',
+  exportTasks: 'Dışa aktar',
+  importTasks: 'İçe aktar',
+  importDone: '{imported} görev içe aktarıldı.',
+  importSkipped: '{skipped} tanesi atlandı (geçerli bir görev değil).',
+  importFailed: 'Bu dosya geçerli bir görev dışa aktarımı değil.',
 
   columns: {
     name: 'Görev',

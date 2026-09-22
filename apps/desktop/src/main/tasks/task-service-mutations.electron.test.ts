@@ -163,6 +163,30 @@ describe('saveTask', () => {
   });
 });
 
+describe('importTasks', () => {
+  it('saves every entry through the same saveTask path (no policy/autonomy ever supplied) and returns the count', () => {
+    runtime.writeToolIdsProvider = () => ['tool.a'];
+    store.get.mockReturnValue({ id: 'new', saved: true });
+    const entries = [saveInput({ id: 't1' }), saveInput({ id: 't2' })];
+
+    const count = m.importTasks(entries);
+
+    expect(count).toBe(2);
+    expect(store.upsert).toHaveBeenCalledTimes(2);
+    // saveTask always synthesizes from 'notify' when no autonomy is on the entry — never the imported
+    // file's say-so — which is the whole point of routing import through saveTask instead of a direct
+    // TaskStore.upsert.
+    expect(tasksLib.synthesizePolicy).toHaveBeenNthCalledWith(1, 'notify', expect.any(Object));
+    expect(tasksLib.synthesizePolicy).toHaveBeenNthCalledWith(2, 'notify', expect.any(Object));
+    expect(stateM.broadcast).toHaveBeenCalledTimes(2);
+  });
+
+  it('imports an empty batch as a no-op', () => {
+    expect(m.importTasks([])).toBe(0);
+    expect(store.upsert).not.toHaveBeenCalled();
+  });
+});
+
 describe('deleteTask', () => {
   it('deletes the row, drops the queue entry and broadcasts', () => {
     runtime.queue.set('t1', {});

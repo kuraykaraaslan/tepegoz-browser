@@ -267,6 +267,13 @@ export const IpcChannels = {
   tasksSetEnabled: 'tasks:set-enabled',
   tasksListRuns: 'tasks:list-runs',
   tasksListArtifacts: 'tasks:list-artifacts',
+  /** A saved task's reusable configuration only (no run history/artifacts, no policy) as one JSON string
+   *  the renderer downloads via Blob — same split as `macrosExport`. */
+  tasksExport: 'tasks:export',
+  /** Renderer→main: the JSON text of a previously exported tasks file. Main validates every entry
+   *  (`TaskImportEntrySchema`, which never accepts a raw `policy`/`autonomy`) and upserts the ones that
+   *  pass through the same `saveTask` path a manual save uses. */
+  tasksImport: 'tasks:import',
   tasksState: 'tasks:state',
   // Multi-protocol messenger (`com.tepegoz.chat`). Accounts + conversations + roster live in the
   // profile DB; the main-process ChatService owns every socket and pushes state/changes live.

@@ -274,6 +274,18 @@ export class TaskStore {
     db.prepare('DELETE FROM tasks WHERE id = ?').run(id);
   }
 
+  /**
+   * Every saved task, newest first, for a user-initiated export. Unlike {@link TaskStore.list} there is
+   * no `LIMIT` — a backup must be complete (mirrors `MacroStore.exportAll`). Run history and artifacts
+   * live in separate tables and are deliberately NOT read here — see
+   * `packages/persistence/src/task-export.ts` for why a task's export is its reusable configuration, not
+   * its run log.
+   */
+  static exportAll(db: Db): TaskDefinition[] {
+    const rows = db.prepare('SELECT * FROM tasks ORDER BY updated_at DESC').all() as TaskRow[];
+    return rows.map(rowToTask);
+  }
+
   static listRuns(db: Db, taskId?: string, limit = 500): TaskRunRecord[] {
     const n = Math.max(1, Math.min(Math.trunc(limit), 1000));
     const rows =

@@ -133,6 +133,30 @@ export const TaskRunRecordSchema = z.object({
   error: z.string().max(4096).optional(),
 }) satisfies z.ZodType<TaskRunRecord>;
 
+/**
+ * `tasks:import` per-entry schema — everything {@link TaskSaveInputSchema} accepts EXCEPT `policy` and
+ * `autonomy`. Deliberately narrower than the save-input schema the manual "New task" / "Save as task"
+ * flows submit: those never let the renderer hand over a raw `policy` either — the UI only offers an
+ * autonomy PRESET, and the main-process `saveTask` synthesizes the concrete write-tool allowlist from
+ * the CURRENT install's live tool registry. `.omit()` makes this the enforcement, not a convention: even
+ * a hand-crafted import file that includes `policy`/`autonomy` has those keys silently stripped by zod
+ * (an unrecognised key on a non-strict `z.object` is dropped, not rejected), so an imported task can
+ * never carry over a foreign install's preapproved-write grant. Every imported task therefore lands with
+ * the same safe default a brand-new task gets — `notify`, no allowlist, every write pauses for approval
+ * — until the user explicitly grants more on THIS install by editing the task, exactly like they would
+ * for a task they typed in by hand.
+ */
+export const TaskImportEntrySchema = TaskSaveInputSchema.omit({ policy: true, autonomy: true });
+export type TaskImportEntry = z.infer<typeof TaskImportEntrySchema>;
+
+/** `safeParse` a single untrusted import entry — the trust-boundary validator `parseTasksImport` (in
+ *  `@tepegoz/persistence`) calls per array item, mirroring `parseMacro`'s shape. */
+export function parseTaskImportEntry(
+  input: unknown,
+): z.SafeParseReturnType<unknown, TaskImportEntry> {
+  return TaskImportEntrySchema.safeParse(input);
+}
+
 export const TaskArtifactRecordSchema = z.object({
   id: z.string().min(1).max(128),
   taskId: z.string().min(1).max(128),

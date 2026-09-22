@@ -174,6 +174,18 @@ export interface TaskStatePatch {
   patch: Partial<Omit<TaskDefinition, 'id' | 'createdAt'>>;
 }
 
+/**
+ * Outcome of a tasks import (`tepegoz://tasks` → Import). Every entry in the imported file is validated
+ * on its own against the import schema: `imported` counts the tasks that passed and were written (upsert
+ * on id, via the same `saveTask` path a manual "New task" save uses), `skipped` counts the entries
+ * dropped because they are not a valid task. A file that is not JSON, or that has no task list at all, is
+ * rejected outright and never produces this result. Mirrors `MacrosImportResult`.
+ */
+export interface TasksImportResult {
+  imported: number;
+  skipped: number;
+}
+
 export function defaultTaskPolicy(): TaskPolicy {
   return {
     allowedOrigins: [],

@@ -35,8 +35,15 @@ const svc = vi.hoisted(() => ({
   command: vi.fn(),
   listRuns: vi.fn(() => []),
   listArtifacts: vi.fn(() => []),
+  exportJson: vi.fn(() => 'tasks-json'),
+  importTasks: vi.fn((entries: unknown[]) => entries.length),
 }));
 vi.mock('../tasks/task-service.electron', () => ({ default: svc }));
+
+const parseTasksImport = vi.hoisted(() =>
+  vi.fn(() => ({ tasks: [{ id: 'a' }, { id: 'b' }], skipped: 1 })),
+);
+vi.mock('@tepegoz/persistence', () => ({ parseTasksImport }));
 
 const { registerTasksIpc } = await import('./ipc-tasks');
 
@@ -48,11 +55,13 @@ const VALID_SAVE = { name: 'Weekly check', prompt: 'do the thing', triggers: [{ 
 beforeEach(() => {
   h.handlers.clear();
   Object.values(svc).forEach((f) => f.mockClear());
+  parseTasksImport.mockClear();
+  parseTasksImport.mockImplementation(() => ({ tasks: [{ id: 'a' }, { id: 'b' }], skipped: 1 }));
   registerTasksIpc();
 });
 
-it('registers the nine task channels as handlers', () => {
-  expect(h.handlers.size).toBe(9);
+it('registers the eleven task channels as handlers', () => {
+  expect(h.handlers.size).toBe(11);
 });
 
 describe('validation gates the service', () => {
@@ -124,6 +133,32 @@ describe('list endpoints', () => {
   });
 });
 
+describe('tasks — export / import', () => {
+  it('tasksExport hands back the JSON TaskService produces', () => {
+    expect(call(IpcChannels.tasksExport)).toBe('tasks-json');
+  });
+
+  it('tasksImport parses the file, upserts the valid entries, and returns { imported, skipped }', () => {
+    const res = call(IpcChannels.tasksImport, '{"tasks":[]}');
+    expect(parseTasksImport).toHaveBeenCalledWith('{"tasks":[]}');
+    expect(svc.importTasks).toHaveBeenCalledWith([{ id: 'a' }, { id: 'b' }]);
+    expect(res).toEqual({ imported: 2, skipped: 1 });
+  });
+
+  it('tasksImport maps a malformed file (parse throws) to a 400, never reaching TaskService', () => {
+    parseTasksImport.mockImplementationOnce(() => {
+      throw new SyntaxError('not json');
+    });
+    // `ipc-helpers.ts`'s real `handle()` wrapper maps every thrown value through `mapAndLog`, which
+    // re-throws a plain Error carrying an ENCODED "[statusCode] message" (Electron drops custom fields
+    // crossing IPC) — this file, unlike `ipc-content-tools.electron.test.ts`, does not mock
+    // `./ipc-helpers`, so the AppError's own `statusCode`/`code` properties are not directly inspectable
+    // here; asserting on the encoded message is the equivalent check for this file's convention.
+    expect(() => call(IpcChannels.tasksImport, 'not json')).toThrow('[400]');
+    expect(svc.importTasks).not.toHaveBeenCalled();
+  });
+});
+
 describe('untrusted sender', () => {
   it('reaches no TaskService method', () => {
     for (const channel of [
@@ -131,6 +166,8 @@ describe('untrusted sender', () => {
       IpcChannels.tasksSave,
       IpcChannels.tasksRunNow,
       IpcChannels.tasksDelete,
+      IpcChannels.tasksExport,
+      IpcChannels.tasksImport,
     ]) {
       expect(() => h.handlers.get(channel)?.(evil, VALID_SAVE)).toThrow();
     }
@@ -138,5 +175,7 @@ describe('untrusted sender', () => {
     expect(svc.save).not.toHaveBeenCalled();
     expect(svc.command).not.toHaveBeenCalled();
     expect(svc.delete).not.toHaveBeenCalled();
+    expect(svc.exportJson).not.toHaveBeenCalled();
+    expect(svc.importTasks).not.toHaveBeenCalled();
   });
 });

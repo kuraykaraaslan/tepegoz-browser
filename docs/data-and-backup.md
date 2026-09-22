@@ -29,35 +29,48 @@ Everything below lives under the app's **user-data directory**:
 
 ## What you can export today
 
-| Data              | How                                         | Format                                                                                                        |
-| ----------------- | ------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
-| Bookmarks         | `tepegoz://bookmarks` → **Export**          | Netscape bookmarks HTML — every other browser imports it                                                      |
-| Stored logins     | Settings → Passwords → Export               | Google-compatible CSV                                                                                         |
-| Browsing history  | `tepegoz://history` → **Export**            | CSV (`url,title,last_visited,visit_count`) — opens in any spreadsheet                                         |
-| Downloads list    | `tepegoz://downloads` → **Export**          | CSV (`filename,url,source_origin,total_bytes,status,risk,created_at,completed_at`) — opens in any spreadsheet |
-| Preferences       | Settings → Reset → **Export settings**      | JSON — re-importable (Settings → **Import settings**)                                                         |
-| Macros            | `tepegoz://com.tepegoz.macros` → **Export** | JSON — re-importable (**Import** on the same page)                                                            |
-| One agent chat    | Agent panel → export conversation           | Plain text                                                                                                    |
-| One agent session | Agent panel header → diagnostic bundle      | Folder: transcript, per-tab DOM + screenshots, redacted journal                                               |
+| Data               | How                                    | Format                                                          |
+| ------------------ | -------------------------------------- | --------------------------------------------------------------- |
+| Bookmarks          | `tepegoz://bookmarks` → **Export**     | Netscape bookmarks HTML — every other browser imports it        |
+| Stored logins      | Settings → Passwords → Export          | Google-compatible CSV                                           |
+| Browsing history   | `tepegoz://history` → **Export**       | CSV (`url,title,last_visited,visit_count`) — opens in any spreadsheet |
+| Downloads list     | `tepegoz://downloads` → **Export**     | CSV (`filename,url,source_origin,total_bytes,status,risk,created_at,completed_at`) — opens in any spreadsheet |
+| Preferences        | Settings → Reset → **Export settings** | JSON — re-importable (Settings → **Import settings**)           |
+| Macros             | `tepegoz://com.tepegoz.macros` → **Export** | JSON — re-importable (**Import** on the same page)          |
+| Scheduled tasks    | `tepegoz://tasks` → **Export**         | JSON — re-importable (**Import** on the same page)              |
+| One agent chat     | Agent panel → export conversation      | Plain text                                                      |
+| One agent session  | Agent panel header → diagnostic bundle | Folder: transcript, per-tab DOM + screenshots, redacted journal |
 
 Bookmark and login exports use the format the other browsers read, on purpose. A JSON dump only this
 application can restore is a backup shaped like lock-in. History and the downloads list have no
-portable _interchange_ format the way bookmarks do, so their export is CSV for inspection and
-archival — there is no history or downloads _import_. The downloads CSV deliberately omits the
-on-disk file paths, the content hash, and the quarantine/trust internals: it is a record of _what_
-was downloaded, not a map of where the bytes landed on this machine. Preferences and macros are the
-cases where a JSON dump is the right answer — there is no cross-browser preferences format or
-cross-tool macro format to target, but both round-trip: **Import** re-applies the file item by item,
-validating each one and skipping anything it does not recognise. Neither carries secrets (API keys
-stay in the keychain-sealed vault; a macro is a recorded click/type script), so both are safe to move
-between machines.
+portable *interchange* format the way bookmarks do, so their export is CSV for inspection and
+archival — there is no history or downloads *import*. The downloads CSV deliberately omits the
+on-disk file paths, the content hash, and the quarantine/trust internals: it is a record of *what*
+was downloaded, not a map of where the bytes landed on this machine. Preferences, macros, and scheduled
+tasks are the cases where a JSON dump is the right answer — there is no cross-browser preferences format,
+cross-tool macro format, or cross-tool task format to target, but all three round-trip: **Import**
+re-applies the file item by item, validating each one and skipping anything it does not recognise.
+Preferences and macros carry no secrets at all (API keys stay in the keychain-sealed vault; a macro is a
+recorded click/type script), so both are safe to move between machines outright.
+
+A scheduled task's export is narrower than the other two, on purpose: it carries the task's *reusable
+configuration* — name, instruction, schedule/trigger, target page — and deliberately leaves out its run
+history and artifacts (those are a log of what already happened on this machine, not something to
+replay on another one, the same call the macros export already makes about past runs) and its
+preapproved-write policy. A task's policy is real capability, not portable data: importing a file must
+never itself be a way to hand a task auto-approval it never earned on this install. Every imported task
+therefore lands in the safe "notify" mode — no write is pre-approved, every one pauses for confirmation —
+exactly like a task the user just created by hand; broader autonomy has to be granted again, explicitly,
+by editing the task on the new machine. An imported task's link back to the agent chat it was converted
+from is also dropped rather than carried over, since agent conversations have no export path of their own
+(below) and the id would not resolve on another install.
 
 ## What you cannot export yet
 
-Scheduled tasks, agent memory and skills, and trust profiles have **no export path**. They are
-readable — `tepegoz.db` is an ordinary SQLite file and nothing stops you opening it — but there is no
-supported way to move them to another installation. This is a real gap, not an oversight being
-hidden: see the tracked item in [`known-issues.md`](known-issues.md).
+Agent memory and skills, and trust profiles, have **no export path**. They are readable — `tepegoz.db` is
+an ordinary SQLite file and nothing stops you opening it — but there is no supported way to move them to
+another installation. This is a real gap, not an oversight being hidden: see the tracked item in
+[`known-issues.md`](known-issues.md).
 
 ## Backing the whole profile up
 

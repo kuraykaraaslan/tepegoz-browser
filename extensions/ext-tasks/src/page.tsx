@@ -7,6 +7,7 @@ import { tasksDict } from './i18n';
 import type { TasksHostApi } from './types';
 import { TaskModal } from './task-modal';
 import { ConversationPicker } from './conversation-picker';
+import { TaskBackupControls } from './task-backup-controls';
 import {
   blankFormState,
   fmtTime,
@@ -205,13 +206,14 @@ export function TasksPage({ api }: Readonly<{ api: TasksHostApi; onClose: () => 
             <h1 className="text-xl font-semibold">{t.title}</h1>
             <p className="mt-1 text-sm text-text-secondary">{t.subtitle}</p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Button size="sm" variant="outline" onClick={() => setPickerOpen(true)}>
               {t.newFromConversation}
             </Button>
             <Button size="sm" onClick={() => setModalInitial(blankFormState())}>
               {t.newTask}
             </Button>
+            <TaskBackupControls api={api} onImported={() => void refresh()} />
           </div>
         </div>
 

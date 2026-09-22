@@ -17,13 +17,22 @@ export * from './schemas-logins';
 export * from './schemas-macros';
 export * from './schemas-chat';
 
+import { z } from 'zod';
+
 export { DownloadCommandInputSchema, DownloadCreateInputSchema } from '@tepegoz/downloads/schemas';
 export { UploadCommandInputSchema, UploadCreateInputSchema } from '@tepegoz/uploads/schemas';
 export {
   TaskCommandInputSchema,
   TaskDefinitionSchema,
+  TaskImportEntrySchema,
   TaskSaveInputSchema,
 } from '@tepegoz/tasks/schemas';
+/**
+ * `tasks:import` payload — the raw JSON text of a previously exported tasks file. Bounded like the
+ * macros counterpart (`MacrosImportJsonSchema`); the handler `JSON.parse`s it and validates every entry
+ * against `TaskImportEntrySchema` individually.
+ */
+export const TasksImportJsonSchema = z.string().max(10_485_760);
 export {
   AgentConversationIdSchema,
   AgentConversationListInputSchema,

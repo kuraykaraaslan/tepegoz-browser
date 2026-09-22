@@ -10,6 +10,7 @@ import type {
   TaskDefinition,
   TaskRunRecord,
   TaskSaveInput,
+  TasksImportResult,
   TasksState,
 } from '@tepegoz/tasks';
 import type {
@@ -29,6 +30,11 @@ export interface TasksHostApi {
   listTaskRuns(taskId?: string): Promise<TaskRunRecord[]>;
   listTaskArtifacts(taskId?: string): Promise<TaskArtifactRecord[]>;
   onTasksState(callback: (state: TasksState) => void): () => void;
+  /** Every saved task's reusable configuration as one JSON string for the user to save (no secrets, no
+   *  policy, no run history). */
+  exportTasks(): Promise<string>;
+  /** Restore tasks from a previously exported JSON string; invalid entries are skipped, not fatal. */
+  importTasks(json: string): Promise<TasksImportResult>;
   /** Agent conversations, used to seed a new task from an existing chat. */
   listAgentConversations(input?: AgentConversationListInput): Promise<AgentConversationSummary[]>;
   getAgentConversation(id: string): Promise<AgentConversationDetail | null>;

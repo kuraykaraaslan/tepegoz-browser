@@ -4,8 +4,15 @@ import {
   type TaskArtifactRecord,
   type TaskDefinition,
   type TaskRunRecord,
+  type TasksImportResult,
 } from '@tepegoz/desktop-ipc';
-import { TaskCommandInputSchema, TaskSaveInputSchema } from '@tepegoz/desktop-ipc/schemas';
+import {
+  TaskCommandInputSchema,
+  TaskSaveInputSchema,
+  TasksImportJsonSchema,
+} from '@tepegoz/desktop-ipc/schemas';
+import { AppError } from '@tepegoz/libs';
+import { parseTasksImport } from '@tepegoz/persistence';
 import TaskService from '../tasks/task-service.electron';
 import { handle } from './ipc-helpers';
 
@@ -46,4 +53,21 @@ export function registerTasksIpc(): void {
   handle(IpcChannels.tasksListArtifacts, (_event, payload): TaskArtifactRecord[] =>
     TaskService.listArtifacts(OptionalTaskIdSchema.parse(payload)),
   );
+  handle(IpcChannels.tasksExport, (): string => {
+    // No policy, no run history — main only stringifies the reusable configuration; the untrusted
+    // renderer does the Blob download, same split as macros/bookmarks/history/preferences export.
+    return TaskService.exportJson();
+  });
+  handle(IpcChannels.tasksImport, (_event, payload): TasksImportResult => {
+    const json = TasksImportJsonSchema.parse(payload);
+    let split: ReturnType<typeof parseTasksImport>;
+    try {
+      split = parseTasksImport(json);
+    } catch {
+      // Not JSON, or JSON with no task list — a malformed file is a bad request, mapped to the same
+      // generic localized 400 as any other rejected renderer payload.
+      throw new AppError('Tasks import is not a valid export file', 400, 'badRequest');
+    }
+    return { imported: TaskService.importTasks(split.tasks), skipped: split.skipped };
+  });
 }

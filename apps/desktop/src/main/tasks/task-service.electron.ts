@@ -6,8 +6,10 @@ import type {
   TaskRunRecord,
   TaskSaveInput,
 } from '@tepegoz/tasks';
+import type { TaskImportEntry } from '@tepegoz/tasks/schemas';
 import type { TaskRunLauncher } from './task-service-support.electron';
 import {
+  exportTasksJson,
   getTask,
   listArtifacts,
   listRuns,
@@ -16,6 +18,7 @@ import {
 } from './task-service-state.electron';
 import {
   deleteTask,
+  importTasks,
   runCommand,
   saveTask,
   setRunner,
@@ -69,6 +72,16 @@ export default class TaskService {
 
   static delete(id: string): void {
     deleteTask(id);
+  }
+
+  /** Every saved task's reusable configuration as one JSON document, for a user-initiated backup. */
+  static exportJson(): string {
+    return exportTasksJson();
+  }
+
+  /** Persist a batch of already-validated import entries; returns how many were written. */
+  static importTasks(entries: readonly TaskImportEntry[]): number {
+    return importTasks(entries);
   }
 
   static listRuns(taskId?: string): TaskRunRecord[] {

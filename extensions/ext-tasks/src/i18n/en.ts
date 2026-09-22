@@ -14,6 +14,11 @@ export const en = {
   noResults: 'No matching tasks',
   none: '—',
   sourceChat: 'From chat',
+  exportTasks: 'Export',
+  importTasks: 'Import',
+  importDone: 'Imported {imported} task(s).',
+  importSkipped: '{skipped} skipped (not a valid task).',
+  importFailed: 'That file is not a valid tasks export.',
 
   columns: {
     name: 'Task',

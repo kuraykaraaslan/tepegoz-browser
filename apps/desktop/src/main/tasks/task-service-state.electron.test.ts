@@ -12,8 +12,10 @@ const store = vi.hoisted(() => ({
   get: vi.fn((): unknown => ({ id: 't1' })),
   listRuns: vi.fn(() => [{ id: 'r1' }]),
   listArtifacts: vi.fn(() => [{ id: 'a1' }]),
+  exportAll: vi.fn(() => [{ id: 't1' }]),
 }));
-vi.mock('@tepegoz/persistence', () => ({ TaskStore: store }));
+const serializeTasksJson = vi.hoisted(() => vi.fn((tasks: unknown[]) => `json:${tasks.length}`));
+vi.mock('@tepegoz/persistence', () => ({ TaskStore: store, serializeTasksJson }));
 
 const db = vi.hoisted((): { value: unknown } => ({ value: { __db: true } }));
 vi.mock('../db/database.electron', () => ({ getDb: () => db.value }));
@@ -48,6 +50,21 @@ describe('the readers', () => {
     expect(store.get).toHaveBeenCalledWith({ __db: true }, 't1');
     expect(store.listRuns).toHaveBeenCalledWith({ __db: true }, 't1');
     expect(store.listArtifacts).toHaveBeenCalledWith({ __db: true }, 't1');
+  });
+});
+
+describe('exportTasksJson', () => {
+  it('serializes an empty list rather than calling the store with no database', () => {
+    db.value = null;
+    expect(state.exportTasksJson()).toBe('json:0');
+    expect(store.exportAll).not.toHaveBeenCalled();
+    expect(serializeTasksJson).toHaveBeenCalledWith([]);
+  });
+
+  it('serializes every row from TaskStore.exportAll (no row cap) when the db is ready', () => {
+    expect(state.exportTasksJson()).toBe('json:1');
+    expect(store.exportAll).toHaveBeenCalledWith({ __db: true });
+    expect(serializeTasksJson).toHaveBeenCalledWith([{ id: 't1' }]);
   });
 });
 

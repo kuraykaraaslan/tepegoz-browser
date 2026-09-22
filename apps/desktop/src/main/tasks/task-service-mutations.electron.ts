@@ -8,6 +8,7 @@ import {
   type TaskDefinition,
   type TaskSaveInput,
 } from '@tepegoz/tasks';
+import type { TaskImportEntry } from '@tepegoz/tasks/schemas';
 import { TaskStore } from '@tepegoz/persistence';
 import { getDb } from '../db/database.electron';
 import { computeNextRunAt, now, type TaskRunLauncher } from './task-service-support.electron';
@@ -65,6 +66,19 @@ export function saveTask(input: TaskSaveInput): TaskDefinition {
   const saved = TaskStore.get(db, task.id) ?? task;
   broadcast();
   return saved;
+}
+
+/**
+ * Persist a batch of already-validated import entries (upsert on id) through the EXACT same `saveTask`
+ * path the manual "New task" UI uses — `entry` never carries `policy`/`autonomy` (stripped by
+ * `TaskImportEntrySchema` at the parse boundary in `@tepegoz/persistence`), so `saveTask` always
+ * synthesizes a fresh policy from the `notify` default. Importing a task therefore never itself grants
+ * any capability. Returns how many were written; the caller ({@link registerTasksIpc}) already parsed +
+ * validated the untrusted file with `parseTasksImport` first — this only touches the DB.
+ */
+export function importTasks(entries: readonly TaskImportEntry[]): number {
+  for (const entry of entries) saveTask(entry);
+  return entries.length;
 }
 
 export function deleteTask(id: string): void {

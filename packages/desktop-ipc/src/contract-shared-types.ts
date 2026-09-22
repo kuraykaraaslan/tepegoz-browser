@@ -107,6 +107,7 @@ import type {
   TaskDefinition,
   TaskRunRecord,
   TaskSaveInput,
+  TasksImportResult,
   TasksState,
 } from '@tepegoz/tasks';
 export type {
@@ -115,6 +116,7 @@ export type {
   TaskDefinition,
   TaskRunRecord,
   TaskSaveInput,
+  TasksImportResult,
   TasksState,
 };
 

@@ -6,6 +6,7 @@ import {
   type TaskDefinition,
   type TaskRunRecord,
   type TaskSaveInput,
+  type TasksImportResult,
   type TasksState,
   type TepegozApi,
 } from '@tepegoz/desktop-ipc';
@@ -22,12 +23,16 @@ export const tasksApi: Pick<
   | 'setTaskEnabled'
   | 'listTaskRuns'
   | 'listTaskArtifacts'
+  | 'exportTasks'
+  | 'importTasks'
   | 'onTasksState'
 > = {
   listTasks: () => invoke<TaskDefinition[]>(IpcChannels.tasksList),
   getTask: (id: string) => invoke<TaskDefinition | null>(IpcChannels.tasksGet, id),
   saveTask: (input: TaskSaveInput) => invoke<TaskDefinition>(IpcChannels.tasksSave, input),
   deleteTask: (id: string) => invoke<void>(IpcChannels.tasksDelete, id),
+  exportTasks: () => invoke<string>(IpcChannels.tasksExport),
+  importTasks: (json: string) => invoke<TasksImportResult>(IpcChannels.tasksImport, json),
   runTaskNow: (input: TaskCommandInput) => invoke<void>(IpcChannels.tasksRunNow, input),
   cancelTaskRun: (input: TaskCommandInput) => invoke<void>(IpcChannels.tasksCancelRun, input),
   setTaskEnabled: (input: { id: string; enabled: boolean }) =>

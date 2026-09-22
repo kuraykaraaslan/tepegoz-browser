@@ -40,6 +40,13 @@ it('listTasks hits its channel with no argument', () => {
   expect(invoke).toHaveBeenCalledWith(IpcChannels.tasksList);
 });
 
+it('exportTasks / importTasks hit their channels', () => {
+  void tasksApi.exportTasks();
+  void tasksApi.importTasks('{"tasks":[]}');
+  expect(invoke).toHaveBeenNthCalledWith(1, IpcChannels.tasksExport);
+  expect(invoke).toHaveBeenNthCalledWith(2, IpcChannels.tasksImport, '{"tasks":[]}');
+});
+
 it('the list filters pass an optional taskId through (undefined = all)', () => {
   void tasksApi.listTaskRuns();
   void tasksApi.listTaskArtifacts('task-1');

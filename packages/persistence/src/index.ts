@@ -13,6 +13,7 @@ export * from './session-store';
 export * from './download-store';
 export * from './downloads-export';
 export * from './task-store';
+export * from './task-export';
 export * from './agent-conversation-store';
 export * from './token-store';
 export { AgentMemoryStore } from './agent-memory-store';
