@@ -12,6 +12,7 @@ import type {
 import { onboardingDict } from './i18n';
 import { AccountStep, FinishStep, WelcomeStep } from './onboarding-surface-steps';
 import { ImportStep } from './onboarding-surface-import';
+import { PrivacyStep } from './onboarding-surface-privacy';
 import {
   emptyBookmarkState,
   emptyPasswordState,
@@ -34,10 +35,11 @@ export function OnboardingSurface({
   importLogins,
   completeOnboarding,
   platform,
+  telemetryEnabled,
 }: OnboardingSurfaceProps) {
   const t = useT(onboardingDict);
   const core = useT(coreDict);
-  const steps = useMemo<StepId[]>(() => ['welcome', 'account', 'import', 'finish'], []);
+  const steps = useMemo<StepId[]>(() => ['welcome', 'account', 'privacy', 'import', 'finish'], []);
   const [step, setStep] = useState<StepId>('welcome');
   const [source, setSource] = useState<BrowserImportSource>('chrome');
   const [bookmarks, setBookmarks] = useState<ImportState<BookmarkImportResult>>(emptyBookmarkState);
@@ -226,6 +228,7 @@ export function OnboardingSurface({
             <div className="mx-auto max-w-2xl">
               {step === 'welcome' && <WelcomeStep />}
               {step === 'account' && <AccountStep />}
+              {step === 'privacy' && <PrivacyStep telemetryEnabled={telemetryEnabled} />}
               {step === 'import' && (
                 <ImportStep
                   source={source}

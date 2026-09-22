@@ -6,7 +6,7 @@ import type {
   LoginImportResult,
 } from '@tepegoz/desktop-ipc';
 
-export type StepId = 'welcome' | 'account' | 'import' | 'finish';
+export type StepId = 'welcome' | 'account' | 'privacy' | 'import' | 'finish';
 export type ImportKind = 'bookmarks' | 'passwords';
 
 export interface ImportState<T> {
@@ -30,6 +30,10 @@ export interface OnboardingSurfaceProps {
   completeOnboarding: () => Promise<void>;
   /** `process.platform`, injected — decides where the window caption comes from (`captionLayout`). */
   platform: string;
+  /** The real `telemetryEnabled` preference (default `false`), injected from the main process via
+   *  `getPreferences()` — the privacy step reads this instead of asserting a hardcoded "off" so it can
+   *  never drift from what Settings actually shows. */
+  telemetryEnabled: boolean;
 }
 
 export const SOURCES: BrowserImportSource[] = ['chrome', 'edge', 'firefox', 'brave', 'other'];

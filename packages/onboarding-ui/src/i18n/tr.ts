@@ -25,6 +25,7 @@ export const tr: OnboardingStrings = {
   steps: {
     welcome: { title: 'Hoş geldin' },
     account: { title: 'Oturum' },
+    privacy: { title: 'Gizlilik' },
     import: { title: 'İçe aktar' },
     finish: { title: 'Hazır' },
   },
@@ -53,6 +54,16 @@ export const tr: OnboardingStrings = {
   localSessionTitle: 'Yerel oturumla devam et',
   localSessionBody:
     'Yer imleri, şifreler, tercihler ve tarayıcı verileri bu yerel profilde kalır. Bu sürümde varsayılan budur.',
+  privacyTelemetryTitle: 'Anonim kullanım telemetrisi',
+  privacyTelemetryOn: 'Açık',
+  privacyTelemetryOff: 'Kapalı',
+  privacyTelemetryBody:
+    'Varsayılan kapalı ve bu derlemede zaten hiçbir şey toplanmıyor veya gönderilmiyor — bu ayarı okuyan bir kod henüz yok. Bir gün olduğunda seçim baştan senin olsun diye burada duruyor.',
+  privacyTelemetrySettingsHint: 'Bunu istediğin zaman Ayarlar → Gizlilik ve telemetri’den değiştirebilirsin.',
+  privacySensitiveTitle: 'Hassas sitelerde ekstra koruma',
+  privacySensitiveBody:
+    'Bankacılık, kamu, kripto, şifre yöneticisi veya sağlık hizmeti gibi görünen sitelerde ajan senin adına işlem yapamaz — yalnızca sayfayı okuyabilir, o da senin iznine bağlı. Bu koruma otomatiktir; senin yönetmen gereken bir site listesine bağlı değildir.',
+  privacySensitiveCategories: ['Bankacılık', 'Kamu', 'Kripto', 'Şifre yöneticileri', 'Sağlık'],
   importSource: 'İçe aktarılacak tarayıcı',
   importSourceHint:
     'Dosyanın hangi tarayıcıdan geldiğini seç. {browser} dışa aktarımları, hangi profilden gelirse gelsin aynı şekilde okunur.',

@@ -23,6 +23,7 @@ export const en = {
   steps: {
     welcome: { title: 'Welcome' },
     account: { title: 'Session' },
+    privacy: { title: 'Privacy' },
     import: { title: 'Import' },
     finish: { title: 'Ready' },
   },
@@ -51,6 +52,16 @@ export const en = {
   localSessionTitle: 'Continue with a local session',
   localSessionBody:
     'Bookmarks, passwords, preferences, and browser data stay in this local profile. This is the default for this version.',
+  privacyTelemetryTitle: 'Anonymous usage telemetry',
+  privacyTelemetryOn: 'On',
+  privacyTelemetryOff: 'Off',
+  privacyTelemetryBody:
+    'Off by default, and nothing is collected or sent by this build either way — no code reads this setting yet. It is here so the choice is already yours when something does.',
+  privacyTelemetrySettingsHint: 'Change this anytime in Settings → Privacy & telemetry.',
+  privacySensitiveTitle: 'Sensitive sites get extra protection',
+  privacySensitiveBody:
+    'On sites that look like banking, government, crypto, a password manager, or healthcare, the agent cannot take actions on your behalf — it can only read the page, and only with your permission. This is automatic and does not depend on a site list you maintain.',
+  privacySensitiveCategories: ['Banking', 'Government', 'Crypto', 'Password managers', 'Healthcare'],
   importSource: 'Import source',
   importSourceHint:
     'Pick the browser a file came from. Files exported from {browser} are read the same way whichever profile they came from.',

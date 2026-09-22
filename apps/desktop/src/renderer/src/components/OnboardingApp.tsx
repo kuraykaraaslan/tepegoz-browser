@@ -8,6 +8,10 @@ import { useWindowMaximized } from '../lib/useWindowMaximized';
 /** Desktop host for the first-run onboarding package. Owns Electron bridge/theme/window concerns. */
 export function OnboardingApp() {
   const [locale, setLocale] = useState<Locale>('en');
+  // Mirrors the preference model's own default (`telemetryEnabled: false` in
+  // `packages/preferences/src/preferences.model.ts`) so a bridge failure fails toward the same value
+  // the app itself ships with, not toward a guess.
+  const [telemetryEnabled, setTelemetryEnabled] = useState(false);
   const isMaximized = useWindowMaximized();
 
   useEffect(() => {
@@ -17,6 +21,7 @@ export function OnboardingApp() {
         setLocale(
           p.locale === 'en' || p.locale === 'tr' ? p.locale : resolveLocale(navigator.language),
         );
+        setTelemetryEnabled(p.telemetryEnabled);
       },
       () => {
         /* bridge unavailable - fall back to defaults */
@@ -32,6 +37,7 @@ export function OnboardingApp() {
         onToggleMaximize={() => window.tepegoz.toggleMaximizeWindow()}
         onClose={() => window.tepegoz.closeWindow()}
         platform={window.tepegoz.platform}
+        telemetryEnabled={telemetryEnabled}
         importBookmarks={(input) => window.tepegoz.importBookmarks(input)}
         detectBrowserProfiles={() => window.tepegoz.detectBrowserProfiles()}
         importBookmarkProfile={(id) => window.tepegoz.importBookmarkProfile(id)}

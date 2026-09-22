@@ -73,6 +73,14 @@ describe('OnboardingApp', () => {
     expect(await screen.findByRole('button', { name: onboardingDict.tr.begin })).toBeTruthy();
   });
 
+  it('threads the real telemetryEnabled preference into the privacy step', async () => {
+    bridge.getPreferences.mockResolvedValueOnce({ ...DEFAULT_PREFERENCES, telemetryEnabled: true });
+    render(<OnboardingApp />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Begin' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Continue' })); // account -> privacy
+    expect(await screen.findByText(onboardingDict.en.privacyTelemetryOn)).toBeTruthy();
+  });
+
   it('wires the caption controls to the window bridge', async () => {
     render(<OnboardingApp />);
     await screen.findByRole('button', { name: 'Begin' });
@@ -97,7 +105,8 @@ describe('OnboardingApp', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Begin' }));
     expect(bridge.detectBrowserProfiles).not.toHaveBeenCalled();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Continue' })); // account -> privacy
+    fireEvent.click(screen.getByRole('button', { name: 'Continue' })); // privacy -> import
     await waitFor(() => expect(bridge.detectBrowserProfiles).toHaveBeenCalledTimes(1));
 
     fireEvent.click(await screen.findByRole('button', { name: 'Import from Chrome — Kuray' }));
@@ -107,7 +116,8 @@ describe('OnboardingApp', () => {
   it('imports bookmarks from a dropped HTML file', async () => {
     render(<OnboardingApp />);
     fireEvent.click(await screen.findByRole('button', { name: 'Begin' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Continue' })); // account -> privacy
+    fireEvent.click(screen.getByRole('button', { name: 'Continue' })); // privacy -> import
     const dropZone = await screen.findByRole('button', { name: /Choose bookmarks file/ });
     // jsdom's `File` has no `.text()`; a plain object with just that method satisfies the
     // handler's actual runtime use of the dropped file (it never touches any other File API).
@@ -123,7 +133,8 @@ describe('OnboardingApp', () => {
   it('imports logins from a dropped CSV file', async () => {
     render(<OnboardingApp />);
     fireEvent.click(await screen.findByRole('button', { name: 'Begin' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Continue' })); // account -> privacy
+    fireEvent.click(screen.getByRole('button', { name: 'Continue' })); // privacy -> import
     const dropZone = await screen.findByRole('button', { name: /Choose password CSV/ });
     const file = { text: () => Promise.resolve('user,pass\n') };
     fireEvent.drop(dropZone, { dataTransfer: { files: [file] } });
@@ -135,7 +146,8 @@ describe('OnboardingApp', () => {
   it('calls completeOnboarding when the user finishes the flow', async () => {
     render(<OnboardingApp />);
     fireEvent.click(await screen.findByRole('button', { name: 'Begin' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Continue' })); // account -> privacy
+    fireEvent.click(screen.getByRole('button', { name: 'Continue' })); // privacy -> import
     fireEvent.click(screen.getByRole('button', { name: 'Skip import' }));
     fireEvent.click(screen.getByRole('button', { name: 'Start browsing' }));
     await waitFor(() => expect(bridge.completeOnboarding).toHaveBeenCalledTimes(1));

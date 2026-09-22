@@ -18,6 +18,7 @@ function props(overrides: Partial<OnboardingSurfaceProps> = {}): OnboardingSurfa
     importLogins: vi.fn(),
     completeOnboarding: vi.fn().mockResolvedValue(undefined),
     platform: 'win32',
+    telemetryEnabled: false,
     ...overrides,
   };
 }
@@ -43,6 +44,8 @@ describe('OnboardingSurface', () => {
     );
 
     fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
+    expect(screen.getByRole('heading', { name: 'Privacy' })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
     expect(screen.getByRole('heading', { name: 'Import' })).toBeTruthy();
     expect(screen.getByRole('button', { name: /Choose bookmarks file/ })).toBeTruthy();
   });
@@ -52,11 +55,59 @@ describe('OnboardingSurface', () => {
     renderSurface(props({ completeOnboarding }));
 
     fireEvent.click(screen.getByRole('button', { name: 'Begin' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Continue' })); // account -> privacy
+    fireEvent.click(screen.getByRole('button', { name: 'Continue' })); // privacy -> import
     fireEvent.click(screen.getByRole('button', { name: 'Skip import' }));
     fireEvent.click(screen.getByRole('button', { name: 'Start browsing' }));
 
     await waitFor(() => expect(completeOnboarding).toHaveBeenCalledTimes(1));
+  });
+});
+
+describe('PrivacyStep', () => {
+  function goToPrivacy(): void {
+    fireEvent.click(screen.getByRole('button', { name: 'Begin' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
+  }
+
+  it('states telemetry is off by default when the real preference is off', () => {
+    renderSurface(props({ telemetryEnabled: false }));
+    goToPrivacy();
+    expect(screen.getByText('Off')).toBeTruthy();
+    expect(screen.queryByText('On')).toBeNull();
+  });
+
+  it('reflects the real preference rather than hardcoding "off" when telemetry is on', () => {
+    // If this step ever hardcoded "off" instead of reading the injected preference, a profile where
+    // telemetry was actually turned on would show a false-safe label — the one privacy claim this
+    // step cannot afford to get wrong.
+    renderSurface(props({ telemetryEnabled: true }));
+    goToPrivacy();
+    expect(screen.getByText('On')).toBeTruthy();
+    expect(screen.queryByText('Off')).toBeNull();
+  });
+
+  it('explains the sensitive-site lockout by category, not a promise of general safety', () => {
+    renderSurface(props());
+    goToPrivacy();
+    expect(
+      screen.getByRole('heading', { name: 'Sensitive sites get extra protection' }),
+    ).toBeTruthy();
+    expect(screen.getByText('Banking')).toBeTruthy();
+    expect(screen.getByText('Government')).toBeTruthy();
+    expect(screen.getByText('Crypto')).toBeTruthy();
+    expect(screen.getByText('Password managers')).toBeTruthy();
+    expect(screen.getByText('Healthcare')).toBeTruthy();
+  });
+
+  it('can be reached and left with the keyboard alone', () => {
+    renderSurface(props());
+    goToPrivacy();
+    const continueButton = screen.getByRole('button', { name: 'Continue' });
+    continueButton.focus();
+    expect(document.activeElement).toBe(continueButton);
+    fireEvent.click(continueButton);
+    expect(screen.getByRole('heading', { name: 'Import' })).toBeTruthy();
   });
 });
 
@@ -69,8 +120,9 @@ const CHROME_PROFILE = {
 };
 
 function goToImport(): void {
-  fireEvent.click(screen.getByRole('button', { name: 'Begin' }));
-  fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Begin' })); // welcome -> account
+  fireEvent.click(screen.getByRole('button', { name: 'Continue' })); // account -> privacy
+  fireEvent.click(screen.getByRole('button', { name: 'Continue' })); // privacy -> import
 }
 
 describe('importing from a profile on this computer', () => {
