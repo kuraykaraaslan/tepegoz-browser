@@ -47,10 +47,18 @@ jobs:
       - name: Package Windows installer (NSIS .exe)
         if: matrix.os == 'windows-latest'
         run: pnpm --filter @tepegoz/desktop run package:win
+      - name: Verify Windows installer
+        if: matrix.os == 'windows-latest'
+        shell: bash
+        run: test -n "$(find apps/desktop/dist -maxdepth 1 -name '*.exe' -print -quit)"
 
       - name: Package Linux (.deb + .tar.gz)
         if: matrix.os == 'ubuntu-latest'
         run: pnpm --filter @tepegoz/desktop run package:linux
+      - name: Verify Debian package
+        if: matrix.os == 'ubuntu-latest'
+        shell: bash
+        run: test -n "$(find apps/desktop/dist -maxdepth 1 -name '*.deb' -print -quit)"
 
       # One artifact per OS (unique name required). Each runner only produces its own formats, so the
       # globs that don't match are ignored.
@@ -64,7 +72,7 @@ jobs:
             apps/desktop/dist/*.zip
             apps/desktop/dist/*.deb
             apps/desktop/dist/*.tar.gz
-          if-no-files-found: error
+          if-no-files-found: ignore
 
       - name: Create platform checksums
         shell: bash
