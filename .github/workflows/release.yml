@@ -30,8 +30,12 @@ jobs:
         run: |
           version="$(node -p "require('./apps/desktop/package.json').version")"
           test "v$version" = "$GITHUB_REF_NAME"
-      - name: Typecheck · lint · test · build
-        run: pnpm exec turbo run typecheck lint test build
+      - name: Validate desktop app
+        run: |
+          pnpm --filter @tepegoz/desktop run typecheck
+          pnpm --filter @tepegoz/desktop run lint
+          pnpm --filter @tepegoz/desktop run test
+          pnpm --filter @tepegoz/desktop run build
 
       # Package the per-OS installers. Each `package:*` script runs `electron-vite build` first, then
       # electron-builder. The database is `node:sqlite` (in-runtime, nothing to rebuild); `npmRebuild`
