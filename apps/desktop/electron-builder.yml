@@ -1,4 +1,4 @@
-# electron-builder config for Tepegöz — Windows (NSIS), macOS (dmg/zip), Linux (deb/rpm/tar.gz).
+# electron-builder config for Tepegöz — Windows (NSIS), Linux (deb/tar.gz).
 #
 # The app is built by electron-vite into `out/` (main/preload/renderer); electron-builder only
 # PACKAGES that output into an installer — it does not compile TS. Run via the per-OS scripts
@@ -127,7 +127,6 @@ dmg: {} # defaults are fine (app + Applications symlink)
 linux:
   target:
     - deb # Debian / Ubuntu
-    - rpm # Fedora / RHEL (needs the `rpm` tool on the build host — see release.yml)
     - tar.gz # distro-agnostic archive
   icon: resources/icon.png # ≥512 PNG; electron-builder generates the hicolor icon set
   category: Network # freedesktop main category for a web browser

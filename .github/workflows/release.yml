@@ -48,12 +48,7 @@ jobs:
         if: matrix.os == 'windows-latest'
         run: pnpm --filter @tepegoz/desktop run package:win
 
-      # rpm target needs the `rpm` tool on the build host; deb/tar.gz work out of the box.
-      - name: Install rpm tooling (Linux)
-        if: matrix.os == 'ubuntu-latest'
-        run: sudo apt-get update && sudo apt-get install -y rpm
-
-      - name: Package Linux (.deb + .rpm + .tar.gz)
+      - name: Package Linux (.deb + .tar.gz)
         if: matrix.os == 'ubuntu-latest'
         run: pnpm --filter @tepegoz/desktop run package:linux
 
@@ -68,7 +63,6 @@ jobs:
             apps/desktop/dist/*.dmg
             apps/desktop/dist/*.zip
             apps/desktop/dist/*.deb
-            apps/desktop/dist/*.rpm
             apps/desktop/dist/*.tar.gz
           if-no-files-found: error
 
@@ -87,7 +81,6 @@ jobs:
             apps/desktop/dist/*.dmg
             apps/desktop/dist/*.zip
             apps/desktop/dist/*.deb
-            apps/desktop/dist/*.rpm
             apps/desktop/dist/*.tar.gz
             apps/desktop/dist/SHA256SUMS-${{ matrix.os }}
           body: |
