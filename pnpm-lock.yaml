@@ -15,6 +15,7 @@ overrides:
   esbuild: '>=0.25.0'
   browserslist: '>=4.28.7'
   '@xmldom/xmldom': '>=0.9.12'
+  app-builder-lib>plist: 5.0.0
 
 importers:
 
@@ -6032,13 +6033,13 @@ packages:
     engines: {node: '>=18'}
     hasBin: true
 
-  plist@3.1.0:
-    resolution: {integrity: sha512-uysumyrvkUX0rX/dEVqt8gC3sTBzd4zoWfLeS29nb53imdaXVvLINYXTI2GNqzaMuvacNx4uJQ8+b3zXR0pkgQ==}
-    engines: {node: '>=10.4.0'}
-
   plist@3.1.1:
     resolution: {integrity: sha512-ZIfcLJC+7E7FBFnDxm9MPmt7D+DidyQ26lewieO75AdhA2ayMtsJSES0iWzqJQbcVRSrTufQoy0DR94xHue0oA==}
     engines: {node: '>=10.4.0'}
+
+  plist@5.0.0:
+    resolution: {integrity: sha512-20N+g1DvMm/DFRbsvER7tT4wDryq0WunK7VMkDaiJcKNapAnUMkTsAnacFYf8n420F4Hf6/hefgmJRkMb1M0fg==}
+    engines: {node: '>=18'}
 
   postcss@8.5.26:
     resolution: {integrity: sha512-u82N74LFzG8ca+dD8puPnplTXoGH4fTPpVGuIbt36G3qvNlkvfD0lEAZSxaly3KX8TS/L1A1gsCEmvKmBcVbkQ==}
@@ -8310,7 +8311,7 @@ snapshots:
       lazy-val: 1.0.5
       minimatch: 10.2.5
       pkijs: 3.4.0
-      plist: 3.1.0
+      plist: 5.0.0
       proper-lockfile: 4.1.2
       resedit: 1.7.2
       semver: 7.7.4
@@ -10359,16 +10360,15 @@ snapshots:
     optionalDependencies:
       fsevents: 2.3.2
 
-  plist@3.1.0:
+  plist@3.1.1:
     dependencies:
       '@xmldom/xmldom': 0.9.12
       base64-js: 1.5.1
       xmlbuilder: 15.1.1
 
-  plist@3.1.1:
+  plist@5.0.0:
     dependencies:
       '@xmldom/xmldom': 0.9.12
-      base64-js: 1.5.1
       xmlbuilder: 15.1.1
 
   postcss@8.5.26:
