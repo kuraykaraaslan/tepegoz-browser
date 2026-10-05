@@ -25,6 +25,11 @@ jobs:
           cache: pnpm
       - name: Install (frozen lockfile)
         run: pnpm install --frozen-lockfile
+      - name: Validate release tag
+        shell: bash
+        run: |
+          version="$(node -p "require('./apps/desktop/package.json').version")"
+          test "v$version" = "$GITHUB_REF_NAME"
       - name: Typecheck · lint · test · build
         run: pnpm exec turbo run typecheck lint test build
 
@@ -68,6 +73,13 @@ jobs:
             apps/desktop/dist/*.tar.gz
           if-no-files-found: error
 
+      - name: Create platform checksums
+        shell: bash
+        run: |
+          sha256sum apps/desktop/dist/*.exe apps/desktop/dist/*.deb apps/desktop/dist/*.rpm \
+            apps/desktop/dist/*.dmg apps/desktop/dist/*.zip apps/desktop/dist/*.tar.gz \
+            2>/dev/null > "apps/desktop/dist/SHA256SUMS-${{ matrix.os }}" || true
+
       - name: Attach installers to GitHub Release
         uses: softprops/action-gh-release@v2
         with:
@@ -78,3 +90,24 @@ jobs:
             apps/desktop/dist/*.deb
             apps/desktop/dist/*.rpm
             apps/desktop/dist/*.tar.gz
+            apps/desktop/dist/SHA256SUMS-${{ matrix.os }}
+          body: |
+            ## Tepegöz Browser ${{ github.ref_name }}
+
+            This release contains native desktop installers built on their
+            target operating systems.
+
+            ### Windows
+
+            - NSIS installer: `Tepegöz Setup ${{ github.ref_name }}.exe`
+            - Per-user installation; no administrator prompt is required by default.
+
+            ### Debian/Ubuntu
+
+            - Debian package: `tepegoz-browser_${{ github.ref_name }}_amd64.deb`
+            - Install with `sudo apt install ./<file>.deb`.
+
+            Each platform also publishes a SHA-256 checksum file. The Windows
+            installer is currently unsigned; SmartScreen may display an
+            “unknown publisher” warning until an Authenticode certificate is
+            configured via repository secrets.
