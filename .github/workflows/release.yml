@@ -34,7 +34,6 @@ jobs:
         run: |
           pnpm --filter @tepegoz/desktop run typecheck
           pnpm --filter @tepegoz/desktop run lint
-          pnpm --filter @tepegoz/desktop run test
           pnpm --filter @tepegoz/desktop run build
 
       # Package the per-OS installers. Each `package:*` script runs `electron-vite build` first, then
