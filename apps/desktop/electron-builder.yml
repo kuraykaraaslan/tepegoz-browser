@@ -10,6 +10,8 @@
 # See .github/workflows/release.yml.
 appId: com.tepegoz.browser
 productName: Tepegöz
+executableName: Tepegoz
+artifactName: Tepegoz-${version}-${os}-${arch}.${ext}
 
 # pnpm's hoisted linker installs electron at the monorepo-root node_modules, not apps/desktop's, so
 # electron-builder can't auto-detect it from projectDir — pin the version explicitly.

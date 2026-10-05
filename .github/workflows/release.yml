@@ -109,15 +109,16 @@ jobs:
 
             ### Windows
 
-            - NSIS installer: `Tepegöz.Setup.${{ github.ref_name }}.exe`
+            - Windows installer: `Tepegoz-${{ github.ref_name }}-win-*.exe`
             - Per-user installation; no administrator prompt is required by default.
 
             ### Debian/Ubuntu
 
-            - Debian package: `desktop_${{ github.ref_name }}_amd64.deb`
+            - Debian package: `Tepegoz-${{ github.ref_name }}-linux-x64.deb`
             - Install with `sudo apt install ./<file>.deb`.
 
-            Each platform also publishes a SHA-256 checksum file. The Windows
-            installer is currently unsigned; SmartScreen may display an
-            “unknown publisher” warning until an Authenticode certificate is
-            configured via repository secrets.
+            macOS publishes matching `Tepegoz-${{ github.ref_name }}-mac-*.dmg`
+            and `.zip` artifacts. Each platform also publishes a SHA-256
+            checksum file. The Windows installer is currently unsigned;
+            SmartScreen may display an “unknown publisher” warning until an
+            Authenticode certificate is configured via repository secrets.

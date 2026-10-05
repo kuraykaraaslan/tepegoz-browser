@@ -19,4 +19,4 @@ overrides:
   esbuild: '>=0.25.0'
   browserslist: '>=4.28.7'
   '@xmldom/xmldom': '>=0.9.12'
-  'app-builder-lib>plist': '5.0.0'
+  'plist>@xmldom/xmldom': '0.8.10'
