@@ -50,7 +50,7 @@ jobs:
       - name: Verify Windows installer
         if: matrix.os == 'windows-latest'
         shell: bash
-        run: test -n "$(find apps/desktop/dist -maxdepth 1 -name '*.exe' -print -quit)"
+        run: test -n "$(find apps/desktop/dist -name '*.exe' -print -quit)"
 
       - name: Package Linux (.deb + .tar.gz)
         if: matrix.os == 'ubuntu-latest'
@@ -58,7 +58,7 @@ jobs:
       - name: Verify Debian package
         if: matrix.os == 'ubuntu-latest'
         shell: bash
-        run: test -n "$(find apps/desktop/dist -maxdepth 1 -name '*.deb' -print -quit)"
+        run: test -n "$(find apps/desktop/dist -name '*.deb' -print -quit)"
 
       # One artifact per OS (unique name required). Each runner only produces its own formats, so the
       # globs that don't match are ignored.
@@ -67,29 +67,29 @@ jobs:
         with:
           name: tepegoz-${{ matrix.os }}
           path: |
-            apps/desktop/dist/*.exe
-            apps/desktop/dist/*.dmg
-            apps/desktop/dist/*.zip
-            apps/desktop/dist/*.deb
-            apps/desktop/dist/*.tar.gz
+            apps/desktop/dist/**/*.exe
+            apps/desktop/dist/**/*.dmg
+            apps/desktop/dist/**/*.zip
+            apps/desktop/dist/**/*.deb
+            apps/desktop/dist/**/*.tar.gz
           if-no-files-found: ignore
 
       - name: Create platform checksums
         shell: bash
         run: |
-          sha256sum apps/desktop/dist/*.exe apps/desktop/dist/*.deb apps/desktop/dist/*.rpm \
-            apps/desktop/dist/*.dmg apps/desktop/dist/*.zip apps/desktop/dist/*.tar.gz \
-            2>/dev/null > "apps/desktop/dist/SHA256SUMS-${{ matrix.os }}" || true
+          find apps/desktop/dist -type f \( -name '*.exe' -o -name '*.deb' -o -name '*.tar.gz' \) -print0 \
+            | xargs -0 sha256sum \
+            > "apps/desktop/dist/SHA256SUMS-${{ matrix.os }}"
 
       - name: Attach installers to GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            apps/desktop/dist/*.exe
-            apps/desktop/dist/*.dmg
-            apps/desktop/dist/*.zip
-            apps/desktop/dist/*.deb
-            apps/desktop/dist/*.tar.gz
+            apps/desktop/dist/**/*.exe
+            apps/desktop/dist/**/*.dmg
+            apps/desktop/dist/**/*.zip
+            apps/desktop/dist/**/*.deb
+            apps/desktop/dist/**/*.tar.gz
             apps/desktop/dist/SHA256SUMS-${{ matrix.os }}
           body: |
             ## Tepegöz Browser ${{ github.ref_name }}
