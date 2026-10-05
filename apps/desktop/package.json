@@ -5,6 +5,7 @@
   "private": true,
   "description": "Tepegöz — agentic, security-by-design, local-first browser.",
   "author": "Kuray Karaaslan <kuraykaraaslan@gmail.com>",
+  "homepage": "https://github.com/kuraykaraaslan/tepegoz-browser#readme",
   "main": "./out/main/index.js",
   "scripts": {
     "dev": "node scripts/dev.mjs",

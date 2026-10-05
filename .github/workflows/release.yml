@@ -14,7 +14,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [windows-latest, macos-latest, ubuntu-latest]
+        os: [windows-latest, ubuntu-latest]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -47,10 +47,6 @@ jobs:
       - name: Package Windows installer (NSIS .exe)
         if: matrix.os == 'windows-latest'
         run: pnpm --filter @tepegoz/desktop run package:win
-
-      - name: Package macOS (.dmg + .zip)
-        if: matrix.os == 'macos-latest'
-        run: pnpm --filter @tepegoz/desktop run package:mac
 
       # rpm target needs the `rpm` tool on the build host; deb/tar.gz work out of the box.
       - name: Install rpm tooling (Linux)
