@@ -99,12 +99,12 @@ jobs:
 
             ### Windows
 
-            - NSIS installer: `Tepegöz Setup ${{ github.ref_name }}.exe`
+            - NSIS installer: `Tepegöz.Setup.${{ github.ref_name }}.exe`
             - Per-user installation; no administrator prompt is required by default.
 
             ### Debian/Ubuntu
 
-            - Debian package: `tepegoz-browser_${{ github.ref_name }}_amd64.deb`
+            - Debian package: `desktop_${{ github.ref_name }}_amd64.deb`
             - Install with `sudo apt install ./<file>.deb`.
 
             Each platform also publishes a SHA-256 checksum file. The Windows
