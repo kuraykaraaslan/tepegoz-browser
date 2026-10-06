@@ -2,7 +2,12 @@ import { describe, it, expect } from 'vitest';
 import { summarizeQuery, MAX_QUERY_MATCHES, type QueryProbe } from './dom-query';
 
 function probe(over: Partial<QueryProbe> = {}): QueryProbe {
-  return { ok: true, total: 1, matches: [{ tag: 'div', ref: 3, attributes: { id: 'x' } }], ...over };
+  return {
+    ok: true,
+    total: 1,
+    matches: [{ tag: 'div', ref: 3, attributes: { id: 'x' } }],
+    ...over,
+  };
 }
 
 describe('summarizeQuery', () => {

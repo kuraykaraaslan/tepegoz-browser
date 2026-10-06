@@ -90,7 +90,9 @@ function renderMatch(m: QueryElementMatch): string {
     .map(([k, v]) => `${k}="${v}"`)
     .join(' ');
   const refLabel = m.ref === null ? 'none' : String(m.ref);
-  return attrPairs.length > 0 ? `<${m.tag} ref=${refLabel} ${attrPairs}>` : `<${m.tag} ref=${refLabel}>`;
+  return attrPairs.length > 0
+    ? `<${m.tag} ref=${refLabel} ${attrPairs}>`
+    : `<${m.tag} ref=${refLabel}>`;
 }
 
 /**
@@ -133,7 +135,8 @@ export function summarizeQuery(
     return { tag, ref: m.ref, attributes };
   });
 
-  const listing = cleanedMatches.length === 0 ? '(no matches)' : cleanedMatches.map(renderMatch).join('\n');
+  const listing =
+    cleanedMatches.length === 0 ? '(no matches)' : cleanedMatches.map(renderMatch).join('\n');
   const guarded = sanitizeContent(listing);
   const allFlags = [...new Set([...flags, ...guarded.flags])];
 

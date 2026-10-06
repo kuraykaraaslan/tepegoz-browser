@@ -133,7 +133,11 @@ function styleLines(clean: CleanedStyle, visible: boolean): string {
  * Shape one element's raw {@link StyleProbe} (or `null` when the ref could not be resolved) into the
  * model-facing {@link StyleReport}. Pure and Electron-free, mirroring `summarizeConsole`/`summarizeNetwork`.
  */
-export function summarizeStyle(probe: StyleProbe | null, ref: number, pageUrl: string): StyleReport {
+export function summarizeStyle(
+  probe: StyleProbe | null,
+  ref: number,
+  pageUrl: string,
+): StyleReport {
   if (probe === null) {
     const { text } = sanitizeContent(
       '(no such element — the ref is stale, unknown, or was read while accessibility-tree fallback ' +

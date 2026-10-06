@@ -77,7 +77,14 @@ describe('summarizeStyle', () => {
     // display/visibility/opacity all say "shown" — only the box places it outside the viewport, which is
     // exactly the "why can't the agent see this" case the tool exists to answer.
     const report = summarizeStyle(
-      probe({ x: 5000, y: 5000, display: 'block', visibility: 'visible', opacity: '1', visible: false }),
+      probe({
+        x: 5000,
+        y: 5000,
+        display: 'block',
+        visibility: 'visible',
+        opacity: '1',
+        visible: false,
+      }),
       1,
       'https://x',
     );
@@ -102,7 +109,11 @@ describe('summarizeStyle', () => {
   });
 
   it('rounds fractional box-model coordinates', () => {
-    const report = summarizeStyle(probe({ x: 12.4, y: 34.6, width: 99.5, height: 20.2 }), 1, 'https://x');
+    const report = summarizeStyle(
+      probe({ x: 12.4, y: 34.6, width: 99.5, height: 20.2 }),
+      1,
+      'https://x',
+    );
     expect(report.x).toBe(12);
     expect(report.y).toBe(35);
     expect(report.width).toBe(100);
