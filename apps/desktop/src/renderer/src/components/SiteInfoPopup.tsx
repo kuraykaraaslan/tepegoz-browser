@@ -1,35 +1,25 @@
-import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import type { IconDefinition } from '@fortawesome/fontawesome-svg-core';
 import {
-  faArrowLeft,
-  faBell,
   faCertificate,
-  faChevronRight,
-  faClipboard,
   faCookieBite,
   faFile,
   faGear,
-  faLocationDot,
   faLock,
-  faMicrophone,
-  faPaste,
   faTriangleExclamation,
-  faUpRightFromSquare,
-  faVideo,
   faXmark,
 } from '@fortawesome/free-solid-svg-icons';
 import { resolveLocale, type Locale } from '@tepegoz/i18n';
 import { I18nProvider, useT } from '@tepegoz/i18n/react';
 import { settingsDict } from '@tepegoz/settings-ui';
-import type {
-  CertificateSummary,
-  SitePermissionState,
-  WebPermissionCapability,
-} from '@tepegoz/shared-types';
+import type { SitePermissionState, WebPermissionCapability } from '@tepegoz/shared-types';
 import type { PageInfo } from '@tepegoz/desktop-ipc';
 import { siteInfoDict } from '../../../i18n';
 import { applyTheme } from '../lib/theme';
+import { CertificateView } from './SiteInfoCertificate';
+import { PermissionsSection } from './SiteInfoPermissions';
+import { Row, SubHeader } from './SiteInfoRows';
 
 /**
  * The "Site information" bubble — Chrome's Page Info panel, as a native popup surface
@@ -58,21 +48,8 @@ const LEVEL_ICON: Record<ShownLevel, IconDefinition> = {
   file: faFile,
 };
 
-/** A glyph per brokered capability, so a permission row reads at a glance (Chrome's row icons). */
-const CAPABILITY_ICON: Record<WebPermissionCapability, IconDefinition> = {
-  camera: faVideo,
-  microphone: faMicrophone,
-  geolocation: faLocationDot,
-  notifications: faBell,
-  clipboardRead: faClipboard,
-  clipboardWrite: faPaste,
-};
-
 /** Which of the three panes is showing. The bubble is a stack, not a scroll. */
 type View = 'main' | 'security' | 'certificate';
-
-/** This bubble's strings for ONE locale — what `useT(siteInfoDict)` hands back. */
-type SiteInfoStrings = (typeof siteInfoDict)['en'];
 
 export function SiteInfoPopup({ url }: { url: string }) {
   const [locale, setLocale] = useState<Locale>('en');
@@ -103,8 +80,6 @@ export function SiteInfoPopup({ url }: { url: string }) {
     </I18nProvider>
   );
 }
-
-const LINK = 'text-xs font-medium text-primary-on-surface hover:underline';
 
 function SiteInfoBody({ url }: { url: string }) {
   const t = useT(siteInfoDict);
@@ -365,48 +340,13 @@ function SiteInfoBody({ url }: { url: string }) {
       </div>
 
       {isWeb && info.permissions.length > 0 && (
-        <section className="border-t border-border px-4 py-3">
-          <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-text-secondary">
-            {t.permissionsTitle}
-          </p>
-          <ul className="space-y-1.5">
-            {info.permissions.map((p) => (
-              <li key={p.capability} className="flex items-center justify-between gap-2">
-                <span className="flex min-w-0 items-center gap-2.5 text-xs text-text-primary">
-                  <FontAwesomeIcon
-                    icon={CAPABILITY_ICON[p.capability]}
-                    className="h-3.5 w-3.5 shrink-0 text-text-secondary"
-                    aria-hidden
-                  />
-                  <span className="truncate">{s.capability[p.capability]}</span>
-                </span>
-                <select
-                  aria-label={s.capability[p.capability]}
-                  value={p.state}
-                  onChange={(e) =>
-                    setPermission(info.origin, p.capability, e.target.value as SitePermissionState)
-                  }
-                  className="h-7 w-32 shrink-0 rounded-md border border-border bg-surface-raised px-2 text-xs text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus"
-                >
-                  {(['prompt', 'allowed', 'denied'] as SitePermissionState[]).map((st) => (
-                    <option key={st} value={st}>
-                      {s.state[st]}
-                    </option>
-                  ))}
-                </select>
-              </li>
-            ))}
-          </ul>
-          {info.permissions.some((p) => p.state !== 'prompt') && (
-            <button
-              type="button"
-              onClick={() => resetPermissions(info.origin)}
-              className={`mt-2.5 ${LINK}`}
-            >
-              {t.resetPermissions}
-            </button>
-          )}
-        </section>
+        <PermissionsSection
+          permissions={info.permissions}
+          t={t}
+          s={s}
+          onChange={(capability, state) => setPermission(info.origin, capability, state)}
+          onReset={() => resetPermissions(info.origin)}
+        />
       )}
 
       {info.trustLevel !== null && (
@@ -416,179 +356,4 @@ function SiteInfoBody({ url }: { url: string }) {
       )}
     </div>
   );
-}
-
-/**
- * A drill-down header: back arrow, the pane's title, the host beneath it, close on the right — the
- * shape Chrome's "Security" sub-page uses.
- */
-function SubHeader({
-  title,
-  subtitle,
-  backLabel,
-  onBack,
-  close,
-}: {
-  title: string;
-  subtitle: string;
-  backLabel: string;
-  onBack: () => void;
-  close: ReactNode;
-}) {
-  return (
-    <header className="flex items-start gap-2.5 px-4 pb-2 pt-3">
-      <button
-        type="button"
-        aria-label={backLabel}
-        onClick={onBack}
-        className="mt-0.5 shrink-0 rounded-full border border-border p-1.5 text-text-secondary hover:bg-surface-overlay focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus"
-      >
-        <FontAwesomeIcon icon={faArrowLeft} className="h-3 w-3" aria-hidden />
-      </button>
-      <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-medium text-text-primary">{title}</p>
-        {subtitle !== '' && (
-          <p className="truncate text-xs text-text-secondary" title={subtitle}>
-            {subtitle}
-          </p>
-        )}
-      </div>
-      {close}
-    </header>
-  );
-}
-
-/**
- * One list row of the panel: glyph, label, and a trailing affordance that says where the row goes —
- * a chevron for a pane inside the bubble, the "leaves this bubble" arrow for Site settings, an inline
- * word (`action`) for a row that acts in place. Rendered as a plain `div` when there is nothing to
- * click, so a non-row does not sit in the tab order pretending to be a button.
- */
-function Row({
-  icon,
-  iconClass,
-  title,
-  titleClass = '',
-  trailing = 'chevron',
-  action,
-  onClick,
-}: {
-  icon: IconDefinition;
-  iconClass: string;
-  title: string;
-  titleClass?: string;
-  trailing?: 'chevron' | 'external' | 'none';
-  action?: string;
-  onClick?: () => void;
-}) {
-  const inner = (
-    <>
-      <FontAwesomeIcon icon={icon} className={`h-4 w-4 shrink-0 ${iconClass}`} aria-hidden />
-      <span className={`min-w-0 flex-1 truncate text-sm ${titleClass}`}>{title}</span>
-      {action !== undefined && (
-        <span className="shrink-0 text-xs font-medium text-primary-on-surface">{action}</span>
-      )}
-      {onClick !== undefined && trailing !== 'none' && (
-        <FontAwesomeIcon
-          icon={trailing === 'external' ? faUpRightFromSquare : faChevronRight}
-          className="h-3 w-3 shrink-0 text-text-secondary"
-          aria-hidden
-        />
-      )}
-    </>
-  );
-  const box = 'flex w-full items-center gap-3 px-4 py-2.5 text-left';
-  if (onClick === undefined) {
-    return <div className={box}>{inner}</div>;
-  }
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`${box} hover:bg-surface-overlay focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-border-focus`}
-    >
-      {inner}
-    </button>
-  );
-}
-
-/** Chrome's certificate viewer, General tab: who it was issued to and by, for how long, its prints. */
-function CertificateView({
-  cert,
-  valid,
-  t,
-}: {
-  cert: CertificateSummary;
-  valid: boolean;
-  t: SiteInfoStrings;
-}) {
-  return (
-    <div className="px-4 pb-4">
-      <p className={`mb-3 text-xs font-medium ${valid ? 'text-text-secondary' : 'text-error'}`}>
-        {valid ? t.certificateValid : t.certificateInvalid}
-      </p>
-      <CertSection title={t.certSubjectName}>
-        <CertRow label={t.certCommonName} value={cert.subjectName} />
-        {cert.serialNumber !== '' && (
-          <CertRow label={t.certSerial} value={cert.serialNumber} mono />
-        )}
-      </CertSection>
-      <CertSection title={t.certIssuerName}>
-        <CertRow label={t.certCommonName} value={cert.issuerName} />
-      </CertSection>
-      <CertSection title={t.certValidityPeriod}>
-        <CertRow label={t.certValidFrom} value={fmtDate(cert.validFrom)} />
-        <CertRow label={t.certValidTo} value={fmtDate(cert.validTo)} />
-      </CertSection>
-      <CertSection title={t.certFingerprint}>
-        <CertRow label="SHA-256" value={cert.fingerprint} mono />
-      </CertSection>
-      {cert.subjectAltNames.length > 0 && (
-        <CertSection title={t.certSan}>
-          <p className="break-all text-xs text-text-primary">{cert.subjectAltNames.join(', ')}</p>
-        </CertSection>
-      )}
-      {cert.chain.length > 0 && (
-        <CertSection title={t.certChain}>
-          <ol className="space-y-1 text-xs text-text-primary">
-            {cert.chain.map((node, i) => (
-              <li key={`${node.subjectName}-${String(i)}`} className="break-all">
-                <span className="text-text-secondary">{'— '.repeat(i + 1)}</span>
-                {node.subjectName}
-              </li>
-            ))}
-          </ol>
-        </CertSection>
-      )}
-    </div>
-  );
-}
-
-function CertSection({ title, children }: { title: string; children: ReactNode }) {
-  return (
-    <section className="mb-3 last:mb-0">
-      <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-text-secondary">
-        {title}
-      </p>
-      <dl className="space-y-1 rounded-lg border border-border px-3 py-2">{children}</dl>
-    </section>
-  );
-}
-
-function CertRow({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
-  return (
-    <div className="flex justify-between gap-3 text-xs">
-      <dt className="shrink-0 text-text-secondary">{label}</dt>
-      <dd
-        className={`min-w-0 break-all text-right text-text-primary ${mono === true ? 'font-mono' : ''}`}
-      >
-        {value}
-      </dd>
-    </div>
-  );
-}
-
-function fmtDate(iso: string): string {
-  const d = new Date(iso);
-  return Number.isNaN(d.getTime()) ? iso : d.toLocaleDateString();
 }

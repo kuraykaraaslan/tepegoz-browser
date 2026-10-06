@@ -1,5 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { GENESIS_HASH } from '@tepegoz/notary';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 /**
  * `registerAgentRunIpc` — the `agent:run` handler that streams live events + round-trips HITL
@@ -9,98 +8,39 @@ import { GENESIS_HASH } from '@tepegoz/notary';
  * claim in `finally`; the pre-flight token-quota gate throws 429 (and still refunds + releases); the
  * injected `onEvent` streams to the sender and raises a handoff notification; `onModelDelta` streams a
  * schema-checked fragment with a first-feedback stamp only on the first; and a throwing setup step
- * releases every claim before rethrowing.
+ * releases every claim before rethrowing. The HITL gates and the journal projections have their own
+ * suites (`ipc-agent-run-approvals`, `ipc-agent-run-events`), which share `ipc-agent-run.test-kit`.
  */
 
-class AppError extends Error {
-  statusCode: number;
-  code?: string | undefined;
-  constructor(m: string, s: number, code?: string) {
-    super(m);
-    this.statusCode = s;
-    this.code = code;
-  }
-}
-const Logger = vi.hoisted(() => ({ warn: vi.fn(), info: vi.fn() }));
+const h = await vi.hoisted(async () =>
+  (await import('./ipc-agent-run.test-kit')).createRunHarness(),
+);
 vi.mock('@tepegoz/libs', () => ({
-  AppError,
-  Logger: { redact: (s: string) => s, warn: Logger.warn, info: Logger.info },
+  AppError: h.AppError,
+  Logger: { redact: (s: string) => s, warn: h.Logger.warn, info: h.Logger.info },
 }));
-
-const IpcChannels = {
-  agentRun: 'agent:run',
-  agentEvent: 'agent:event',
-  agentDelta: 'agent:delta',
-  agentApprovalRequest: 'agent:approval-request',
-  agentPlanPreview: 'agent:plan-preview',
-  tokenUsage: 'token:usage',
-};
-vi.mock('@tepegoz/desktop-ipc', () => ({ IpcChannels }));
+vi.mock('@tepegoz/desktop-ipc', () => ({ IpcChannels: h.IpcChannels }));
 vi.mock('@tepegoz/desktop-ipc/schemas', () => ({ AgentRunInputSchema: { safeParse: vi.fn() } }));
-
-const AgentDeltaSchema = vi.hoisted(() => ({
-  safeParse: vi.fn<(v: unknown) => { success: boolean; data?: unknown }>((v: unknown) => ({
-    success: true,
-    data: v,
-  })),
-}));
-const CompletionOutcomeSchema = vi.hoisted(() => ({
-  safeParse: vi.fn((v: unknown) =>
-    v !== undefined ? { success: true as const, data: v } : { success: false as const },
-  ),
-}));
-const CompletionEvidenceSchema = vi.hoisted(() => ({
-  safeParse: vi.fn((v: unknown) =>
-    v !== undefined ? { success: true as const, data: v } : { success: false as const },
-  ),
-}));
 vi.mock('@tepegoz/shared-types', () => ({
-  AgentDeltaSchema,
-  CompletionOutcomeSchema,
-  CompletionEvidenceSchema,
+  AgentDeltaSchema: h.AgentDeltaSchema,
+  CompletionOutcomeSchema: h.CompletionOutcomeSchema,
+  CompletionEvidenceSchema: h.CompletionEvidenceSchema,
   MAX_DELTA_TEXT: 2000,
   // The real, small, stable constant — not an empty stub — so a test can actually exercise "this tier
   // is one of the ones that always prompts" without also having to fake the constant's own contents.
   NEVER_AUTO_GRANTABLE_TIERS: ['financial', 'credential', 'destructive'] as string[],
 }));
-
-const PlanGrantStore = vi.hoisted(() => ({
-  revoke: vi.fn(),
-  covers: vi.fn(() => ({ covered: false })),
-  mint: vi.fn(() => ({ domains: [], tiers: [] })),
-  grantFromApproval: vi.fn(() => ({ domains: [], tiers: [] })),
-}));
-const resolveAutonomy = vi.hoisted(() =>
-  vi.fn<() => { decision: string; reason: string }>(() => ({ decision: 'ask', reason: 'r' })),
-);
-const classifyRisk = vi.hoisted(() =>
-  vi.fn<() => { tier: string; reasons: string[] }>(() => ({ tier: 'read', reasons: [] })),
-);
 vi.mock('@tepegoz/security-policy', () => ({
-  PlanGrantStore,
+  PlanGrantStore: h.PlanGrantStore,
   REMEMBERED_GRANT_DAYS: 30,
-  resolveAutonomy,
-  classifyRisk,
+  resolveAutonomy: h.resolveAutonomy,
+  classifyRisk: h.classifyRisk,
 }));
-const capabilityRegistry = vi.hoisted(() => ({
-  get: vi.fn((): { descriptor: { dangerClass?: string } } | undefined => undefined),
-}));
-vi.mock('@tepegoz/capability-plane', () => ({ CapabilityRegistry: capabilityRegistry }));
-
+vi.mock('@tepegoz/capability-plane', () => ({ CapabilityRegistry: h.capabilityRegistry }));
 vi.mock('@tepegoz/model-gateway', () => ({
   TokenLedger: { runScoped: (fn: () => unknown) => fn(), snapshotEntries: vi.fn(() => []) },
 }));
-
-const TokenStore = vi.hoisted(() => ({
-  lifetimeTotals: vi.fn(() => ({ totalTokens: 0 })),
-  recordRun: vi.fn(),
-  refundRun: vi.fn(),
-}));
-const EventJournal = vi.hoisted(() => ({
-  append: vi.fn(),
-  tailHash: vi.fn((): string | null => null),
-}));
-vi.mock('@tepegoz/persistence', () => ({ EventJournal, TokenStore }));
+vi.mock('@tepegoz/persistence', () => ({ EventJournal: h.EventJournal, TokenStore: h.TokenStore }));
 
 // randomUUID is stubbed for deterministic ids; createHash is kept real — appendChainedEvent's
 // selfHashOf (unmocked, see below) needs it, same as ipc-agent-run-report.electron.test.ts's choice
@@ -110,59 +50,17 @@ vi.mock('node:crypto', async (importOriginal) => ({
   randomUUID: () => 'uuid-x',
 }));
 
-const AgentService = vi.hoisted(() => ({
-  run: vi.fn<
-    (p: string, h: unknown, g: string, dp: string, b: unknown) => Promise<Record<string, unknown>>
-  >(() => Promise.resolve({ ok: true, stoppedReason: 'complete', completionOutcome: 'verified' })),
-  beginHistoryTurn: vi.fn((): unknown => null),
-  appendHistoryEvent: vi.fn(),
-}));
-vi.mock('../agent/agent-service.electron', () => ({ default: AgentService }));
-
-const bh = vi.hoisted(() => ({
-  browserHost: { listTabs: vi.fn(() => [] as { active?: boolean; url?: string }[]) },
-  releaseAgentRun: vi.fn(),
-  setCurrentAgentRun: vi.fn(),
-  withAgentRunScope: (_id: string, fn: () => unknown) => fn(),
-}));
-vi.mock('../agent/browser-host.electron', () => bh);
-
-const resourceTracker = vi.hoisted(() => ({
-  startRunResourceTracking: vi.fn(() => ({ __tracker: true })),
-  sampleRunResource: vi.fn(),
-  finishRunResourceTracking: vi.fn(() => ({ peakRssBytes: 123, cpuSeconds: 4.5 })),
-}));
-vi.mock('../agent/run-resource-tracker.electron', () => resourceTracker);
-
+vi.mock('../agent/agent-service.electron', () => ({ default: h.AgentService }));
+vi.mock('../agent/browser-host.electron', () => h.bh);
+vi.mock('../agent/run-resource-tracker.electron', () => h.resourceTracker);
 vi.mock('../tabs', () => ({
   default: { getState: vi.fn(() => ({ tabs: [] as unknown[], activeId: null })) },
 }));
-const planGrantScopeMock = vi.hoisted(() =>
-  vi.fn<() => { urls: string[]; tiers: string[] }>(() => ({ urls: [], tiers: [] })),
-);
-vi.mock('../agent/plan-grant-scope', () => ({ planGrantScope: planGrantScopeMock }));
-const remGrant = vi.hoisted(() => ({
-  mayOfferRemember: vi.fn<() => boolean>(() => false),
-  rememberGrant: vi.fn<() => unknown>(() => null),
-  rememberedCoverage: vi.fn<() => { covered: boolean }>(() => ({ covered: false })),
-  resolveSkillScope: vi.fn<() => unknown>(() => null),
-}));
-vi.mock('../agent/remembered-grant-scope', () => remGrant);
-const runLock = vi.hoisted(() => ({
-  createRunControl: vi.fn(() => ({ signal: { aborted: false } })),
-  unregisterRunControl: vi.fn(),
-}));
-vi.mock('../agent/agent-run-lock.electron', () => runLock);
-const fileOps = vi.hoisted(() => ({
-  consentDecision: vi.fn<(req: unknown) => Promise<{ type: string; approved?: boolean }>>(() =>
-    Promise.resolve({ type: 'auto', approved: true }),
-  ),
-}));
-vi.mock('../file-operations/file-operations-host', () => ({ default: fileOps }));
-
-const getDb = vi.hoisted(() => vi.fn((): unknown => null));
-vi.mock('../db/database.electron', () => ({ getDb }));
-
+vi.mock('../agent/plan-grant-scope', () => ({ planGrantScope: h.planGrantScopeMock }));
+vi.mock('../agent/remembered-grant-scope', () => h.remGrant);
+vi.mock('../agent/agent-run-lock.electron', () => h.runLock);
+vi.mock('../file-operations/file-operations-host', () => ({ default: h.fileOps }));
+vi.mock('../db/database.electron', () => ({ getDb: h.getDb }));
 vi.mock('../lib/i18n-main', () => ({
   mainStrings: () => ({
     agent: {
@@ -172,113 +70,39 @@ vi.mock('../lib/i18n-main', () => ({
     },
   }),
 }));
-const setTrayAgentRunning = vi.hoisted(() => vi.fn());
-vi.mock('../tray', () => ({ setTrayAgentRunning }));
-const NotificationHost = vi.hoisted(() => ({ push: vi.fn() }));
-vi.mock('../notifications/notification-host', () => ({ default: NotificationHost }));
-
-const PreferenceStore = vi.hoisted(() => ({
-  getAll: vi.fn(() => ({ agentTokenQuota: 0, agentAutonomy: 'ask' })),
-}));
-vi.mock('@tepegoz/preferences', () => ({ default: PreferenceStore }));
-
-const cap = vi.hoisted(
-  (): { fn?: (e: unknown, p: unknown) => Promise<Record<string, unknown>> } => ({}),
-);
-vi.mock('./ipc-helpers', () => ({
-  handle: vi.fn(),
-  handleAsync: vi.fn(
-    (_ch: string, fn: (e: unknown, p: unknown) => Promise<Record<string, unknown>>) => {
-      cap.fn = fn;
-    },
-  ),
-  parsePayload: vi.fn((_s: unknown, p: unknown) => p),
-}));
-
-const shared = vi.hoisted(() => ({
-  activeAgentGroups: vi.fn(() => [] as string[]),
-  agentRunByGroup: new Map<string, boolean>(),
-  broadcastConversationsState: vi.fn(),
-  isHistoryKind: vi.fn<(k: string) => boolean>(() => false),
-  JOURNAL_TYPE_BY_KIND: {},
-  maybeWarnQuota: vi.fn(),
-  pendingApprovals: new Map<string, unknown>(),
-  pendingPlans: new Map<string, unknown>(),
-  REFUNDABLE_STOP_REASONS: new Set(['network_lost']),
-  requireAgentEnabled: vi.fn(),
-  safeArgsPreview: vi.fn(() => ({})),
-  setAgentRunForGroup: vi.fn((groupId: string, running: boolean) => {
-    if (running) shared.agentRunByGroup.set(groupId, true);
-    else shared.agentRunByGroup.delete(groupId);
-  }),
-  tokenUsage: vi.fn(() => ({})),
-}));
-vi.mock('./ipc-agent-shared', () => shared);
+vi.mock('../tray', () => ({ setTrayAgentRunning: h.setTrayAgentRunning }));
+vi.mock('../notifications/notification-host', () => ({ default: h.NotificationHost }));
+vi.mock('@tepegoz/preferences', () => ({ default: h.PreferenceStore }));
+vi.mock('./ipc-helpers', () => h.helpers);
+vi.mock('./ipc-agent-shared', () => h.shared);
 
 const { registerAgentRunIpc } = await import('./ipc-agent-run');
 
-type Hooks = {
-  onEvent: (k: string, m: string, d?: string) => void;
-  onModelDelta: (t: string) => void;
-  onCheckpoint: (c: unknown) => void;
-  onAudit: (e: {
-    toolName: string;
-    decision: 'allow' | 'ask' | 'deny';
-    reason: string;
-    riskTier?: string;
-    targetUrl?: string;
-    outcome?: 'approved' | 'refused';
-  }) => void;
-  requestApproval: (req: unknown) => Promise<boolean>;
-  requestPlanApproval: (plan: unknown) => Promise<{ approved: boolean }>;
-};
-const hooksArg = (): Hooks => AgentService.run.mock.calls[0]![1] as Hooks;
-
+const {
+  AppError,
+  Logger,
+  IpcChannels,
+  AgentDeltaSchema,
+  CompletionEvidenceSchema,
+  PlanGrantStore,
+  TokenStore,
+  AgentService,
+  bh,
+  resourceTracker,
+  runLock,
+  getDb,
+  setTrayAgentRunning,
+  NotificationHost,
+  PreferenceStore,
+  shared,
+  hooksArg,
+  run,
+} = h;
 let send: ReturnType<typeof vi.fn>;
-let event: { sender: { isDestroyed: () => boolean; send: ReturnType<typeof vi.fn> } };
-const run = (over: Record<string, unknown> = {}): Promise<Record<string, unknown>> =>
-  cap.fn!(event, {
-    prompt: 'do it',
-    groupId: 'g1',
-    displayPrompt: 'Do it',
-    attachmentMeta: [],
-    ...over,
-  });
 
 beforeEach(() => {
-  vi.clearAllMocks();
-  shared.requireAgentEnabled.mockReset();
-  AgentService.beginHistoryTurn.mockReset();
-  shared.agentRunByGroup.clear();
-  shared.pendingApprovals.clear();
-  shared.pendingPlans.clear();
-  getDb.mockReturnValue(null);
-  AgentService.run.mockResolvedValue({
-    ok: true,
-    stoppedReason: 'complete',
-    completionOutcome: 'verified',
-  });
-  AgentService.beginHistoryTurn.mockReturnValue(null);
-  TokenStore.lifetimeTotals.mockReturnValue({ totalTokens: 0 });
-  PreferenceStore.getAll.mockReturnValue({ agentTokenQuota: 0, agentAutonomy: 'ask' });
-  AgentDeltaSchema.safeParse.mockImplementation((v: unknown) => ({
-    success: true as const,
-    data: v,
-  }));
-  fileOps.consentDecision.mockResolvedValue({ type: 'auto', approved: true });
-  remGrant.resolveSkillScope.mockReturnValue(null);
-  remGrant.rememberedCoverage.mockReturnValue({ covered: false });
-  remGrant.mayOfferRemember.mockReturnValue(false);
-  remGrant.rememberGrant.mockReturnValue(null);
-  resolveAutonomy.mockReturnValue({ decision: 'ask', reason: 'r' });
-  PlanGrantStore.covers.mockReturnValue({ covered: false });
-  PlanGrantStore.mint.mockReturnValue({ domains: [], tiers: [] });
-  planGrantScopeMock.mockReturnValue({ urls: [], tiers: [] });
-  bh.browserHost.listTabs.mockReturnValue([]);
-  resourceTracker.startRunResourceTracking.mockReturnValue({ __tracker: true });
-  resourceTracker.finishRunResourceTracking.mockReturnValue({ peakRssBytes: 123, cpuSeconds: 4.5 });
-  send = vi.fn();
-  event = { sender: { isDestroyed: () => false, send } };
+  h.reset();
+  send = h.driver.send;
   registerAgentRunIpc();
 });
 
@@ -438,570 +262,7 @@ describe('the injected hooks', () => {
   });
 });
 
-describe('the injected requestApproval hook', () => {
-  const confirmReq = (over: Record<string, unknown> = {}): Record<string, unknown> => ({
-    toolName: 'fs.write',
-    args: {},
-    policy: { reason: 'writes a file', biometric: false },
-    risk: { tier: 'low' },
-    targetUrl: 'https://example.com/x',
-    ...over,
-  });
-
-  it('short-circuits to the FileOperationsHost decision when it is an "auto" one', async () => {
-    await run();
-    expect(await hooksArg().requestApproval(confirmReq())).toBe(true);
-
-    fileOps.consentDecision.mockResolvedValue({ type: 'auto', approved: false });
-    expect(await hooksArg().requestApproval(confirmReq())).toBe(false);
-    expect(send).not.toHaveBeenCalledWith(IpcChannels.agentApprovalRequest, expect.anything());
-  });
-
-  it('approves without a prompt when the approved plan grant already covers the step', async () => {
-    fileOps.consentDecision.mockResolvedValue({ type: 'ask' });
-    PlanGrantStore.covers.mockReturnValue({ covered: true });
-    await run();
-    expect(await hooksArg().requestApproval(confirmReq())).toBe(true);
-    expect(PlanGrantStore.covers).toHaveBeenCalledWith(
-      expect.objectContaining({ targetUrl: 'https://example.com/x', tier: 'low' }),
-    );
-    expect(send).not.toHaveBeenCalledWith(IpcChannels.agentApprovalRequest, expect.anything());
-  });
-
-  it('approves on a remembered grant and narrates it into the transcript', async () => {
-    fileOps.consentDecision.mockResolvedValue({ type: 'ask' });
-    remGrant.resolveSkillScope.mockReturnValue({ name: 'my-skill' });
-    remGrant.rememberedCoverage.mockReturnValue({ covered: true });
-    await run();
-    expect(await hooksArg().requestApproval(confirmReq())).toBe(true);
-    expect(send).toHaveBeenCalledWith(
-      IpcChannels.agentEvent,
-      expect.objectContaining({ kind: 'grant', detail: 'remembered_grant' }),
-    );
-  });
-
-  it('approves without a prompt when the autonomy level auto-approves', async () => {
-    fileOps.consentDecision.mockResolvedValue({ type: 'ask' });
-    resolveAutonomy.mockReturnValue({ decision: 'auto_approve', reason: 'autonomy: allow' });
-    await run();
-    expect(await hooksArg().requestApproval(confirmReq())).toBe(true);
-    expect(send).not.toHaveBeenCalledWith(IpcChannels.agentApprovalRequest, expect.anything());
-  });
-
-  it('otherwise sends the HITL request and resolves with the renderer answer', async () => {
-    fileOps.consentDecision.mockResolvedValue({ type: 'ask' });
-    await run();
-    const pending = hooksArg().requestApproval(confirmReq());
-    // requestApproval awaits the FileOperationsHost decision first, so let that microtask settle.
-    await vi.waitFor(() => expect(shared.pendingApprovals.has('appr-uuid-x')).toBe(true));
-    expect(send).toHaveBeenCalledWith(
-      IpcChannels.agentApprovalRequest,
-      expect.objectContaining({ approvalId: 'appr-uuid-x', toolName: 'fs.write' }),
-    );
-    const entry = shared.pendingApprovals.get('appr-uuid-x') as { resolve: (o: unknown) => void };
-    entry.resolve({ approved: true });
-    expect(await pending).toBe(true);
-  });
-
-  it('withholds the one-tap grant offer when the target URL will not parse', async () => {
-    fileOps.consentDecision.mockResolvedValue({ type: 'ask' });
-    await run();
-    const pending = hooksArg().requestApproval(confirmReq({ targetUrl: 'not a url' }));
-    await vi.waitFor(() => expect(shared.pendingApprovals.has('appr-uuid-x')).toBe(true));
-    const call = send.mock.calls.find((c) => c[0] === IpcChannels.agentApprovalRequest) as [
-      string,
-      Record<string, unknown>,
-    ];
-    expect(call[1]).not.toHaveProperty('scopeHost');
-    const entry = shared.pendingApprovals.get('appr-uuid-x') as { resolve: (o: unknown) => void };
-    entry.resolve({ approved: false });
-    await pending;
-  });
-
-  it('fail-safe denies the HITL request when nobody answers within the timeout', async () => {
-    fileOps.consentDecision.mockResolvedValue({ type: 'ask' });
-    await run();
-    vi.useFakeTimers();
-    try {
-      const pending = hooksArg().requestApproval(confirmReq());
-      await vi.advanceTimersByTimeAsync(120_000);
-      expect(await pending).toBe(false);
-      expect(shared.pendingApprovals.has('appr-uuid-x')).toBe(false);
-    } finally {
-      vi.useRealTimers();
-    }
-  });
-
-  it('skips both grant checks and prompts with no grant offer for an unclassified call', async () => {
-    fileOps.consentDecision.mockResolvedValue({ type: 'ask' });
-    await run();
-    const pending = hooksArg().requestApproval(
-      confirmReq({ risk: undefined, targetUrl: undefined }),
-    );
-    await vi.waitFor(() => expect(shared.pendingApprovals.has('appr-uuid-x')).toBe(true));
-    expect(PlanGrantStore.covers).not.toHaveBeenCalled();
-    expect(remGrant.rememberedCoverage).not.toHaveBeenCalled();
-    const call = send.mock.calls.find((c) => c[0] === IpcChannels.agentApprovalRequest) as [
-      string,
-      Record<string, unknown>,
-    ];
-    expect(call[1]).not.toHaveProperty('riskTier');
-    expect(call[1]).not.toHaveProperty('scopeHost');
-    const entry = shared.pendingApprovals.get('appr-uuid-x') as { resolve: (o: unknown) => void };
-    entry.resolve({ approved: false });
-    expect(await pending).toBe(false);
-  });
-
-  it('widens the run scope and stores a remembered grant when the user ticks both boxes', async () => {
-    fileOps.consentDecision.mockResolvedValue({ type: 'ask' });
-    remGrant.resolveSkillScope.mockReturnValue({ name: 'sk' });
-    remGrant.mayOfferRemember.mockReturnValue(true);
-    remGrant.rememberGrant.mockReturnValue(Date.now() + 1000);
-    await run();
-    const pending = hooksArg().requestApproval(confirmReq());
-    await vi.waitFor(() => expect(shared.pendingApprovals.has('appr-uuid-x')).toBe(true));
-    const entry = shared.pendingApprovals.get('appr-uuid-x') as { resolve: (o: unknown) => void };
-    entry.resolve({ approved: true, grantScope: true, remember: true });
-    expect(await pending).toBe(true);
-    expect(PlanGrantStore.grantFromApproval).toHaveBeenCalledWith(
-      expect.stringMatching(/^run-\d+$/) as string,
-      'https://example.com/x',
-      'low',
-    );
-    expect(remGrant.rememberGrant).toHaveBeenCalled();
-    expect(send).toHaveBeenCalledWith(
-      IpcChannels.agentEvent,
-      expect.objectContaining({ kind: 'grant', detail: 'remembered_grant' }),
-    );
-  });
-});
-
-describe('the injected requestPlanApproval hook', () => {
-  const plan = { goal: 'buy milk', steps: [{ id: 's1', tool: 'nav', rationale: 'go' }] };
-
-  it('mints a scoped grant and self-approves when autonomy is above "ask"', async () => {
-    PreferenceStore.getAll.mockReturnValue({ agentTokenQuota: 0, agentAutonomy: 'allow' });
-    await run();
-    expect(await hooksArg().requestPlanApproval(plan)).toEqual({ approved: true });
-    expect(PlanGrantStore.mint).toHaveBeenCalled();
-    expect(send).not.toHaveBeenCalledWith(IpcChannels.agentPlanPreview, expect.anything());
-  });
-
-  it('sends a plan preview and mints the grant only once the renderer approves it', async () => {
-    await run();
-    const pending = hooksArg().requestPlanApproval(plan);
-    expect(send).toHaveBeenCalledWith(
-      IpcChannels.agentPlanPreview,
-      expect.objectContaining({ planId: 'plan-uuid-x', goal: 'buy milk' }),
-    );
-    expect(PlanGrantStore.mint).not.toHaveBeenCalled();
-    const entry = shared.pendingPlans.get('plan-uuid-x') as { resolve: (d: unknown) => void };
-    entry.resolve({ approved: true });
-    expect(await pending).toEqual({ approved: true });
-    expect(PlanGrantStore.mint).toHaveBeenCalled();
-  });
-
-  it('includes each step’s DECLARED dangerClass from the CapabilityRegistry, omitting it for an unrecognized tool', async () => {
-    await run();
-    const twoStepPlan = {
-      goal: 'buy milk',
-      steps: [
-        { id: 's1', tool: 'nav', rationale: 'go' },
-        { id: 's2', tool: 'unregistered_tool', rationale: 'unknown to this build' },
-      ],
-    };
-    // Queued in step order: requestPlanApproval maps the steps in sequence, one .get() call each.
-    capabilityRegistry.get.mockImplementationOnce(() => ({
-      descriptor: { dangerClass: 'destructive' },
-    }));
-    capabilityRegistry.get.mockImplementationOnce(() => undefined);
-    void hooksArg().requestPlanApproval(twoStepPlan);
-    expect(send).toHaveBeenCalledWith(
-      IpcChannels.agentPlanPreview,
-      expect.objectContaining({
-        steps: [
-          { id: 's1', tool: 'nav', rationale: 'go', dangerClass: 'destructive' },
-          { id: 's2', tool: 'unregistered_tool', rationale: 'unknown to this build' },
-        ],
-      }),
-    );
-  });
-
-  it('counts guaranteedApprovals as the steps whose classified tier is never-auto-grantable', async () => {
-    await run();
-    const threeStepPlan = {
-      goal: 'x',
-      steps: [
-        { id: 's1', tool: 'files_delete_item', rationale: 'a', args: {} },
-        { id: 's2', tool: 'nav', rationale: 'b', args: {} },
-        { id: 's3', tool: 'payments_send_money', rationale: 'c', args: {} },
-      ],
-    };
-    // mockReturnValueOnce ×3, not a persistent mockReturnValue — this must not leak into later tests.
-    capabilityRegistry.get
-      .mockReturnValueOnce({ descriptor: { dangerClass: 'destructive' } })
-      .mockReturnValueOnce({ descriptor: { dangerClass: 'read' } })
-      .mockReturnValueOnce({ descriptor: { dangerClass: 'financial' } });
-    classifyRisk
-      .mockReturnValueOnce({ tier: 'destructive', reasons: [] }) // s1 — counts
-      .mockReturnValueOnce({ tier: 'ui-write', reasons: [] }) // s2 — does not
-      .mockReturnValueOnce({ tier: 'financial', reasons: [] }); // s3 — counts
-    void hooksArg().requestPlanApproval(threeStepPlan);
-    expect(send).toHaveBeenCalledWith(
-      IpcChannels.agentPlanPreview,
-      expect.objectContaining({ guaranteedApprovals: 2 }),
-    );
-  });
-
-  it('never counts a step whose tool did not resolve — unknown contributes nothing, same as its dangerClass', async () => {
-    await run();
-    capabilityRegistry.get.mockReturnValueOnce(undefined);
-    void hooksArg().requestPlanApproval(plan);
-    expect(classifyRisk).not.toHaveBeenCalled();
-    expect(send).toHaveBeenCalledWith(
-      IpcChannels.agentPlanPreview,
-      expect.objectContaining({ guaranteedApprovals: 0 }),
-    );
-  });
-
-  it('sends deduped hostnames from planGrantScope’s URLs as "sites", dropping anything unparseable', async () => {
-    await run();
-    planGrantScopeMock.mockReturnValueOnce({
-      urls: [
-        'https://a.example/cart',
-        'https://a.example/checkout',
-        'https://b.example/',
-        'not-a-url',
-      ],
-      tiers: [],
-    });
-    void hooksArg().requestPlanApproval(plan);
-    expect(send).toHaveBeenCalledWith(
-      IpcChannels.agentPlanPreview,
-      expect.objectContaining({ sites: ['a.example', 'b.example'] }),
-    );
-  });
-
-  it('derives the plan-scope entry URL from the active tab, the same input mintPlanGrant uses', async () => {
-    await run();
-    bh.browserHost.listTabs.mockReturnValue([
-      { active: false, url: 'https://inactive.example' },
-      { active: true, url: 'https://active.example/page' },
-    ]);
-    void hooksArg().requestPlanApproval(plan);
-    expect(planGrantScopeMock).toHaveBeenCalledWith(
-      plan,
-      'https://active.example/page',
-      expect.any(Function),
-    );
-  });
-
-  it('does not mint a grant when the renderer rejects the plan', async () => {
-    await run();
-    const pending = hooksArg().requestPlanApproval(plan);
-    const entry = shared.pendingPlans.get('plan-uuid-x') as { resolve: (d: unknown) => void };
-    entry.resolve({ approved: false });
-    expect(await pending).toEqual({ approved: false });
-    expect(PlanGrantStore.mint).not.toHaveBeenCalled();
-  });
-
-  it('fail-safe rejects the plan when nobody answers within the timeout', async () => {
-    await run();
-    vi.useFakeTimers();
-    try {
-      const pending = hooksArg().requestPlanApproval(plan);
-      await vi.advanceTimersByTimeAsync(120_000);
-      expect(await pending).toEqual({ approved: false });
-      expect(shared.pendingPlans.has('plan-uuid-x')).toBe(false);
-      expect(PlanGrantStore.mint).not.toHaveBeenCalled();
-    } finally {
-      vi.useRealTimers();
-    }
-  });
-
-  it('mints the grant scoped to the active tab URL when autonomy self-approves', async () => {
-    PreferenceStore.getAll.mockReturnValue({ agentTokenQuota: 0, agentAutonomy: 'allow' });
-    bh.browserHost.listTabs.mockReturnValue([
-      { active: false, url: 'https://other.example' },
-      { active: true, url: 'https://shop.example/cart' },
-    ]);
-    await run();
-    await hooksArg().requestPlanApproval(plan);
-    expect(planGrantScopeMock).toHaveBeenCalledWith(
-      plan,
-      'https://shop.example/cart',
-      expect.any(Function),
-    );
-  });
-});
-
-describe('journal + history + token-ledger projections', () => {
-  const journalTypes = shared.JOURNAL_TYPE_BY_KIND as Record<string, string>;
-  afterEach(() => {
-    shared.isHistoryKind.mockReturnValue(false);
-    for (const k of Object.keys(journalTypes)) delete journalTypes[k];
-  });
-
-  it('onEvent writes to conversation history and the Event Journal when both are live', async () => {
-    getDb.mockReturnValue({ __db: true });
-    AgentService.beginHistoryTurn.mockReturnValue({ turnId: 'turn-1' });
-    shared.isHistoryKind.mockReturnValue(true);
-    journalTypes.tool_call = 'ToolCalled';
-    await run();
-
-    hooksArg().onEvent('tool_call', 'clicked #buy', 'on the cart page');
-
-    expect(AgentService.appendHistoryEvent).toHaveBeenCalledWith(
-      { __db: true },
-      'turn-1',
-      expect.objectContaining({
-        kind: 'tool_call',
-        message: 'clicked #buy',
-        detail: 'on the cart page',
-      }),
-    );
-    expect(shared.broadcastConversationsState).toHaveBeenCalled();
-    expect(EventJournal.append).toHaveBeenCalledWith(
-      { __db: true },
-      expect.objectContaining({ type: 'ToolCalled', actor: 'agent', redacted: true }),
-    );
-  });
-
-  it('onEvent chains the journal append off EventJournal.tailHash (Phase 7) — genesis first, then the prior selfHash', async () => {
-    getDb.mockReturnValue({ __db: true });
-    journalTypes.step_ok = 'AgentStepExecuted';
-    await run();
-
-    EventJournal.tailHash.mockReturnValueOnce(null); // nothing chained yet on this device
-    hooksArg().onEvent('step_ok', 'first step');
-    const firstCall = EventJournal.append.mock.calls[0]![1] as {
-      prevHash: string;
-      selfHash: string;
-    };
-    expect(firstCall.prevHash).toBe(GENESIS_HASH);
-    expect(firstCall.selfHash).toMatch(/^[a-f0-9]{64}$/);
-
-    EventJournal.tailHash.mockReturnValueOnce(firstCall.selfHash); // chains onto its own prior tail
-    hooksArg().onEvent('step_ok', 'second step');
-    const secondCall = EventJournal.append.mock.calls[1]![1] as {
-      prevHash: string;
-      selfHash: string;
-    };
-    expect(secondCall.prevHash).toBe(firstCall.selfHash);
-    expect(secondCall.selfHash).not.toBe(firstCall.selfHash);
-  });
-
-  it('onEvent swallows and logs a failing journal append', async () => {
-    getDb.mockReturnValue({ __db: true });
-    journalTypes.error = 'AgentError';
-    EventJournal.append.mockImplementationOnce(() => {
-      throw new Error('journal disk full');
-    });
-    await run();
-
-    expect(() => hooksArg().onEvent('error', 'boom')).not.toThrow();
-    expect(Logger.warn).toHaveBeenCalledWith(
-      'Journal append failed',
-      expect.objectContaining({ err: expect.stringContaining('journal disk full') as string }),
-    );
-  });
-
-  it('onCheckpoint is a no-op when there is no database', async () => {
-    getDb.mockReturnValue(null);
-    await run();
-
-    hooksArg().onCheckpoint({ step: 1 });
-
-    expect(EventJournal.append).not.toHaveBeenCalled();
-  });
-
-  it('onCheckpoint appends a redacted CheckpointWritten record', async () => {
-    getDb.mockReturnValue({ __db: true });
-    await run();
-    EventJournal.append.mockClear();
-
-    hooksArg().onCheckpoint({ step: 3, note: 'halfway' });
-
-    expect(EventJournal.append).toHaveBeenCalledWith(
-      { __db: true },
-      expect.objectContaining({ type: 'CheckpointWritten', actor: 'agent', redacted: true }),
-    );
-  });
-
-  it('onCheckpoint safely logs (never throws out of the run) when the checkpoint cannot be chained at all', async () => {
-    getDb.mockReturnValue({ __db: true });
-    await run();
-    EventJournal.append.mockClear();
-    const circular: Record<string, unknown> = {};
-    circular.self = circular;
-
-    expect(() => hooksArg().onCheckpoint(circular)).not.toThrow();
-    expect(EventJournal.append).not.toHaveBeenCalled();
-    expect(Logger.warn).toHaveBeenCalledWith(
-      'Journal checkpoint append failed',
-      expect.any(Object),
-    );
-  });
-
-  it('onCheckpoint swallows and logs a failing journal append', async () => {
-    getDb.mockReturnValue({ __db: true });
-    await run();
-    EventJournal.append.mockImplementationOnce(() => {
-      throw new Error('checkpoint write failed');
-    });
-
-    expect(() => hooksArg().onCheckpoint({ step: 9 })).not.toThrow();
-    expect(Logger.warn).toHaveBeenCalledWith(
-      'Journal checkpoint append failed',
-      expect.objectContaining({
-        err: expect.stringContaining('checkpoint write failed') as string,
-      }),
-    );
-  });
-
-  it('onAudit skips a pre-resolution `ask` (no outcome yet) — nothing is journaled', async () => {
-    getDb.mockReturnValue({ __db: true });
-    await run();
-    EventJournal.append.mockClear();
-
-    hooksArg().onAudit({ toolName: 'form_update_field', decision: 'ask', reason: 'state_change_confirm' });
-
-    expect(EventJournal.append).not.toHaveBeenCalled();
-  });
-
-  it('onAudit journals an unconditional allow as ToolInvoked, carrying the target site', async () => {
-    getDb.mockReturnValue({ __db: true });
-    await run();
-    EventJournal.append.mockClear();
-
-    hooksArg().onAudit({
-      toolName: 'browser_get_page',
-      decision: 'allow',
-      reason: 'read_allowed',
-      targetUrl: 'https://a.example/page',
-    });
-
-    expect(EventJournal.append).toHaveBeenCalledWith(
-      { __db: true },
-      expect.objectContaining({
-        type: 'ToolInvoked',
-        actor: 'agent',
-        redacted: true,
-        payload: expect.objectContaining({
-          toolName: 'browser_get_page',
-          targetUrl: 'https://a.example/page',
-          reason: 'read_allowed',
-          decision: 'allow',
-        }) as unknown,
-      }),
-    );
-  });
-
-  it('onAudit journals an outright deny as PolicyBlocked', async () => {
-    getDb.mockReturnValue({ __db: true });
-    await run();
-    EventJournal.append.mockClear();
-
-    hooksArg().onAudit({
-      toolName: 'file_delete_item',
-      decision: 'deny',
-      reason: 'sensitive_site_lockout',
-    });
-
-    expect(EventJournal.append).toHaveBeenCalledWith(
-      { __db: true },
-      expect.objectContaining({
-        type: 'PolicyBlocked',
-        payload: expect.objectContaining({ decision: 'deny' }) as unknown,
-      }),
-    );
-  });
-
-  it('onAudit journals a resolved `ask` as PolicyBlocked when refused, ToolInvoked when approved', async () => {
-    getDb.mockReturnValue({ __db: true });
-    await run();
-    EventJournal.append.mockClear();
-
-    hooksArg().onAudit({
-      toolName: 'form_update_field',
-      decision: 'ask',
-      reason: 'state_change_confirm',
-      outcome: 'refused',
-    });
-    expect(EventJournal.append).toHaveBeenLastCalledWith(
-      { __db: true },
-      expect.objectContaining({ type: 'PolicyBlocked' }),
-    );
-
-    hooksArg().onAudit({
-      toolName: 'form_update_field',
-      decision: 'ask',
-      reason: 'state_change_confirm',
-      outcome: 'approved',
-    });
-    expect(EventJournal.append).toHaveBeenLastCalledWith(
-      { __db: true },
-      expect.objectContaining({ type: 'ToolInvoked' }),
-    );
-  });
-
-  it('onAudit attaches WHICH standing permission answered an ask, then clears it for the next call', async () => {
-    getDb.mockReturnValue({ __db: true });
-    fileOps.consentDecision.mockResolvedValue({ type: 'ask' });
-    PlanGrantStore.covers.mockReturnValue({ covered: true });
-    await run();
-    EventJournal.append.mockClear();
-
-    // The plan-grant coverage check happens in requestApproval; onAudit's SECOND (post-resolution)
-    // call is what the gateway fires right after requestApproval resolves — same sequence as
-    // ToolGateway.invoke's real ordering.
-    await hooksArg().requestApproval({
-      toolName: 'form_update_field',
-      args: {},
-      policy: { reason: 'state_change_confirm', biometric: false, decision: 'ask' },
-      risk: { tier: 'ui-write' },
-      targetUrl: 'https://a.example',
-    });
-    hooksArg().onAudit({
-      toolName: 'form_update_field',
-      decision: 'ask',
-      reason: 'state_change_confirm',
-      outcome: 'approved',
-    });
-    expect(EventJournal.append).toHaveBeenCalledWith(
-      { __db: true },
-      expect.objectContaining({
-        payload: expect.objectContaining({ rememberedBy: 'plan_grant' }) as unknown,
-      }),
-    );
-
-    // A SECOND, unrelated decision must not inherit the hint — it was consumed by the call above.
-    EventJournal.append.mockClear();
-    hooksArg().onAudit({
-      toolName: 'browser_get_page',
-      decision: 'allow',
-      reason: 'read_allowed',
-    });
-    const [, payload] = EventJournal.append.mock.calls[0] as [unknown, { payload: object }];
-    expect(payload.payload).not.toHaveProperty('rememberedBy');
-  });
-
-  it('onAudit swallows and logs a failing journal append', async () => {
-    getDb.mockReturnValue({ __db: true });
-    await run();
-    EventJournal.append.mockImplementationOnce(() => {
-      throw new Error('journal disk full');
-    });
-
-    expect(() =>
-      hooksArg().onAudit({ toolName: 'x', decision: 'allow', reason: 'read_allowed' }),
-    ).not.toThrow();
-    expect(Logger.warn).toHaveBeenCalledWith(
-      'Permission Debug journal append failed',
-      expect.objectContaining({ err: expect.stringContaining('journal disk full') as string }),
-    );
-  });
-
+describe('token-ledger teardown', () => {
   it('refunds the run in teardown when it stopped for a refundable reason', async () => {
     getDb.mockReturnValue({ __db: true });
     AgentService.run.mockResolvedValue({

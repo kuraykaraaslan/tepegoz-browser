@@ -1,14 +1,9 @@
 import { Logger } from '@tepegoz/libs';
-import { ModelGateway, type CanonMessage } from '@tepegoz/model-gateway';
+import type { CanonMessage } from '@tepegoz/model-gateway';
 import { ToolGateway } from '@tepegoz/capability-plane';
 import { wrapUserRequest } from '@tepegoz/tool-executor';
 import { DEFAULT_AGENT_MAX_STEPS } from '@tepegoz/shared-types';
-import type {
-  AgentWorkingState,
-  CompletionEvidence,
-  CompletionOutcome,
-  VisionEscalation,
-} from '@tepegoz/shared-types';
+import type { AgentWorkingState, VisionEscalation } from '@tepegoz/shared-types';
 import type { StepOutcome } from './executor';
 import {
   classifyRuntimeError,
@@ -16,40 +11,31 @@ import {
   recoveryAdviceFor,
   stopReasonForFailure,
 } from './recovery';
-import { stableIndexBefore } from './cache-window';
-import { assembleEvidence } from './completion-evidence';
-import { evaluateVisionTrigger } from './vision-trigger';
-import { parseDecision, parseNativeDecision, type Decision } from './reactor-decision';
-import { DECISION_TOOL_NAME, decisionToolDef, resolveDecisionMode } from './reactor-decision-mode';
+import type { Decision } from './reactor-decision';
+import { resolveDecisionMode } from './reactor-decision-mode';
+import { requestDecision } from './reactor-decide';
 import {
   isToolError,
   observationOf,
   observationWithRecovery,
   stableStringify,
 } from './reactor-observation';
-import {
-  COLLAPSED_IMAGE_PLACEHOLDER,
-  COLLAPSED_STATE_PLACEHOLDER,
-  STATE_COLLAPSE_THRESHOLD,
-} from './reactor-page-state';
-import {
-  COLLAPSED_WORKING_STATE_PLACEHOLDER,
-  WORKING_STATE_HEADER,
-  isWorkingStateEmpty,
-  mergeWorkingState,
-  renderWorkingState,
-} from './reactor-working-state';
+import { mergeWorkingState } from './reactor-working-state';
 import { isQuickModeEnabled } from './quick-decision';
-import { cadenceBounds, shouldValidate } from './should-validate';
+import { cadenceBounds } from './should-validate';
 import { createProgressTracker } from './reactor-progress';
 import { systemPrompt } from './reactor-prompt';
-import type {
-  CompletionContext,
-  CompletionVerdict,
-  ReactOptions,
-  ReactRequest,
-  ReactResult,
-} from './reactor-types';
+import { createCompletionAuthority } from './reactor-completion';
+import {
+  boundedGrounding,
+  createReadStreakGuard,
+  signalAborted,
+  urlFromOutcome,
+} from './reactor-guards';
+import { createReplanner } from './reactor-replan';
+import { handleVisionStep } from './reactor-vision';
+import { createConversationWindow } from './reactor-window';
+import type { ReactOptions, ReactRequest, ReactResult } from './reactor-types';
 
 /**
  * L3 reactive executor — the perceive → decide → act loop. Unlike the static {@link Executor} (which
@@ -59,7 +45,8 @@ import type {
  * Detector, abort, and a post-step guard (Human Handoff Controller). The model's output is UNTRUSTED —
  * every decision is JSON-extracted + zod-validated and the chosen tool must be registered before it runs.
  * The decision boundary, observation/transient-page-state helpers, prompt, and public types live in the
- * sibling `reactor-*` modules; this file is the loop plus the re-exports that keep the surface unchanged.
+ * sibling `reactor-*` modules (decide, thread, completion, replan, vision, guards); this file is the loop
+ * itself plus the re-exports that keep the surface unchanged.
  */
 
 // Re-export the full public surface so existing importers of './reactor' are unaffected.
@@ -75,6 +62,7 @@ export {
   resolveDecisionMode,
   type DecisionMode,
 } from './reactor-decision-mode';
+export { createReadStreakGuard } from './reactor-guards';
 export type {
   CompletionContext,
   CompletionVerdict,
@@ -84,85 +72,6 @@ export type {
   ReplanContext,
   ReplanResult,
 } from './reactor-types';
-
-/** Wall-clock budget for the AI-7 navigation-grounding hook per step. Bounds the hot loop against a slow
- *  or hostile same-origin sitemap fetch (the in-flight fetch keeps running + is cached; the loop just does
- *  not wait past this) so a user cancel never blocks on discovery. */
-const NAV_GROUNDING_BUDGET_MS = 8000;
-
-/** The host of the page a step landed on, or null when the outcome says nothing about a page. Used to
- *  recall cross-run notes once per site rather than once per step. */
-function urlFromOutcome(outcome: StepOutcome): string | null {
-  const result = outcome.result;
-  if (result === null || typeof result !== 'object') return null;
-  const url = (result as { url?: unknown }).url;
-  if (typeof url !== 'string' || url.length === 0) return null;
-  try {
-    return new URL(url).host;
-  } catch {
-    return null;
-  }
-}
-
-/** Read a live abort signal without control-flow narrowing (the signal mutates between reads, so an earlier
- *  `=== true` guard must not narrow a later check to `false`). */
-function signalAborted(signal: { readonly aborted: boolean } | undefined): boolean {
-  return signal?.aborted === true;
-}
-
-/** Run the grounding hook with a wall-clock budget; resolves null on timeout or any hook error, so a steer
- *  is strictly best-effort and can never stall or crash the loop. */
-async function boundedGrounding(
-  hook: (outcome: StepOutcome, goal: string) => Promise<string | null>,
-  outcome: StepOutcome,
-  goal: string,
-): Promise<string | null> {
-  let timer: ReturnType<typeof setTimeout> | undefined;
-  const budget = new Promise<null>((resolve) => {
-    timer = setTimeout(() => resolve(null), NAV_GROUNDING_BUDGET_MS);
-  });
-  try {
-    return await Promise.race([hook(outcome, goal).catch(() => null), budget]);
-  } finally {
-    if (timer !== undefined) clearTimeout(timer);
-  }
-}
-
-/**
- * M1: identical-CONSECUTIVE-read streak guard — the read exemption's honest counterweight (a live
- * trial burned 22 identical `browser_get_elements` calls unpunished). Re-reading after each ACTION is
- * the encouraged pattern and never trips this; only the same read repeated back-to-back does. At the
- * threshold: one 'nudge'; a further identical consecutive read: 'stop'. Any different call resets.
- */
-export function createReadStreakGuard(
-  threshold: number,
-): (isRead: boolean, signature: string) => 'ok' | 'nudge' | 'stop' {
-  const cap = Math.max(2, threshold);
-  let streakSignature = '';
-  let count = 0;
-  let nudged = false;
-  return (isRead, signature) => {
-    if (!isRead) {
-      streakSignature = '';
-      count = 0;
-      nudged = false;
-      return 'ok';
-    }
-    if (signature === streakSignature) {
-      count += 1;
-    } else {
-      streakSignature = signature;
-      count = 1;
-      nudged = false;
-    }
-    if (count < cap) return 'ok';
-    if (!nudged) {
-      nudged = true;
-      return 'nudge';
-    }
-    return 'stop';
-  };
-}
 
 export default class Reactor {
   static async run(req: ReactRequest, options: ReactOptions = {}): Promise<ReactResult> {
@@ -196,263 +105,50 @@ export default class Reactor {
     // (a frozen page still gets judged). No new budget — see should-validate.ts for why the floor is
     // what makes this change safe without a sweep.
     const cadence = cadenceBounds(options.planningInterval ?? 3);
-    const maxCompletionRejects = options.maxCompletionRejects ?? 3;
-    // C1 PR2 (s14): run-level no-progress detection. `progress` classifies each outcome; `noProgressActs`
+    // C1 PR2 (s14): run-level no-progress detection. `progress` classifies each outcome; the replanner
     // counts consecutive state-changing actions that moved nothing; past the threshold a single bounded
     // replan pass injects a NEW approach instead of grinding on / failing closed.
     const progress = createProgressTracker();
     const noProgressThreshold = Math.max(2, options.noProgressThreshold ?? 6);
-    const maxReplans = options.maxReplans ?? 2;
-    let noProgressActs = 0;
-    let replanCount = 0;
     let decisionRepairs = 0;
-    // Completion-authority state (AI-3 PR2): the actor's latest progress ledger, how many finish
-    // CLAIMS the validator has rejected (fail-closed guard), and the action count last validated
-    // (so a periodic check fires once per cadence tick, not on every no-op turn).
-    let latestMemory = '';
-    // S7: the world signature as of the last validation pass — the input to the adaptive cadence.
-    let sigAtLastValidation: string | null = null;
     // C1 (s15): the actor's TYPED working ledger — the authoritative merge of every `state` patch it has
     // proposed. Injected as a compact persistent block re-rendered at the tail each step (see
-    // `syncWorkingState`) so structured progress survives the transient page-state collapse, instead of
-    // riding free-text `memory` prose that gets buried and lost.
+    // `ConversationWindow.syncWorkingState`) so structured progress survives the transient page-state
+    // collapse, instead of riding free-text `memory` prose that gets buried and lost.
     let workingState: AgentWorkingState = {};
-    let workingStateIndex: number | null = null;
-    let completionRejects = 0;
-    let lastValidatedCount = -1;
     // AI-7: the last navigation-grounding hint injected, so an identical steer is not re-pushed every read.
     let lastNavHint = '';
-
-    /** The compact tail of recent observations handed to the completion validator as page evidence. */
-    const recentObservations = (): string[] =>
-      outcomes.slice(-3).map((o) => {
-        const text = observationOf(o);
-        return text.length > 500 ? `${text.slice(0, 500)}…` : text;
-      });
-
-    const validator = options.validateCompletion;
-    /** Run the validator, fail-open to "not done" on error so a validator hiccup never kills the run. */
-    // S4: the last completion verdict's outcome, so a run that ended any other way still reports what
-    // the evidence said the last time it was asked.
-    let lastOutcome: CompletionOutcome | undefined;
-    // S8 PR2: the evidence that outcome was actually judged against, so the chip can cite it.
-    let lastEvidence: CompletionEvidence | undefined;
     // S10: every escalation this run judged, so the rate can be reported.
     const visionEscalations: VisionEscalation[] = [];
     // S9: the host whose notes have already been injected this run.
     let recalledHost: string | null = null;
-    const validate = async (ctx: CompletionContext): Promise<CompletionVerdict> => {
-      if (validator === undefined) return { done: false };
-      try {
-        return await validator(ctx);
-      } catch (err) {
-        Logger.warn('completion validator failed; treating as not-done', { err: String(err) });
-        return { done: false };
-      }
-    };
-
-    /** Periodic validator pass: end the run iff the Planner judges the goal already met. Else null. */
-    const periodicCheck = async (): Promise<ReactResult | null> => {
-      if (
-        validator === undefined ||
-        outcomes.length === 0 ||
-        outcomes.length === lastValidatedCount
-      ) {
-        return null;
-      }
-      const decision = shouldValidate(
-        {
-          // -1 means "never validated", so every action so far counts toward the floor.
-          actionsSinceValidation:
-            lastValidatedCount < 0 ? outcomes.length : outcomes.length - lastValidatedCount,
-          sigAtLastValidation: sigAtLastValidation,
-          currentSig: progress.worldSignature(),
-        },
-        cadence,
-      );
-      if (!decision.validate) return null;
-      lastValidatedCount = outcomes.length;
-      sigAtLastValidation = progress.worldSignature();
-      const evidence = assembleEvidence(outcomes);
-      const verdict = await validate({
-        goal: req.goal,
-        memory: latestMemory,
-        trigger: 'periodic',
-        recentObservations: recentObservations(),
-        evidence,
-      });
-      if (!verdict.done) {
-        lastOutcome = verdict.outcome;
-        lastEvidence = evidence;
-        return null;
-      }
-      return {
-        outcomes,
-        visionEscalations,
-        stoppedReason: 'completed',
-        summary: verdict.finalAnswer ?? latestMemory,
-        ...(verdict.outcome !== undefined ? { completionOutcome: verdict.outcome, evidence } : {}),
-      };
-    };
-
-    /**
-     * Resolve the actor's `finish` CLAIM. Without a validator the claim ends the run (legacy). With one,
-     * only a `done` verdict ends it (with the authoritative answer); a rejection pushes continue-guidance
-     * and returns null so the loop goes on — until `maxCompletionRejects`, after which we concede to the
-     * actor rather than burn the whole step budget.
-     */
-    const settleClaim = async (summary: string): Promise<ReactResult | null> => {
-      if (validator === undefined)
-        return { outcomes, visionEscalations, stoppedReason: 'completed', summary };
-      // S4: the claim is judged against what the run OBSERVED, not against what the page says about
-      // itself. Assembled here because this is the only place that has every step outcome.
-      const evidence = assembleEvidence(outcomes);
-      const verdict = await validate({
-        goal: req.goal,
-        memory: latestMemory,
-        claimedSummary: summary,
-        trigger: 'claim',
-        recentObservations: recentObservations(),
-        evidence,
-      });
-      if (verdict.done) {
-        return {
-          outcomes,
-          visionEscalations,
-          stoppedReason: 'completed',
-          summary: verdict.finalAnswer ?? summary,
-          ...(verdict.outcome !== undefined
-            ? { completionOutcome: verdict.outcome, evidence }
-            : {}),
-        };
-      }
-      lastOutcome = verdict.outcome;
-      lastEvidence = evidence;
-      completionRejects += 1;
-      // Conceding to the actor after N rejections still carries WHY the validator kept rejecting — a
-      // conceded run that the evidence never supported must not read as a clean success.
-      if (completionRejects > maxCompletionRejects) {
-        return {
-          outcomes,
-          visionEscalations,
-          stoppedReason: 'completed',
-          summary,
-          ...(verdict.outcome !== undefined
-            ? { completionOutcome: verdict.outcome, evidence }
-            : {}),
-        };
-      }
-      const reason =
-        verdict.reason !== undefined && verdict.reason.length > 0 ? ` — ${verdict.reason}` : '';
-      messages.push({
-        role: 'user',
-        content:
-          `Completion check: NOT done yet${reason}. Do NOT finish. Continue toward the goal (open menus, ` +
-          'try other links or conventional paths, or read more of the page) and only finish once every ' +
-          'part of the goal is actually satisfied.',
-      });
-      return null;
-    };
 
     const messages: CanonMessage[] = [
       { role: 'system', content: systemPrompt(req, quickMode) },
       ...(req.history ?? []),
       { role: 'user', content: `Goal:\n${wrapUserRequest(req.goal)}` },
     ];
-
-    // Transient page-state (AI-3): keep only the LATEST large observation live. When a new page-state
-    // blob is fed back, the previous one is collapsed to a placeholder so DOM dumps never accumulate
-    // across a long run — the compact decisions (with their `memory`) remain the persistent history.
-    let lastStateIndex: number | null = null;
-    // S7 context eviction: same collapse-in-place pattern as page-state, applied to S10's vision-
-    // escalation images — the single most expensive thing this loop can put in a prompt.
-    let lastImageIndex: number | null = null;
-    /**
-     * The last message index this run promises never to rewrite — the prompt-cache breakpoint.
-     *
-     * Both collapses below mutate a message IN PLACE, and prompt caching is a prefix match, so a
-     * breakpoint at the tail would be invalidated on every single step: the cache-write premium would
-     * be paid for a 0% hit rate, which costs more than not caching at all. Everything strictly before
-     * the two live indices is already collapsed (or was never collapsible) and is safe forever.
-     *
-     * Recomputed wherever either index moves, so the promise can never drift from the mutation that
-     * would break it.
-     */
-    let cacheStableIndex: number | null = null;
-    const pushObservation = (content: string): void => {
-      const isState = content.length > STATE_COLLAPSE_THRESHOLD;
-      if (isState && lastStateIndex !== null) {
-        const prev = messages[lastStateIndex];
-        if (prev !== undefined)
-          messages[lastStateIndex] = { ...prev, content: COLLAPSED_STATE_PLACEHOLDER };
-      }
-      messages.push({ role: 'user', content });
-      if (isState) lastStateIndex = messages.length - 1;
-      cacheStableIndex = stableIndexBefore(lastStateIndex, workingStateIndex, lastImageIndex);
-    };
-
-    // C1: re-inject the typed working ledger as a compact persistent block at the tail, collapsing the
-    // previous copy (mirrors the transient page-state collapse) so only the CURRENT ledger stays live and
-    // the model always sees up-to-date structured progress. No-op while the ledger is empty (legacy path).
-    const syncWorkingState = (): void => {
-      if (isWorkingStateEmpty(workingState)) return;
-      const firstInjection = workingStateIndex === null;
-      if (workingStateIndex !== null) {
-        const prev = messages[workingStateIndex];
-        if (prev !== undefined)
-          messages[workingStateIndex] = { ...prev, content: COLLAPSED_WORKING_STATE_PLACEHOLDER };
-      }
-      messages.push({
-        role: 'user',
-        content: `${WORKING_STATE_HEADER}\n${renderWorkingState(workingState)}`,
-      });
-      workingStateIndex = messages.length - 1;
-      cacheStableIndex = stableIndexBefore(lastStateIndex, workingStateIndex, lastImageIndex);
-      // C1 engagement signal (diagnostic): the model actually emitted a typed `state` and it is now being
-      // fed back. Logged ONCE per run so a sweep transcript can PROVE PR1 engaged (vs the model ignoring it).
-      if (firstInjection)
-        Logger.info('[c1] typed working-state injected (model emitted structured `state`)');
-    };
-
-    // C1 PR2: when the run has stalled — `noProgressThreshold` state-changing actions with no observable
-    // page-state change — and the replan budget remains, ask the hook for a genuinely NEW approach and
-    // inject it as a steer. Fail-open: a hook error is logged and the run simply continues.
-    const maybeReplan = async (): Promise<void> => {
-      if (
-        options.replan === undefined ||
-        noProgressActs < noProgressThreshold ||
-        replanCount >= maxReplans
-      ) {
-        return;
-      }
-      replanCount += 1;
-      const reason = `No observable page-state change across ${String(noProgressActs)} acting steps.`;
-      // C1 engagement signal (diagnostic): the no-progress detector tripped and PR2's replan is firing.
-      Logger.info('[c1] no-progress replan fired', { replanCount, reason });
-      noProgressActs = 0; // give the new approach a fresh no-progress budget
-      let guidance = '';
-      try {
-        const res = await options.replan({
-          goal: req.goal,
-          workingState,
-          memory: latestMemory,
-          recentObservations: recentObservations(),
-          reason,
-        });
-        if (res !== null) guidance = res.guidance;
-      } catch (err) {
-        Logger.warn('replan hook failed; continuing without a new plan', { err: String(err) });
-        return;
-      }
-      if (guidance.length > 0) {
-        messages.push({
-          role: 'user',
-          content:
-            'Replan: the actions you have tried are not moving the page toward the goal. Do NOT keep ' +
-            `repeating them. Try this DIFFERENT approach instead:\n${guidance}`,
-        });
-      }
-    };
+    const thread = createConversationWindow(messages);
+    const completion = createCompletionAuthority({
+      req,
+      validator: options.validateCompletion,
+      outcomes,
+      visionEscalations,
+      messages,
+      progress,
+      cadence,
+      maxCompletionRejects: options.maxCompletionRejects ?? 3,
+    });
+    const replanner = createReplanner({
+      req,
+      replan: options.replan,
+      messages,
+      workingState: () => workingState,
+      memory: () => completion.memory(),
+      recentObservations: () => completion.recentObservations(),
+      noProgressThreshold,
+      maxReplans: options.maxReplans ?? 2,
+    });
 
     for (let step = 0; ; step++) {
       if (options.signal?.aborted === true)
@@ -472,6 +168,8 @@ export default class Reactor {
         }
       }
       if (outcomes.length >= maxSteps) {
+        const lastOutcome = completion.lastOutcome();
+        const lastEvidence = completion.lastEvidence();
         return {
           outcomes,
           visionEscalations,
@@ -487,66 +185,27 @@ export default class Reactor {
 
       // Periodic validator pass (AI-3): every `planningInterval` actions the Planner checks whether the
       // goal is already met — catching an actor stuck acting past completion.
-      const periodicDone = await periodicCheck();
+      const periodicDone = await completion.periodicCheck();
       if (periodicDone !== null) return periodicDone;
 
       // C1 PR2: if the run has stalled, inject a fresh approach BEFORE the next decision (bounded + fail-open).
-      await maybeReplan();
+      await replanner.maybeReplan();
 
       // C1: refresh the typed working ledger at the tail so THIS decision reasons over up-to-date
       // structured progress (no-op on the first step / whenever the ledger is still empty).
-      syncWorkingState();
+      thread.syncWorkingState(workingState);
 
       let responseText: string;
       let decision: Decision;
       try {
-        const request = {
-          provider: req.provider,
-          model: req.model,
-          capability: 'exec',
+        ({ decision, responseText } = await requestDecision({
+          req,
+          options,
           messages,
-          maxTokens: req.maxTokens ?? 1500,
-          timeoutMs: req.timeoutMs ?? 60_000,
-          // The stable-prefix promise (see `cacheStableIndex`). `1h` because a sweep runs many tasks
-          // back to back against the same system prompt and tool set — the 5-minute default would
-          // expire the shared half between trials and re-pay for it every time.
-          cache: {
-            systemAndTools: true,
-            ...(cacheStableIndex !== null && { lastStableMessageIndex: cacheStableIndex }),
-            ttl: '1h' as const,
-          },
-          // Native: one required tool whose schema IS the decision, so the provider enforces the shape.
-          // JSON: the legacy json_object nudge, which only guarantees valid JSON, never valid shape.
-          ...(decisionMode === 'native'
-            ? {
-                tools: [decisionToolDef()],
-                toolChoice: { type: 'tool' as const, name: DECISION_TOOL_NAME },
-              }
-            : { responseFormat: 'json' as const }),
-        };
-        // Streaming changes only WHO SEES the output early — the settled response below is still the
-        // only thing parsed, and the sink is never read back by the loop (ADR-0025). Gated to the
-        // native arm only: native's text is empty except on a genuine "finish" turn (S1 PR4's own
-        // comment above — "usually pure tool call with empty text"), so streaming it is harmless. The
-        // JSON arm's entire text IS the decision — action, tool id, args, rationale, the working-state
-        // ledger — for every provider without native tool support (Kimi, Nova, DeepSeek, xAI, Groq via
-        // openai-compat), so streaming it would show raw decision JSON growing character by character in
-        // the "working" indicator on every tool-calling step. That is exactly the "streaming text while
-        // buffering tool calls" failure the interactive-streaming DoD (S1 PR5b / S8 PR9) named as the
-        // case that breaks — it just breaks per-provider (native vs JSON transport) rather than per-run
-        // -kind (Ask vs Act/Dev), since only one run kind exists today (see phase docs).
-        const onDelta = decisionMode === 'native' ? options.onModelDelta : undefined;
-        const response =
-          onDelta === undefined
-            ? await ModelGateway.complete(request)
-            : await ModelGateway.generateStream(request, onDelta);
-        decision =
-          decisionMode === 'native'
-            ? parseNativeDecision(response)
-            : parseDecision(response.text, quickMode);
-        // The native arm's turn is usually pure tool call with empty text; re-serializing the settled
-        // decision keeps the assistant history non-empty and structurally identical across both arms.
-        responseText = response.text.trim().length > 0 ? response.text : JSON.stringify(decision);
+          decisionMode,
+          quickMode,
+          cacheStableIndex: thread.cacheStableIndex(),
+        }));
       } catch (err) {
         const failure = classifyRuntimeError(err);
         if (failure.kind === 'model_malformed' && decisionRepairs < maxDecisionRepairs) {
@@ -571,7 +230,7 @@ export default class Reactor {
       decisionRepairs = 0;
       messages.push({ role: 'assistant', content: responseText });
       if (decision.memory !== undefined && decision.memory.length > 0)
-        latestMemory = decision.memory;
+        completion.setMemory(decision.memory);
       // C1: fold the model's proposed ledger update into the authoritative snapshot. A malformed patch was
       // already dropped to `undefined` at the decision boundary (`.catch`), so `state` here is valid-or-absent;
       // an absent patch carries the prior ledger forward via the field-level merge.
@@ -579,7 +238,7 @@ export default class Reactor {
         workingState = mergeWorkingState(workingState, decision.state);
 
       if (decision.action === 'finish') {
-        const settled = await settleClaim(decision.summary);
+        const settled = await completion.settleClaim(decision.summary);
         if (settled !== null) return settled;
         continue;
       }
@@ -602,7 +261,7 @@ export default class Reactor {
         `${decision.tool}:${stableStringify(decision.args)}`,
       );
       if (streakVerdict === 'nudge') {
-        pushObservation(
+        thread.pushObservation(
           `Observation: You have made the exact same ${decision.tool} read several times in a row. ` +
             'Re-reading an unchanged page again will not produce new information. ACT instead: ' +
             'click/fill/scroll toward the goal, or finish with what you know. If you are waiting for ' +
@@ -625,7 +284,7 @@ export default class Reactor {
           // the hard stop. Only a further identical repeat after the nudge is a real loop.
           if (!loopNudged.has(signature)) {
             loopNudged.add(signature);
-            pushObservation(
+            thread.pushObservation(
               `Observation: You have chosen ${decision.tool} with identical arguments ${String(count)} ` +
                 'times without moving toward the goal. It may ALREADY have taken effect (e.g. the menu / ' +
                 'panel you are toggling is already open) or the ref may be stale — verify by re-reading ' +
@@ -675,55 +334,22 @@ export default class Reactor {
           Logger.warn('[s9] memory recall failed; continuing without it', { err: String(err) });
           return null;
         });
-        if (recalled !== null && recalled.length > 0) pushObservation(recalled);
+        if (recalled !== null && recalled.length > 0) thread.pushObservation(recalled);
       }
 
-      // S10 PR2: is this step BLIND — i.e. would a correct DOM read still leave nothing to act on?
-      // Deterministic and pre-model, and observation-only: nothing is captured, and nothing is injected
-      // into the conversation, so recording an escalation cannot itself change the run. The same reason
-      // is not recorded twice in a row — an unchanged blind page is one escalation, not one per step.
-      const escalation = evaluateVisionTrigger(outcomes);
-      if (escalation !== null && escalation.reason !== visionEscalations.at(-1)?.reason) {
-        visionEscalations.push(escalation);
-        Logger.info('[s10] vision escalation', escalation);
-        options.onVisionEscalation?.(escalation);
-        // Fallback-ONLY: this is the sole call site, reached only when a trigger fired. An ordinary step
-        // has no path to a screenshot, which is what the Never-list clause requires.
-        if (options.captureVision !== undefined) {
-          const blocks = await options.captureVision(escalation).catch((err: unknown) => {
-            // A failed capture degrades the step; it must never end the run.
-            Logger.warn('[s10] vision capture failed; continuing without it', { err: String(err) });
-            return null;
-          });
-          if (blocks !== null && blocks.length > 0) {
-            // S7 context eviction: collapse the previous live screenshot in place before appending the
-            // new one, mirroring pushObservation's page-state collapse — only the LATEST image stays at
-            // full fidelity, so a long run's images never accumulate.
-            if (lastImageIndex !== null) {
-              const prev = messages[lastImageIndex];
-              if (prev !== undefined)
-                messages[lastImageIndex] = { ...prev, content: COLLAPSED_IMAGE_PLACEHOLDER };
-            }
-            messages.push({ role: 'user', content: blocks });
-            lastImageIndex = messages.length - 1;
-            cacheStableIndex = stableIndexBefore(lastStateIndex, workingStateIndex, lastImageIndex);
-          }
-        }
-      }
+      await handleVisionStep(outcomes, visionEscalations, options, thread);
 
       // C1 PR2: fold this outcome into the run-level no-progress counter (a state-changing action that
       // moved nothing is a 'stall'; a read of an unchanged page is neutral). `maybeReplan` at the loop top
       // acts on it. Reads never stall — re-reading is the encouraged pattern (bounded by the streak guard).
-      const progressSignal = progress.observe(outcome, readOnlyTools.has(decision.tool));
-      if (progressSignal === 'progress') noProgressActs = 0;
-      else if (progressSignal === 'stall') noProgressActs += 1;
+      replanner.observe(progress.observe(outcome, readOnlyTools.has(decision.tool)));
 
       // C1 PR3: an escape attempt (web search / off-origin nav) is the failure mode the stall detector is
       // blind to — an escape via a read-class tool reads as 'neutral', so the agent wanders off unpunished
       // (the verified cause of C1's first-sweep miss). Treat it as a hard no-progress event so `maybeReplan`
       // fires next step and the Replanner steers back on-page, rather than letting the escape stand.
       if (outcome.ok && options.isEscapeTool?.(decision.tool, decision.args) === true) {
-        noProgressActs = Math.max(noProgressActs, noProgressThreshold);
+        replanner.forceStall();
         Logger.info('[c1] escape attempt detected → forcing replan', { tool: decision.tool });
       }
 
@@ -750,7 +376,7 @@ export default class Reactor {
             failure,
           };
         }
-        pushObservation(`Observation:\n${observationWithRecovery(outcome, failure)}`);
+        thread.pushObservation(`Observation:\n${observationWithRecovery(outcome, failure)}`);
         continue;
       }
 
@@ -769,7 +395,7 @@ export default class Reactor {
       const halt = outcome.ok ? options.guard?.(outcome) : null;
       if (halt != null) return { outcomes, visionEscalations, stoppedReason: halt };
 
-      pushObservation(`Observation:\n${observationOf(outcome)}`);
+      thread.pushObservation(`Observation:\n${observationOf(outcome)}`);
 
       // AI-7 navigation grounding: after the observation, surface a deterministic steer toward a route the
       // agent can see/verify (visible link / sitemap-backed path). Best-effort and time-boxed so a slow

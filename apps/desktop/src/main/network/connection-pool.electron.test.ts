@@ -1,5 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { NetworkConnection } from '@tepegoz/shared-types';
+import { conn } from './connection-pool.electron.test-kit';
+
+/**
+ * `ConnectionPool` — loading persisted connections, bringing one up, adding / removing, and the small
+ * surface still worth pinning. Health polling + the handshake tally live in
+ * `connection-pool-health.electron.test.ts`; provider selection + `newIdentity` in
+ * `connection-pool-providers.electron.test.ts`.
+ */
 
 const h = vi.hoisted(() => ({
   prefs: { networkConnections: [] as NetworkConnection[] },
@@ -66,16 +74,6 @@ vi.mock('./browsing-sessions.electron', () => ({
 }));
 
 const { default: ConnectionPool } = await import('./connection-pool.electron');
-
-const conn = (id: string, socksPort = 9050): NetworkConnection => ({
-  id,
-  label: id.toUpperCase(),
-  kind: 'byo-socks',
-  socksPort,
-  note: 'Tor',
-  updatedAt: 1,
-  version: 1,
-});
 
 beforeEach(() => {
   ConnectionPool.resetForTests();
@@ -196,154 +194,6 @@ describe('bringing a connection up', () => {
   });
 });
 
-describe('health polling', () => {
-  beforeEach(async () => {
-    h.prefs.networkConnections = [conn('tor')];
-    ConnectionPool.init();
-    await ConnectionPool.ensureUp('tor');
-  });
-
-  it('flips a dropped connection to down and tells its listeners', async () => {
-    const seen: [string, string][] = [];
-    ConnectionPool.onStatusChange((id, status) => seen.push([id, status]));
-    h.probe.mockResolvedValue(false);
-
-    await ConnectionPool.pollOnce();
-
-    expect(ConnectionPool.statusMap().get('tor')).toBe('down');
-    expect(seen).toEqual([['tor', 'down']]);
-    // The verified-proxy cache must be dropped too, or a re-bind would skip re-verification.
-    expect(h.invalidateTunnelVerification).toHaveBeenCalledWith('tor');
-  });
-
-  it('BLACKHOLES the partition the moment the connection drops', async () => {
-    // A dead SOCKS port fails closed only while it stays dead. Loopback ports get recycled, and an
-    // unrelated local process that later bound this one would inherit a partition pointing at it — a
-    // stranger in the middle of traffic the user believes is tunneled.
-    h.probe.mockResolvedValue(false);
-    await ConnectionPool.pollOnce();
-    expect(h.blackholeTunnelSession).toHaveBeenCalledWith('tor');
-  });
-
-  it('leaves a healthy connection alone', async () => {
-    await ConnectionPool.pollOnce();
-    expect(ConnectionPool.statusMap().get('tor')).toBe('up');
-    expect(h.blackholeTunnelSession).not.toHaveBeenCalled();
-  });
-
-  it('does not probe connections nobody brought up', async () => {
-    await ConnectionPool.takeDown('tor');
-    h.probe.mockClear();
-    await ConnectionPool.pollOnce();
-    expect(h.probe).not.toHaveBeenCalled();
-  });
-
-  it('records health over time — connectedSince on up, a drop counter, and a probe heartbeat', async () => {
-    // Brought up in beforeEach: connectedSince is set, nothing has dropped, no probe yet.
-    let view = ConnectionPool.get('tor')!;
-    expect(typeof view.connectedSince).toBe('number');
-    expect(view.drops).toBe(0);
-    expect(view.lastCheckedAt).toBeNull();
-
-    // A healthy sweep stamps the heartbeat but does not touch the drop count or connectedSince.
-    const connectedSince = view.connectedSince ?? 0;
-    const beforePoll = Date.now();
-    await ConnectionPool.pollOnce();
-    view = ConnectionPool.get('tor')!;
-    expect(view.lastCheckedAt).toBeGreaterThanOrEqual(beforePoll);
-    expect(view.drops).toBe(0);
-    expect(view.connectedSince).toBe(connectedSince);
-
-    // It drops → drop count rises, connectedSince clears.
-    h.probe.mockResolvedValue(false);
-    await ConnectionPool.pollOnce();
-    view = ConnectionPool.get('tor')!;
-    expect(view.drops).toBe(1);
-    expect(view.connectedSince).toBeNull();
-
-    // Back up → connectedSince is fresh, the drop count stays (it is a session tally).
-    h.probe.mockResolvedValue(true);
-    await ConnectionPool.ensureUp('tor');
-    view = ConnectionPool.get('tor')!;
-    expect(view.drops).toBe(1);
-    expect(view.connectedSince).toBeGreaterThanOrEqual(connectedSince);
-  });
-
-  it('does not count a first failed connect as a drop — it was never up', async () => {
-    h.prefs.networkConnections = [conn('tor')];
-    ConnectionPool.resetForTests();
-    ConnectionPool.init();
-    h.connect.mockRejectedValue(new Error('nothing listening'));
-    await expect(ConnectionPool.ensureUp('tor')).rejects.toThrow();
-    const view = ConnectionPool.get('tor')!;
-    expect(view.drops).toBe(0);
-    expect(view.connectedSince).toBeNull();
-  });
-});
-
-describe('handshake tally — session-scoped, feeds the health overview', () => {
-  beforeEach(() => {
-    h.prefs.networkConnections = [conn('tor')];
-    ConnectionPool.resetForTests();
-    ConnectionPool.init();
-  });
-
-  it('starts every counter at zero with no timestamps', () => {
-    const view = ConnectionPool.get('tor')!;
-    expect(view.handshakesOk).toBe(0);
-    expect(view.handshakesFailed).toBe(0);
-    expect(view.reconnects).toBe(0);
-    expect(view.lastHandshakeAt).toBeNull();
-    expect(view.lastErrorAt).toBeNull();
-  });
-
-  it('counts an ok handshake and stamps lastHandshakeAt — but not a reconnect the first time', async () => {
-    const before = Date.now();
-    await ConnectionPool.ensureUp('tor');
-    const view = ConnectionPool.get('tor')!;
-    expect(view.handshakesOk).toBe(1);
-    expect(view.handshakesFailed).toBe(0);
-    expect(view.reconnects).toBe(0);
-    expect(view.lastHandshakeAt).toBeGreaterThanOrEqual(before);
-  });
-
-  it('counts a failed handshake and stamps lastErrorAt, leaving lastHandshakeAt untouched', async () => {
-    h.connect.mockRejectedValue(new Error('wireproxy did not come up: bad key'));
-    const before = Date.now();
-    await expect(ConnectionPool.ensureUp('tor')).rejects.toThrow();
-    const view = ConnectionPool.get('tor')!;
-    expect(view.handshakesFailed).toBe(1);
-    expect(view.handshakesOk).toBe(0);
-    expect(view.lastErrorAt).toBeGreaterThanOrEqual(before);
-    expect(view.lastHandshakeAt).toBeNull();
-  });
-
-  it('counts the SECOND (and later) successful handshake as a reconnect', async () => {
-    await ConnectionPool.ensureUp('tor');
-    // It drops, then comes back — that return is the reconnect.
-    h.probe.mockResolvedValue(false);
-    await ConnectionPool.pollOnce();
-    h.probe.mockResolvedValue(true);
-    await ConnectionPool.ensureUp('tor');
-
-    const view = ConnectionPool.get('tor')!;
-    expect(view.handshakesOk).toBe(2);
-    expect(view.reconnects).toBe(1);
-    expect(view.lastHandshakeAt).not.toBeNull();
-  });
-
-  it('keeps lastHandshakeAt across a drop — the health view still shows when it last connected', async () => {
-    await ConnectionPool.ensureUp('tor');
-    const at = ConnectionPool.get('tor')!.lastHandshakeAt;
-    h.probe.mockResolvedValue(false);
-    await ConnectionPool.pollOnce();
-    const view = ConnectionPool.get('tor')!;
-    expect(view.status).toBe('down');
-    expect(view.connectedSince).toBeNull();
-    expect(view.lastHandshakeAt).toBe(at); // retained, unlike connectedSince
-  });
-});
-
 describe('adding and removing', () => {
   it('persists an added connection', () => {
     ConnectionPool.init();
@@ -370,83 +220,6 @@ describe('adding and removing', () => {
     h.release.mockRejectedValue(new Error('locked'));
     await expect(ConnectionPool.remove('tor')).resolves.toBeUndefined();
     expect(ConnectionPool.has('tor')).toBe(false);
-  });
-});
-
-const wgConn = (id: string): NetworkConnection =>
-  ({
-    id,
-    label: id.toUpperCase(),
-    kind: 'wireguard',
-    note: '',
-    updatedAt: 1,
-    version: 1,
-  }) as NetworkConnection;
-const torConn = (id: string, upstreamConnectionId: string | null): NetworkConnection => ({
-  id,
-  label: id.toUpperCase(),
-  kind: 'tor',
-  upstreamConnectionId,
-  note: '',
-  updatedAt: 1,
-  version: 1,
-});
-
-describe('providerFor — the one place that knows protocols exist', () => {
-  it('builds a WireGuardProvider from the connection id', () => {
-    ConnectionPool.init();
-    ConnectionPool.add(wgConn('wg1'));
-    expect(h.wgCtor).toHaveBeenCalledWith('wg1');
-    expect(ConnectionPool.has('wg1')).toBe(true);
-  });
-
-  it('builds a TorProvider with a null upstream resolver when the connection does not chain', () => {
-    ConnectionPool.init();
-    ConnectionPool.add(torConn('t1', null));
-    expect(h.torCtor).toHaveBeenCalledWith('t1', null);
-  });
-
-  it('builds a TorProvider with a LAZY upstream-port resolver when it chains', async () => {
-    h.prefs.networkConnections = [conn('up', 1080)];
-    ConnectionPool.init();
-    ConnectionPool.add(torConn('t2', 'up'));
-
-    const resolver = h.torCtor.mock.calls[0]![1];
-    expect(typeof resolver).toBe('function');
-
-    // Resolved at connect time against the upstream's CURRENT port.
-    h.connect.mockResolvedValueOnce({ socksPort: 1080 });
-    await expect(resolver!()).resolves.toBe(1080);
-  });
-
-  it('the chain resolver throws when the upstream exposed no port', async () => {
-    h.prefs.networkConnections = [conn('up', 1080)];
-    ConnectionPool.init();
-    ConnectionPool.add(torConn('t3', 'up'));
-    const resolver = h.torCtor.mock.calls[0]![1]!;
-
-    h.connect.mockResolvedValueOnce({ socksPort: null });
-    await expect(resolver()).rejects.toThrow(/exposed no port/);
-  });
-
-  it('refuses a chain that loops back on itself', async () => {
-    ConnectionPool.init();
-    ConnectionPool.add(torConn('loop', 'loop'));
-    const resolver = h.torCtor.mock.calls[0]![1]!;
-
-    // Drive it from inside its own `ensureUp` so the cycle guard sees `connecting` already holds the id.
-    h.connect.mockImplementationOnce(() => resolver().then(() => ({ socksPort: 9050 })));
-    await expect(ConnectionPool.ensureUp('loop')).rejects.toThrow(/loops back to loop/);
-    expect(ConnectionPool.statusMap().get('loop')).toBe('down');
-  });
-
-  it('reports — does not silently drop — a persisted connection whose kind has no provider', () => {
-    h.prefs.networkConnections = [
-      { ...conn('weird'), kind: 'quantum-link' } as unknown as NetworkConnection,
-    ];
-    ConnectionPool.init();
-    // The exhaustive `never` default threw; init caught it, so the pool loads with nothing.
-    expect(ConnectionPool.list()).toEqual([]);
   });
 });
 
@@ -488,79 +261,5 @@ describe('small surface still worth pinning', () => {
       ConnectionPool.stopHealthPolling();
       vi.useRealTimers();
     }
-  });
-});
-
-describe('newIdentity — new circuits AND a clean jar, or neither', () => {
-  /**
-   * The order is the security property, not a detail. Between "burn the circuits" and "wipe the site
-   * state" there is a window where a tab could still egress on the connection, and a wipe racing a
-   * live page is a wipe that misses what the page writes next. Taking the connection DOWN first closes
-   * it: the kill-switch holds every tab bound to it while the jar is emptied.
-   */
-  it('goes down, wipes the partition, and only then comes back up', async () => {
-    const order: string[] = [];
-    h.disconnect.mockImplementation(() => {
-      order.push('down');
-      return Promise.resolve();
-    });
-    h.wipe.mockImplementation(() => {
-      order.push('wipe');
-      return Promise.resolve();
-    });
-    h.connect.mockImplementation(() => {
-      order.push('up');
-      return Promise.resolve({ socksPort: 9050 });
-    });
-
-    h.prefs.networkConnections = [torConn('t1', null)];
-    ConnectionPool.init();
-    await ConnectionPool.ensureUp('t1');
-    order.length = 0;
-
-    await expect(ConnectionPool.newIdentity('t1')).resolves.toEqual({ reconnected: true });
-    expect(order).toEqual(['down', 'wipe', 'up']);
-    expect(h.wipe).toHaveBeenCalledWith('persist:tepegoz-web--conn-t1');
-    expect(ConnectionPool.get('t1')?.status).toBe('up');
-  });
-
-  it('does NOT dial a connection the user had left down — it only cleans it', async () => {
-    // A privacy action must not become a reason the browser opened a tunnel nobody asked it to open.
-    h.prefs.networkConnections = [torConn('t1', null)];
-    ConnectionPool.init();
-    await expect(ConnectionPool.newIdentity('t1')).resolves.toEqual({ reconnected: false });
-    expect(h.wipe).toHaveBeenCalledTimes(1);
-    expect(h.connect).not.toHaveBeenCalled();
-    expect(ConnectionPool.get('t1')?.status).toBe('down');
-  });
-
-  it('refuses a non-Tor connection rather than renaming a reconnect', async () => {
-    // A WireGuard or SOCKS reconnect lands on the same exit address, so "new identity" there would be
-    // a claim the product cannot keep. Refused in main, not merely hidden in the UI.
-    h.prefs.networkConnections = [wgConn('wg1')];
-    ConnectionPool.init();
-    await expect(ConnectionPool.newIdentity('wg1')).rejects.toMatchObject({
-      code: 'networkNewIdentityNotTor',
-      statusCode: 400,
-    });
-    expect(h.wipe).not.toHaveBeenCalled();
-  });
-
-  it('refuses an unknown connection', async () => {
-    ConnectionPool.init();
-    await expect(ConnectionPool.newIdentity('nope')).rejects.toMatchObject({ statusCode: 404 });
-  });
-
-  it('does not bring the connection back when the wipe fails — a dirty jar is not a new identity', async () => {
-    h.prefs.networkConnections = [torConn('t1', null)];
-    ConnectionPool.init();
-    await ConnectionPool.ensureUp('t1');
-    h.wipe.mockRejectedValue(new Error('locked'));
-    h.connect.mockClear();
-    await expect(ConnectionPool.newIdentity('t1')).rejects.toThrow('locked');
-    // Left DOWN on purpose: coming back up would hand the user a connection carrying the identity
-    // they just asked to destroy, with nothing on screen saying the wipe did not happen.
-    expect(h.connect).not.toHaveBeenCalled();
-    expect(ConnectionPool.get('t1')?.status).toBe('down');
   });
 });

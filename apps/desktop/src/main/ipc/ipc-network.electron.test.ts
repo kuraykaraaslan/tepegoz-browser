@@ -1,209 +1,54 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 /**
- * `ipc-network` — the network-privacy bridge. Pinned: `networkGetState` projects the per-window routing
- * picture (empty when the sender has no window); bind / general handlers delegate to `BindingService`
- * then rebroadcast; `networkAddConnection` mints a fresh id, reads + re-parses a WireGuard config into
- * the pool (or 404s an unknown Tor upstream), and falls back to a counter id for a label with no usable
- * characters; `networkPickWireguard` refuses when the keychain is unavailable; `networkSetActive` /
- * `networkSetBinaryPath` / `networkPickBinaryFolder` (404 when nothing is found) update state; and
- * `networkRemoveConnection` releases bindings before removing the connection.
- *
- * Also pinned here: `groupRouteFor` (via the `groups` map `networkGetState` returns) — a Direct group is
- * omitted, a group bound to a connection the pool forgot shows as a dead `vpn: 'down'` route, a non-Tor
- * connection is a single VPN leg, and a Tor connection splits into `{ vpn, tor }` with the upstream VPN's
- * health and a `label → upstreamLabel` when it is chained; `networkBindGroup` delegates to
- * `BindingService.bindGroup`; `networkAddConnection` adds a Tor connection (with or without an upstream);
- * and both file/folder pickers parent their dialog to the sender window when there is one.
- *
- * `broadcastNetworkState` also pinned: the per-window loop is unchanged (each chrome window gets its
- * OWN personalized `networkStateFor(win)`, survives a throwing `send`), and it additionally reaches
- * trusted `tepegoz://` app-page surfaces (via `appSurfaceContents`) with the profile-wide projection
- * (empty `tabs`/`groups` — there is no owning window to resolve a per-tab breakdown from), without
- * double-sending to a chrome window the first loop already reached.
+ * `ipc-network` — the network-privacy bridge, STATE PROJECTION half. Pinned: `networkGetState` projects
+ * the per-window routing picture (empty when the sender has no window); each connection view carries the
+ * slow-cause verdict computed by the real classifier; and `groupRouteFor` (via the `groups` map
+ * `networkGetState` returns) — a Direct group is omitted, a group bound to a connection the pool forgot
+ * shows as a dead `vpn: 'down'` route, a non-Tor connection is a single VPN leg, and a Tor connection
+ * splits into `{ vpn, tor }` with the upstream VPN's health and a `label → upstreamLabel` when chained.
+ * The mutating handlers and the broadcast live in `ipc-network-connections` / `ipc-network-broadcast`,
+ * which share `ipc-network.test-kit`.
  */
 
-const IpcChannels = {
-  networkGetState: 'network:get-state',
-  networkBindTab: 'network:bind-tab',
-  networkBindGroup: 'network:bind-group',
-  networkSetGeneral: 'network:set-general',
-  networkAddConnection: 'network:add-connection',
-  networkPickWireguard: 'network:pick-wireguard',
-  networkSetActive: 'network:set-active',
-  networkSetBinaryPath: 'network:set-binary-path',
-  networkPickBinaryFolder: 'network:pick-binary-folder',
-  networkRemoveConnection: 'network:remove-connection',
-  networkNewIdentity: 'network:new-identity',
-  networkTestConnection: 'network:test-connection',
-  networkState: 'network:state',
-};
-vi.mock('@tepegoz/desktop-ipc', () => ({ IpcChannels }));
-
-const schemas = vi.hoisted(() => ({
-  AddNetworkConnectionSchema: { parse: vi.fn() },
-  BindGroupNetworkSchema: { parse: vi.fn() },
-  BindTabNetworkSchema: { parse: vi.fn() },
-  RemoveNetworkConnectionSchema: { parse: vi.fn() },
-  NewNetworkIdentitySchema: { parse: vi.fn() },
-  SetBinaryPathSchema: { parse: vi.fn() },
-  VpnBinarySchema: { parse: vi.fn() },
-  SetConnectionActiveSchema: { parse: vi.fn() },
-  SetGeneralBindingSchema: { parse: vi.fn() },
-  TestNetworkConnectionSchema: { parse: vi.fn() },
-}));
-vi.mock('@tepegoz/desktop-ipc/schemas', () => schemas);
+const h = await vi.hoisted(async () =>
+  (await import('./ipc-network.test-kit')).createNetworkHarness(),
+);
+vi.mock('@tepegoz/desktop-ipc', () => ({ IpcChannels: h.IpcChannels }));
+vi.mock('@tepegoz/desktop-ipc/schemas', () => h.schemas);
 vi.mock('@tepegoz/shared-types', () => ({ isValidConnectionId: (s: string) => s.length > 0 }));
-
-class AppError extends Error {
-  statusCode: number;
-  code?: string | undefined;
-  constructor(m: string, s: number, code?: string) {
-    super(m);
-    this.statusCode = s;
-    this.code = code;
-  }
-}
-vi.mock('@tepegoz/libs', () => ({ AppError, Logger: { info: vi.fn(), warn: vi.fn() } }));
+vi.mock('@tepegoz/libs', () => ({
+  AppError: h.AppError,
+  Logger: { info: vi.fn(), warn: vi.fn() },
+}));
 vi.mock('../lib/i18n-main', () => ({
   mainStrings: () => ({ browser: { wireguardPickerTitle: 'Pick a profile' } }),
 }));
-
-const prefs = vi.hoisted(() => ({
-  getAll: vi.fn(() => ({ networkBinaries: { wireproxy: '', tor: '' } })),
-  update: vi.fn(),
-}));
-vi.mock('@tepegoz/preferences', () => ({ default: prefs }));
-
-const bins = vi.hoisted(() => ({
-  binDir: () => '/drop-in',
-  findBinaryInFolder: vi.fn((): string | null => null),
-  locateBinary: vi.fn((): string => {
-    throw new Error('not found');
-  }),
-}));
-vi.mock('../network/vpn-binaries.electron', () => bins);
-
-const secrets = vi.hoisted(() => ({ isAvailable: vi.fn(() => true), save: vi.fn() }));
-vi.mock('../network/vpn-secrets.electron', () => ({ default: secrets }));
+vi.mock('@tepegoz/preferences', () => ({ default: h.prefs }));
+vi.mock('../network/vpn-binaries.electron', () => h.bins);
+vi.mock('../network/vpn-secrets.electron', () => ({ default: h.secrets }));
 vi.mock('../network/wireguard-config', () => ({
   parseWireGuardConfig: (t: string) => ({ raw: t }),
   summarize: () => ({ endpoint: 'vpn.example:51820', dns: ['1.1.1.1'], fullTunnel: true }),
 }));
-
-const tabs = vi.hoisted(() => ({
-  forWindow: vi.fn((): unknown => ({ getState: () => ({ tabs: [], groups: [] }) })),
-  bindingStates: vi.fn((): { tabId: string; groupId: string | null }[] => []),
-  reloadTab: vi.fn<(id: string) => void>(),
-}));
-vi.mock('../tabs', () => ({ default: tabs }));
-
-const binding = vi.hoisted(() => ({
-  prune: vi.fn(),
-  resolveFor: vi.fn<
-    (tabId: string) => { resolved: { connectionId: string | null }; source: string }
-  >(() => ({ resolved: { connectionId: null }, source: 'default' })),
-  resolveForGroup: vi.fn<(groupId: string) => { resolved: { connectionId: string | null } }>(
-    () => ({
-      resolved: { connectionId: null },
-    }),
-  ),
-  mayEgress: vi.fn(() => true),
-  general: vi.fn(() => ({ mode: 'direct' })),
-  bindTab: vi.fn(() => Promise.resolve()),
-  bindGroup: vi.fn(() => Promise.resolve()),
-  setGeneral: vi.fn(() => Promise.resolve()),
-  releaseConnection: vi.fn(() => Promise.resolve()),
-}));
-vi.mock('../network/binding-service.electron', () => ({ default: binding }));
-
-const pool = vi.hoisted(() => ({
-  has: vi.fn<(id: string) => boolean>(() => false),
-  get: vi.fn<(id: string) => unknown>(() => undefined),
-  list: vi.fn(() => [] as unknown[]),
-  add: vi.fn(),
-  ensureUp: vi.fn(() => Promise.resolve()),
-  takeDown: vi.fn(() => Promise.resolve()),
-  remove: vi.fn(() => Promise.resolve()),
-  newIdentity: vi.fn(() => Promise.resolve({ reconnected: true })),
-}));
-vi.mock('../network/connection-pool.electron', () => ({ default: pool }));
-
-interface TestStage {
-  status: 'pass' | 'fail' | 'skipped';
-  detail: string | null;
-}
-interface TestResult {
-  connectionId: string;
-  configParse: TestStage;
-  handshake: TestStage;
-  reachability: 'notReached' | 'unverified';
-}
-const connectionTest = vi.hoisted(() => ({
-  testConnection: vi.fn<(id: string) => Promise<TestResult>>(() =>
-    Promise.resolve({
-      connectionId: 'c1',
-      configParse: { status: 'pass', detail: null },
-      handshake: { status: 'pass', detail: null },
-      reachability: 'unverified',
-    }),
-  ),
-}));
-vi.mock('../network/connection-test.electron', () => ({ default: connectionTest }));
-const backgroundConnections = vi.hoisted(() => ({ notifyEgressChange: vi.fn() }));
+vi.mock('../tabs', () => ({ default: h.tabs }));
+vi.mock('../network/binding-service.electron', () => ({ default: h.binding }));
+vi.mock('../network/connection-pool.electron', () => ({ default: h.pool }));
+vi.mock('../network/connection-test.electron', () => ({ default: h.connectionTest }));
 vi.mock('../extensions/background-connection.electron', () => ({
-  default: backgroundConnections,
+  default: h.backgroundConnections,
 }));
-
-const readFileSync = vi.hoisted(() => vi.fn(() => '[Interface]\nPrivateKey=x'));
-vi.mock('node:fs', () => ({ readFileSync }));
-
-const bw = vi.hoisted(() => ({
-  fromWebContents: vi.fn((): unknown => null),
-  getAllWindows: vi.fn(() => [] as unknown[]),
-}));
-const dialog = vi.hoisted(() => ({
-  showOpenDialog: vi.fn(() => Promise.resolve({ canceled: true, filePaths: [] as string[] })),
-}));
-vi.mock('electron', () => ({ BrowserWindow: bw, dialog }));
-const appSurfaceContents = vi.hoisted(() => vi.fn((): unknown[] => []));
-vi.mock('../lib/app-surfaces', () => ({ appSurfaceContents }));
-
-const handlers = vi.hoisted(() => new Map<string, (e: unknown, p: unknown) => Promise<unknown>>());
-vi.mock('./ipc-helpers', () => ({
-  handleAsync: (ch: string, fn: (e: unknown, p: unknown) => Promise<unknown>) => {
-    handlers.set(ch, fn);
-  },
-}));
+vi.mock('node:fs', () => ({ readFileSync: h.readFileSync }));
+vi.mock('electron', () => ({ BrowserWindow: h.bw, dialog: h.dialog }));
+vi.mock('../lib/app-surfaces', () => ({ appSurfaceContents: h.appSurfaceContents }));
+vi.mock('./ipc-helpers', () => ({ handleAsync: h.handleAsync }));
 
 const mod = await import('./ipc-network');
 
-const event = { sender: {} };
-const call = (ch: string, payload?: unknown): Promise<unknown> => handlers.get(ch)!(event, payload);
+const { IpcChannels, tabs, binding, pool, bw, call } = h;
 
 beforeEach(() => {
-  vi.clearAllMocks();
-  bw.fromWebContents.mockReturnValue(null);
-  bw.getAllWindows.mockReturnValue([]);
-  appSurfaceContents.mockReturnValue([]);
-  secrets.isAvailable.mockReturnValue(true);
-  pool.has.mockReturnValue(false);
-  pool.get.mockReturnValue(undefined);
-  pool.list.mockReturnValue([]);
-  tabs.forWindow.mockReturnValue({ getState: () => ({ tabs: [], groups: [] }) });
-  tabs.bindingStates.mockReturnValue([]);
-  prefs.getAll.mockReturnValue({ networkBinaries: { wireproxy: '', tor: '' } });
-  dialog.showOpenDialog.mockResolvedValue({ canceled: true, filePaths: [] });
-  bins.locateBinary.mockImplementation(() => {
-    throw new Error('not found');
-  });
-  bins.findBinaryInFolder.mockReturnValue(null);
-  connectionTest.testConnection.mockResolvedValue({
-    connectionId: 'c1',
-    configParse: { status: 'pass', detail: null },
-    handshake: { status: 'pass', detail: null },
-    reachability: 'unverified',
-  });
+  h.reset();
   mod.registerNetworkIpc();
 });
 
@@ -259,192 +104,6 @@ describe('connectionViews — the slow-cause verdict (Phase 5: "\'Slow\' needs a
       connections: { slowCause: string }[];
     };
     expect(state.connections[0]?.slowCause).toBe('tunnel_degraded');
-  });
-});
-
-describe('bind + general handlers', () => {
-  it('networkBindTab delegates and rebroadcasts', async () => {
-    schemas.BindTabNetworkSchema.parse.mockReturnValue({ tabId: 't9', binding: { mode: 'vpn' } });
-    await call(IpcChannels.networkBindTab, {});
-    expect(binding.bindTab).toHaveBeenCalledWith('t9', { mode: 'vpn' });
-    expect(bw.getAllWindows).toHaveBeenCalled();
-  });
-
-  it('networkSetGeneral delegates to BindingService.setGeneral', async () => {
-    schemas.SetGeneralBindingSchema.parse.mockReturnValue({ mode: 'tor' });
-    await call(IpcChannels.networkSetGeneral, {});
-    expect(binding.setGeneral).toHaveBeenCalledWith({ mode: 'tor' });
-  });
-});
-
-describe('networkAddConnection', () => {
-  it('reads + re-parses a WireGuard config into the pool', async () => {
-    schemas.AddNetworkConnectionSchema.parse.mockReturnValue({
-      kind: 'wireguard',
-      label: 'Work VPN',
-      note: 'n',
-      sourcePath: '/tmp/wg.conf',
-    });
-    await call(IpcChannels.networkAddConnection, {});
-    expect(readFileSync).toHaveBeenCalledWith('/tmp/wg.conf', 'utf8');
-    expect(secrets.save).toHaveBeenCalledWith('work-vpn', '[Interface]\nPrivateKey=x');
-    expect(pool.add).toHaveBeenCalledWith(
-      expect.objectContaining({ id: 'work-vpn', kind: 'wireguard', endpoint: 'vpn.example:51820' }),
-    );
-  });
-
-  it('404s a Tor connection whose upstream is unknown', async () => {
-    schemas.AddNetworkConnectionSchema.parse.mockReturnValue({
-      kind: 'tor',
-      label: 'Onion',
-      note: '',
-      upstreamConnectionId: 'ghost',
-    });
-    pool.has.mockReturnValue(false);
-    await expect(call(IpcChannels.networkAddConnection, {})).rejects.toMatchObject({
-      statusCode: 404,
-      code: 'networkNoSuchConnection',
-    });
-  });
-
-  it('falls back to a counter id for a label with no usable characters', async () => {
-    schemas.AddNetworkConnectionSchema.parse.mockReturnValue({
-      kind: 'byo-socks',
-      label: '🧅🧅🧅',
-      note: '',
-      socksPort: 9050,
-    });
-    pool.has.mockImplementation((id: string) => id === 'connection');
-    await call(IpcChannels.networkAddConnection, {});
-    expect(pool.add).toHaveBeenCalledWith(
-      expect.objectContaining({ id: 'connection-2', kind: 'byo-socks', socksPort: 9050 }),
-    );
-  });
-});
-
-describe('networkPickWireguard', () => {
-  it('refuses before opening the picker when the keychain is unavailable', async () => {
-    secrets.isAvailable.mockReturnValue(false);
-    await expect(call(IpcChannels.networkPickWireguard)).rejects.toMatchObject({
-      statusCode: 503,
-      code: 'networkSecretsUnavailable',
-    });
-  });
-
-  it('returns the parsed profile summary for a picked file', async () => {
-    dialog.showOpenDialog.mockResolvedValue({ canceled: false, filePaths: ['/home/me/home.conf'] });
-    const res = (await call(IpcChannels.networkPickWireguard)) as { fileName: string };
-    expect(res).toMatchObject({
-      path: '/home/me/home.conf',
-      fileName: 'home.conf',
-      endpoint: 'vpn.example:51820',
-      fullTunnel: true,
-    });
-  });
-
-  it('returns null when the picker is canceled', async () => {
-    dialog.showOpenDialog.mockResolvedValue({ canceled: true, filePaths: [] });
-    expect(await call(IpcChannels.networkPickWireguard)).toBeNull();
-  });
-});
-
-describe('the remaining setters', () => {
-  it('networkSetActive brings a connection up or down', async () => {
-    schemas.SetConnectionActiveSchema.parse.mockReturnValue({ id: 'c1', active: true });
-    await call(IpcChannels.networkSetActive, {});
-    expect(pool.ensureUp).toHaveBeenCalledWith('c1');
-
-    schemas.SetConnectionActiveSchema.parse.mockReturnValue({ id: 'c1', active: false });
-    await call(IpcChannels.networkSetActive, {});
-    expect(pool.takeDown).toHaveBeenCalledWith('c1');
-  });
-
-  it('networkNewIdentity reloads exactly the tabs on that connection, in every window', async () => {
-    // Cross-window on purpose: a reload list that stopped at the focused window would leave pages from
-    // the identity that was just burned still on screen elsewhere.
-    schemas.NewNetworkIdentitySchema.parse.mockReturnValue('t1');
-    tabs.bindingStates.mockReturnValue([
-      { tabId: 'a', groupId: null },
-      { tabId: 'b', groupId: null },
-      { tabId: 'c', groupId: null },
-    ]);
-    binding.resolveFor.mockImplementation((tabId: string) => ({
-      resolved: { connectionId: tabId === 'c' ? 'other' : 't1' },
-      source: 'group',
-    }));
-
-    await expect(call(IpcChannels.networkNewIdentity, 't1')).resolves.toEqual({
-      reconnected: true,
-    });
-    expect(pool.newIdentity).toHaveBeenCalledWith('t1');
-    expect(tabs.reloadTab.mock.calls.map((c) => c[0])).toEqual(['a', 'b']);
-  });
-
-  it('does NOT reload when the tunnel did not come back up', async () => {
-    // Reloading a tab whose connection is down just paints a kill-switch error over the page the user
-    // was reading, destroying the one thing they still had.
-    schemas.NewNetworkIdentitySchema.parse.mockReturnValue('t1');
-    tabs.bindingStates.mockReturnValue([{ tabId: 'a', groupId: null }]);
-    binding.resolveFor.mockReturnValue({ resolved: { connectionId: 't1' }, source: 'group' });
-    pool.newIdentity.mockResolvedValue({ reconnected: false });
-
-    await call(IpcChannels.networkNewIdentity, 't1');
-    expect(tabs.reloadTab).not.toHaveBeenCalled();
-  });
-
-  it('networkSetBinaryPath merges the path into the preference', async () => {
-    schemas.SetBinaryPathSchema.parse.mockReturnValue({ binary: 'tor', path: '/opt/tor' });
-    await call(IpcChannels.networkSetBinaryPath, {});
-    expect(prefs.update).toHaveBeenCalledWith({
-      networkBinaries: { wireproxy: '', tor: '/opt/tor' },
-    });
-  });
-
-  it('networkPickBinaryFolder 404s when the binary is not under the picked folder', async () => {
-    schemas.VpnBinarySchema.parse.mockReturnValue('tor');
-    dialog.showOpenDialog.mockResolvedValue({ canceled: false, filePaths: ['/apps'] });
-    bins.findBinaryInFolder.mockReturnValue(null);
-    await expect(call(IpcChannels.networkPickBinaryFolder, {})).rejects.toMatchObject({
-      statusCode: 404,
-      code: 'networkBinaryNotFound',
-    });
-  });
-
-  it('networkPickBinaryFolder stores and returns a located binary', async () => {
-    schemas.VpnBinarySchema.parse.mockReturnValue('tor');
-    dialog.showOpenDialog.mockResolvedValue({ canceled: false, filePaths: ['/apps'] });
-    bins.findBinaryInFolder.mockReturnValue('/apps/tor/tor');
-    const res = await call(IpcChannels.networkPickBinaryFolder, {});
-    expect(res).toBe('/apps/tor/tor');
-    expect(prefs.update).toHaveBeenCalledWith({
-      networkBinaries: { wireproxy: '', tor: '/apps/tor/tor' },
-    });
-  });
-
-  it('networkRemoveConnection releases bindings before removing the connection', async () => {
-    schemas.RemoveNetworkConnectionSchema.parse.mockReturnValue('c-gone');
-    await call(IpcChannels.networkRemoveConnection, {});
-    expect(binding.releaseConnection).toHaveBeenCalledWith('c-gone');
-    expect(pool.remove).toHaveBeenCalledWith('c-gone');
-    expect(binding.releaseConnection.mock.invocationCallOrder[0]).toBeLessThan(
-      pool.remove.mock.invocationCallOrder[0]!,
-    );
-  });
-});
-
-describe('networkTestConnection', () => {
-  it('delegates to ConnectionTest.testConnection and rebroadcasts', async () => {
-    schemas.TestNetworkConnectionSchema.parse.mockReturnValue('c1');
-    connectionTest.testConnection.mockResolvedValue({
-      connectionId: 'c1',
-      configParse: { status: 'pass', detail: null },
-      handshake: { status: 'fail', detail: 'wireproxy did not come up: bad key material' },
-      reachability: 'notReached',
-    });
-    const result = await call(IpcChannels.networkTestConnection, 'c1');
-    expect(connectionTest.testConnection).toHaveBeenCalledWith('c1');
-    expect(result).toMatchObject({ reachability: 'notReached' });
-    expect(bw.getAllWindows).toHaveBeenCalled();
   });
 });
 
@@ -545,132 +204,5 @@ describe('groupRouteFor (via the networkGetState groups map)', () => {
       tor: 'up',
       label: 'Onion',
     });
-  });
-});
-
-describe('networkBindGroup', () => {
-  it('delegates to BindingService.bindGroup then rebroadcasts', async () => {
-    schemas.BindGroupNetworkSchema.parse.mockReturnValue({
-      groupId: 'g7',
-      binding: { mode: 'tor' },
-    });
-    await call(IpcChannels.networkBindGroup, {});
-    expect(binding.bindGroup).toHaveBeenCalledWith('g7', { mode: 'tor' });
-    expect(bw.getAllWindows).toHaveBeenCalled();
-  });
-});
-
-describe('networkAddConnection — Tor', () => {
-  it('adds a Tor connection chained onto a known upstream', async () => {
-    schemas.AddNetworkConnectionSchema.parse.mockReturnValue({
-      kind: 'tor',
-      label: 'Onion',
-      note: 'n',
-      upstreamConnectionId: 'wg1',
-    });
-    pool.has.mockImplementation((id: string) => id === 'wg1');
-    await call(IpcChannels.networkAddConnection, {});
-    expect(pool.add).toHaveBeenCalledWith(
-      expect.objectContaining({
-        id: 'onion',
-        kind: 'tor',
-        upstreamConnectionId: 'wg1',
-        version: 1,
-      }),
-    );
-  });
-
-  it('adds a standalone Tor connection when there is no upstream at all', async () => {
-    schemas.AddNetworkConnectionSchema.parse.mockReturnValue({
-      kind: 'tor',
-      label: 'Solo Onion',
-      note: '',
-      upstreamConnectionId: null,
-    });
-    await call(IpcChannels.networkAddConnection, {});
-    expect(pool.add).toHaveBeenCalledWith(
-      expect.objectContaining({ id: 'solo-onion', kind: 'tor', upstreamConnectionId: null }),
-    );
-  });
-});
-
-describe('pickers parented to the sender window', () => {
-  it('networkPickWireguard parents the open dialog to the sender window', async () => {
-    bw.fromWebContents.mockReturnValue({ __win: true });
-    dialog.showOpenDialog.mockResolvedValue({ canceled: false, filePaths: ['/home/me/vpn.conf'] });
-    const res = (await call(IpcChannels.networkPickWireguard)) as { fileName: string };
-    expect(res).toMatchObject({ fileName: 'vpn.conf' });
-    expect(dialog.showOpenDialog).toHaveBeenCalledWith(
-      { __win: true },
-      expect.objectContaining({ properties: ['openFile'] }),
-    );
-  });
-
-  it('networkPickBinaryFolder parents the open dialog to the sender window', async () => {
-    bw.fromWebContents.mockReturnValue({ __win: true });
-    schemas.VpnBinarySchema.parse.mockReturnValue('tor');
-    dialog.showOpenDialog.mockResolvedValue({ canceled: false, filePaths: ['/apps'] });
-    bins.findBinaryInFolder.mockReturnValue('/apps/tor/tor');
-    const res = await call(IpcChannels.networkPickBinaryFolder, {});
-    expect(res).toBe('/apps/tor/tor');
-    expect(dialog.showOpenDialog).toHaveBeenCalledWith(
-      { __win: true },
-      expect.objectContaining({ properties: ['openDirectory'] }),
-    );
-  });
-});
-
-describe('broadcastNetworkState', () => {
-  it('pushes the per-window state to every live window and survives a send that throws', () => {
-    const good = { isDestroyed: () => false, webContents: { id: 1, send: vi.fn() } };
-    const bad = {
-      isDestroyed: () => false,
-      webContents: {
-        id: 2,
-        send: vi.fn(() => {
-          throw new Error('gone');
-        }),
-      },
-    };
-    bw.getAllWindows.mockReturnValue([bad, good]);
-    expect(() => {
-      mod.broadcastNetworkState();
-    }).not.toThrow();
-    expect(good.webContents.send).toHaveBeenCalledWith('network:state', expect.anything());
-    expect(backgroundConnections.notifyEgressChange).toHaveBeenCalledTimes(1);
-  });
-
-  it('also reaches trusted app-page surfaces (tepegoz:// tabs) with the profile-wide projection', () => {
-    const page = { id: 9, isDestroyed: () => false, send: vi.fn() };
-    bw.getAllWindows.mockReturnValue([]);
-    appSurfaceContents.mockReturnValue([page]);
-    mod.broadcastNetworkState();
-    expect(page.send).toHaveBeenCalledWith(
-      'network:state',
-      expect.objectContaining({ tabs: {}, groups: {} }),
-    );
-  });
-
-  it('does not double-send to a chrome window already reached by the per-window loop', () => {
-    const win = { isDestroyed: () => false, webContents: { id: 5, send: vi.fn() } };
-    bw.getAllWindows.mockReturnValue([win]);
-    appSurfaceContents.mockReturnValue([win.webContents]);
-    mod.broadcastNetworkState();
-    expect(win.webContents.send).toHaveBeenCalledTimes(1);
-  });
-
-  it('survives a send that throws on an app-page surface', () => {
-    const page = {
-      id: 9,
-      isDestroyed: () => false,
-      send: vi.fn(() => {
-        throw new Error('gone');
-      }),
-    };
-    bw.getAllWindows.mockReturnValue([]);
-    appSurfaceContents.mockReturnValue([page]);
-    expect(() => {
-      mod.broadcastNetworkState();
-    }).not.toThrow();
   });
 });
