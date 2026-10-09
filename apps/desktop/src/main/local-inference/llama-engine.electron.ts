@@ -45,8 +45,24 @@ class LlamaEngineElectron implements LlamaEngine {
     void this.ensureLlama();
   }
 
-  private async ensureLlama(): Promise<Llama | null> {
-    if (this.llama !== null) return this.llama;
+  /** The initialisation already under way, shared by every caller until it settles. */
+  private starting: Promise<Llama | null> | null = null;
+
+  /**
+   * Bring the native binding up once. The constructor's warm-up and the first `load()` typically run at the
+   * same moment; without sharing, each initialised `node-llama-cpp` on its own — two native Llama instances
+   * (a second multi-hundred-megabyte backend) where one is meant. A FAILED start is not cached, so a later
+   * call retries rather than reporting "unavailable" forever.
+   */
+  private ensureLlama(): Promise<Llama | null> {
+    if (this.llama !== null) return Promise.resolve(this.llama);
+    this.starting ??= this.start().finally(() => {
+      this.starting = null;
+    });
+    return this.starting;
+  }
+
+  private async start(): Promise<Llama | null> {
     try {
       this.nlc ??= await import('node-llama-cpp');
       this.llama = await this.nlc.getLlama();

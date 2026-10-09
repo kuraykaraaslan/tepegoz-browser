@@ -110,6 +110,33 @@ describe('load', () => {
   });
 });
 
+describe('starting the native binding', () => {
+  it('initialises it ONCE when the warm-up and several loads race, not once per caller', async () => {
+    const mod = await load();
+    const eng = mod.llamaEngine(); // the constructor starts a warm-up of its own
+    await Promise.all([
+      eng.load('a', '/models/a.gguf', 1024),
+      eng.load('b', '/models/b.gguf', 1024),
+      eng.load('c', '/models/c.gguf', 1024),
+    ]);
+    // One backend for the process: a second `getLlama()` would bring up a second multi-hundred-megabyte one.
+    expect(getLlama).toHaveBeenCalledTimes(1);
+    expect(llama.loadModel).toHaveBeenCalledTimes(3);
+  });
+
+  it('does not cache a FAILED start: a later load retries and succeeds', async () => {
+    getLlama.mockRejectedValueOnce(new Error('no binary yet'));
+    const mod = await load();
+    const eng = mod.llamaEngine();
+    await flush(); // the warm-up has failed
+    expect(eng.isAvailable()).toBe(false);
+    const handle = await eng.load('m1', '/models/m1.gguf', 2048);
+    expect(handle).toEqual({ modelId: 'm1', ctxSize: 2048 });
+    expect(eng.isAvailable()).toBe(true);
+    expect(getLlama).toHaveBeenCalledTimes(2);
+  });
+});
+
 describe('generate', () => {
   it('409s a handle whose model was never loaded', async () => {
     const mod = await load();
