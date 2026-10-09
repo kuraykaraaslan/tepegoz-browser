@@ -270,7 +270,7 @@ export function privacyAndAdvancedSections(ctx: SettingsSectionsCtx): SettingsSe
       group: s.groupPrivacy,
       label: s.privacyTitle,
       icon: <IconShield />,
-      searchText: `${s.privacyTitle} ${s.telemetry} ${s.telemetryDesc} ${s.telemetryNothingSent} ${s.safeBrowsing.title} ${s.safeBrowsing.desc} ${s.clearData.title} ${s.clearData.desc} ${s.clearHistoryLabel} ${s.forgetSite.title} ${s.clientCerts.title}`,
+      searchText: `${s.privacyTitle} ${s.telemetry} ${s.telemetryDesc} ${s.telemetryNothingSent} ${s.safeBrowsing.title} ${s.safeBrowsing.desc} ${s.httpsOnly.title} ${s.httpsOnly.desc} ${s.clearData.title} ${s.clearData.desc} ${s.clearHistoryLabel} ${s.forgetSite.title} ${s.clientCerts.title}`,
       content: (
         <Card title={s.privacyTitle}>
           <div className="space-y-4">
@@ -303,6 +303,15 @@ export function privacyAndAdvancedSections(ctx: SettingsSectionsCtx): SettingsSe
                   provider reads it, but resolves `unknown` until then. Said plainly. */}
               <p className="mt-1.5 text-xs text-text-secondary">{s.safeBrowsing.inactiveNote}</p>
             </div>
+            <Toggle
+              id="https-only-tunnel"
+              label={s.httpsOnly.title}
+              description={s.httpsOnly.desc}
+              checked={prefs.httpsOnlyOnTunnel}
+              onChange={(v) => {
+                setPref({ httpsOnlyOnTunnel: v });
+              }}
+            />
             <ClearBrowsingDataRow s={s} />
             <ClearOnExitRow
               s={s}

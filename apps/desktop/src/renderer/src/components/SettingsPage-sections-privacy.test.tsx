@@ -172,6 +172,40 @@ describe('privacyAndAdvancedSections — the privacy card', () => {
   });
 });
 
+describe('privacyAndAdvancedSections — HTTPS-only on tunnelled tabs', () => {
+  it('renders the toggle from prefs and writes false when switched off', () => {
+    const { setPref } = renderPrivacy({ httpsOnlyOnTunnel: true });
+    const toggle = screen.getByTestId('toggle-https-only-tunnel');
+    expect(screen.getByText(s.httpsOnly.title)).toBeTruthy();
+    expect(screen.getByText(s.httpsOnly.desc)).toBeTruthy();
+    fireEvent.click(toggle);
+    expect(setPref).toHaveBeenCalledTimes(1);
+    expect(setPref).toHaveBeenCalledWith({ httpsOnlyOnTunnel: false });
+  });
+
+  it('writes true when switched back on from the off state', () => {
+    const { setPref } = renderPrivacy({ httpsOnlyOnTunnel: false });
+    fireEvent.click(screen.getByTestId('toggle-https-only-tunnel'));
+    expect(setPref).toHaveBeenCalledWith({ httpsOnlyOnTunnel: true });
+    expect(setPref).not.toHaveBeenCalledWith(
+      expect.objectContaining({ safeBrowsingEnabled: true }),
+    );
+  });
+
+  it('is found by settings search, and says the Site Info warning stays', () => {
+    const section = privacyAndAdvancedSections(ctx().ctx).find((sec) => sec.id === 'privacy');
+    expect(section!.searchText).toContain(s.httpsOnly.title);
+    expect(section!.searchText).toContain(s.httpsOnly.desc);
+    expect(s.httpsOnly.desc).toMatch(/Site Info/);
+  });
+
+  it('has a Turkish translation distinct from English', () => {
+    expect(settingsDict.tr.httpsOnly.title.length).toBeGreaterThan(0);
+    expect(settingsDict.tr.httpsOnly.title).not.toBe(s.httpsOnly.title);
+    expect(settingsDict.tr.httpsOnly.desc).not.toBe(s.httpsOnly.desc);
+  });
+});
+
 describe('privacyAndAdvancedSections — developer gating', () => {
   it('includes the developer section only when developerVisible is true', () => {
     const withDev = privacyAndAdvancedSections(ctx({}, true).ctx).map((sec) => sec.id);

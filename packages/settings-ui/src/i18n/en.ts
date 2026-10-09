@@ -472,6 +472,11 @@ export const en = {
     inactiveNote:
       'Not active in this build yet — the threat list and its key are not wired. The switch is here so the choice is already yours when it is.',
   },
+  // HTTPS-only on tunnelled tabs (ADR-0050).
+  httpsOnly: {
+    title: 'HTTPS-only on tunnelled tabs',
+    desc: 'Upgrade plain http pages to https in tabs routed through Tor, a VPN or a proxy. If a site has no https, you are asked before it loads over http. Turning this off lets tunnelled tabs load plain http; the cleartext warning in Site Info stays.',
+  },
   clearHistoryConfirm:
     'Deletes your whole browsing history on this device. Bookmarks, passwords and site permissions are not affected.',
   clearHistoryButton: 'Clear history',

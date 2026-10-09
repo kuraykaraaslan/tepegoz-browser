@@ -458,6 +458,11 @@ export const tr: SettingsStrings = {
     inactiveNote:
       'Bu derlemede henüz etkin değil — tehdit listesi ve anahtarı bağlanmadı. Anahtar geldiğinde seçim baştan senin olsun diye bu düğme burada.',
   },
+  // Tünelli sekmelerde yalnızca HTTPS (ADR-0050).
+  httpsOnly: {
+    title: 'Tünelli sekmelerde yalnızca HTTPS',
+    desc: "Tor, VPN veya proxy üzerinden giden sekmelerde düz http sayfalarını https'e yükseltir. Bir sitede https yoksa http ile yüklenmeden önce sana sorulur. Kapatırsan tünelli sekmeler düz http yükleyebilir; Site Bilgisi'ndeki şifresiz bağlantı uyarısı yine görünür.",
+  },
   clearHistoryConfirm:
     'Bu cihazdaki tüm gezinme geçmişini siler. Yer imleri, parolalar ve site izinleri etkilenmez.',
   clearHistoryButton: 'Geçmişi temizle',
