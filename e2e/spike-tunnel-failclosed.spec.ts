@@ -126,7 +126,10 @@ async function launch(
 ): Promise<[ElectronApplication, string]> {
   const profileDir = join(process.cwd(), `.spike-profile-${profileTag}`);
   mkdirSync(profileDir, { recursive: true });
-  writeFileSync(join(profileDir, 'preferences.json'), '{}');
+  // These specs measure ROUTING over plain-HTTP probe origins, so HTTPS-only (ADR-0050, on by default for
+  // tunnel tabs) is switched off: it would upgrade every probe request and the origin would never see
+  // it. HTTPS-only itself is covered by `https-only-tunnel.spec.ts`.
+  writeFileSync(join(profileDir, 'preferences.json'), JSON.stringify({ httpsOnlyOnTunnel: false }));
   const app = await electron.launch({
     args: [`--user-data-dir=${profileDir}`, ...extraArgs, appDir],
     env: guiEnv(),
@@ -159,9 +162,13 @@ test('A. a tunnel-bound session routes through the SOCKS endpoint, resolving DNS
     expect(tunnelOrigin.hits).toContain('/through-tunnel');
 
     // REMOTE DNS: the proxy was handed the hostname, not an address the browser had already resolved.
-    expect(socks.requests).toHaveLength(1);
-    expect(socks.requests[0]?.atyp).toBe(3); // 3 = DOMAINNAME
-    expect(socks.requests[0]?.host).toBe(PROBE_HOST);
+    // Chromium may also send its own housekeeping requests (component updater hosts such as
+    // `redirector.gvt1.com`) through the session, so this looks at the probe's requests — not at the
+    // total — and, separately, at every request: none may have carried a pre-resolved address.
+    const probeRequests = socks.requests.filter((r) => r.host === PROBE_HOST);
+    expect(probeRequests.length).toBeGreaterThan(0);
+    expect(probeRequests.every((r) => r.atyp === 3)).toBe(true); // 3 = DOMAINNAME
+    expect(socks.requests.every((r) => r.atyp === 3)).toBe(true);
   } finally {
     await app.close();
     await socks.close();

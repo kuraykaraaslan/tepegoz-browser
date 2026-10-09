@@ -134,7 +134,10 @@ test('two connections bound to two different tabs never cross — each tab reach
 
   const profileDir = join(process.cwd(), `.spike-profile-cross-tab-${socksA.port}`);
   mkdirSync(profileDir, { recursive: true });
-  writeFileSync(join(profileDir, 'preferences.json'), '{}');
+  // These specs measure ROUTING over plain-HTTP probe origins, so HTTPS-only (ADR-0050, on by default for
+  // tunnel tabs) is switched off: it would upgrade every probe request and the origin would never see
+  // it. HTTPS-only itself is covered by `https-only-tunnel.spec.ts`.
+  writeFileSync(join(profileDir, 'preferences.json'), JSON.stringify({ httpsOnlyOnTunnel: false }));
 
   const app: ElectronApplication = await electron.launch({
     args: [
