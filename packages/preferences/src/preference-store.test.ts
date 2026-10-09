@@ -123,6 +123,16 @@ describe('PreferenceStore', () => {
     expect(PreferenceStore.getAll().confirmCloseMultiTab).toBe(false);
   });
 
+  it('defaults showHomeButton to on for an old file, and round-trips off', () => {
+    writeFileSync(filePath, JSON.stringify({ locale: 'tr' }), 'utf8');
+    PreferenceStore.init({ filePath });
+    expect(PreferenceStore.getAll().showHomeButton).toBe(true);
+    PreferenceStore.update({ showHomeButton: false });
+    PreferenceStore.reset();
+    PreferenceStore.init({ filePath });
+    expect(PreferenceStore.getAll().showHomeButton).toBe(false);
+  });
+
   it('defaults mcpServers to [] and round-trips a valid stdio server', () => {
     PreferenceStore.init({ filePath });
     expect(PreferenceStore.getAll().mcpServers).toEqual([]);

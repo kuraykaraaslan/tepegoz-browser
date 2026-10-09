@@ -44,7 +44,7 @@ const STRINGS: BrowserChromeStrings = {
   },
 };
 
-function renderChrome(over: { platform?: string } = {}) {
+function renderChrome(over: { platform?: string; showHomeButton?: boolean } = {}) {
   const handlers = {
     onSelectTab: vi.fn(),
     onCloseTab: vi.fn(),
@@ -62,6 +62,7 @@ function renderChrome(over: { platform?: string } = {}) {
   render(
     <BrowserChrome
       platform={over.platform ?? 'win32'}
+      showHomeButton={over.showHomeButton}
       t={STRINGS}
       tabs={[{ id: '1', title: 'First page', faviconUrl: null, isLoading: false }]}
       activeTabId="1"
@@ -109,5 +110,13 @@ describe('the window caption follows the platform', () => {
     // a Mac window had its close button on the wrong side and no native one at all.
     renderChrome({ platform: 'darwin' });
     expect(screen.queryByRole('button', { name: STRINGS.window.close })).toBeNull();
+  });
+
+  it('passes the Home-button setting through to the toolbar', () => {
+    renderChrome();
+    expect(screen.getByRole('button', { name: STRINGS.browser.home })).toBeDefined();
+    cleanup();
+    renderChrome({ showHomeButton: false });
+    expect(screen.queryByRole('button', { name: STRINGS.browser.home })).toBeNull();
   });
 });

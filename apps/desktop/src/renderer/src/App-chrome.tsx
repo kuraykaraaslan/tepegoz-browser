@@ -171,6 +171,7 @@ export function AppChrome({
         onForwardContextMenu={() => window.tepegoz.showNavHistoryMenu('forward')}
         onReload={() => window.tepegoz.tabReload()}
         onHome={() => window.tepegoz.tabHome()}
+        showHomeButton={prefs?.showHomeButton !== false}
         captionLeading={
           <>
             <HiddenTabsButton count={hiddenCount} label={browserT.hiddenTabs} />

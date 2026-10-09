@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { settingsDict } from '@tepegoz/settings-ui';
-import { Button, Card, Input } from '@tepegoz/ui';
+import { Button, Card, Input, Toggle } from '@tepegoz/ui';
 import { useT } from '@tepegoz/i18n/react';
 import { DEFAULT_SEARCH_ENGINE_ID, SEARCH_ENGINES } from '@tepegoz/shared-types/search-engines';
 import {
@@ -113,6 +113,17 @@ export function SearchStartupSection({
           }}
           onBlur={homepage.flush}
         />
+        <div className="mt-4">
+          <Toggle
+            id="show-home-button"
+            label={s.showHomeButtonLabel}
+            description={s.showHomeButtonDesc}
+            checked={prefs.showHomeButton}
+            onChange={(v) => {
+              setPref({ showHomeButton: v });
+            }}
+          />
+        </div>
       </Card>
 
       <Card title={s.searchEngineLabel} subtitle={s.searchEngineDesc}>

@@ -201,8 +201,12 @@ work lives in Phase 2; agent orchestration (multi-tab parallelism) stays in Phas
   - [x] _Landed 2026-10-09 (unit-tested, not run in the packaged app):_ **"On startup" tabs** —
         Preferences → On startup now offers "Continue where I left off" (default, unchanged behaviour) or
         "Open the New Tab page" (`startupTabs`, private pref; hidden in kiosk mode; safe mode still never
-        restores). The "open a specific set of pages" option, Home button, link-opening behaviour, MRU
-        Ctrl+Tab, hover cards and network prediction remain open.
+        restores). The "open a specific set of pages" option, link-opening behaviour, MRU Ctrl+Tab, hover
+        cards and network prediction remain open.
+  - [x] _Landed 2026-10-09 (unit-tested, not run in the packaged app):_ **Show Home button** — a toggle
+        under the Homepage field in Preferences (`showHomeButton`, on by default so nothing changes
+        until it is turned off); `NavToolbar` gained a `showHome` prop and `BrowserChrome` passes it
+        through. The Home button was already built; only its visibility is new.
   - [x] _Landed 2026-10-09 (unit-tested, not run in the packaged app):_ **warn before closing a window with
         several tabs** — Preferences → System tray & power, off by default (`confirmCloseMultiTab`). A native
         "Close this window? This will close N tabs." with Keep open as the default; skipped on a real quit,

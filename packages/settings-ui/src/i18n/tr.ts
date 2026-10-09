@@ -81,6 +81,8 @@ export const tr: SettingsStrings = {
   homepageLabel: 'Ana sayfa',
   homepageDesc: 'Yeni sekmeler, Ana Sayfa düğmesi ve boş adres çubuğu gönderiminde açılır.',
   homepagePlaceholder: 'https://ornek.com',
+  showHomeButtonLabel: 'Ana sayfa düğmesini göster',
+  showHomeButtonDesc: 'Araç çubuğuna ana sayfanızı açan bir Ana sayfa düğmesi ekler.',
 
   // --- İndirilenler ---
   downloadsTitle: 'İndirilenler',

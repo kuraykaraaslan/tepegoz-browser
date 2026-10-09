@@ -82,6 +82,8 @@ export const en = {
   homepageLabel: 'Homepage',
   homepageDesc: 'Opened for new tabs, the Home button, and a blank address-bar submit.',
   homepagePlaceholder: 'https://example.com',
+  showHomeButtonLabel: 'Show Home button',
+  showHomeButtonDesc: 'Adds a Home button to the toolbar that opens your homepage.',
 
   // --- Downloads ---
   downloadsTitle: 'Downloads',

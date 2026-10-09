@@ -183,6 +183,8 @@ export interface Preferences {
   homepageUrl: string;
   /** Show the bookmarks bar strip under the nav toolbar (Chrome-style; toggled from the Bookmarks menu). */
   showBookmarksBar: boolean;
+  /** Show the Home button in the toolbar (it navigates to `homepageUrl`). */
+  showHomeButton: boolean;
   /** New-tab page shortcut tiles — the user's own list, independent of bookmarks (starts empty). */
   newTabShortcuts: NewTabShortcut[];
   /** New-tab page background (solid color / color + SVG pattern / uploaded image, plus a dimness level). */

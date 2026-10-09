@@ -108,6 +108,8 @@ export interface BrowserChromeProps {
   onForward: () => void;
   onReload: () => void;
   onHome: () => void;
+  /** Show the toolbar's Home button (default true). */
+  showHomeButton?: boolean | undefined;
   /** Right-click on the back button — the host pops that tab's back-history dropdown. */
   onBackContextMenu?: (() => void) | undefined;
   /** Right-click on the forward button — the host pops that tab's forward-history dropdown. */
@@ -199,6 +201,7 @@ export function BrowserChrome({
   onForward,
   onReload,
   onHome,
+  showHomeButton,
   onBackContextMenu,
   onForwardContextMenu,
   menu,
@@ -312,6 +315,7 @@ export function BrowserChrome({
         onForward={onForward}
         onReload={onReload}
         onHome={onHome}
+        showHome={showHomeButton}
         onBackContextMenu={onBackContextMenu}
         onForwardContextMenu={onForwardContextMenu}
         menu={menu}

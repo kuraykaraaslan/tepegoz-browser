@@ -68,6 +68,7 @@ export const PREFERENCE_METADATA = {
   networkBinaries: stable,
   homepageUrl: stable,
   showBookmarksBar: stable,
+  showHomeButton: stable,
   newTabShortcuts: stable,
   newTabBackground: stable,
   downloadDirectory: stable,

@@ -53,6 +53,19 @@ describe('NavToolbar', () => {
     expect(h.onHome).toHaveBeenCalledTimes(1);
   });
 
+  it('shows the Home button by default and omits it when the host turns it off', () => {
+    renderToolbar();
+    expect(screen.getByRole('button', { name: LABELS.home })).toBeDefined();
+    cleanup();
+    renderToolbar({ showHome: false });
+    expect(screen.queryByRole('button', { name: LABELS.home })).toBeNull();
+    // The rest of the toolbar is untouched.
+    expect(screen.getByRole('button', { name: LABELS.reload })).toBeDefined();
+    cleanup();
+    renderToolbar({ showHome: undefined });
+    expect(screen.getByRole('button', { name: LABELS.home })).toBeDefined();
+  });
+
   it('reports a right-click on back/forward so the host can pop the history dropdown', () => {
     const onBackContextMenu = vi.fn();
     const onForwardContextMenu = vi.fn();

@@ -41,6 +41,8 @@ export interface NavToolbarProps {
   onForward: () => void;
   onReload: () => void;
   onHome: () => void;
+  /** Render the Home button. Defaults to true; a host turns it off from a user setting. */
+  showHome?: boolean | undefined;
   /** Right-click on the back button — Chrome pops that tab's back-history dropdown here. The list
    *  itself is the host's business (it lives where the history does); this package only reports the
    *  gesture. Omit to leave the button with no context menu. */
@@ -109,6 +111,7 @@ export function NavToolbar({
   onForward,
   onReload,
   onHome,
+  showHome = true,
   onBackContextMenu,
   onForwardContextMenu,
   menu,
@@ -166,9 +169,11 @@ export function NavToolbar({
       <button type="button" aria-label={labels.reload} onClick={onReload} className={NAV_BTN}>
         <FontAwesomeIcon icon={faRotateRight} className="h-4 w-4" aria-hidden />
       </button>
-      <button type="button" aria-label={labels.home} onClick={onHome} className={NAV_BTN}>
-        <FontAwesomeIcon icon={faHouse} className="h-4 w-4" aria-hidden />
-      </button>
+      {showHome && (
+        <button type="button" aria-label={labels.home} onClick={onHome} className={NAV_BTN}>
+          <FontAwesomeIcon icon={faHouse} className="h-4 w-4" aria-hidden />
+        </button>
+      )}
 
       <Omnibox
         className="flex-1"

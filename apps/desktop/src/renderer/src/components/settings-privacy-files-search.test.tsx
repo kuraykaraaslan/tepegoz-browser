@@ -100,6 +100,14 @@ describe('SearchStartupSection', () => {
     expect(lastPatch(setPref)).toEqual({ customSearchEngines: [] });
   });
 
+  it('writes the Home button toggle, which is on by default', () => {
+    const { setPref } = renderSection();
+    const toggle = screen.getByRole('switch', { name: /show home button/i });
+    expect(toggle.getAttribute('aria-checked')).toBe('true');
+    fireEvent.click(toggle);
+    expect(setPref).toHaveBeenCalledWith({ showHomeButton: false });
+  });
+
   it('commits a normalised homepage URL on blur', () => {
     const { setPref } = renderSection({ homepageUrl: '' });
     const input = document.getElementById('homepage-url')!;
