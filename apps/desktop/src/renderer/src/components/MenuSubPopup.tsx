@@ -139,6 +139,19 @@ export function MenuSubPopup({ kind }: { kind: string }) {
               }),
           },
           {
+            id: 'bm-bar-newtab-only',
+            label: m.bookmarksBarOnlyNewTab,
+            // Meaningless while the bar is off, so it is disabled rather than silently doing nothing.
+            disabled: !barShown,
+            ...(prefs.bookmarksBarOnlyNewTab === true ? { trailing: <Icon name="check" /> } : {}),
+            onSelect: () =>
+              act(() => {
+                void window.tepegoz.updatePreferences({
+                  bookmarksBarOnlyNewTab: prefs.bookmarksBarOnlyNewTab !== true,
+                });
+              }),
+          },
+          {
             id: 'bm-manager',
             label: m.bookmarkManager,
             onSelect: () => act(() => window.tepegoz.navigateTab(INTERNAL_BOOKMARKS_URL)),

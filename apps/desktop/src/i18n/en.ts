@@ -338,6 +338,7 @@ export const en = {
     showFullHistory: 'Show full history',
     // Bookmarks submenu (flyout): the show/hide bookmarks-bar toggle + empty-state row.
     showBookmarksBar: 'Show bookmarks bar',
+    bookmarksBarOnlyNewTab: 'Only on the New Tab page',
     noBookmarks: 'No bookmarks yet',
     bookmarkManager: 'Bookmark manager',
     // Short captions shown under the grouped icon buttons (the full labels above stay the tooltips).

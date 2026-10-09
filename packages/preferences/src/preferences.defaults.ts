@@ -25,6 +25,7 @@ export const DEFAULT_PREFERENCES: Preferences = {
   networkBinaries: { wireproxy: '', tor: '' },
   homepageUrl: 'https://duckduckgo.com/',
   showBookmarksBar: true,
+  bookmarksBarOnlyNewTab: false,
   showHomeButton: true,
   newTabShortcuts: [],
   newTabBackground: {

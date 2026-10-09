@@ -8,6 +8,7 @@ import { BookmarksBar } from '@tepegoz/bookmarks-bar';
 import { BOOKMARK_ROOT_BAR } from '@tepegoz/bookmarks';
 import type { ExtensionId, Preferences, TabsState } from '@tepegoz/desktop-ipc';
 import { PrivateBadge } from './components/PrivateBadge';
+import { bookmarksBarVisible } from './lib/bookmarks-bar-visibility';
 import type { OmniboxQuickSettingTarget } from '@tepegoz/omnibox';
 import { browserDict, userMenuDict } from '../../i18n';
 import { ExtensionTray } from './components/ExtensionTray';
@@ -218,7 +219,7 @@ export function AppChrome({
       {/* Chrome-style bookmarks bar (toggled from the Bookmarks menu). Rendered above the content row,
           so contentRef's ResizeObserver reports the new top and main reflows the web view down.
           Default-on: shown once prefs load unless explicitly turned off. */}
-      {prefs !== null && prefs.showBookmarksBar !== false && (
+      {bookmarksBarVisible(prefs, currentUrl) && (
         <BookmarksBar
           nodes={bookmarks.barNodes}
           barRootId={BOOKMARK_ROOT_BAR}

@@ -193,6 +193,25 @@ describe('MenuSubPopup', () => {
       expect(bridge.navigateTab).toHaveBeenCalledWith('https://bm/');
     });
 
+    it('"Only on the New Tab page" flips its preference, and is disabled while the bar is off', async () => {
+      bridge.getPreferences.mockResolvedValue({
+        ...DEFAULT_PREFERENCES,
+        showBookmarksBar: true,
+        bookmarksBarOnlyNewTab: false,
+      });
+      bridge.listBookmarks.mockResolvedValue([]);
+      render(<MenuSubPopup kind="bookmarks" />);
+      fireEvent.click(await screen.findByRole('menuitem', { name: /Only on the New Tab page/ }));
+      expect(bridge.updatePreferences).toHaveBeenCalledWith({ bookmarksBarOnlyNewTab: true });
+      cleanup();
+      bridge.updatePreferences.mockClear();
+      bridge.getPreferences.mockResolvedValue({ ...DEFAULT_PREFERENCES, showBookmarksBar: false });
+      render(<MenuSubPopup kind="bookmarks" />);
+      const item = await screen.findByRole('menuitem', { name: /Only on the New Tab page/ });
+      fireEvent.click(item);
+      expect(bridge.updatePreferences).not.toHaveBeenCalled();
+    });
+
     it('falls back to the URL for a bookmark with no title', async () => {
       bridge.listBookmarks.mockResolvedValue([{ url: 'https://untitled-bm.example/', title: '' }]);
       render(<MenuSubPopup kind="bookmarks" />);

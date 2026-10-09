@@ -62,6 +62,7 @@ export const SETTINGS_VISIBILITY: Record<keyof Preferences, 'public' | 'private'
   networkBinaries: 'private',
   homepageUrl: 'private',
   showBookmarksBar: 'private',
+  bookmarksBarOnlyNewTab: 'private',
   showHomeButton: 'private',
   // Private — new-tab personalization (the user's shortcut list + background); extensions have no need.
   newTabShortcuts: 'private',

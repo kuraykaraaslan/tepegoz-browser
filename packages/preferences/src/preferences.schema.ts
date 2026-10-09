@@ -97,6 +97,7 @@ export const PreferencesSchema = z.object({
     .refine((v) => v === '' || isNavigableWebUrl(v), 'homepageUrl must be an http(s) URL'),
   // Show the bookmarks bar strip under the nav toolbar (toggled from the Bookmarks menu).
   showBookmarksBar: z.boolean(),
+  bookmarksBarOnlyNewTab: z.boolean(),
   showHomeButton: z.boolean(),
   // New-tab shortcut tiles — the user's own list, independent of bookmarks. Capped at one Chrome-style
   // grid (two rows of five).

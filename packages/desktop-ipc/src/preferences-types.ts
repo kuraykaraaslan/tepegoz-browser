@@ -186,6 +186,8 @@ export interface Preferences {
   homepageUrl: string;
   /** Show the bookmarks bar strip under the nav toolbar (Chrome-style; toggled from the Bookmarks menu). */
   showBookmarksBar: boolean;
+  /** With the bar on, show it only on the New Tab page (Chrome's "Only show on New Tab page"). */
+  bookmarksBarOnlyNewTab: boolean;
   /** Show the Home button in the toolbar (it navigates to `homepageUrl`). */
   showHomeButton: boolean;
   /** New-tab page shortcut tiles — the user's own list, independent of bookmarks (starts empty). */

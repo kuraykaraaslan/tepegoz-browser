@@ -310,6 +310,7 @@ export const tr: AppStrings = {
     help: 'Yardım',
     showFullHistory: 'Tüm geçmişi göster',
     showBookmarksBar: 'Yer imi çubuğunu göster',
+    bookmarksBarOnlyNewTab: 'Yalnızca Yeni Sekme sayfasında',
     noBookmarks: 'Henüz yer imi yok',
     bookmarkManager: 'Yer imi yöneticisi',
     short: {
