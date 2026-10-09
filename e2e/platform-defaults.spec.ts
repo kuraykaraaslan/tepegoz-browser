@@ -62,6 +62,12 @@ const PROBE = `(async () => {
   });
   await probe('geolocation', () => new Promise((res, rej) =>
     navigator.geolocation.getCurrentPosition(() => res(true), (e) => rej(new Error('code ' + e.code)), { timeout: 3000 })));
+  // How many capture devices exist. With none, Chromium rejects getUserMedia with NotFoundError BEFORE it
+  // ever asks for permission, so the deny-by-default handler cannot be observed through that call.
+  out.captureDevices = (await navigator.mediaDevices.enumerateDevices()).filter((d) => d.kind === 'audioinput' || d.kind === 'videoinput').length;
+  // Web Bluetooth is not exposed on every platform build (Linux without the BlueZ feature has no
+  // navigator.bluetooth), and then the probe above throws a TypeError rather than a NotFoundError.
+  out.bluetoothExposed = typeof navigator.bluetooth !== 'undefined';
   out.idleDetection = (await navigator.permissions.query({ name: 'idle-detection' })).state;
   out.notificationState = Notification.permission;
   out.nodeRequire = typeof require;
@@ -128,14 +134,29 @@ test('a browsed page reaches nothing it has not been granted', async () => {
     expect(seen.secureContext).toBe(true);
 
     // Camera, microphone and the screen: refused by the deny-by-default permission handler.
-    expect(seen.getUserMedia).toBe('rejected:NotAllowedError');
+    if ((seen.captureDevices as number) > 0) {
+      expect(seen.getUserMedia).toBe('rejected:NotAllowedError');
+    } else {
+      // No camera or microphone on this machine: the permission check is unobservable here, so the strict
+      // assertion above cannot be made. What CAN still be asserted is the part that matters — no stream
+      // was granted. Say so in the report instead of letting a vacuous pass read as a proof.
+      test.info().annotations.push({
+        type: 'note',
+        description:
+          'no capture devices: getUserMedia denial is unobservable; asserted "not granted" only',
+      });
+      expect(String(seen.getUserMedia)).toMatch(/^rejected:(NotAllowedError|NotFoundError)$/);
+    }
     expect(seen.getDisplayMedia).toBe('rejected:NotAllowedError');
     expect(seen.geolocation).toBe('rejected:Error');
 
     // Device access. These are safe by a different mechanism: the app installs no device-selection
     // handler, so no device is ever chosen, and the request fails for want of one.
     expect(seen.usb).toBe('rejected:NotFoundError');
-    expect(seen.bluetooth).toBe('rejected:NotFoundError');
+    // Not exposed at all (a platform build without it) is at least as safe as exposed-but-refused.
+    expect(seen.bluetooth).toBe(
+      seen.bluetoothExposed === true ? 'rejected:NotFoundError' : 'rejected:TypeError',
+    );
     expect(seen.serial).toBe('rejected:NotFoundError');
     // WebHID is the odd one out and the reason this assertion names a COUNT: `requestDevice` resolves
     // with an empty array rather than rejecting when nothing is selected. "Resolved" alone would have
