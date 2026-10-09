@@ -2,6 +2,7 @@ import { app } from 'electron';
 import { markCleanExit } from './recovery/safe-mode';
 import { abortActiveAgentRuns } from './ipc';
 import { isQuitting, markQuitting } from './quit-state';
+import { confirmBeforeQuit } from './quit-confirm';
 import PreferenceStore from '@tepegoz/preferences';
 import { closeDatabase, getDb } from './db/database.electron';
 import { clearOnExitNow } from './privacy/clear-on-exit.electron';
@@ -32,7 +33,13 @@ export function registerQuitLifecycle(): void {
   // tab's webContents can still report its URL. The window 'closed' handler then persists + resets as
   // usual, and will-quit (all windows gone) finally flushes + closes the SQLite connection — after
   // this, getDb() is null and any straggling handler no-ops.
-  app.on('before-quit', () => {
+  app.on('before-quit', (event) => {
+    // "Confirm before quitting": a quit nobody here owns (the OS menu's Cmd-Q) is vetoed, asked about, and
+    // re-issued once confirmed. Quits that already set the flag (Exit, tray Quit, relaunch) skip this.
+    if (confirmBeforeQuit()) {
+      event.preventDefault();
+      return;
+    }
     // A real quit is underway — let the window close-interceptor (close-to-tray) allow windows to close.
     markQuitting();
     // Say goodbye to the crash counter FIRST. Everything below this line can throw, and a quit that

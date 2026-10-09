@@ -34,6 +34,8 @@ vi.mock('../../shared/extensions', () => ({
   manifestById: (id: string) => kit.extensions.manifests.get(id),
 }));
 vi.mock('../quit-state', () => kit.quitStateModule);
+const requestQuit = vi.hoisted(() => vi.fn());
+vi.mock('../quit-confirm', () => ({ requestQuit }));
 vi.mock('../menus/tab-context-menu', () => ({ showTabContextMenu: kit.menus.tab }));
 vi.mock('../menus/hidden-tabs-menu', () => ({ showHiddenTabsMenu: kit.menus.hidden }));
 vi.mock('../menus/nav-history-menu', () => ({ showNavHistoryMenu: kit.menus.navHistory }));
@@ -69,23 +71,23 @@ const {
 } = kit;
 
 beforeEach(() => {
+  requestQuit.mockClear();
   kit.reset();
   registerTabsWindowsIpc();
 });
 
-describe('app:quit ordering', () => {
-  it('marks quitting BEFORE quitting, so the close-to-tray interceptor stands down', () => {
+describe('app:quit', () => {
+  // The quit itself — confirmation, then marking it real BEFORE `app.quit()` so the close-to-tray
+  // interceptor stands down — lives in `quit-confirm.ts` and is pinned in `quit-confirm.test.ts`.
+  it('asks for a quit through the shared confirm-then-quit path', () => {
     fire(IpcChannels.appQuit, TRUSTED);
-
-    expect(quit.marks).toBe(1);
-    expect(h.quits).toBe(1);
-    // Reversed, a real quit is swallowed into the tray and the app never exits.
-    expect(h.markQuittingAt[0]).toBeLessThan(h.quitAt[0] ?? 0);
+    expect(requestQuit).toHaveBeenCalledTimes(1);
+    expect(h.quits).toBe(0);
   });
 
   it('does not quit for an untrusted frame', () => {
     fire(IpcChannels.appQuit, UNTRUSTED);
-
+    expect(requestQuit).not.toHaveBeenCalled();
     expect(h.quits).toBe(0);
     expect(quit.marks).toBe(0);
   });
@@ -158,13 +160,6 @@ describe('submenu + quit signals', () => {
     expect(popups.submenus.at(-1)).toMatchObject({
       query: { surface: 'menu-sub', kind: 'history' },
     });
-  });
-
-  it('app:quit marks quitting BEFORE it calls app.quit()', () => {
-    fire(IpcChannels.appQuit, TRUSTED);
-    expect(quit.marks).toBe(1);
-    expect(h.quits).toBe(1);
-    expect(Math.min(...h.markQuittingAt)).toBeLessThan(Math.min(...h.quitAt));
   });
 });
 

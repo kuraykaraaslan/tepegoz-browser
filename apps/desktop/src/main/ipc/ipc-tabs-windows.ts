@@ -37,6 +37,7 @@ import { showTabContextMenu } from '../menus/tab-context-menu';
 import { showHiddenTabsMenu } from '../menus/hidden-tabs-menu';
 import { showNavHistoryMenu } from '../menus/nav-history-menu';
 import { markQuitting } from '../quit-state';
+import { requestQuit } from '../quit-confirm';
 import { showBookmarkContextMenu } from '../menus/bookmark-context-menu';
 import { showExtensionContextMenu } from '../menus/extension-context-menu';
 import { chromeWindowFor } from '../lib/chrome-window';
@@ -371,8 +372,7 @@ export function registerTabsWindowsIpc(): void {
   });
   // Exit — quits the whole app regardless of the sender window (a popup can't use the window-close path).
   onSignal(IpcChannels.appQuit, () => {
-    markQuitting(); // real quit → windows may close (the close-to-tray interceptor stands down)
-    app.quit();
+    requestQuit(); // marks the quit as real (the close-to-tray interceptor stands down) once confirmed
   });
   // Restart. `relaunch` only queues the new instance; the quit is what actually ends this one, and it
   // needs the same `markQuitting` stand-down as Exit or close-to-tray would swallow it.

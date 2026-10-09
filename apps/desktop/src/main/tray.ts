@@ -1,9 +1,9 @@
-import { app, Menu, nativeImage, Notification, Tray } from 'electron';
+import { Menu, nativeImage, Notification, Tray } from 'electron';
 import PreferenceStore from '@tepegoz/preferences';
 import { mainStrings } from './lib/i18n-main';
 import TabManager from './tabs';
 import { ICON_PATH, showFromTray } from './window';
-import { markQuitting } from './quit-state';
+import { requestQuit } from './quit-confirm';
 import { reconcileTrayPowerBlocker } from './power-lifecycle';
 
 /**
@@ -45,8 +45,7 @@ function buildTrayMenu(): Menu {
     {
       label: t.browser.trayQuit,
       click: () => {
-        markQuitting(); // real quit → the window close-interceptor lets windows close (before-quit persists)
-        app.quit();
+        requestQuit(); // marks the quit as real (windows may close; before-quit persists) once confirmed
       },
     },
   ]);

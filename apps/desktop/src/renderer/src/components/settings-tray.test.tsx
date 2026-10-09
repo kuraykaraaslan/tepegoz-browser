@@ -49,6 +49,14 @@ describe('TraySection', () => {
     expect(setPref).toHaveBeenCalledWith({ confirmCloseMultiTab: true });
   });
 
+  it('writes the confirm-before-quitting toggle, off by default', () => {
+    const { setPref } = renderSection();
+    const toggle = screen.getByRole('switch', { name: /confirm before quitting/i });
+    expect(toggle.getAttribute('aria-checked')).toBe('false');
+    fireEvent.click(toggle);
+    expect(setPref).toHaveBeenCalledWith({ confirmQuit: true });
+  });
+
   it('writes the tab-discard toggle, flipping its current value', () => {
     const { setPref } = renderSection({ tabDiscardEnabled: false });
     fireEvent.click(screen.getByRole('switch', { name: /discard/i }));

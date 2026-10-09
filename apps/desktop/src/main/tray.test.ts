@@ -6,7 +6,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
  *   - `initTray` is idempotent and wires click + double-click to "show or open";
  *   - a tray click reveals existing windows, or opens ONE fresh window when none exist;
  *   - revealing all windows also stops the keep-awake blocker (nothing is parked any more);
- *   - Quit marks the quit intent BEFORE `app.quit()` so the close-interceptor lets windows go;
+ *   - Quit goes through `requestQuit` (confirm if asked, then mark the quit real and `app.quit()`);
  *   - the "running in the tray" hint fires exactly once and then remembers not to nag;
  *   - the agent-running tooltip only re-renders on an actual state change.
  */
@@ -92,6 +92,8 @@ const showFromTray = vi.hoisted(() => vi.fn());
 vi.mock('./window', () => ({ ICON_PATH: '/icon.png', showFromTray }));
 const markQuitting = vi.hoisted(() => vi.fn());
 vi.mock('./quit-state', () => ({ markQuitting }));
+const requestQuit = vi.hoisted(() => vi.fn());
+vi.mock('./quit-confirm', () => ({ requestQuit }));
 const reconcilePower = vi.hoisted(() => vi.fn());
 vi.mock('./power-lifecycle', () => ({ reconcileTrayPowerBlocker: reconcilePower }));
 const openWindow = vi.hoisted(() => vi.fn());
@@ -104,6 +106,7 @@ async function load() {
 beforeEach(() => {
   vi.resetModules();
   el.quit.mockClear();
+  requestQuit.mockClear();
   el.buildFromTemplate.mockClear();
   el.notificationShow.mockClear();
   el.notificationCtor.mockClear();
@@ -186,7 +189,7 @@ describe('Show item', () => {
 });
 
 describe('Quit item', () => {
-  it('marks the quit intent before calling app.quit', async () => {
+  it('quits through the shared confirm-then-quit path', async () => {
     const { initTray } = await load();
     initTray();
     const template = el.buildFromTemplate.mock.calls[0]![0] as {
@@ -195,11 +198,9 @@ describe('Quit item', () => {
     }[];
     const quit = template.find((i) => i.label === 'Quit');
     quit?.click?.();
-    expect(markQuitting).toHaveBeenCalledTimes(1);
-    expect(el.quit).toHaveBeenCalledTimes(1);
-    expect(markQuitting.mock.invocationCallOrder[0]).toBeLessThan(
-      el.quit.mock.invocationCallOrder[0]!,
-    );
+    // Confirmation and the "mark real, then quit" ordering are pinned in `quit-confirm.test.ts`.
+    expect(requestQuit).toHaveBeenCalledTimes(1);
+    expect(el.quit).not.toHaveBeenCalled();
   });
 });
 

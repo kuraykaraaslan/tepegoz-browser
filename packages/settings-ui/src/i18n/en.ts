@@ -132,6 +132,9 @@ export const en = {
     confirmCloseMultiTab: 'Warn before closing a window with several tabs',
     confirmCloseMultiTabDesc:
       'Asks first when closing a window would close two or more tabs. It does not apply while Close to tray is on, because that only hides the window.',
+    confirmQuit: 'Confirm before quitting',
+    confirmQuitDesc:
+      'Asks first when quitting Tepegöz would close two or more tabs, whichever way you quit. It is not asked on a restart for an update.',
     closeToTray: 'Close to tray',
     closeToTrayDesc:
       'Closing the window keeps Tepegöz running in the system tray, so background tabs and the agent keep working. Quit from the tray icon menu.',

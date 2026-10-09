@@ -302,6 +302,8 @@ export interface Preferences {
   closeToTray: boolean;
   /** Ask before a window with several tabs really closes (it does not apply while close-to-tray hides it). */
   confirmCloseMultiTab: boolean;
+  /** Ask before a quit that would close two or more tabs. Off by default. */
+  confirmQuit: boolean;
   /** While hidden in the tray, prevent the OS from suspending the app (powerSaveBlocker) so background
    *  work stays reliable — at a higher battery cost. Device-local. */
   keepAwakeInTray: boolean;

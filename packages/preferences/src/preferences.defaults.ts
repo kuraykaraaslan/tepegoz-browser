@@ -129,6 +129,8 @@ export const DEFAULT_PREFERENCES: Preferences = {
   closeToTray: true,
   // Off by default: closing a window stays one click unless the user opts into the warning.
   confirmCloseMultiTab: false,
+  // Off by default for the same reason: quitting stays one action unless the user opts into the warning.
+  confirmQuit: false,
   // Battery-friendly power defaults: pause background work on sleep, but don't force-keep-awake in tray.
   keepAwakeInTray: false,
   pauseTasksOnSleep: true,

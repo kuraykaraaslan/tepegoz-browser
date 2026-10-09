@@ -63,6 +63,15 @@ export function TraySection({
           }}
         />
         <Toggle
+          id="confirm-quit"
+          label={t.confirmQuit}
+          description={t.confirmQuitDesc}
+          checked={prefs.confirmQuit}
+          onChange={(v) => {
+            setPref({ confirmQuit: v });
+          }}
+        />
+        <Toggle
           id="keep-awake-in-tray"
           label={t.keepAwake}
           description={t.keepAwakeDesc}

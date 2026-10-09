@@ -314,6 +314,7 @@ export const PreferencesSchema = z.object({
   // Close-to-tray + power behavior (device-local; private — not projected to PublicSettings).
   closeToTray: z.boolean(),
   confirmCloseMultiTab: z.boolean(),
+  confirmQuit: z.boolean(),
   keepAwakeInTray: z.boolean(),
   pauseTasksOnSleep: z.boolean(),
   startupMode: z.enum(['window', 'background', 'kiosk']),

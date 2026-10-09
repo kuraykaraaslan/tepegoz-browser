@@ -230,6 +230,16 @@ describe('PreferenceStore', () => {
     expect(PreferenceStore.getAll().clearOnExitKeepSites).toEqual(['example.com']);
   });
 
+  it('defaults confirmQuit to off for an old file, and round-trips on', () => {
+    writeFileSync(filePath, JSON.stringify({ locale: 'tr' }), 'utf8');
+    PreferenceStore.init({ filePath });
+    expect(PreferenceStore.getAll().confirmQuit).toBe(false);
+    PreferenceStore.update({ confirmQuit: true });
+    PreferenceStore.reset();
+    PreferenceStore.init({ filePath });
+    expect(PreferenceStore.getAll().confirmQuit).toBe(true);
+  });
+
   it('defaults httpsFirstEverywhere to off for an old file, and round-trips on', () => {
     writeFileSync(filePath, JSON.stringify({ locale: 'tr' }), 'utf8');
     PreferenceStore.init({ filePath });

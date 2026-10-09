@@ -114,6 +114,7 @@ export const PREFERENCE_METADATA = {
   windowBounds: internal,
   closeToTray: stable,
   confirmCloseMultiTab: stable,
+  confirmQuit: stable,
   keepAwakeInTray: stable,
   pauseTasksOnSleep: stable,
   startupMode: stable,

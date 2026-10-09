@@ -132,6 +132,9 @@ export const tr: SettingsStrings = {
     confirmCloseMultiTab: 'Birden çok sekmeli pencereyi kapatmadan önce uyar',
     confirmCloseMultiTabDesc:
       'Bir pencereyi kapatmak iki veya daha fazla sekmeyi kapatacaksa önce sorar. “Tepsiye kapat” açıkken uygulanmaz, çünkü o yalnızca pencereyi gizler.',
+    confirmQuit: 'Çıkmadan önce onay iste',
+    confirmQuitDesc:
+      'Tepegöz’den çıkmak iki veya daha fazla sekmeyi kapatacaksa, hangi yolla çıkarsanız çıkın önce sorar. Güncelleme için yeniden başlatırken sorulmaz.',
     closeToTray: 'Kapatınca tepsiye',
     closeToTrayDesc:
       'Pencereyi kapatmak Tepegöz’ü sistem tepsisinde çalışır durumda tutar; arka plan sekmeleri ve ajan çalışmaya devam eder. Çıkış için tepsi simgesi menüsünü kullanın.',
