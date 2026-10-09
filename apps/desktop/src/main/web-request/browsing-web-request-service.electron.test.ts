@@ -86,10 +86,13 @@ function fakeWebRequest() {
         if (headers === null) throw new Error('headers listener missing');
         headers(details, resolve);
       }),
-    sendHeaders: (requestHeaders: Record<string, string> = { Accept: '*/*' }) =>
+    sendHeaders: (
+      requestHeaders: Record<string, string> = { Accept: '*/*' },
+      over: Record<string, unknown> = {},
+    ) =>
       new Promise<Electron.BeforeSendResponse>((resolve) => {
         if (sendHeaders === null) throw new Error('send-headers listener missing');
-        sendHeaders({ ...beforeDetails(), requestHeaders }, resolve);
+        sendHeaders({ ...beforeDetails(), requestHeaders, ...over }, resolve);
       }),
     hasSendHeadersListener: () => sendHeaders !== null,
     completed: (details: Electron.OnCompletedListenerDetails) => {
@@ -489,6 +492,89 @@ describe('BrowsingWebRequestService', () => {
       });
       await expect(fake.sendHeaders()).resolves.toEqual({});
       expect(logger.warn).toHaveBeenCalled();
+    });
+  });
+
+  describe('blockThirdPartyCookies', () => {
+    const page = (url: string) => ({ isDestroyed: () => false, getURL: () => url });
+    const thirdParty = {
+      url: 'https://ads.tracker.test/pixel',
+      resourceType: 'image',
+      webContents: page('https://www.news.example/story'),
+    };
+    const firstParty = {
+      url: 'https://static.news.example/app.js',
+      resourceType: 'script',
+      webContents: page('https://www.news.example/story'),
+    };
+    const headersFor = (over: Record<string, unknown>) =>
+      ({
+        ...headersDetails(),
+        responseHeaders: { 'Set-Cookie': ['id=1'], Server: ['x'] },
+        ...over,
+      }) as Electron.OnHeadersReceivedListenerDetails;
+
+    it('removes Cookie from a third-party request and keeps the other headers', async () => {
+      const fake = fakeWebRequest();
+      BrowsingWebRequestService.attach(fake.webRequest, { blockThirdPartyCookies: () => true });
+      await expect(
+        fake.sendHeaders({ Cookie: 'id=1', Accept: '*/*' }, thirdParty),
+      ).resolves.toEqual({ requestHeaders: { Accept: '*/*' } });
+    });
+
+    it('leaves a first-party request, a main-frame navigation and an unjudgeable one alone', async () => {
+      const fake = fakeWebRequest();
+      BrowsingWebRequestService.attach(fake.webRequest, { blockThirdPartyCookies: () => true });
+      expect(await fake.sendHeaders({ Cookie: 'id=1' }, firstParty)).toEqual({});
+      expect(
+        await fake.sendHeaders({ Cookie: 'id=1' }, { ...thirdParty, resourceType: 'mainFrame' }),
+      ).toEqual({});
+      expect(
+        await fake.sendHeaders({ Cookie: 'id=1' }, { ...thirdParty, webContents: undefined }),
+      ).toEqual({});
+    });
+
+    it('does nothing while the setting is off, and follows it live', async () => {
+      const fake = fakeWebRequest();
+      let on = false;
+      BrowsingWebRequestService.attach(fake.webRequest, { blockThirdPartyCookies: () => on });
+      expect(await fake.sendHeaders({ Cookie: 'id=1' }, thirdParty)).toEqual({});
+      on = true;
+      expect((await fake.sendHeaders({ Cookie: 'id=1' }, thirdParty)).requestHeaders).toEqual({});
+    });
+
+    it('strips Set-Cookie from a third-party response only', async () => {
+      const fake = fakeWebRequest();
+      BrowsingWebRequestService.attach(fake.webRequest, { blockThirdPartyCookies: () => true });
+      const blocked = await fake.headers(headersFor(thirdParty));
+      expect(blocked.responseHeaders).toEqual({ Server: ['x'] });
+      const kept = await fake.headers(headersFor(firstParty));
+      expect(kept.responseHeaders).toBeUndefined();
+    });
+
+    it('still strips when a handler returned its own headers, and when the pipeline fails', async () => {
+      const fake = fakeWebRequest();
+      BrowsingWebRequestService.attach(fake.webRequest, { blockThirdPartyCookies: () => true });
+      BrowsingWebRequestService.onHeadersReceived('adds', () => ({
+        responseHeaders: { 'set-cookie': ['sneaky=1'], 'X-Added': ['y'] },
+      }));
+      const res = await fake.headers(headersFor(thirdParty));
+      expect(res.responseHeaders).toEqual({ Server: ['x'], 'X-Added': ['y'] });
+
+      BrowsingWebRequestService.resetForTests();
+      const fake2 = fakeWebRequest();
+      BrowsingWebRequestService.attach(fake2.webRequest, { blockThirdPartyCookies: () => true });
+      BrowsingWebRequestService.onHeadersReceived('boom', () => {
+        throw new Error('handler blew up');
+      });
+      const failed = await fake2.headers(headersFor(thirdParty));
+      expect(failed.responseHeaders).toEqual({ Server: ['x'] });
+    });
+
+    it('registers the request listener on its own, without a request stamp', () => {
+      const fake = fakeWebRequest();
+      BrowsingWebRequestService.attach(fake.webRequest, { blockThirdPartyCookies: () => false });
+      expect(fake.hasSendHeadersListener()).toBe(true);
     });
   });
 

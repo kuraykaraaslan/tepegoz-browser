@@ -100,6 +100,7 @@ export const PREFERENCE_METADATA = {
   preloadPages: stable,
   globalPrivacyControl: stable,
   doNotTrack: stable,
+  blockThirdPartyCookies: stable,
   typo: stable,
   translate: stable,
   videoPlayer: stable,

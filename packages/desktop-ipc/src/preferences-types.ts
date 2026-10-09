@@ -268,6 +268,8 @@ export interface Preferences {
   globalPrivacyControl: boolean;
   /** Send `DNT: 1` (Do Not Track) on every browsing request. Off by default — see the defaults file. */
   doNotTrack: boolean;
+  /** Strip `Cookie` from third-party requests and `Set-Cookie` from third-party responses. Off by default. */
+  blockThirdPartyCookies: boolean;
   /** Typo extension settings. Dictionaries live in userData/dictionaries and are not persisted here. */
   typo: TypoSettings;
   /** Translate extension settings. Translation memory lives outside preferences. */

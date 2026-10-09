@@ -528,6 +528,10 @@ export const en = {
     title: 'Use secure connections for all sites',
     desc: 'Tries the https address first whenever you open a plain http link. If a site has no https, you are asked before it loads over http. Addresses on your own network (a router, a printer) are left alone.',
   },
+  thirdPartyCookies: {
+    title: 'Block third-party cookies',
+    desc: 'Stops other sites’ requests embedded in a page (ads, analytics, widgets) from sending or setting cookies, so they cannot recognise you across sites. Some sites that sign you in or take payment through an embedded frame may stop working while this is on. It covers requests, not cookies a third-party frame writes with script.',
+  },
   privacySignals: {
     gpcTitle: 'Send a Global Privacy Control signal',
     gpcDesc:

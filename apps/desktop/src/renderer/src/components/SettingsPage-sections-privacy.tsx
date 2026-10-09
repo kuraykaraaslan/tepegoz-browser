@@ -272,7 +272,7 @@ export function privacyAndAdvancedSections(ctx: SettingsSectionsCtx): SettingsSe
       group: s.groupPrivacy,
       label: s.privacyTitle,
       icon: <IconShield />,
-      searchText: `${s.privacyTitle} ${s.telemetry} ${s.telemetryDesc} ${s.telemetryNothingSent} ${s.safeBrowsing.title} ${s.safeBrowsing.desc} ${s.httpsOnly.title} ${s.httpsOnly.desc} ${s.httpsFirst.title} ${s.httpsFirst.desc} ${s.autoplay.title} ${s.autoplay.desc} ${s.secureDns.title} ${s.secureDns.desc} ${s.privacySignals.gpcTitle} ${s.privacySignals.gpcDesc} ${s.privacySignals.dntTitle} ${s.privacySignals.dntDesc} ${s.preload.title} ${s.preload.desc} ${s.clearData.title} ${s.clearData.desc} ${s.clearHistoryLabel} ${s.forgetSite.title} ${s.clientCerts.title}`,
+      searchText: `${s.privacyTitle} ${s.telemetry} ${s.telemetryDesc} ${s.telemetryNothingSent} ${s.safeBrowsing.title} ${s.safeBrowsing.desc} ${s.httpsOnly.title} ${s.httpsOnly.desc} ${s.httpsFirst.title} ${s.httpsFirst.desc} ${s.autoplay.title} ${s.autoplay.desc} ${s.secureDns.title} ${s.secureDns.desc} ${s.thirdPartyCookies.title} ${s.thirdPartyCookies.desc} ${s.privacySignals.gpcTitle} ${s.privacySignals.gpcDesc} ${s.privacySignals.dntTitle} ${s.privacySignals.dntDesc} ${s.preload.title} ${s.preload.desc} ${s.clearData.title} ${s.clearData.desc} ${s.clearHistoryLabel} ${s.forgetSite.title} ${s.clientCerts.title}`,
       content: (
         <Card title={s.privacyTitle}>
           <div className="space-y-4">
@@ -321,6 +321,15 @@ export function privacyAndAdvancedSections(ctx: SettingsSectionsCtx): SettingsSe
               checked={prefs.httpsFirstEverywhere}
               onChange={(v) => {
                 setPref({ httpsFirstEverywhere: v });
+              }}
+            />
+            <Toggle
+              id="third-party-cookies"
+              label={s.thirdPartyCookies.title}
+              description={s.thirdPartyCookies.desc}
+              checked={prefs.blockThirdPartyCookies}
+              onChange={(v) => {
+                setPref({ blockThirdPartyCookies: v });
               }}
             />
             <Toggle

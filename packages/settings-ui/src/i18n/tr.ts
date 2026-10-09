@@ -514,6 +514,10 @@ export const tr: SettingsStrings = {
     title: 'Tüm sitelerde güvenli bağlantı kullan',
     desc: 'Düz http bağlantısı açtığınızda önce https adresini dener. Bir sitede https yoksa http ile yüklenmeden önce size sorulur. Kendi ağınızdaki adreslere (yönlendirici, yazıcı) dokunulmaz.',
   },
+  thirdPartyCookies: {
+    title: 'Üçüncü taraf çerezlerini engelle',
+    desc: 'Bir sayfaya gömülü başka sitelerin isteklerinin (reklam, analiz, bileşen) çerez göndermesini veya ayarlamasını engeller; böylece sizi siteler arasında tanıyamazlar. Oturum açmayı ya da ödemeyi gömülü bir çerçeveyle yapan bazı siteler bu açıkken çalışmayabilir. İstekleri kapsar; üçüncü taraf çerçevenin betikle yazdığı çerezleri kapsamaz.',
+  },
   privacySignals: {
     gpcTitle: 'Küresel Gizlilik Denetimi sinyali gönder',
     gpcDesc:

@@ -82,6 +82,9 @@ export const DEFAULT_PREFERENCES: Preferences = {
   // site is obliged to honour it and the extra header makes a browser easier to tell apart, so it is off.
   globalPrivacyControl: true,
   doNotTrack: false,
+  // Off by default, like Chrome: blocking every third-party cookie breaks embedded sign-in and payment
+  // frames on sites that still depend on them, and a default that breaks logins gets turned off for good.
+  blockThirdPartyCookies: false,
   typo: {
     enabled: true,
     autoDetectLanguage: true,

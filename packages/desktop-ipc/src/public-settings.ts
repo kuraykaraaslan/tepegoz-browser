@@ -140,6 +140,7 @@ export const SETTINGS_VISIBILITY: Record<keyof Preferences, 'public' | 'private'
   preloadPages: 'private',
   globalPrivacyControl: 'private',
   doNotTrack: 'private',
+  blockThirdPartyCookies: 'private',
   // Private for now. They are presentation settings an extension's UI could reasonably follow, but
   // widening the public contract for a consumer that does not exist yet is surface added on
   // speculation — `PUBLIC_SETTING_KEYS` is where that decision gets made, deliberately.

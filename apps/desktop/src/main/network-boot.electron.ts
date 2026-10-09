@@ -56,6 +56,7 @@ export function initBrowsingNetwork(safeMode: boolean): void {
             ),
           // Opt-out signals (Global Privacy Control / Do Not Track), read per request for the same reason.
           stampRequestHeaders: () => privacySignalHeaders(PreferenceStore.getAll()),
+          blockThirdPartyCookies: () => PreferenceStore.getAll().blockThirdPartyCookies,
           partition,
         },
       );

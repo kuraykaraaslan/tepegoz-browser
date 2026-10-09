@@ -383,3 +383,15 @@ describe('privacyAndAdvancedSections — privacy signals', () => {
     expect(section!.searchText).toContain(s.privacySignals.dntTitle);
   });
 });
+
+describe('privacyAndAdvancedSections — third-party cookies', () => {
+  it('is off by default, writes true when switched on, and is found by settings search', () => {
+    const { setPref } = renderPrivacy({ blockThirdPartyCookies: false });
+    expect(screen.getByText(s.thirdPartyCookies.title)).toBeTruthy();
+    fireEvent.click(screen.getByTestId('toggle-third-party-cookies'));
+    expect(setPref).toHaveBeenCalledWith({ blockThirdPartyCookies: true });
+    const section = privacyAndAdvancedSections(ctx().ctx).find((sec) => sec.id === 'privacy');
+    expect(section!.searchText).toContain(s.thirdPartyCookies.title);
+    expect(s.thirdPartyCookies.desc).toMatch(/sign you in/);
+  });
+});

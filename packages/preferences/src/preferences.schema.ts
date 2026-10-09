@@ -230,6 +230,7 @@ export const PreferencesSchema = z.object({
   preloadPages: z.boolean(),
   globalPrivacyControl: z.boolean(),
   doNotTrack: z.boolean(),
+  blockThirdPartyCookies: z.boolean(),
   // Typo extension settings. Dictionaries are profile files, not preference payloads.
   typo: z.object({
     enabled: z.boolean(),

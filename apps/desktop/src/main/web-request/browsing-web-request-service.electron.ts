@@ -1,3 +1,8 @@
+import {
+  isThirdPartyRequest,
+  withoutCookieHeader,
+  withoutSetCookie,
+} from '../network/third-party-cookies';
 import { Logger } from '@tepegoz/libs';
 
 /**
@@ -172,6 +177,9 @@ const BrowsingWebRequestService = {
       /** Headers added to every request this session sends (privacy signals). Asked per request, so a
        *  setting can change them without re-attaching. Overwrites a header the page set itself. */
       stampRequestHeaders?: () => Record<string, string>;
+      /** Asked per request: when true, third-party requests carry no `Cookie` and third-party responses
+       *  set none (see `network/third-party-cookies.ts`). */
+      blockThirdPartyCookies?: () => boolean;
       partition?: string;
     },
   ): void {
@@ -194,17 +202,33 @@ const BrowsingWebRequestService = {
     });
 
     const requestStamp = opts?.stampRequestHeaders;
-    if (requestStamp !== undefined) {
+    const blockThirdParty = opts?.blockThirdPartyCookies;
+    // Whether THIS request is one the policy strips cookies from. A page that is gone (a closed tab's
+    // late request) has no URL to compare with, which `isThirdPartyRequest` reads as "cannot judge".
+    const stripsCookies = (
+      details: Pick<
+        Electron.OnBeforeSendHeadersListenerDetails,
+        'url' | 'resourceType' | 'webContents'
+      >,
+    ): boolean => {
+      if (blockThirdParty === undefined || !blockThirdParty()) return false;
+      const wc = details.webContents;
+      const top = wc !== undefined && !wc.isDestroyed() ? wc.getURL() : '';
+      return isThirdPartyRequest(top, details.url, details.resourceType);
+    };
+    if (requestStamp !== undefined || blockThirdParty !== undefined) {
       // Owned here, like every other listener on this session: Electron keeps only the LAST listener per
       // event, so a feature registering its own `onBeforeSendHeaders` would silently evict this one.
       webRequest.onBeforeSendHeaders((details, callback) => {
         try {
-          const stamp = requestStamp();
-          if (Object.keys(stamp).length === 0) {
+          const stamp = requestStamp?.() ?? {};
+          const strip = stripsCookies(details);
+          if (Object.keys(stamp).length === 0 && !strip) {
             callback({});
             return;
           }
-          callback({ requestHeaders: { ...details.requestHeaders, ...stamp } });
+          const merged = { ...details.requestHeaders, ...stamp };
+          callback({ requestHeaders: strip ? withoutCookieHeader(merged) : merged });
         } catch (err) {
           Logger.warn('webRequest onBeforeSendHeaders stamp failed open', { err: String(err) });
           callback({});
@@ -212,19 +236,29 @@ const BrowsingWebRequestService = {
       });
     }
 
+    // Applied last, on whatever the pipeline decided: a cookie a handler left in place must still go.
+    const finalize = (
+      details: Electron.OnHeadersReceivedListenerDetails,
+      response: Electron.HeadersReceivedResponse,
+    ): Electron.HeadersReceivedResponse => {
+      const stamp = currentStamp();
+      const stamped = stamp === undefined ? response : withStamp(details, response, stamp);
+      if (stamped.cancel === true || !stripsCookies(details)) return stamped;
+      const base = stamped.responseHeaders ?? details.responseHeaders ?? {};
+      return { ...stamped, responseHeaders: withoutSetCookie(base) };
+    };
+
     webRequest.onHeadersReceived((details, callback) => {
       void runHeadersReceived(details).then(
         (response) => {
-          const stamp = currentStamp();
-          callback(stamp === undefined ? response : withStamp(details, response, stamp));
+          callback(finalize(details, response));
         },
         (err: unknown) => {
           Logger.warn('webRequest onHeadersReceived pipeline failed open', { err: String(err) });
           // Even on a pipeline failure the stamp is applied: it is a per-SESSION privacy header, not a
           // feature handler, and dropping it because some unrelated filter threw would silently
           // re-enable the very behaviour it exists to suppress.
-          const stamp = currentStamp();
-          callback(stamp === undefined ? {} : withStamp(details, {}, stamp));
+          callback(finalize(details, {}));
         },
       );
     });
