@@ -92,6 +92,12 @@ export const NetworkConnectionSchema = z.discriminatedUnion('kind', [
      * the group is cut, without anything having to coordinate the two.
      */
     upstreamConnectionId: ConnectionIdSchema.nullable(),
+    /**
+     * Canonical bridge lines (`obfs4 192.0.2.1:443 <fingerprint> cert=…`), already sanitized by the main
+     * process. Empty = connect to the public relays. A bridge is an unlisted relay address, not key
+     * material, so plain JSON is acceptable here; absent in rows written before bridges existed.
+     */
+    bridges: z.array(z.string().min(1).max(512)).max(16).optional(),
   }),
 ]);
 export type NetworkConnection = z.infer<typeof NetworkConnectionSchema>;

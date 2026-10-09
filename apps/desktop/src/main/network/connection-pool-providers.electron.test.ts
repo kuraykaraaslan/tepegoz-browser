@@ -19,6 +19,7 @@ const h = vi.hoisted(() => ({
   wipe: vi.fn(),
   wgCtor: vi.fn(),
   torCtor: vi.fn<(id: string, resolver: (() => Promise<number>) | null) => void>(),
+  torBridges: vi.fn<(bridges: readonly { line: string }[]) => void>(),
 }));
 
 vi.mock('electron', () => ({ session: { fromPartition: (partition: string) => ({ partition }) } }));
@@ -56,8 +57,13 @@ vi.mock('./tor-provider.electron', () => ({
     connect = h.connect;
     disconnect = h.disconnect;
     probe = h.probe;
-    constructor(id: string, resolver: (() => Promise<number>) | null) {
+    constructor(
+      id: string,
+      resolver: (() => Promise<number>) | null,
+      bridges: readonly { line: string }[],
+    ) {
       h.torCtor(id, resolver);
+      h.torBridges(bridges);
     }
   },
 }));
@@ -115,6 +121,17 @@ describe('providerFor — the one place that knows protocols exist', () => {
     ConnectionPool.init();
     ConnectionPool.add(torConn('t1', null));
     expect(h.torCtor).toHaveBeenCalledWith('t1', null);
+  });
+
+  it("parses a Tor connection's stored bridge lines before handing them to the provider", () => {
+    ConnectionPool.init();
+    ConnectionPool.add({
+      ...torConn('t2', null),
+      bridges: ['Bridge 192.0.2.1:9001'],
+    } as NetworkConnection);
+    expect(h.torBridges).toHaveBeenCalledWith([
+      expect.objectContaining({ line: '192.0.2.1:9001' }),
+    ]);
   });
 
   it('builds a TorProvider with a LAZY upstream-port resolver when it chains', async () => {

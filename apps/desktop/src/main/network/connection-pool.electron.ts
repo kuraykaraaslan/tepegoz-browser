@@ -1,3 +1,4 @@
+import { parseBridgeLine } from './bridge-line';
 import { AppError, Logger } from '@tepegoz/libs';
 import PreferenceStore from '@tepegoz/preferences';
 import { partitionKeyFor } from '@tepegoz/tab-engine';
@@ -156,6 +157,7 @@ function providerFor(config: NetworkConnection): NetworkPrivacyProvider {
               }
               return up.socksPort;
             },
+        (config.bridges ?? []).map(parseBridgeLine),
       );
     default: {
       // Exhaustive: every `kind` in the schema union has a case above. If one is added without a
