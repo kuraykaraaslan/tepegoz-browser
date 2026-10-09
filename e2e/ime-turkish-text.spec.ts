@@ -1,6 +1,7 @@
 import { resolve, join } from 'node:path';
 import { mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { test, expect, _electron as electron, type ElectronApplication } from '@playwright/test';
+import { sendCtrlChord } from './send-chord';
 import { IME_MATRIX, TURKISH_SPECIAL_LETTERS } from '@tepegoz/i18n';
 
 const appDir = resolve(process.cwd(), 'apps/desktop');
@@ -50,8 +51,11 @@ test.describe('Turkish text input survives the app, independent of UI language',
   async function paletteInput() {
     const window = await app.firstWindow();
     await window.waitForLoadState('domcontentloaded');
+    // The chrome has to be MOUNTED, not just loaded: the shortcut is forwarded to the renderer as a message,
+    // and one sent before its listener exists is lost.
+    await expect(window.getByRole('combobox').first()).toBeVisible();
     const input = window.getByPlaceholder('Type a command or ask Tepegöz…');
-    if ((await input.count()) === 0) await window.keyboard.press('Control+k');
+    if ((await input.count()) === 0) await sendCtrlChord(app, 'k');
     await expect(input).toHaveCount(1);
     return input;
   }

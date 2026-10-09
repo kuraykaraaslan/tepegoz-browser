@@ -1,6 +1,7 @@
 import { resolve, join } from 'node:path';
 import { mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { test, expect, _electron as electron, type ElectronApplication } from '@playwright/test';
+import { sendCtrlChord } from './send-chord';
 
 const appDir = resolve(process.cwd(), 'apps/desktop');
 
@@ -44,7 +45,7 @@ test('Ctrl+K opens the command palette, filters, and closes', async () => {
 
     await expect(palette).toHaveCount(0);
 
-    await window.keyboard.press('Control+k');
+    await sendCtrlChord(app, 'k');
     await expect(palette).toHaveCount(1);
 
     // Four modes, and at least one real command to run.
@@ -53,9 +54,14 @@ test('Ctrl+K opens the command palette, filters, and closes', async () => {
     const options = window.getByRole('option');
     expect(await options.count()).toBeGreaterThan(0);
 
-    // Typing narrows to a single command…
+    // Typing narrows the list to the commands that match — the "Reopen closed tab" command and the
+    // keyboard-shortcut row that describes it — and nothing else survives the filter…
+    const unfiltered = await options.count();
     await palette.fill('reo');
-    await expect(options).toHaveCount(1);
+    await expect.poll(async () => options.count()).toBeLessThan(unfiltered);
+    const narrowed = await options.allInnerTexts();
+    expect(narrowed.length).toBeGreaterThan(0);
+    expect(narrowed.every((t) => /reopen/i.test(t))).toBe(true);
 
     // …and a query that matches nothing says so, rather than showing an empty box.
     await palette.fill('zzzznomatch');
