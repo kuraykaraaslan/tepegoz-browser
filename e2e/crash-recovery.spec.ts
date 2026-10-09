@@ -60,6 +60,37 @@ test('the recovery ladder: crash → restore + notice → safe mode → session 
     electron.launch({ args: [`--user-data-dir=${profileDir}`, appDir], env: guiEnv() });
 
   /**
+   * The browser CHROME page, not merely the first page Playwright sees. A restored tab is a
+   * `WebContentsView` that Playwright also reports as a page, and on a launch that restores one it can
+   * win `firstWindow()` — the assertions below then look for the toast in the restored page's DOM, where
+   * it can never be (measured: body text "ok"). The chrome is the page that has the address bar.
+   */
+  const chromeOf = async (app: ElectronApplication) => {
+    await app.firstWindow(); // at least one page exists
+    let found: Awaited<ReturnType<ElectronApplication['firstWindow']>> | undefined;
+    await expect
+      .poll(
+        async () => {
+          for (const p of app.windows()) {
+            if (
+              (await p
+                .getByRole('combobox')
+                .count()
+                .catch(() => 0)) > 0
+            ) {
+              found = p;
+              return true;
+            }
+          }
+          return false;
+        },
+        { timeout: 30_000 },
+      )
+      .toBe(true);
+    return found!;
+  };
+
+  /**
    * Kill the app outright: no `before-quit`, so the crash counter is left mid-launch — exactly the state
    * a real crash leaves. The whole process TREE goes, not just the main process: Electron's
    * single-instance lock lives in the profile directory, and an orphaned GPU/utility child keeps the
@@ -78,7 +109,7 @@ test('the recovery ladder: crash → restore + notice → safe mode → session 
   try {
     // ── 1. A session worth losing ─────────────────────────────────────────────────────────────────
     let app = await launch();
-    let window = await app.firstWindow();
+    let window = await chromeOf(app);
     await expect(window.locator('[role="tab"]').first()).toBeVisible();
     // Drive a real page into the session. Every assertion below asks for THIS tab by its page title
     // rather than counting rows: a blank new tab is the internal `tepegoz://newtab` chooser, which is
@@ -98,7 +129,7 @@ test('the recovery ladder: crash → restore + notice → safe mode → session 
 
     // ── 2. The launch after a crash: restore, and say so ──────────────────────────────────────────
     app = await launch();
-    window = await app.firstWindow();
+    window = await chromeOf(app);
     // The notice is checked FIRST, and deliberately so: a toast auto-dismisses after six seconds, so an
     // assertion queued behind a slower one can miss a toast that really did appear. Asserted by ROLE,
     // never by text — this file must not fail because the app is running in Turkish.
@@ -112,7 +143,7 @@ test('the recovery ladder: crash → restore + notice → safe mode → session 
 
     // ── 3. Two crashes in a row: safe mode, which does NOT restore ────────────────────────────────
     app = await launch();
-    window = await app.firstWindow();
+    window = await chromeOf(app);
     await expect(toastOf(window).first()).toBeVisible({ timeout: 15_000 });
     // The tab that may have been the cause is NOT reopened — that is the whole point of the rung.
     await expect(restoredTab(window)).toHaveCount(0);
@@ -121,7 +152,7 @@ test('the recovery ladder: crash → restore + notice → safe mode → session 
 
     // ── 4. Safe mode cost the user nothing ────────────────────────────────────────────────────────
     app = await launch();
-    window = await app.firstWindow();
+    window = await chromeOf(app);
     await expect(restoredTab(window)).toHaveCount(1);
     // Nothing crashed before this launch, so nothing is announced.
     await expect(toastOf(window)).toHaveCount(0);
