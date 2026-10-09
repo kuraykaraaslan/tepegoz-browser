@@ -202,6 +202,15 @@ work lives in Phase 2; agent orchestration (multi-tab parallelism) stays in Phas
         Preferences → On startup now offers "Continue where I left off" (default, unchanged behaviour) or
         "Open the New Tab page" (`startupTabs`, private pref; hidden in kiosk mode; safe mode still never
         restores). Hover cards and network prediction remain open.
+  - [ ] _Tab hover cards — **design constraint found 2026-10-09, not built.**_ A card drawn in the chrome's own
+        DOM cannot appear over the page: the page is a native `WebContentsView` stacked ABOVE the chrome
+        renderer, which is why every menu and flyout here is its own popup `BrowserWindow`, and why the
+        only in-DOM overlays (Settings, the palette) hide the live view and show a still of it. A hover is
+        too brief and too frequent for the hide-and-still trick, so the card has to be a transient popup
+        window through the existing `openPopup` mechanism (positioned under the tab, no focus, dismissed on
+        leave). Doable, but it is a new popup surface plus hover-intent timing, not a styling change — and
+        the current `title=` tooltip already covers the title. A thumbnail would additionally need a
+        per-tab snapshot cache; `captureActiveTab` only sees the visible tab.
   - [x] _Landed 2026-10-09 (unit-tested; **e2e-verified** in `e2e/startup-settings.spec.ts` against a real launch):_ **"open a specific set of pages"**
         — a third On-startup choice (`startupTabs: 'pages'` + `startupPages`, up to 10 http/https
         addresses, one per line). The first opens focused, the rest behind it; an empty list is one New
