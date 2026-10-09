@@ -105,6 +105,24 @@ describe('PreferenceStore', () => {
     expect(PreferenceStore.getAll().startupTabs).toBe('restore');
   });
 
+  it('defaults confirmCloseMultiTab to off for an old file, and round-trips true', () => {
+    writeFileSync(filePath, JSON.stringify({ locale: 'tr' }), 'utf8');
+    PreferenceStore.init({ filePath });
+    expect(PreferenceStore.getAll().confirmCloseMultiTab).toBe(false);
+    PreferenceStore.update({ confirmCloseMultiTab: true });
+    PreferenceStore.reset();
+    PreferenceStore.init({ filePath });
+    expect(PreferenceStore.getAll().confirmCloseMultiTab).toBe(true);
+  });
+
+  it('rejects a non-boolean confirmCloseMultiTab patch', () => {
+    PreferenceStore.init({ filePath });
+    expect(() =>
+      PreferenceStore.update({ confirmCloseMultiTab: 'yes' as unknown as boolean }),
+    ).toThrow();
+    expect(PreferenceStore.getAll().confirmCloseMultiTab).toBe(false);
+  });
+
   it('defaults mcpServers to [] and round-trips a valid stdio server', () => {
     PreferenceStore.init({ filePath });
     expect(PreferenceStore.getAll().mcpServers).toEqual([]);

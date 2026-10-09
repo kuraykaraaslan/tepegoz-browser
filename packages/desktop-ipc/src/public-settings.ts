@@ -109,6 +109,7 @@ export const SETTINGS_VISIBILITY: Record<keyof Preferences, 'public' | 'private'
   windowBounds: 'private',
   // Private — close-to-tray + tray power behavior + the one-time tray hint flag; device-local chrome.
   closeToTray: 'private',
+  confirmCloseMultiTab: 'private',
   keepAwakeInTray: 'private',
   pauseTasksOnSleep: 'private',
   startupMode: 'private',

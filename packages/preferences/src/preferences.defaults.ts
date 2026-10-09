@@ -104,6 +104,8 @@ export const DEFAULT_PREFERENCES: Preferences = {
   windowBounds: null,
   // Close (X) → tray so the browser keeps running (and the agent keeps driving tabs) in the background.
   closeToTray: true,
+  // Off by default: closing a window stays one click unless the user opts into the warning.
+  confirmCloseMultiTab: false,
   // Battery-friendly power defaults: pause background work on sleep, but don't force-keep-awake in tray.
   keepAwakeInTray: false,
   pauseTasksOnSleep: true,

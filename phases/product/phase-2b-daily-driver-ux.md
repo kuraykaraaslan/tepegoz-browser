@@ -201,8 +201,13 @@ work lives in Phase 2; agent orchestration (multi-tab parallelism) stays in Phas
   - [x] _Landed 2026-10-09 (unit-tested, not run in the packaged app):_ **"On startup" tabs** —
         Preferences → On startup now offers "Continue where I left off" (default, unchanged behaviour) or
         "Open the New Tab page" (`startupTabs`, private pref; hidden in kiosk mode; safe mode still never
-        restores). The "open a specific set of pages" option, Home button, multi-tab close warning,
-        link-opening behaviour, MRU Ctrl+Tab, hover cards and network prediction remain open.
+        restores). The "open a specific set of pages" option, Home button, link-opening behaviour, MRU
+        Ctrl+Tab, hover cards and network prediction remain open.
+  - [x] _Landed 2026-10-09 (unit-tested, not run in the packaged app):_ **warn before closing a window with
+        several tabs** — Preferences → System tray & power, off by default (`confirmCloseMultiTab`). A native
+        "Close this window? This will close N tabs." with Keep open as the default; skipped on a real quit,
+        in eval mode, and while close-to-tray is on (that only hides the window, nothing is lost). One
+        prompt at a time.
 
 ### Cross-cutting (as in every phase)
 

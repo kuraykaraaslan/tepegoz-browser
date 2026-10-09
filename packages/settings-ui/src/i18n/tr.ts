@@ -114,6 +114,9 @@ export const tr: SettingsStrings = {
   // --- Sistem tepsisi ve güç ---
   tray: {
     title: 'Sistem tepsisi ve güç',
+    confirmCloseMultiTab: 'Birden çok sekmeli pencereyi kapatmadan önce uyar',
+    confirmCloseMultiTabDesc:
+      'Bir pencereyi kapatmak iki veya daha fazla sekmeyi kapatacaksa önce sorar. “Tepsiye kapat” açıkken uygulanmaz, çünkü o yalnızca pencereyi gizler.',
     closeToTray: 'Kapatınca tepsiye',
     closeToTrayDesc:
       'Pencereyi kapatmak Tepegöz’ü sistem tepsisinde çalışır durumda tutar; arka plan sekmeleri ve ajan çalışmaya devam eder. Çıkış için tepsi simgesi menüsünü kullanın.',

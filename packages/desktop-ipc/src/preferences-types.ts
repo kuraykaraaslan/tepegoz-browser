@@ -258,6 +258,8 @@ export interface Preferences {
   /** Close (X) hides the app to the system tray instead of quitting; all tabs keep rendering so the agent
    *  keeps working. Quit only from the tray menu. Device-local (not exposed to extensions). */
   closeToTray: boolean;
+  /** Ask before a window with several tabs really closes (it does not apply while close-to-tray hides it). */
+  confirmCloseMultiTab: boolean;
   /** While hidden in the tray, prevent the OS from suspending the app (powerSaveBlocker) so background
    *  work stays reliable — at a higher battery cost. Device-local. */
   keepAwakeInTray: boolean;

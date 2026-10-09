@@ -100,6 +100,7 @@ export const PREFERENCE_METADATA = {
   // Restored window placement — rewritten on every move/resize.
   windowBounds: internal,
   closeToTray: stable,
+  confirmCloseMultiTab: stable,
   keepAwakeInTray: stable,
   pauseTasksOnSleep: stable,
   startupMode: stable,

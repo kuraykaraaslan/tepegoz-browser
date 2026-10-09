@@ -1,5 +1,6 @@
 import type { BrowserWindow } from 'electron';
 import PreferenceStore from '@tepegoz/preferences';
+import { confirmCloseWindow, shouldConfirmClose } from './window-close-guard';
 import { SessionStore } from '@tepegoz/persistence';
 import { createWindow, effectiveStartupMode, hideToTray } from './window';
 import { ensureOnScreen } from './window-placement';
@@ -122,9 +123,33 @@ export function openWindow(opts?: {
   // underway, in eval mode, when the pref is off, or when the window has no tabs left (e.g. the last tab
   // was just closed → let it close so the app can quit). Registered AFTER createWindow's bounds-persist
   // close handler, so the real on-screen placement is captured before we park the window off-screen.
+  let closeConfirmed = false;
+  let confirmingClose = false;
   win.on('close', (event) => {
-    if (isQuitting() || process.env.TEPEGOZ_EVAL === '1' || !PreferenceStore.getAll().closeToTray)
-      return;
+    const prefs = PreferenceStore.getAll();
+    if (!closeConfirmed && process.env.TEPEGOZ_EVAL !== '1') {
+      const tabCount = TabManager.forWindow(win)?.tabCount() ?? 0;
+      if (
+        shouldConfirmClose({
+          enabled: prefs.confirmCloseMultiTab,
+          closeToTray: prefs.closeToTray,
+          quitting: isQuitting(),
+          tabCount,
+        })
+      ) {
+        event.preventDefault();
+        if (confirmingClose) return; // a prompt is already up; do not stack another
+        confirmingClose = true;
+        void confirmCloseWindow(win, tabCount).then((ok) => {
+          confirmingClose = false;
+          if (!ok || win.isDestroyed()) return;
+          closeConfirmed = true;
+          win.close();
+        });
+        return;
+      }
+    }
+    if (isQuitting() || process.env.TEPEGOZ_EVAL === '1' || !prefs.closeToTray) return;
     if ((TabManager.forWindow(win)?.tabCount() ?? 0) === 0) return;
     event.preventDefault();
     hideToTray(win);

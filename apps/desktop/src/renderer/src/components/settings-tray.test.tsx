@@ -33,12 +33,20 @@ describe('TraySection', () => {
       keepAwakeInTray: false,
       pauseTasksOnSleep: false,
     });
-    fireEvent.click(screen.getByRole('switch', { name: /close.*tray/i }));
+    fireEvent.click(screen.getByRole('switch', { name: /^close to tray/i }));
     fireEvent.click(screen.getByRole('switch', { name: /keep active/i }));
     fireEvent.click(screen.getByRole('switch', { name: /pause on sleep/i }));
     expect(setPref).toHaveBeenCalledWith({ closeToTray: true });
     expect(setPref).toHaveBeenCalledWith({ keepAwakeInTray: true });
     expect(setPref).toHaveBeenCalledWith({ pauseTasksOnSleep: true });
+  });
+
+  it('writes the multi-tab close warning toggle, off by default', () => {
+    const { setPref } = renderSection();
+    const toggle = screen.getByRole('switch', { name: /warn before closing/i });
+    expect(toggle.getAttribute('aria-checked')).toBe('false');
+    fireEvent.click(toggle);
+    expect(setPref).toHaveBeenCalledWith({ confirmCloseMultiTab: true });
   });
 
   it('writes the tab-discard toggle, flipping its current value', () => {

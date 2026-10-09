@@ -15,6 +15,11 @@ const win = vi.hoisted(() => ({
   effectiveStartupMode: vi.fn((): string => 'window'),
   hideToTray: vi.fn(),
 }));
+const guard = vi.hoisted(() => ({
+  shouldConfirmClose: vi.fn(() => false),
+  confirmCloseWindow: vi.fn(() => Promise.resolve(false)),
+}));
+vi.mock('./window-close-guard', () => guard);
 vi.mock('./window', () => win);
 vi.mock('./window-placement', () => ({
   ensureOnScreen: vi.fn((b: object) => ({ ...b, placed: true })),
@@ -102,6 +107,8 @@ function fakeWin() {
     once: vi.fn(),
     on: vi.fn(),
     webContents: { on: vi.fn() },
+    close: vi.fn(),
+    isDestroyed: () => false,
   };
 }
 let winInstance: ReturnType<typeof fakeWin>;
@@ -126,6 +133,8 @@ beforeEach(() => {
   tm.forWindow.mockReturnValue(wt);
   tm.forSenderWindow.mockReturnValue(wt);
   tm.hasPrivateWindow.mockReturnValue(false);
+  guard.shouldConfirmClose.mockReturnValue(false);
+  guard.confirmCloseWindow.mockResolvedValue(false);
   wt.tabCount.mockReturnValue(1);
   wt.getState.mockReturnValue({ activeId: 'a1' });
   db.value = null;
@@ -245,6 +254,67 @@ describe('openWindow', () => {
     openWindow(); // second one: sessionBootstrapped === true -> default tab, no restore attempt
     expect(wt.createTab).toHaveBeenCalledTimes(1);
     expect(wt.restoreWindow).not.toHaveBeenCalled();
+  });
+});
+
+describe('warn before closing a multi-tab window', () => {
+  const tick = () => new Promise<void>((r) => setTimeout(r, 0));
+
+  it('holds the close while it asks, and closes for real once the user confirms', async () => {
+    guard.shouldConfirmClose.mockReturnValue(true);
+    guard.confirmCloseWindow.mockResolvedValue(true);
+    wt.tabCount.mockReturnValue(3);
+    const { openWindow } = await load();
+    openWindow();
+    const onClose = handlerFor(winInstance, 'close')!;
+    const ev = { preventDefault: vi.fn() };
+    onClose(ev);
+    expect(ev.preventDefault).toHaveBeenCalled();
+    expect(guard.confirmCloseWindow).toHaveBeenCalledWith(winInstance, 3);
+    await tick();
+    expect(winInstance.close).toHaveBeenCalledTimes(1);
+    // The close it triggers must not ask a second time.
+    const again = { preventDefault: vi.fn() };
+    onClose(again);
+    expect(again.preventDefault).not.toHaveBeenCalled();
+    expect(guard.confirmCloseWindow).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps the window open when the user cancels, and asks again on the next attempt', async () => {
+    guard.shouldConfirmClose.mockReturnValue(true);
+    wt.tabCount.mockReturnValue(3);
+    const { openWindow } = await load();
+    openWindow();
+    const onClose = handlerFor(winInstance, 'close')!;
+    onClose({ preventDefault: vi.fn() });
+    await tick();
+    expect(winInstance.close).not.toHaveBeenCalled();
+    onClose({ preventDefault: vi.fn() });
+    expect(guard.confirmCloseWindow).toHaveBeenCalledTimes(2);
+  });
+
+  it('does not stack a second prompt while one is open', async () => {
+    guard.shouldConfirmClose.mockReturnValue(true);
+    guard.confirmCloseWindow.mockReturnValue(new Promise(() => undefined));
+    const { openWindow } = await load();
+    openWindow();
+    const onClose = handlerFor(winInstance, 'close')!;
+    const a = { preventDefault: vi.fn() };
+    const b = { preventDefault: vi.fn() };
+    onClose(a);
+    onClose(b);
+    expect(a.preventDefault).toHaveBeenCalled();
+    expect(b.preventDefault).toHaveBeenCalled();
+    expect(guard.confirmCloseWindow).toHaveBeenCalledTimes(1);
+  });
+
+  it('does nothing extra when the guard says no', async () => {
+    const { openWindow } = await load();
+    openWindow();
+    const ev = { preventDefault: vi.fn() };
+    handlerFor(winInstance, 'close')!(ev);
+    expect(ev.preventDefault).not.toHaveBeenCalled();
+    expect(guard.confirmCloseWindow).not.toHaveBeenCalled();
   });
 });
 

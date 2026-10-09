@@ -54,6 +54,15 @@ export function TraySection({
           }}
         />
         <Toggle
+          id="confirm-close-multi-tab"
+          label={t.confirmCloseMultiTab}
+          description={t.confirmCloseMultiTabDesc}
+          checked={prefs.confirmCloseMultiTab}
+          onChange={(v) => {
+            setPref({ confirmCloseMultiTab: v });
+          }}
+        />
+        <Toggle
           id="keep-awake-in-tray"
           label={t.keepAwake}
           description={t.keepAwakeDesc}
