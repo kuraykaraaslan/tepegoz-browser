@@ -1,6 +1,5 @@
 import type { WebContents } from 'electron';
 import { showHttpsOnlyInterstitial } from '../security/https-only-interstitial.electron';
-import BindingService from './binding-service.electron';
 import BrowsingSessions from './browsing-sessions.electron';
 import { classifyLoadFailure, normalizeHost } from './https-only';
 import {
@@ -8,6 +7,18 @@ import {
   getPendingHttpsOnly,
   tunnelKindOfPartition,
 } from './https-only.electron';
+
+/**
+ * Whether a tab's traffic is currently allowed to leave (a tunnel that is down says no). Supplied by the
+ * boot code instead of imported here: `BindingService` reaches the tab model, and this module is imported
+ * BY the tab model's view wiring — importing it directly closes a module cycle (dependency-cruiser's
+ * `no-circular`, which CI enforces). The default is "yes", the answer for a tab with no tunnel.
+ */
+type EgressCheck = (tabId: string) => boolean;
+let mayEgress: EgressCheck = () => true;
+export function setHttpsOnlyEgressCheck(check: EgressCheck): void {
+  mayEgress = check;
+}
 
 /**
  * Per-tab half of HTTPS-only (ADR-0050): when the main frame fails to load after the request handler
@@ -33,7 +44,7 @@ export function wireHttpsOnly(wc: WebContents, tabId: string): void {
     if (partition === null) return;
     clearPendingHttpsOnly(wc.id);
     const kind = tunnelKindOfPartition(partition);
-    if (!BindingService.mayEgress(tabId)) {
+    if (!mayEgress(tabId)) {
       showHttpsOnlyInterstitial(wc, 'tunnel-down', record.host, record.httpUrl, kind);
       return;
     }

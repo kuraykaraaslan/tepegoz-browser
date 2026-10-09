@@ -14,6 +14,7 @@ import userAgentHost from './extensions/user-agent-host.electron';
 import DownloadService from './downloads/download-service.electron';
 import SafeBrowsingService from './security/safe-browsing-service.electron';
 import { registerHttpsOnly } from './network/https-only.electron';
+import { setHttpsOnlyEgressCheck } from './network/https-only-wiring';
 import { applySecureDns } from './network/secure-dns.electron';
 import UploadService from './uploads/upload-service.electron';
 import BrowsingWebRequestService from './web-request/browsing-web-request-service.electron';
@@ -76,6 +77,7 @@ export function initBrowsingNetwork(safeMode: boolean): void {
   // HTTPS-only on tunnel partitions (ADR-0050). Registered here, ahead of adblock (deferred-init) and
   // also in safe mode: cleartext must not reach a tunnel exit in either.
   registerHttpsOnly();
+  setHttpsOnlyEgressCheck((tabId) => BindingService.mayEgress(tabId));
   UploadService.init();
   // Network privacy (Phase 5): load the configured connections (nothing is dialled here — a
   // connection comes up only when something binds to it) and push the routing picture to the chrome

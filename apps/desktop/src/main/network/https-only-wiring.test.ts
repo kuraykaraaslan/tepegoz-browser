@@ -19,12 +19,11 @@ vi.mock('./browsing-sessions.electron', () => ({
 }));
 
 const binding = vi.hoisted(() => ({ mayEgress: vi.fn(() => true) }));
-vi.mock('./binding-service.electron', () => ({ default: binding }));
 
 const ui = vi.hoisted(() => ({ showHttpsOnlyInterstitial: vi.fn() }));
 vi.mock('../security/https-only-interstitial.electron', () => ui);
 
-const { wireHttpsOnly } = await import('./https-only-wiring');
+const { wireHttpsOnly, setHttpsOnlyEgressCheck } = await import('./https-only-wiring');
 
 type Listener = (...a: unknown[]) => void;
 function wire() {
@@ -61,6 +60,7 @@ beforeEach(() => {
   };
   sessions.partition = 'persist:tepegoz-web--conn-tor1';
   binding.mayEgress.mockReturnValue(true);
+  setHttpsOnlyEgressCheck(binding.mayEgress);
 });
 
 describe('wireHttpsOnly did-fail-load', () => {
@@ -166,5 +166,25 @@ describe('wireHttpsOnly did-navigate', () => {
   it('clears the pending record for this contents', () => {
     wire().navigated();
     expect(pending.clear).toHaveBeenCalledWith(7);
+  });
+});
+
+describe('the egress check is injected, not imported', () => {
+  it('defaults to "allowed" when nothing was supplied — the answer for a tab with no tunnel', async () => {
+    vi.resetModules();
+    const fresh = await import('./https-only-wiring');
+    const listeners = new Map<string, Listener>();
+    const wc = {
+      id: 9,
+      session: {},
+      on: vi.fn((ev: string, l: Listener) => {
+        listeners.set(ev, l);
+      }),
+    };
+    fresh.wireHttpsOnly(wc as never, 't9');
+    ui.showHttpsOnlyInterstitial.mockClear();
+    listeners.get('did-fail-load')!({}, -102, 'desc', 'https://old.example/p', true);
+    // Nothing set the check, so the tab is treated as free to egress: the bypass page, not tunnel-down.
+    expect(ui.showHttpsOnlyInterstitial.mock.calls[0]?.[1]).toBe('bypass');
   });
 });

@@ -265,7 +265,7 @@ re-snapshotting).
 > `recoveryHint` elsewhere in this file — never localized, by the same established convention.
 >
 > **Verification:** 7 new unit tests in
-> [browser-tools.test.ts](../../packages/browser-tools/src/browser-tools.test.ts) (note-folding across all
+> [browser-tools-verification.test.ts](../../packages/browser-tools/src/browser-tools-verification.test.ts) (note-folding across all
 > three tools, graceful degrade when the host omits `interceptionsSince`, append-not-replace with an
 > existing note); the CDP mechanism itself is proven live by the 4-arm spike against a real Electron
 > window, not a fixture run (the eval sweep stays ⏸ funded). `confirm-dialog-destructive`'s own task never
@@ -323,7 +323,7 @@ re-snapshotting).
       -out intercept (`dragstart` prevented, or the element was not really draggable) disables
       `Input.setInterceptDrags` in a `finally` rather than leaving a future real drag silently swallowed.
       35 new unit tests (`cdp-driver-input.electron.test.ts`, `cdp-driver-dom.electron.test.ts`,
-      `browser-tools.test.ts`).
+      `browser-tools-*.test.ts`).
 
 > **PR6 status.** Both `hover` and `drag` landed. **What the spike answered, and what it did not**: it
 > proves the mechanism is real and correct against one hand-built fixture — not that it holds up across
