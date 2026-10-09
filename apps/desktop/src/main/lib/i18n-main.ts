@@ -9,7 +9,7 @@ import { processDict } from '@tepegoz/process-ui/i18n';
 import { uploadsDict } from '@tepegoz/uploads-ui/i18n';
 import { tasksDict } from '@tepegoz/ext-tasks/i18n';
 import { translateDict } from '@tepegoz/ext-translate/i18n';
-import { browserDict } from '../../i18n';
+import { browserDict, httpsOnlyDict } from '../../i18n';
 import PreferenceStore from '@tepegoz/preferences';
 
 /**
@@ -32,6 +32,7 @@ export function mainStrings(): {
   errors: typeof coreDict.en.errors;
   extensions: typeof extensionsDict.en;
   history: typeof historyDict.en;
+  httpsOnly: typeof httpsOnlyDict.en;
   process: typeof processDict.en;
   tasks: typeof tasksDict.en;
   translate: typeof translateDict.en;
@@ -50,6 +51,7 @@ export function mainStrings(): {
     errors: pick(coreDict, l).errors,
     extensions: pick(extensionsDict, l),
     history: pick(historyDict, l),
+    httpsOnly: pick(httpsOnlyDict, l),
     process: pick(processDict, l),
     tasks: pick(tasksDict, l),
     // The page context-menu submenu and the cloud-fallback consent dialog are drawn natively here,

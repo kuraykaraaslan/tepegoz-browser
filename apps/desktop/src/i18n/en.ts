@@ -369,6 +369,21 @@ export const en = {
     guestProfile: 'Open Guest profile',
     manageProfiles: 'Manage profiles',
   },
+  // HTTPS-only interstitial for tunneled tabs (read from main via mainStrings()). {host} and {tunnel}
+  // are interpolated by the caller; {tunnel} is a tunnel kind label such as "Tor" or "WireGuard".
+  httpsOnly: {
+    title: 'This site does not support a secure connection',
+    body: 'Your tab goes through {tunnel}, so anything sent over plain HTTP to {host} can be read or changed by the network on the way. Tepegoz tried the secure (HTTPS) address first and it did not load.',
+    interferenceWarning:
+      'This can mean the site has no HTTPS, but it can also mean someone is interfering with your connection. Only continue if you are sure the content is not sensitive.',
+    tunnelDownTitle: 'The tunnel is not connected',
+    tunnelDownBody:
+      'This tab cannot reach {host} because its {tunnel} connection is not up. Nothing was sent. Reconnect the tunnel and try again.',
+    nonGetBody:
+      'This form would have been sent to {host} over plain HTTP, so it was blocked before any data left your device.',
+    back: 'Back to safety',
+    proceed: 'Continue over HTTP (this visit only)',
+  },
 };
 
 /** Shape contract derived from the English source. */

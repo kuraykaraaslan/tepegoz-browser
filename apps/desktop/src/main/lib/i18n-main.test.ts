@@ -44,6 +44,7 @@ describe('mainStrings', () => {
       'errors',
       'extensions',
       'history',
+      'httpsOnly',
       'process',
       'tasks',
       'translate',
@@ -61,5 +62,14 @@ describe('mainStrings', () => {
     prefs.locale = 'tr';
     const tr = mainStrings().process.title;
     expect(en).not.toBe(tr);
+  });
+
+  it('serves the HTTPS-only interstitial copy in the active locale', () => {
+    prefs.locale = 'en';
+    const en = mainStrings().httpsOnly;
+    prefs.locale = 'tr';
+    const tr = mainStrings().httpsOnly;
+    expect(en.back).not.toBe(tr.back);
+    expect(en.body).toContain('{host}');
   });
 });
