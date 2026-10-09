@@ -30,6 +30,14 @@ export interface ShortcutSpec {
   id: string;
   /** Lowercase `KeyboardEvent.key` value: 'k', 'f11', ','. Never a keyCode. */
   key: string;
+  /**
+   * Optional `KeyboardEvent.code` (the PHYSICAL key: 'Digit1'). When set it decides the match whenever the
+   * press carries a code, and `key` is only the fallback. Digits need this: on an AZERTY keyboard the
+   * unshifted top row types `&é"'(…`, so matching the typed character would make Ctrl+1 unreachable there,
+   * while the physical key is the same everywhere. Letters deliberately do NOT use it — Ctrl+T must follow
+   * the layout (a Dvorak user's "T" is somewhere else).
+   */
+  code?: string;
   /** Ctrl on Windows/Linux, Cmd on macOS. One flag, because it is one concept to a user. */
   ctrlOrCmd?: boolean;
   shift?: boolean;
@@ -113,15 +121,15 @@ export const SHORTCUTS = [
   { id: 'nextTabAlt', key: 'pagedown', ctrlOrCmd: true, scope: 'main' },
   { id: 'prevTab', key: 'tab', ctrlOrCmd: true, shift: true, scope: 'main' },
   { id: 'prevTabAlt', key: 'pageup', ctrlOrCmd: true, scope: 'main' },
-  { id: 'selectTab1', key: '1', ctrlOrCmd: true, scope: 'main' },
-  { id: 'selectTab2', key: '2', ctrlOrCmd: true, scope: 'main' },
-  { id: 'selectTab3', key: '3', ctrlOrCmd: true, scope: 'main' },
-  { id: 'selectTab4', key: '4', ctrlOrCmd: true, scope: 'main' },
-  { id: 'selectTab5', key: '5', ctrlOrCmd: true, scope: 'main' },
-  { id: 'selectTab6', key: '6', ctrlOrCmd: true, scope: 'main' },
-  { id: 'selectTab7', key: '7', ctrlOrCmd: true, scope: 'main' },
-  { id: 'selectTab8', key: '8', ctrlOrCmd: true, scope: 'main' },
-  { id: 'selectLastTab', key: '9', ctrlOrCmd: true, scope: 'main' },
+  { id: 'selectTab1', key: '1', code: 'Digit1', ctrlOrCmd: true, scope: 'main' },
+  { id: 'selectTab2', key: '2', code: 'Digit2', ctrlOrCmd: true, scope: 'main' },
+  { id: 'selectTab3', key: '3', code: 'Digit3', ctrlOrCmd: true, scope: 'main' },
+  { id: 'selectTab4', key: '4', code: 'Digit4', ctrlOrCmd: true, scope: 'main' },
+  { id: 'selectTab5', key: '5', code: 'Digit5', ctrlOrCmd: true, scope: 'main' },
+  { id: 'selectTab6', key: '6', code: 'Digit6', ctrlOrCmd: true, scope: 'main' },
+  { id: 'selectTab7', key: '7', code: 'Digit7', ctrlOrCmd: true, scope: 'main' },
+  { id: 'selectTab8', key: '8', code: 'Digit8', ctrlOrCmd: true, scope: 'main' },
+  { id: 'selectLastTab', key: '9', code: 'Digit9', ctrlOrCmd: true, scope: 'main' },
 ] as const satisfies readonly ShortcutSpec[];
 
 export type ShortcutId = (typeof SHORTCUTS)[number]['id'];
@@ -129,6 +137,8 @@ export type ShortcutId = (typeof SHORTCUTS)[number]['id'];
 /** A key press, in the one shape both Electron `Input` and DOM `KeyboardEvent` can be reduced to. */
 export interface KeyPress {
   key: string;
+  /** Physical key (`KeyboardEvent.code`), when the source has one. */
+  code?: string | undefined;
   ctrlOrCmd: boolean;
   shift: boolean;
   alt: boolean;
@@ -142,7 +152,9 @@ export interface KeyPress {
  */
 export function matchesShortcut(spec: ShortcutSpec, press: KeyPress): boolean {
   return (
-    press.key.toLowerCase() === spec.key &&
+    (spec.code !== undefined && press.code !== undefined
+      ? press.code === spec.code
+      : press.key.toLowerCase() === spec.key) &&
     press.ctrlOrCmd === (spec.ctrlOrCmd ?? false) &&
     press.shift === (spec.shift ?? false) &&
     press.alt === (spec.alt ?? false)
@@ -158,17 +170,25 @@ export function shortcutFor(press: KeyPress, scope: ShortcutScope): ShortcutId |
 /** Adapt a DOM `KeyboardEvent` (renderer side). */
 export function pressFromEvent(e: {
   key: string;
+  code?: string;
   ctrlKey: boolean;
   metaKey: boolean;
   shiftKey: boolean;
   altKey: boolean;
 }): KeyPress {
-  return { key: e.key, ctrlOrCmd: e.ctrlKey || e.metaKey, shift: e.shiftKey, alt: e.altKey };
+  return {
+    key: e.key,
+    code: e.code,
+    ctrlOrCmd: e.ctrlKey || e.metaKey,
+    shift: e.shiftKey,
+    alt: e.altKey,
+  };
 }
 
 /** Adapt an Electron `before-input-event` Input (main side). */
 export function pressFromInput(input: {
   key: string;
+  code?: string;
   control: boolean;
   meta: boolean;
   shift: boolean;
@@ -176,6 +196,7 @@ export function pressFromInput(input: {
 }): KeyPress {
   return {
     key: input.key,
+    code: input.code,
     ctrlOrCmd: input.control || input.meta,
     shift: input.shift,
     alt: input.alt,

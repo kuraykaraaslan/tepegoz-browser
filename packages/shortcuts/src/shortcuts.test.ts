@@ -165,6 +165,53 @@ describe('the tab-switching shortcuts', () => {
   });
 });
 
+describe('digit shortcuts follow the physical key', () => {
+  const ctrl = { ctrlOrCmd: true, shift: false, alt: false };
+
+  it('Ctrl+1 works on an AZERTY keyboard, where the unshifted top row types "&"', () => {
+    expect(shortcutFor({ key: '&', code: 'Digit1', ...ctrl }, 'main')).toBe('selectTab1');
+    expect(shortcutFor({ key: 'é', code: 'Digit2', ...ctrl }, 'main')).toBe('selectTab2');
+    expect(shortcutFor({ key: 'ç', code: 'Digit9', ...ctrl }, 'main')).toBe('selectLastTab');
+  });
+
+  it('still works from the typed character when the source gives no code', () => {
+    expect(shortcutFor({ key: '3', ...ctrl }, 'main')).toBe('selectTab3');
+  });
+
+  it('does not match the numpad digit (a different physical key) or the wrong row key', () => {
+    expect(shortcutFor({ key: '1', code: 'Numpad1', ...ctrl }, 'main')).toBeNull();
+    expect(shortcutFor({ key: '1', code: 'Digit2', ...ctrl }, 'main')).toBe('selectTab2');
+  });
+
+  it('keeps letter shortcuts on the typed character, so Dvorak users follow their layout', () => {
+    expect(shortcutFor({ key: 't', code: 'KeyF', ...ctrl }, 'renderer')).toBe('newTab');
+    expect(shortcutFor({ key: 'f', code: 'KeyT', ...ctrl }, 'main')).toBe('find');
+  });
+
+  it('carries the code from both input shapes', () => {
+    expect(
+      pressFromEvent({
+        key: '&',
+        code: 'Digit1',
+        ctrlKey: true,
+        metaKey: false,
+        shiftKey: false,
+        altKey: false,
+      }),
+    ).toMatchObject({ code: 'Digit1' });
+    expect(
+      pressFromInput({
+        key: '&',
+        code: 'Digit1',
+        control: true,
+        meta: false,
+        shift: false,
+        alt: false,
+      }),
+    ).toMatchObject({ code: 'Digit1' });
+  });
+});
+
 describe('matchesShortcut is the primitive both of those use', () => {
   it('is false when a required modifier is missing', () => {
     expect(matchesShortcut(ALL[0]!, press({ key: 't' }))).toBe(false);
