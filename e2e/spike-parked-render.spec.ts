@@ -181,14 +181,17 @@ test('start-in-background launches PARKED (off-screen) but keeps rendering', asy
     const page = await app.firstWindow();
     await expect(page.locator('[role="tab"]').first()).toBeVisible();
 
-    // Launched PARKED: shown (compositor runs) but off every display (start-in-background).
-    const winState = await app.evaluate(({ BrowserWindow }) => {
-      const win = BrowserWindow.getAllWindows().find((w) => w.getParentWindow() === null);
-      const pos = win?.getPosition() ?? [0, 0];
-      return { x: pos[0], visible: win?.isVisible() ?? false };
-    });
-    expect(winState.visible).toBe(true); // shown → compositor active (not hidden)
-    expect(winState.x).toBeLessThan(-10000); // off-screen → invisible to the user, i.e. "in the background"
+    // Launched PARKED: shown (compositor runs) but off every display (start-in-background). The window
+    // is parked on `ready-to-show`, which can land just AFTER the first tab is visible, so the position
+    // is polled (as the two sibling specs below already do) rather than read once.
+    const readWin = (): Promise<{ x: number; visible: boolean }> =>
+      app.evaluate(({ BrowserWindow }) => {
+        const win = BrowserWindow.getAllWindows().find((w) => w.getParentWindow() === null);
+        const pos = win?.getPosition() ?? [0, 0];
+        return { x: pos[0] ?? 0, visible: win?.isVisible() ?? false };
+      });
+    await expect.poll(async () => (await readWin()).x, { timeout: 8000 }).toBeLessThan(-10000); // off-screen → invisible to the user, i.e. "in the background"
+    expect((await readWin()).visible).toBe(true); // shown → compositor active (not hidden)
 
     // A web tab opened while the app runs in the background still lays out + paints.
     await page.evaluate(

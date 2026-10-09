@@ -68,7 +68,9 @@ test('the puzzle button opens the Extensions panel, and pinning there adds a too
     await row.getByRole('button', { name: 'Adblock Shield' }).click();
     const extPopup = await extPopupOpened;
     // `surface=ext&`, not `surface=ext` — the panel's own URL starts with `surface=extensions-panel`.
-    expect(extPopup.url()).toContain('surface=ext&');
+    // A popup's `url()` is empty until its first navigation commits, and `waitForEvent('window')` hands it
+    // back the moment the window exists — so read the URL by polling, not once.
+    await expect.poll(() => extPopup.url()).toContain('surface=ext&');
     expect(extPopup.url()).toContain('id=com.tepegoz.adblock');
   } finally {
     await app.close();

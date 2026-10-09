@@ -159,7 +159,8 @@ test('tepegoz://settings loads as a real page and its right-click opens the nati
       wc?.sendInputEvent({ type: 'mouseUp', button: 'right', x: 40, y: 40, clickCount: 1 });
     }, settingsId);
     const popup = await popupOpened;
-    expect(popup.url()).toContain('surface=page-context-menu');
+    // `url()` is empty until the popup's first navigation commits; poll rather than read it once.
+    await expect.poll(() => popup.url()).toContain('surface=page-context-menu');
   } finally {
     await app.close();
     rmSync(profileDir, { recursive: true, force: true });
