@@ -544,10 +544,25 @@ describe('keyboard tab switching', () => {
   it('hands the shortcuts to a wired view through the view-wiring host', () => {
     const [a, b] = [tabs.addWeb(), tabs.addWeb()] as [string, string];
     tabs.setActive(a);
+    switchOrder.v = 'recent';
     const host = (
-      tabs as unknown as { viewWiringHost(): { activateAdjacentTab(d: 1 | -1): void } }
+      tabs as unknown as {
+        viewWiringHost(): {
+          activateAdjacentTab(d: 1 | -1, via: 'tab' | 'page'): void;
+          activateTabAtPosition(p: number | 'last'): void;
+          endTabCycle(): void;
+        };
+      }
     ).viewWiringHost();
-    host.activateAdjacentTab(1);
+    host.activateAdjacentTab(1, 'page'); // strip order
+    expect(tabs.activeId()).toBe(b);
+    host.activateTabAtPosition(1);
+    expect(tabs.activeId()).toBe(a);
+    tabs.activate(b);
+    host.activateAdjacentTab(1, 'tab'); // recent order: back to a, a walk now open
+    expect(tabs.activeId()).toBe(a);
+    host.endTabCycle(); // the page's Ctrl key-up
+    host.activateAdjacentTab(1, 'tab'); // a fresh walk from a lands on b again
     expect(tabs.activeId()).toBe(b);
   });
 });

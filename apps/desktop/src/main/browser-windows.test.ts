@@ -29,6 +29,8 @@ const wt = vi.hoisted(() => ({
   createTab: vi.fn(),
   tabCount: vi.fn(() => 1),
   visibleTabCount: vi.fn(() => 1),
+  activateAdjacentTab: vi.fn(),
+  activateTabAtPosition: vi.fn(),
   endTabCycle: vi.fn(),
   restoreWindow: vi.fn(() => [] as string[]),
   getState: vi.fn(() => ({ activeId: 'a1' })),
@@ -65,7 +67,13 @@ const shortcut = vi.hoisted(() => ({
     (
       win: unknown,
       input: unknown,
-      targets: { closeActiveTab: () => void; reloadActiveTab: (hard: boolean) => void },
+      targets: {
+        closeActiveTab: () => void;
+        reloadActiveTab: (hard: boolean) => void;
+        activateAdjacentTab: (d: 1 | -1, via: 'tab' | 'page') => void;
+        activateTabAtPosition: (p: number | 'last') => void;
+        endTabCycle: () => void;
+      },
     ) => boolean
   >(() => false),
 }));
@@ -448,6 +456,32 @@ describe('the window lifecycle handlers', () => {
     onKey(ev2, { type: 'keyDown' });
     expect(ev2.preventDefault).toHaveBeenCalled();
     expect(wt.closeTab).toHaveBeenCalledWith('a1');
+  });
+
+  it('chrome before-input-event hands the tab-switching targets to the window tab model', async () => {
+    const { openWindow } = await load();
+    openWindow();
+    const onKey = handlerFor(winInstance.webContents, 'before-input-event')!;
+    shortcut.handleWindowShortcut.mockImplementation(
+      (
+        _w: unknown,
+        _i: unknown,
+        targets: {
+          activateAdjacentTab: (d: 1 | -1, via: 'tab' | 'page') => void;
+          activateTabAtPosition: (p: number | 'last') => void;
+          endTabCycle: () => void;
+        },
+      ) => {
+        targets.activateAdjacentTab(-1, 'tab');
+        targets.activateTabAtPosition(3);
+        targets.endTabCycle();
+        return true;
+      },
+    );
+    onKey({ preventDefault: vi.fn() }, { type: 'keyDown' });
+    expect(wt.activateAdjacentTab).toHaveBeenCalledWith(-1, 'tab');
+    expect(wt.activateTabAtPosition).toHaveBeenCalledWith(3);
+    expect(wt.endTabCycle).toHaveBeenCalledTimes(1);
   });
 
   it('chrome before-input-event gives the shortcut handler a reloadActiveTab that hits the tab model', async () => {

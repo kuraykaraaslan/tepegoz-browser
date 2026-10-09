@@ -326,6 +326,22 @@ describe('base small surface', () => {
     expect(base.rawWiringHost().closeTab()).toBeUndefined();
   });
 
+  it('WindowTabsBase.viewWiringHost() tab-switch hooks are inert no-ops below WindowTabsNav', () => {
+    class BaseHarness extends WindowTabsBase {
+      rawWiringHost(): {
+        activateAdjacentTab: (d: 1 | -1, via: 'tab' | 'page') => void;
+        activateTabAtPosition: (p: number | 'last') => void;
+        endTabCycle: () => void;
+      } {
+        return this.viewWiringHost();
+      }
+    }
+    const host = new BaseHarness(fakeWindow() as never, false).rawWiringHost();
+    expect(host.activateAdjacentTab(1, 'tab')).toBeUndefined();
+    expect(host.activateTabAtPosition('last')).toBeUndefined();
+    expect(host.endTabCycle()).toBeUndefined();
+  });
+
   it('schedulePersist flushes persistSession once the debounce elapses', () => {
     vi.useFakeTimers();
     try {

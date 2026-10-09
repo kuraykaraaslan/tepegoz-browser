@@ -151,6 +151,26 @@ describe('the recently-closed list', () => {
 
 const shared = await import('./tabs-shared');
 
+describe('switchToLinkTabs / tabSwitchOrder', () => {
+  it('switchToLinkTabs follows the preference and defaults to on when it is absent', () => {
+    prefs.getAll.mockReturnValue({ switchToLinkTabs: false });
+    expect(shared.switchToLinkTabs()).toBe(false);
+    prefs.getAll.mockReturnValue({ switchToLinkTabs: true });
+    expect(shared.switchToLinkTabs()).toBe(true);
+    prefs.getAll.mockReturnValue({});
+    expect(shared.switchToLinkTabs()).toBe(true);
+  });
+
+  it('tabSwitchOrder is "recent" only when asked for, and "positional" for anything else', () => {
+    prefs.getAll.mockReturnValue({ tabSwitchOrder: 'recent' });
+    expect(shared.tabSwitchOrder()).toBe('recent');
+    prefs.getAll.mockReturnValue({ tabSwitchOrder: 'positional' });
+    expect(shared.tabSwitchOrder()).toBe('positional');
+    prefs.getAll.mockReturnValue({});
+    expect(shared.tabSwitchOrder()).toBe('positional');
+  });
+});
+
 describe('homeUrl / searchUrlForQuery', () => {
   beforeEach(() => {
     prefs.getAll.mockReturnValue({});
