@@ -18,9 +18,12 @@ function renderControls(
   } = {},
 ) {
   const exportTasks = vi.fn(
-    over.exportTasks ?? (() => Promise.resolve('{"format":"tepegoz.tasks","version":1,"tasks":[]}')),
+    over.exportTasks ??
+      (() => Promise.resolve('{"format":"tepegoz.tasks","version":1,"tasks":[]}')),
   );
-  const importTasks = vi.fn(over.importTasks ?? (() => Promise.resolve({ imported: 0, skipped: 0 })));
+  const importTasks = vi.fn(
+    over.importTasks ?? (() => Promise.resolve({ imported: 0, skipped: 0 })),
+  );
   const onImported = vi.fn();
   render(
     <I18nProvider locale="en">

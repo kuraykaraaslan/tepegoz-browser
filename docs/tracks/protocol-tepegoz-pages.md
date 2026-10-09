@@ -329,6 +329,7 @@ yüzden bu YENİ bir davranış değil. Bir `sent` id kümesi, zaten pencere dö
 penceresine ikinci kez (farklı bir payload'la) gönderim yapılmasını engelliyor.
 
 **Kasıtlı olarak dokunulmadı:**
+
 - `ipc-content-app.ts`'teki `BrowserWindow.getAllWindows()` döngüsü (glass/tema arka planını
   `applyChromeGlass` ile uyguluyor) bu sınıftan bir hata DEĞİL — `setBackgroundMaterial`/
   `setBackgroundColor` yalnızca gerçek `BrowserWindow`'larda var olan native pencere-chrome API'leri;
@@ -337,7 +338,7 @@ penceresine ikinci kez (farklı bir payload'la) gönderim yapılmasını engelli
 - `video-player-page-injector.electron.ts` (`videoPlayerPageState`) ve `chat-service.electron.ts`
   (`chatState`) incelendi: tüketicileri (`ext-video-player`/`ext-chat` panelleri) chrome içinde render
   edilen uzantı yan panelleri, `REAL_PAGE_HOSTS`'ta (`settings, extensions, history, downloads, uploads,
-  bookmarks, process, developer, profiles`) ne "chat" ne "video-player" var — yani şu an bu sinyali
+bookmarks, process, developer, profiles`) ne "chat" ne "video-player" var — yani şu an bu sinyali
   dinleyen hiçbir `tepegoz://` sekmesi yok. Bu ikisi bırakıldı; `REAL_PAGE_HOSTS`'a böyle bir sayfa
   eklenirse aynı sınıf hata olarak yeniden değerlendirilmeli.
 

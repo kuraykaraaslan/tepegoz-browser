@@ -303,10 +303,8 @@ export function registerBrowsingIpc(): void {
   handle(IpcChannels.agentCapabilitiesList, (): AgentCapabilityRow[] => agentCapabilityMatrix());
   // Permission Debug (S8 PR7): past decisions the Policy Kernel actually made, read back from the
   // Event Journal for a chosen site/tool. A HISTORY view, distinct from the live matrix above.
-  handle(
-    IpcChannels.permissionDecisionHistory,
-    (_event, payload): PermissionDecisionRecord[] =>
-      permissionDecisionHistory(parsePayload(PermissionDecisionQuerySchema, payload ?? {})),
+  handle(IpcChannels.permissionDecisionHistory, (_event, payload): PermissionDecisionRecord[] =>
+    permissionDecisionHistory(parsePayload(PermissionDecisionQuerySchema, payload ?? {})),
   );
   handle(IpcChannels.screenshotCapture, (_event, payload): Promise<StoredScreenshot | null> =>
     captureAndStore(ScreenshotModeSchema.parse(payload)),

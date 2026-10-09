@@ -1,11 +1,6 @@
 import { z } from 'zod';
 import { EXTENSION_ID_RE } from '@tepegoz/extension-sdk';
-import {
-  LOCALE_PREFS,
-  MCP_TRANSPORTS,
-  PROVIDER_IDS,
-  THEME_PREFS,
-} from '@tepegoz/desktop-ipc';
+import { LOCALE_PREFS, MCP_TRANSPORTS, PROVIDER_IDS, THEME_PREFS } from '@tepegoz/desktop-ipc';
 
 /**
  * App preferences validation (main-side). The TYPE and its value lists live in the shared IPC contract

@@ -59,7 +59,8 @@ export const tr: OnboardingStrings = {
   privacyTelemetryOff: 'Kapalı',
   privacyTelemetryBody:
     'Varsayılan kapalı ve bu derlemede zaten hiçbir şey toplanmıyor veya gönderilmiyor — bu ayarı okuyan bir kod henüz yok. Bir gün olduğunda seçim baştan senin olsun diye burada duruyor.',
-  privacyTelemetrySettingsHint: 'Bunu istediğin zaman Ayarlar → Gizlilik ve telemetri’den değiştirebilirsin.',
+  privacyTelemetrySettingsHint:
+    'Bunu istediğin zaman Ayarlar → Gizlilik ve telemetri’den değiştirebilirsin.',
   privacySensitiveTitle: 'Hassas sitelerde ekstra koruma',
   privacySensitiveBody:
     'Bankacılık, kamu, kripto, şifre yöneticisi veya sağlık hizmeti gibi görünen sitelerde ajan senin adına işlem yapamaz — yalnızca sayfayı okuyabilir, o da senin iznine bağlı. Bu koruma otomatiktir; senin yönetmen gereken bir site listesine bağlı değildir.',

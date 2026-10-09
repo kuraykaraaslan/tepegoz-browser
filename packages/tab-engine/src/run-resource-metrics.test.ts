@@ -22,7 +22,13 @@ describe('foldRunResourceSample', () => {
   it('attributes the SUM of the given pids at one sample', () => {
     const acc = foldRunResourceSample(
       emptyRunResourceAccumulator(),
-      sample([100, 200], [[100, 50_000], [200, 30_000]]),
+      sample(
+        [100, 200],
+        [
+          [100, 50_000],
+          [200, 30_000],
+        ],
+      ),
     );
     expect(acc.peakRssBytes).toBe((50_000 + 30_000) * 1024);
     expect(acc.sampleCount).toBe(1);
@@ -55,8 +61,26 @@ describe('foldRunResourceSample', () => {
     // Sample 1: run's working tab is pid 100 (small). Sample 2: the run followed a navigation to a new
     // tab, pid 200 (large) — pid 100 no longer appears in the pids list for that sample.
     let acc = emptyRunResourceAccumulator();
-    acc = foldRunResourceSample(acc, sample([1, 100], [[1, 10_000], [100, 15_000]]));
-    acc = foldRunResourceSample(acc, sample([1, 200], [[1, 10_000], [200, 60_000]]));
+    acc = foldRunResourceSample(
+      acc,
+      sample(
+        [1, 100],
+        [
+          [1, 10_000],
+          [100, 15_000],
+        ],
+      ),
+    );
+    acc = foldRunResourceSample(
+      acc,
+      sample(
+        [1, 200],
+        [
+          [1, 10_000],
+          [200, 60_000],
+        ],
+      ),
+    );
     expect(acc.peakRssBytes).toBe((10_000 + 60_000) * 1024);
     expect(acc.sampleCount).toBe(2);
   });

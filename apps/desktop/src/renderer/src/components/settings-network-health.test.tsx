@@ -173,18 +173,20 @@ describe('NetworkHealthCard', () => {
       expect(within(row).getByText(s.network.slowCause.relay_latency)).toBeTruthy();
     });
 
-    it.each(['bridge_or_bootstrap', 'exit_blocked_by_site', 'tunnel_degraded', 'insufficient_signal'] as const)(
-      'renders the %s sentence too',
-      (cause) => {
-        render(
-          <NetworkHealthCard
-            s={s}
-            state={netState([conn({ label: 'FRA', status: 'up', slowCause: cause })])}
-          />,
-        );
-        expect(within(rowFor('FRA')).getByText(s.network.slowCause[cause])).toBeTruthy();
-      },
-    );
+    it.each([
+      'bridge_or_bootstrap',
+      'exit_blocked_by_site',
+      'tunnel_degraded',
+      'insufficient_signal',
+    ] as const)('renders the %s sentence too', (cause) => {
+      render(
+        <NetworkHealthCard
+          s={s}
+          state={netState([conn({ label: 'FRA', status: 'up', slowCause: cause })])}
+        />,
+      );
+      expect(within(rowFor('FRA')).getByText(s.network.slowCause[cause])).toBeTruthy();
+    });
 
     it('is hidden while the connection is down or connecting — the status badge already says so', () => {
       render(
@@ -192,7 +194,12 @@ describe('NetworkHealthCard', () => {
           s={s}
           state={netState([
             conn({ id: 'a', label: 'FRA', status: 'down', slowCause: 'tunnel_degraded' }),
-            conn({ id: 'b', label: 'Onion', status: 'connecting', slowCause: 'bridge_or_bootstrap' }),
+            conn({
+              id: 'b',
+              label: 'Onion',
+              status: 'connecting',
+              slowCause: 'bridge_or_bootstrap',
+            }),
           ])}
         />,
       );

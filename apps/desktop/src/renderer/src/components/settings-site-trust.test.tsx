@@ -42,7 +42,9 @@ beforeEach(() => {
   listTrustProfiles.mockResolvedValue([]);
   setTrustProfile.mockResolvedValue([]);
   removeTrustProfile.mockResolvedValue([]);
-  exportTrustProfiles.mockResolvedValue('{"format":"tepegoz.trust-profiles","version":1,"profiles":[]}');
+  exportTrustProfiles.mockResolvedValue(
+    '{"format":"tepegoz.trust-profiles","version":1,"profiles":[]}',
+  );
   importTrustProfiles.mockResolvedValue({ imported: 0, skipped: 0 });
   Object.defineProperty(window, 'tepegoz', {
     configurable: true,

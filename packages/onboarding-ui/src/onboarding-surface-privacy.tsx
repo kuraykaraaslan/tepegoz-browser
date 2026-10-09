@@ -24,7 +24,9 @@ export function PrivacyStep({ telemetryEnabled }: { telemetryEnabled: boolean })
           </Badge>
         </div>
         <p className="text-sm leading-6 text-text-secondary">{t.privacyTelemetryBody}</p>
-        <p className="mt-2 text-xs leading-5 text-text-secondary">{t.privacyTelemetrySettingsHint}</p>
+        <p className="mt-2 text-xs leading-5 text-text-secondary">
+          {t.privacyTelemetrySettingsHint}
+        </p>
       </div>
       <div className="rounded-lg border border-border bg-surface-base p-6">
         <h3 className="text-lg font-semibold">{t.privacySensitiveTitle}</h3>

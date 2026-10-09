@@ -141,7 +141,9 @@ describe('trust-profiles:import', () => {
   });
 
   it('rejects a payload that is not a string before touching the host', () => {
-    expect(() => h.handlers.get(IpcChannels.trustProfilesImport)?.(ev, { not: 'a string' })).toThrow();
+    expect(() =>
+      h.handlers.get(IpcChannels.trustProfilesImport)?.(ev, { not: 'a string' }),
+    ).toThrow();
     expect(host.importEntries).not.toHaveBeenCalled();
   });
 
@@ -162,9 +164,7 @@ describe('untrusted sender', () => {
     ).toThrow();
     expect(() => h.handlers.get(IpcChannels.trustProfilesRemove)?.(evil, 'example.com')).toThrow();
     expect(() => h.handlers.get(IpcChannels.trustProfilesExport)?.(evil, undefined)).toThrow();
-    expect(() =>
-      h.handlers.get(IpcChannels.trustProfilesImport)?.(evil, '[]'),
-    ).toThrow();
+    expect(() => h.handlers.get(IpcChannels.trustProfilesImport)?.(evil, '[]')).toThrow();
     expect(host.list).not.toHaveBeenCalled();
     expect(host.set).not.toHaveBeenCalled();
     expect(host.remove).not.toHaveBeenCalled();

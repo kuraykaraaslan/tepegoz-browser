@@ -22,9 +22,9 @@ describe('classifySlowCause', () => {
   it('a fully down connection is always tunnel_degraded, never a softer cause', () => {
     expect(classifySlowCause(signals({ status: 'down' }))).toBe('tunnel_degraded');
     // Even with an otherwise "clean" exit signal — down is down.
-    expect(
-      classifySlowCause(signals({ status: 'down', recentExitStatusClass: '2xx' })),
-    ).toBe('tunnel_degraded');
+    expect(classifySlowCause(signals({ status: 'down', recentExitStatusClass: '2xx' }))).toBe(
+      'tunnel_degraded',
+    );
   });
 
   it('a connection still establishing is bridge_or_bootstrap', () => {
@@ -41,15 +41,21 @@ describe('classifySlowCause', () => {
   });
 
   it('a 4xx exit response on an otherwise healthy connection is exit_blocked_by_site', () => {
-    expect(classifySlowCause(signals({ recentExitStatusClass: '4xx' }))).toBe('exit_blocked_by_site');
+    expect(classifySlowCause(signals({ recentExitStatusClass: '4xx' }))).toBe(
+      'exit_blocked_by_site',
+    );
   });
 
   it('a 5xx exit response is NOT attributed to the tunnel — that would be false confidence', () => {
-    expect(classifySlowCause(signals({ recentExitStatusClass: '5xx' }))).toBe('insufficient_signal');
+    expect(classifySlowCause(signals({ recentExitStatusClass: '5xx' }))).toBe(
+      'insufficient_signal',
+    );
   });
 
   it('never checked (no health poll yet) is insufficient_signal, not assumed healthy or degraded', () => {
-    expect(classifySlowCause(signals({ msSinceLastHealthCheck: null }))).toBe('insufficient_signal');
+    expect(classifySlowCause(signals({ msSinceLastHealthCheck: null }))).toBe(
+      'insufficient_signal',
+    );
   });
 
   it('a health poll gone stale on a nominally-up connection is tunnel_degraded', () => {
@@ -61,9 +67,12 @@ describe('classifySlowCause', () => {
   it.each([
     ['drops', { drops: 2 }],
     ['reconnects', { reconnects: 2 }],
-  ])('flapping this session (>=2 %s) is tunnel_degraded even while nominally up', (_label, over) => {
-    expect(classifySlowCause(signals(over))).toBe('tunnel_degraded');
-  });
+  ])(
+    'flapping this session (>=2 %s) is tunnel_degraded even while nominally up',
+    (_label, over) => {
+      expect(classifySlowCause(signals(over))).toBe('tunnel_degraded');
+    },
+  );
 
   it('a single recovered drop is not yet "flapping" — one reconnect is not a pattern', () => {
     expect(classifySlowCause(signals({ drops: 1, reconnects: 1 }))).toBe('relay_latency');
@@ -73,9 +82,9 @@ describe('classifySlowCause', () => {
     it('flapping + a clean 4xx-shaped exit signal still reports the tunnel fault, not the site', () => {
       // If this reported exit_blocked_by_site, a user watching their own tunnel flap would be told to
       // blame the website instead of the connection that is actually failing.
-      expect(
-        classifySlowCause(signals({ drops: 3, recentExitStatusClass: '4xx' })),
-      ).toBe('tunnel_degraded');
+      expect(classifySlowCause(signals({ drops: 3, recentExitStatusClass: '4xx' }))).toBe(
+        'tunnel_degraded',
+      );
     });
 
     it('a stale health poll + a clean exit signal still reports the tunnel fault, not relay latency', () => {

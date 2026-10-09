@@ -1,8 +1,4 @@
-import type {
-  TrustLevel,
-  TrustProfile,
-  TrustProfilesImportResult,
-} from '@tepegoz/shared-types';
+import type { TrustLevel, TrustProfile, TrustProfilesImportResult } from '@tepegoz/shared-types';
 
 /**
  * Scoped Trust Profiles over the bridge.

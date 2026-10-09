@@ -61,7 +61,13 @@ export const en = {
   privacySensitiveTitle: 'Sensitive sites get extra protection',
   privacySensitiveBody:
     'On sites that look like banking, government, crypto, a password manager, or healthcare, the agent cannot take actions on your behalf — it can only read the page, and only with your permission. This is automatic and does not depend on a site list you maintain.',
-  privacySensitiveCategories: ['Banking', 'Government', 'Crypto', 'Password managers', 'Healthcare'],
+  privacySensitiveCategories: [
+    'Banking',
+    'Government',
+    'Crypto',
+    'Password managers',
+    'Healthcare',
+  ],
   importSource: 'Import source',
   importSourceHint:
     'Pick the browser a file came from. Files exported from {browser} are read the same way whichever profile they came from.',

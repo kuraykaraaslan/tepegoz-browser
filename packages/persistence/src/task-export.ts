@@ -93,7 +93,9 @@ export function parseTasksImport(json: string): { tasks: TaskImportEntry[]; skip
   ) {
     list = (raw as TasksExportFile).tasks;
   } else {
-    throw new SyntaxError('Tasks import must be a JSON array or an export file with a "tasks" array.');
+    throw new SyntaxError(
+      'Tasks import must be a JSON array or an export file with a "tasks" array.',
+    );
   }
 
   const tasks: TaskImportEntry[] = [];

@@ -55,7 +55,9 @@ const styleInspector = vi.hoisted(() => ({
 }));
 vi.mock('./style-inspector.electron.js', () => styleInspector);
 const domQuery = vi.hoisted(() => ({
-  queryElements: vi.fn((): Promise<unknown> => Promise.resolve({ ok: true, total: 0, matches: [] })),
+  queryElements: vi.fn((): Promise<unknown> =>
+    Promise.resolve({ ok: true, total: 0, matches: [] }),
+  ),
 }));
 vi.mock('./dom-query.electron.js', () => domQuery);
 const sessionMod = vi.hoisted(() => ({ waitForPageSettled: vi.fn(() => Promise.resolve()) }));
@@ -400,7 +402,11 @@ describe('queryElements (S2/PR7 P3-a) — no CDP attach required', () => {
     });
 
     const result = await CdpDriver.queryElements(cast(wc), '#x', 'css');
-    expect(result).toEqual({ ok: true, total: 1, matches: [{ tag: 'div', ref: 1, attributes: {} }] });
+    expect(result).toEqual({
+      ok: true,
+      total: 1,
+      matches: [{ tag: 'div', ref: 1, attributes: {} }],
+    });
     expect(domQuery.queryElements).toHaveBeenCalledWith(wc, '#x', 'css', expect.any(WeakMap));
     expect(dbg(wc).sendCommand).not.toHaveBeenCalled();
   });

@@ -65,12 +65,7 @@ export function TaskBackupControls({
       <Button size="sm" variant="outline" disabled={busy} onClick={() => void handleExport()}>
         {t.exportTasks}
       </Button>
-      <Button
-        size="sm"
-        variant="outline"
-        disabled={busy}
-        onClick={() => fileRef.current?.click()}
-      >
+      <Button size="sm" variant="outline" disabled={busy} onClick={() => fileRef.current?.click()}>
         {t.importTasks}
       </Button>
       <input

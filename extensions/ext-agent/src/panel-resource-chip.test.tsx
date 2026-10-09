@@ -22,9 +22,7 @@ describe('ResourceChip', () => {
   });
 
   it('renders nothing for a non-finite value', () => {
-    const { container } = render(
-      <ResourceChip peakRssBytes={Number.NaN} cpuSeconds={1} a={a} />,
-    );
+    const { container } = render(<ResourceChip peakRssBytes={Number.NaN} cpuSeconds={1} a={a} />);
     expect(container.firstChild).toBeNull();
   });
 
@@ -53,11 +51,11 @@ describe('ResourceChip', () => {
     const chip = screen.getByText('Peak memory: 10.0 MB · CPU: 1.0s');
     const enTitle = chip.getAttribute('title');
     expect(enTitle).toContain('browser slow');
-    expect(chip.getAttribute('aria-label')).toBe('Peak memory used by this run: 10.0 MB. CPU time: 1.0s.');
-
-    rerender(
-      <ResourceChip peakRssBytes={10 * 1024 * 1024} cpuSeconds={1} a={agentDict.tr} />,
+    expect(chip.getAttribute('aria-label')).toBe(
+      'Peak memory used by this run: 10.0 MB. CPU time: 1.0s.',
     );
+
+    rerender(<ResourceChip peakRssBytes={10 * 1024 * 1024} cpuSeconds={1} a={agentDict.tr} />);
     const trChip = screen.getByText('En yüksek bellek: 10.0 MB · CPU: 1.0s');
     expect(trChip.getAttribute('title')).not.toEqual(enTitle);
     expect(trChip.getAttribute('title')).toContain('yavaşlat');

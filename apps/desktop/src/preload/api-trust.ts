@@ -1,9 +1,5 @@
 import { IpcChannels, type TepegozApi } from '@tepegoz/desktop-ipc';
-import type {
-  TrustLevel,
-  TrustProfile,
-  TrustProfilesImportResult,
-} from '@tepegoz/shared-types';
+import type { TrustLevel, TrustProfile, TrustProfilesImportResult } from '@tepegoz/shared-types';
 import { invoke } from './ipc-invoke';
 
 /** Scoped Trust Profiles: read/write calls plus export/import, no local state. Every level is

@@ -137,10 +137,14 @@ describe('with a working database', () => {
     );
     expect(destructive.decision).toBe('ask');
 
-    const deny = applyTrust({ decision: 'deny', reason: 'sensitive_site_lockout' }, imported!.level, {
-      risk: 'read',
-      taintedArgs: false,
-    });
+    const deny = applyTrust(
+      { decision: 'deny', reason: 'sensitive_site_lockout' },
+      imported!.level,
+      {
+        risk: 'read',
+        taintedArgs: false,
+      },
+    );
     expect(deny.decision).toBe('deny');
   });
 

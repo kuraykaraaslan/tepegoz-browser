@@ -39,7 +39,15 @@ function runProbe(
     noElement?: boolean;
   } = {},
 ): unknown {
-  const rect: FakeRect = { top: 10, left: 20, right: 120, bottom: 40, width: 100, height: 30, ...opts.rect };
+  const rect: FakeRect = {
+    top: 10,
+    left: 20,
+    right: 120,
+    bottom: 40,
+    width: 100,
+    height: 30,
+    ...opts.rect,
+  };
   const style: Required<FakeStyle> = {
     display: 'block',
     visibility: 'visible',
@@ -108,7 +116,10 @@ describe('buildStyleProbeExpression', () => {
   });
 
   it('a display:none element is CSS-invisible → visible:false, values still reported', () => {
-    const result = runProbe([[0]], { style: { display: 'none' } }) as { display: string; visible: boolean };
+    const result = runProbe([[0]], { style: { display: 'none' } }) as {
+      display: string;
+      visible: boolean;
+    };
     expect(result.display).toBe('none');
     expect(result.visible).toBe(false);
   });
@@ -119,7 +130,10 @@ describe('buildStyleProbeExpression', () => {
   });
 
   it('a zero-opacity element is CSS-invisible → visible:false', () => {
-    const result = runProbe([[0]], { style: { opacity: '0' } }) as { opacity: string; visible: boolean };
+    const result = runProbe([[0]], { style: { opacity: '0' } }) as {
+      opacity: string;
+      visible: boolean;
+    };
     expect(result.opacity).toBe('0');
     expect(result.visible).toBe(false);
   });

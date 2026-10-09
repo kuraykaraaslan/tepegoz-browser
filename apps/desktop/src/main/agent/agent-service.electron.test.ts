@@ -45,9 +45,10 @@ type FakeResolvedBinding = {
 };
 const binding = vi.hoisted(() => ({
   mayEgress: vi.fn(() => true),
-  resolveFor: vi.fn(
-    (): FakeResolvedBinding => ({ resolved: { connectionId: null }, source: 'general' }),
-  ),
+  resolveFor: vi.fn((): FakeResolvedBinding => ({
+    resolved: { connectionId: null },
+    source: 'general',
+  })),
 }));
 vi.mock('../network/binding-service.electron', () => ({ default: binding }));
 vi.mock('./browser-host.electron', () => ({ runActiveTabUrl: () => 'https://active.test/' }));

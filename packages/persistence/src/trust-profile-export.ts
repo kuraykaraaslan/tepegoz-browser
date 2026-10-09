@@ -74,9 +74,10 @@ export function serializeTrustProfilesJson(profiles: readonly TrustProfile[]): s
  * entries (so a hand-assembled list still imports). A file that is not JSON, or is JSON with no
  * profiles list at all, is rejected outright with a {@link SyntaxError} — there is nothing to apply.
  */
-export function parseTrustProfilesImport(
-  json: string,
-): { profiles: TrustProfileImportEntry[]; skipped: number } {
+export function parseTrustProfilesImport(json: string): {
+  profiles: TrustProfileImportEntry[];
+  skipped: number;
+} {
   let raw: unknown;
   try {
     raw = JSON.parse(json);

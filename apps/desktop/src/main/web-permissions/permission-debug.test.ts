@@ -34,7 +34,11 @@ describe('permissionDecisionHistory', () => {
 
   it('reads both decision journal types, newest-first', () => {
     permissionDecisionHistory({});
-    expect(readByTypes).toHaveBeenCalledWith({ __db: true }, ['ToolInvoked', 'PolicyBlocked'], expect.any(Number));
+    expect(readByTypes).toHaveBeenCalledWith(
+      { __db: true },
+      ['ToolInvoked', 'PolicyBlocked'],
+      expect.any(Number),
+    );
   });
 
   it('maps a well-formed row to the DTO, including outcome and rememberedBy', () => {

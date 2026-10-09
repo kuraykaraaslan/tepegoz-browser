@@ -2,7 +2,9 @@ import type { Macro, SelectorChain } from '@tepegoz/shared-types';
 import type { MacroHost } from './host';
 
 /** A scriptable fake host that records the actions the interpreter drives + every sleep duration. */
-export function fakeHost(over: Partial<MacroHost> = {}): MacroHost & { log: string[]; sleeps: number[] } {
+export function fakeHost(
+  over: Partial<MacroHost> = {},
+): MacroHost & { log: string[]; sleeps: number[] } {
   const log: string[] = [];
   const sleeps: number[] = [];
   const sel = (c: SelectorChain): string => c[0]?.value ?? '?';

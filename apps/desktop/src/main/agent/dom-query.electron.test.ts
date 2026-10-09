@@ -57,7 +57,9 @@ describe('queryElements (S2/PR7 P3-a)', () => {
 
   it('never throws when the isolated-world read rejects', async () => {
     const { wc } = fakeWebContents({ reject: new Error('frame gone') });
-    await expect(queryElements(wc, 'div', 'css', new WeakMap())).resolves.toMatchObject({ ok: false });
+    await expect(queryElements(wc, 'div', 'css', new WeakMap())).resolves.toMatchObject({
+      ok: false,
+    });
   });
 
   it('a malformed page result degrades to ok:false rather than being trusted', async () => {
@@ -87,7 +89,9 @@ describe('queryElements (S2/PR7 P3-a)', () => {
   it('mints a FRESH ref (one past the highest existing ref) for an untracked match, and writes it into refMaps', async () => {
     const refMaps = new WeakMap<WebContents, Map<number, RefTarget>>();
     const { wc } = fakeWebContents({
-      result: okResult([{ tag: 'div', attributes: { id: 'new' }, existingRef: null, path: [[2, 1]] }]),
+      result: okResult([
+        { tag: 'div', attributes: { id: 'new' }, existingRef: null, path: [[2, 1]] },
+      ]),
     });
     refMaps.set(wc, new Map([[3, { path: [[0]] }]]));
     const probe = await queryElements(wc, '#new', 'css', refMaps);

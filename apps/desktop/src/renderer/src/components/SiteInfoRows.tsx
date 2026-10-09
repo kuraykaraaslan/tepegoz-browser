@@ -1,7 +1,11 @@
 import type { ReactNode } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import type { IconDefinition } from '@fortawesome/fontawesome-svg-core';
-import { faArrowLeft, faChevronRight, faUpRightFromSquare } from '@fortawesome/free-solid-svg-icons';
+import {
+  faArrowLeft,
+  faChevronRight,
+  faUpRightFromSquare,
+} from '@fortawesome/free-solid-svg-icons';
 
 /**
  * A drill-down header: back arrow, the pane's title, the host beneath it, close on the right — the

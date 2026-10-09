@@ -453,32 +453,32 @@ endpoint** (one loopback port per active connection), never an OS-level system p
 > WireGuard config and read status words. That is the same cliff.
 
 - [~] **First-run flow for a tunnel** — import a config, name it, test it, and see a plain-language result;
-      a failed test says which step failed (config parse / handshake / DNS / exit reachability), not "not
-      connected". _Landed 2026-09-22 as a "Test connection" action on the EXISTING add-connection row
-      (`ConnectionTestAction`, [settings-network-test.tsx](../../apps/desktop/src/renderer/src/components/settings-network-test.tsx))
-      rather than a separate wizard, so it runs immediately after saving a connection or any time later.
-      Main-process stage classification ([connection-test.electron.ts](../../apps/desktop/src/main/network/connection-test.electron.ts),
-      11 tests) over a new `network:test-connection` IPC (zod-validated request, `ConnectionTestResultSchema`
-      in `@tepegoz/shared-types`, `safeParse`d again at the renderer boundary — degrades to "could not be
-      read" rather than trusting a malformed shape). **Two stages are real and independently distinguished:**
-      `configParse` re-runs the EXACT synchronous checks a connection already passed at add time (WireGuard
-      secret decrypt + `parseWireGuardConfig`, a Tor upstream's continued existence) with no network attempt;
-      `handshake` is the connection pool's own `ensureUp` — the same call the manual Connect button makes,
-      not a second way to bring a tunnel up. Every failed stage renders the SAME localized sentence
-      `classifyNetworkError` already produces for the connections overview's `lastError`, never raw
-      provider text as the primary message (kept on `title=`). **DNS and exit reachability are NOT built
-      as independent stages, and stay `[~]` for that reason.** The only reusable signal past a successful
-      handshake is `ensureTunnelSession`'s `resolveProxy` check (already inside `ensureUp`) — proof the
-      session's proxy config took effect, not that the tunnel can resolve a name or reach a real
-      destination. Turning either into a real, distinct check would mean adding new probing logic inside
-      the connection pool's connect path, which this change deliberately does not touch (scoped down per
-      this task's own instruction rather than fabricating a pass). Both fold into one coarse `reachability`
-      result (`unverified` on a successful handshake, `notReached` otherwise), shown as its own honest
-      sentence rather than a third stage. en+tr, `keyPaths`-parity tested; each stage's pass/fail/skip
-      state is named in text next to its icon, never colour alone. 6 test files touched (3 new: the
-      main-process stage classifier, the renderer's `parseConnectionTestResult`, and the component;
-      3 extended: `ipc-network`, the preload bridge, the connections overview), 26 new tests across
-      main, preload, and renderer._
+  a failed test says which step failed (config parse / handshake / DNS / exit reachability), not "not
+  connected". _Landed 2026-09-22 as a "Test connection" action on the EXISTING add-connection row
+  (`ConnectionTestAction`, [settings-network-test.tsx](../../apps/desktop/src/renderer/src/components/settings-network-test.tsx))
+  rather than a separate wizard, so it runs immediately after saving a connection or any time later.
+  Main-process stage classification ([connection-test.electron.ts](../../apps/desktop/src/main/network/connection-test.electron.ts),
+  11 tests) over a new `network:test-connection` IPC (zod-validated request, `ConnectionTestResultSchema`
+  in `@tepegoz/shared-types`, `safeParse`d again at the renderer boundary — degrades to "could not be
+  read" rather than trusting a malformed shape). **Two stages are real and independently distinguished:**
+  `configParse` re-runs the EXACT synchronous checks a connection already passed at add time (WireGuard
+  secret decrypt + `parseWireGuardConfig`, a Tor upstream's continued existence) with no network attempt;
+  `handshake` is the connection pool's own `ensureUp` — the same call the manual Connect button makes,
+  not a second way to bring a tunnel up. Every failed stage renders the SAME localized sentence
+  `classifyNetworkError` already produces for the connections overview's `lastError`, never raw
+  provider text as the primary message (kept on `title=`). **DNS and exit reachability are NOT built
+  as independent stages, and stay `[~]` for that reason.** The only reusable signal past a successful
+  handshake is `ensureTunnelSession`'s `resolveProxy` check (already inside `ensureUp`) — proof the
+  session's proxy config took effect, not that the tunnel can resolve a name or reach a real
+  destination. Turning either into a real, distinct check would mean adding new probing logic inside
+  the connection pool's connect path, which this change deliberately does not touch (scoped down per
+  this task's own instruction rather than fabricating a pass). Both fold into one coarse `reachability`
+  result (`unverified` on a successful handshake, `notReached` otherwise), shown as its own honest
+  sentence rather than a third stage. en+tr, `keyPaths`-parity tested; each stage's pass/fail/skip
+  state is named in text next to its icon, never colour alone. 6 test files touched (3 new: the
+  main-process stage classifier, the renderer's `parseConnectionTestResult`, and the component;
+  3 extended: `ipc-network`, the preload bridge, the connections overview), 26 new tests across
+  main, preload, and renderer._
 - [x] **Connection health over time** — keep-alive, reconnect, and per-connection metrics (handshake
       success rate, reconnect count, last error) surfaced in the connections overview, so a tunnel that dies
       quietly is visible instead of being discovered through a leak. _Landed 2026-09-08: the pool tracks
@@ -520,64 +520,64 @@ endpoint** (one loopback port per active connection), never an OS-level system p
   links back. **Turkish half owed** — the repo has no bilingual-docs mechanism and inventing one is
   out of this box's scope; box kept `[~]`._
 - [~] **"Slow" needs a cause, not a spinner.** When a tunnelled tab is slow the user cannot tell whether it
-      is relay latency, a bridge, the site blocking the exit, or the tunnel itself half-down — and the Tor
-      corpus shows that ambiguity is what turns a slow session into an abandoned product. Attribute it: the
-      connection panel names the likely cause from what is already measured (handshake time, health poll,
-      HTTP status class from the exit).
-      _Landed 2026-09-22: a pure, main-computed classifier
-      ([slow-cause-classifier.ts](../../packages/security-policy/src/slow-cause-classifier.ts), 15 tests)
-      resolves one of a closed set — `relay_latency`, `bridge_or_bootstrap`, `exit_blocked_by_site`,
-      `tunnel_degraded`, `insufficient_signal` (`SLOW_CAUSES` in
-      [`shared-types/network-privacy.ts`](../../packages/shared-types/src/network-privacy.ts), the only
-      schema source per this repo's rule) — from signals the pool already tallies: live status, the
-      health-poll heartbeat (stale-vs-never distinguished), and this session's drop/reconnect counts. A
-      connection that is simultaneously slow AND unhealthy always reports `tunnel_degraded`, never
-      `relay_latency` — the more actionable explanation wins by construction, not by luck of evaluation
-      order (pinned by a dedicated boundary-case test group). Computed in
-      [`ipc-network.ts`](../../apps/desktop/src/main/ipc/ipc-network.ts)'s `connectionViews()` — no new
-      code in the pool itself, so this cannot touch how a tunnel connects, is health-polled, or fails
-      closed — and pushed over the existing `network:get-state` read, `safeParse`d at the renderer
-      boundary (`parseSlowCause`, degrading an unrecognised code to the same text as
-      `insufficient_signal` rather than throwing or showing a raw identifier). Surfaced as one localized
-      (en+tr) sentence, `network.slowCause.*`, in the Connections overview's health card
-      ([settings-network-health.tsx](../../apps/desktop/src/renderer/src/components/settings-network-health.tsx)),
-      shown only while a connection is `up` (a `down`/`connecting` connection already says so via its
-      status badge, so the row would just repeat it). **Honest gap, not silently dropped:** the phase
-      doc's third named signal — HTTP status class from the exit — has no producer anywhere in this
-      codebase; tallying per-connection response codes is new `webRequest` measurement plumbing, out of
-      this box's explicit scope ("do not invent new measurement plumbing"). The classifier accepts
-      `recentExitStatusClass` and `exit_blocked_by_site` is real and independently tested, but production
-      always passes `null` for it today — same stated-not-wired shape as this phase's `setTunnelAgentFactory`
-      seam above. Kept `[~]` for exactly that: two of the three named signals are live, the third is a
-      reachable, tested, but unwired branch._
+  is relay latency, a bridge, the site blocking the exit, or the tunnel itself half-down — and the Tor
+  corpus shows that ambiguity is what turns a slow session into an abandoned product. Attribute it: the
+  connection panel names the likely cause from what is already measured (handshake time, health poll,
+  HTTP status class from the exit).
+  _Landed 2026-09-22: a pure, main-computed classifier
+  ([slow-cause-classifier.ts](../../packages/security-policy/src/slow-cause-classifier.ts), 15 tests)
+  resolves one of a closed set — `relay_latency`, `bridge_or_bootstrap`, `exit_blocked_by_site`,
+  `tunnel_degraded`, `insufficient_signal` (`SLOW_CAUSES` in
+  [`shared-types/network-privacy.ts`](../../packages/shared-types/src/network-privacy.ts), the only
+  schema source per this repo's rule) — from signals the pool already tallies: live status, the
+  health-poll heartbeat (stale-vs-never distinguished), and this session's drop/reconnect counts. A
+  connection that is simultaneously slow AND unhealthy always reports `tunnel_degraded`, never
+  `relay_latency` — the more actionable explanation wins by construction, not by luck of evaluation
+  order (pinned by a dedicated boundary-case test group). Computed in
+  [`ipc-network.ts`](../../apps/desktop/src/main/ipc/ipc-network.ts)'s `connectionViews()` — no new
+  code in the pool itself, so this cannot touch how a tunnel connects, is health-polled, or fails
+  closed — and pushed over the existing `network:get-state` read, `safeParse`d at the renderer
+  boundary (`parseSlowCause`, degrading an unrecognised code to the same text as
+  `insufficient_signal` rather than throwing or showing a raw identifier). Surfaced as one localized
+  (en+tr) sentence, `network.slowCause.*`, in the Connections overview's health card
+  ([settings-network-health.tsx](../../apps/desktop/src/renderer/src/components/settings-network-health.tsx)),
+  shown only while a connection is `up` (a `down`/`connecting` connection already says so via its
+  status badge, so the row would just repeat it). **Honest gap, not silently dropped:** the phase
+  doc's third named signal — HTTP status class from the exit — has no producer anywhere in this
+  codebase; tallying per-connection response codes is new `webRequest` measurement plumbing, out of
+  this box's explicit scope ("do not invent new measurement plumbing"). The classifier accepts
+  `recentExitStatusClass` and `exit_blocked_by_site` is real and independently tested, but production
+  always passes `null` for it today — same stated-not-wired shape as this phase's `setTunnelAgentFactory`
+  seam above. Kept `[~]` for exactly that: two of the three named signals are live, the third is a
+  reachable, tested, but unwired branch._
 - [~] **A compatibility disclosure layer, because the exit IP is the problem the user will actually hit.**
-      CAPTCHA loops, account lockouts and Cloudflare walls are the single most visible complaint cluster
-      against Tor — and they arrive here too, since a shared exit address is what triggers them. Say it at
-      the moment it happens ("this site is challenging the exit address, not you"), and connect it to the
-      existing [ADR-0039](../../docs/adr/0039-user-granted-sensitive-capabilities.md) Human Handoff path
-      rather than letting an agent run grind against a wall it cannot pass. Also worth stating: an
-      **agent** run on a Tor-routed tab will hit these far more often than a human will.
-      _**Agent path landed 2026-09-22:** the existing Human Handoff Controller (`detectHandoff` →
-      Executor `guard` → `'handoff'` StopReason, phase-1a) now appends the exit-IP clause to the
-      **CAPTCHA-shaped** handoff message ONLY when the triggering tab's resolved binding is non-Direct
-      (VPN, Tor, or chained — read via the same `BindingService.resolveFor`/`resolveBinding` the per-tab
-      tunnel badge reads, never re-derived or renderer-trusted). 2FA/OTP and login-wall handoffs, and a
-      CAPTCHA on a Direct tab, are byte-for-byte unchanged. New seam: `AgentRunDeps.tabTunneled` +
-      `.captchaTunnelDisclosure` (`packages/agent-runtime/src/agent-runtime-types.ts`), consumed by
-      `handoffMessageFor` (`packages/agent-runtime/src/agent-runtime-loop.ts`) and wired in
-      `apps/desktop/src/main/agent/agent-service.electron.ts` via a `tabTunneled` reader over
-      `BindingService.resolveFor(tabId).resolved.connectionId !== null`. The clause also states the
-      "an agent hits this more than a human" point inline (no second UI surface). en/tr in
-      `extensions/ext-agent/src/i18n/{en,tr}.ts` (`handoff.captchaTunnelDisclosure`), i18n-parity test
-      green. 8 new `handoffMessageFor` unit tests (captcha×tunneled/direct/no-dep matrix, 2fa/login
-      unaffected, explicit-tabId resolution) in `agent-runtime-loop.test.ts`; `agent-service.electron.test.ts`
-      extended to assert the wiring. Detection logic, the StopReason/journal mechanism, and tunnel
-      routing/kill-switch code are untouched — this is messaging/attribution only, no auto-solve.
-      **Not done:** the human-facing surface for a person's OWN manual CAPTCHA encounter on a tunneled
-      tab (the phase's "user will actually hit" framing). There is no existing browser-chrome CAPTCHA/
-      challenge signal to hook into today (checked: nothing in `apps/desktop/src/renderer` detects a
-      CAPTCHA) — building one would be a second, standalone detection surface, which is out of this box's
-      scope. Left as `[~]` pending that surface or an owner call that the agent path is sufficient for now._
+  CAPTCHA loops, account lockouts and Cloudflare walls are the single most visible complaint cluster
+  against Tor — and they arrive here too, since a shared exit address is what triggers them. Say it at
+  the moment it happens ("this site is challenging the exit address, not you"), and connect it to the
+  existing [ADR-0039](../../docs/adr/0039-user-granted-sensitive-capabilities.md) Human Handoff path
+  rather than letting an agent run grind against a wall it cannot pass. Also worth stating: an
+  **agent** run on a Tor-routed tab will hit these far more often than a human will.
+  _**Agent path landed 2026-09-22:** the existing Human Handoff Controller (`detectHandoff` →
+  Executor `guard` → `'handoff'` StopReason, phase-1a) now appends the exit-IP clause to the
+  **CAPTCHA-shaped** handoff message ONLY when the triggering tab's resolved binding is non-Direct
+  (VPN, Tor, or chained — read via the same `BindingService.resolveFor`/`resolveBinding` the per-tab
+  tunnel badge reads, never re-derived or renderer-trusted). 2FA/OTP and login-wall handoffs, and a
+  CAPTCHA on a Direct tab, are byte-for-byte unchanged. New seam: `AgentRunDeps.tabTunneled` +
+  `.captchaTunnelDisclosure` (`packages/agent-runtime/src/agent-runtime-types.ts`), consumed by
+  `handoffMessageFor` (`packages/agent-runtime/src/agent-runtime-loop.ts`) and wired in
+  `apps/desktop/src/main/agent/agent-service.electron.ts` via a `tabTunneled` reader over
+  `BindingService.resolveFor(tabId).resolved.connectionId !== null`. The clause also states the
+  "an agent hits this more than a human" point inline (no second UI surface). en/tr in
+  `extensions/ext-agent/src/i18n/{en,tr}.ts` (`handoff.captchaTunnelDisclosure`), i18n-parity test
+  green. 8 new `handoffMessageFor` unit tests (captcha×tunneled/direct/no-dep matrix, 2fa/login
+  unaffected, explicit-tabId resolution) in `agent-runtime-loop.test.ts`; `agent-service.electron.test.ts`
+  extended to assert the wiring. Detection logic, the StopReason/journal mechanism, and tunnel
+  routing/kill-switch code are untouched — this is messaging/attribution only, no auto-solve.
+  **Not done:** the human-facing surface for a person's OWN manual CAPTCHA encounter on a tunneled
+  tab (the phase's "user will actually hit" framing). There is no existing browser-chrome CAPTCHA/
+  challenge signal to hook into today (checked: nothing in `apps/desktop/src/renderer` detects a
+  CAPTCHA) — building one would be a second, standalone detection surface, which is out of this box's
+  scope. Left as `[~]` pending that surface or an owner call that the agent path is sufficient for now._
 - [ ] _Independent confirmation:_ the Tor complaint corpus reaches the **same** conclusion Freenet's does —
       the heaviest user pain is not anonymity theory, it is installing, connecting and staying connected.
       Two unrelated anonymity products failing the same way is the strongest evidence this section has.

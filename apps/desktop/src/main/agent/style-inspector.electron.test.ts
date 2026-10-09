@@ -10,11 +10,13 @@ import type { RefTarget } from './cdp-driver-schemas.electron';
  * `null` rather than being trusted or throwing.
  */
 
-function fakeWebContents(opts: {
-  destroyed?: boolean;
-  result?: unknown;
-  reject?: Error;
-} = {}): { wc: WebContents; calls: unknown[][]; debuggerSendCommand: ReturnType<typeof vi.fn> } {
+function fakeWebContents(
+  opts: {
+    destroyed?: boolean;
+    result?: unknown;
+    reject?: Error;
+  } = {},
+): { wc: WebContents; calls: unknown[][]; debuggerSendCommand: ReturnType<typeof vi.fn> } {
   const calls: unknown[][] = [];
   const debuggerSendCommand = vi.fn(() => Promise.reject(new Error('CDP must not be used here')));
   const wc = {

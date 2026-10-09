@@ -210,7 +210,10 @@ describe('ToolGateway.invoke', () => {
     register({ id: 'browser_get_page', dangerClass: 'read' });
     await ToolGateway.invoke('browser_get_page', {}, { targetUrl: 'https://a.example/page' });
     expect(entries).toContainEqual(
-      expect.objectContaining({ toolName: 'browser_get_page', targetUrl: 'https://a.example/page' }),
+      expect.objectContaining({
+        toolName: 'browser_get_page',
+        targetUrl: 'https://a.example/page',
+      }),
     );
 
     // A call with no site context carries no `targetUrl` at all — never a fabricated one.
@@ -224,11 +227,7 @@ describe('ToolGateway.invoke', () => {
     ToolGateway.setAuditHandler((e) => entries.push(e));
     ToolGateway.setConfirmHandler(() => Promise.resolve(true));
     register({ id: 'form_update_field', dangerClass: 'state_changing' });
-    await ToolGateway.invoke(
-      'form_update_field',
-      {},
-      { targetUrl: 'https://a.example/checkout' },
-    );
+    await ToolGateway.invoke('form_update_field', {}, { targetUrl: 'https://a.example/checkout' });
     expect(entries).toHaveLength(2);
     expect(entries[0]?.targetUrl).toBe('https://a.example/checkout');
     expect(entries[0]?.outcome).toBeUndefined();

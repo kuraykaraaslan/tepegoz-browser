@@ -131,7 +131,9 @@ describe('parseTrustProfilesImport', () => {
   });
 
   it('returns an all-skipped result (not a throw) for a list of only bad entries', () => {
-    const { profiles, skipped } = parseTrustProfilesImport(JSON.stringify([{ nope: 1 }, { nope: 2 }]));
+    const { profiles, skipped } = parseTrustProfilesImport(
+      JSON.stringify([{ nope: 1 }, { nope: 2 }]),
+    );
     expect(profiles).toEqual([]);
     expect(skipped).toBe(2);
   });

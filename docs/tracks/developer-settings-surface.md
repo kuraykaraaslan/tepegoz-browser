@@ -52,11 +52,11 @@ developer, experimental, and flag-level detail included.
 
 That phrase is four different surfaces, and only some of them can safely become a UI toggle:
 
-| Tier                                | What                                                                                                                | Today                                                                                           | Exposable in Developer?                                                            |
-| ----------------------------------- | ------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
-| **A. Preferences**                  | the zod schema — ~60 top-level keys ([`preferences.model.ts`](../../packages/preferences/src/preferences.model.ts)) | Developer table already lists **all** of them, flat                                             | ✅ present — needs enrichment                                                      |
-| **B. Chromium switches / features** | `--enable-features`, `chrome://flags`-style toggles                                                                 | only `KEEP_RENDERING_SWITCHES`, hardcoded in [`index.ts`](../../apps/desktop/src/main/index.ts) | ✅ new `chromiumFlags` pref — **the real `chrome://flags` analog**, allowlist-only |
-| **C. Per-tab `webPreferences`**     | [`browsedViewWebPreferences()`](../../apps/desktop/src/main/tabs-shared.ts) — a hardened constant                   | fixed at creation                                                                               | ⚠️ **safe subset only**; four keys permanently locked (ADR-0041)                   |
+| Tier                                | What                                                                                                                | Today                                                                                                         | Exposable in Developer?                                                                             |
+| ----------------------------------- | ------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| **A. Preferences**                  | the zod schema — ~60 top-level keys ([`preferences.model.ts`](../../packages/preferences/src/preferences.model.ts)) | Developer table already lists **all** of them, flat                                                           | ✅ present — needs enrichment                                                                       |
+| **B. Chromium switches / features** | `--enable-features`, `chrome://flags`-style toggles                                                                 | only `KEEP_RENDERING_SWITCHES`, hardcoded in [`index.ts`](../../apps/desktop/src/main/index.ts)               | ✅ new `chromiumFlags` pref — **the real `chrome://flags` analog**, allowlist-only                  |
+| **C. Per-tab `webPreferences`**     | [`browsedViewWebPreferences()`](../../apps/desktop/src/main/tabs-shared.ts) — a hardened constant                   | fixed at creation                                                                                             | ⚠️ **safe subset only**; four keys permanently locked (ADR-0041)                                    |
 | **D. `session.*` defaults**         | spellcheck languages, cache, DoH, permission defaults                                                               | telemetry, Safe Browsing, default network route mirrored (2026-09-22); the rest has no owning Settings UI yet | ✅ mirror (read) + deep-link to the owning section — **3 rows landed, not the full list in "What"** |
 
 ## The security line (non-negotiable — CLAUDE.md, ADR-0041)
@@ -114,11 +114,11 @@ Safe-to-expose `webPreferences` / `session` subset: `backgroundThrottling`, `plu
      - **Safe Browsing** (`prefs.safeBrowsingEnabled`) → deep-links to `tepegoz://settings#privacy`.
      - **Default network route** (`getNetworkState().general`, direct vs. a named connection) →
        deep-links to `tepegoz://settings#network-privacy`.
-     All three read off IPC the owning Settings page already calls (`getPreferences` for the first two —
-     `prefs` the Developer page already fetches, no read even needed on this card's part — and
-     `getNetworkState`/`onNetworkState` for the third, the same pair `settings-network-privacy.tsx`
-     uses). The deep-link itself is `window.tepegoz.navigateTab('tepegoz://settings#<section>')`, the
-     same call `SiteInfoPopup.tsx`'s "Site settings" row already made — no new navigation primitive.
+       All three read off IPC the owning Settings page already calls (`getPreferences` for the first two —
+       `prefs` the Developer page already fetches, no read even needed on this card's part — and
+       `getNetworkState`/`onNetworkState` for the third, the same pair `settings-network-privacy.tsx`
+       uses). The deep-link itself is `window.tepegoz.navigateTab('tepegoz://settings#<section>')`, the
+       same call `SiteInfoPopup.tsx`'s "Site settings" row already made — no new navigation primitive.
    - **Considered and deferred**, because none has an owning Settings UI to deep-link to today (mirroring
      one would mean fabricating a destination, which this tier exists to refuse to do):
      - **Spellcheck languages** — grep of the renderer and `apps/desktop/src/main` confirms no spellcheck

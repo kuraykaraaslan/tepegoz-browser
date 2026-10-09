@@ -206,7 +206,7 @@ Prior art gives us the shape of the win without the claim: browser-use's TSV ser
       (`browser-host.electron.test.ts`, +1 test plus one assertion added to the existing
       destroyed-tab-tolerance test), and `registerBrowserTools` (`browser-tools.test.ts`, +5 tests). 40
       new tests total; `pnpm exec turbo run typecheck lint test --filter=@tepegoz/browser-tools
-      --filter=@tepegoz/desktop` green (one unrelated flake seen once in the full-suite run — a stray
+--filter=@tepegoz/desktop` green (one unrelated flake seen once in the full-suite run — a stray
       `setTimeout` in `PermissionsCenter.tsx` firing during `SettingsPage.test.tsx`, in files this PR
       never touches; it passed both in isolation and on an immediate full-suite re-run). On-harness
       measurement (does this tool actually reduce steps/tokens vs. a `browser_get_elements` full read on

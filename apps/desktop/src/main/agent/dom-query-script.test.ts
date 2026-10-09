@@ -47,7 +47,8 @@ function descendants(node: { children: FakeEl[] }): FakeEl[] {
 function matchesOne(el: FakeEl, sel: string): boolean {
   const trimmed = sel.trim();
   if (trimmed.startsWith('#')) return el.attrsDict['id'] === trimmed.slice(1);
-  if (trimmed.startsWith('.')) return (el.attrsDict['class'] ?? '').split(' ').includes(trimmed.slice(1));
+  if (trimmed.startsWith('.'))
+    return (el.attrsDict['class'] ?? '').split(' ').includes(trimmed.slice(1));
   if (trimmed.startsWith('[')) {
     const m = /^\[([^=\]]+)(?:="([^"]*)")?\]$/.exec(trimmed);
     if (m === null) return false;
@@ -55,11 +56,15 @@ function matchesOne(el: FakeEl, sel: string): boolean {
     if (name === undefined) return false;
     return value === undefined ? name in el.attrsDict : el.attrsDict[name] === value;
   }
-  if (trimmed === 'INVALID_SELECTOR[[[') throw new Error("'INVALID_SELECTOR[[[' is not a valid selector");
+  if (trimmed === 'INVALID_SELECTOR[[[')
+    throw new Error("'INVALID_SELECTOR[[[' is not a valid selector");
   return el.tagName.toLowerCase() === trimmed;
 }
 
-function fakeEvaluate(expr: string, root: FakeDoc): { snapshotLength: number; snapshotItem: (i: number) => unknown } {
+function fakeEvaluate(
+  expr: string,
+  root: FakeDoc,
+): { snapshotLength: number; snapshotItem: (i: number) => unknown } {
   if (expr === 'INVALID[[[XPATH') throw new Error('The string did not match the expected pattern.');
   const m = /^\/\/([a-zA-Z][a-zA-Z0-9]*)(?:\[@([a-zA-Z-]+)="([^"]*)"\])?$/.exec(expr);
   const items: unknown[] = [];
@@ -102,7 +107,9 @@ function run(
 
 describe('buildDomQueryExpression', () => {
   it('produces a syntactically valid, self-contained JS expression', () => {
-    expect(() => new vm.Script(`(${buildDomQueryExpression('div', 'css', [], 200)})`)).not.toThrow();
+    expect(
+      () => new vm.Script(`(${buildDomQueryExpression('div', 'css', [], 200)})`),
+    ).not.toThrow();
   });
 
   it('is an IIFE (evaluatable expression, not a statement)', () => {
@@ -112,7 +119,9 @@ describe('buildDomQueryExpression', () => {
   });
 
   it('CSS: finds matches and reports {tag, attributes, existingRef: null, path} — no innerText/innerHTML', () => {
-    const doc = buildDoc(makeEl('body', {}, [makeEl('div', { id: 'a' }), makeEl('div', { id: 'b' })]));
+    const doc = buildDoc(
+      makeEl('body', {}, [makeEl('div', { id: 'a' }), makeEl('div', { id: 'b' })]),
+    );
     const result = run('div', 'css', doc) as { ok: true; total: number; matches: unknown[] };
     expect(result.ok).toBe(true);
     expect(result.total).toBe(2);
@@ -139,7 +148,9 @@ describe('buildDomQueryExpression', () => {
   });
 
   it('an untracked match gets path computed (light-DOM child-index address) for the host to mint a ref from', () => {
-    const doc = buildDoc(makeEl('body', {}, [makeEl('div', {}, []), makeEl('span', { class: 'x' }, [])]));
+    const doc = buildDoc(
+      makeEl('body', {}, [makeEl('div', {}, []), makeEl('span', { class: 'x' }, [])]),
+    );
     const result = run('.x', 'css', doc) as { matches: Record<string, unknown>[] };
     // document.children[0] is <body> (index 0), <span> is body's 2nd child (index 1) — one segment.
     expect(result.matches[0]?.['path']).toEqual([[0, 1]]);
@@ -183,7 +194,11 @@ describe('buildDomQueryExpression', () => {
 
   it('XPath: finds matches via document.evaluate and reports the same shape as CSS', () => {
     const doc = buildDoc(makeEl('body', {}, [makeEl('div', { 'data-x': 'y' })]));
-    const result = run('//div[@data-x="y"]', 'xpath', doc) as { ok: true; total: number; matches: Record<string, unknown>[] };
+    const result = run('//div[@data-x="y"]', 'xpath', doc) as {
+      ok: true;
+      total: number;
+      matches: Record<string, unknown>[];
+    };
     expect(result.ok).toBe(true);
     expect(result.total).toBe(1);
     expect(result.matches[0]?.['tag']).toBe('div');

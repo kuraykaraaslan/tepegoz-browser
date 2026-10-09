@@ -3,7 +3,10 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import type { EventInput } from '@tepegoz/shared-types';
 import { openDatabase, migrate, EventJournal, MetaStore, type Db } from './index';
 
-function makeEvent(correlationId: string, type: EventInput['type'] = 'AgentStepExecuted'): EventInput {
+function makeEvent(
+  correlationId: string,
+  type: EventInput['type'] = 'AgentStepExecuted',
+): EventInput {
   return {
     id: randomUUID(),
     type,
