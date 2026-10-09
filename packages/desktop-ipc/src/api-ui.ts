@@ -96,7 +96,8 @@ export interface UiApi {
    * unparseable or internal page comes back with the null-heavy shape.
    */
   getPageInfo(url: string): Promise<PageInfo | null>;
-  // Bookmarks. Only http(s) pages are bookmarkable (internal tepegoz:// pages are rejected in main).
+  // Bookmarks. A scheme allow-list (`isBookmarkable`): http(s), file:// and trusted tepegoz:// pages are
+  // bookmarkable; javascript:/data:/blob:/about: and the like are refused in main.
   /** Clear browsing data over a time range. Returns what was actually removed, per category. */
   clearBrowsingData(request: BrowsingDataClearRequest): Promise<BrowsingDataClearResult>;
   /** Data Rights: search the local Agent Conversation history + Event Journal for a subject and write a
