@@ -49,7 +49,7 @@ Legend: **C** Chrome · **B** Brave · **S** Safari · **F** Firefox · _all_ = 
 | Gap                                                             | Ships in | Today                                                                                      | Home            |
 | --------------------------------------------------------------- | -------- | ------------------------------------------------------------------------------------------ | --------------- |
 | "Open links in a new **tab** instead of a new window"           | F/S      | **Already true** — plain http(s) popups become tabs; only scriptable/POST/geometry popups open natively | 2b              |
-| "When I open a link in a new tab, **switch to it immediately**" | F/S      | **Built** (`switchToLinkTabs`, on by default)                                              | 2b              |
+| "When I open a link in a new tab, **switch to it immediately**" | F/S      | **Built** (`switchToLinkTabs`, on by default; e2e-verified)                                              | 2b              |
 | Ctrl+Tab cycles tabs in **most-recently-used** order            | F        | positional by default; MRU order is a setting (no switcher overlay)                         | 2b              |
 | Tab **hover preview / thumbnail cards**                         | C/F      | —                                                                                          | 2b              |
 | **Saved / named tab groups** management surface                 | C/S/F    | groups exist ([ADR-0020](../../docs/adr/0020-tab-boundary-model.md)); no settings for them | 2b (workspaces) |

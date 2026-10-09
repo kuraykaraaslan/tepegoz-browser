@@ -207,7 +207,7 @@ work lives in Phase 2; agent orchestration (multi-tab parallelism) stays in Phas
         addresses, one per line). The first opens focused, the rest behind it; an empty list is one New
         Tab page; safe mode ignores the list. The schema refuses anything that is not a navigable web
         address, so a hand-edited preferences file cannot make startup navigate to `javascript:`/`file:`.
-  - [x] _Landed 2026-10-09 (unit-tested, not run in the packaged app):_ **"switch to a new tab opened from
+  - [x] _Landed 2026-10-09 (unit-tested; **e2e-verified** in `e2e/link-tab-focus.spec.ts` with real mouse input):_ **"switch to a new tab opened from
         a link"** — Preferences, on by default (`switchToLinkTabs`, the long-standing behaviour). Off, a
         plain `target=_blank` / `window.open` tab opens in the background; Ctrl/middle-click is always
         background. "Open links in a tab not a window" needed no work: plain http(s) popups already become
