@@ -25,6 +25,7 @@ export const host = () => ({
   emitState: vi.fn(),
   closeTab: vi.fn(),
   activateAdjacentTab: vi.fn(),
+  endTabCycle: vi.fn(),
   activateTabAtPosition: vi.fn(),
   isPrivate: false,
 });

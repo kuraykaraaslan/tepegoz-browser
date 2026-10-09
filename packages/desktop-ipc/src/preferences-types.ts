@@ -117,6 +117,9 @@ export type StartupMode = 'window' | 'background' | 'kiosk';
 /** What a normal launch opens: the tabs of the last session, or one fresh New Tab page. */
 export type StartupTabs = 'restore' | 'newtab';
 
+/** How Ctrl+Tab walks the tabs: strip order, or most recently used first. */
+export type TabSwitchOrder = 'positional' | 'recent';
+
 export interface Preferences {
   theme: ThemePref;
   /**
@@ -274,6 +277,8 @@ export interface Preferences {
   startupMode: StartupMode;
   /** Which tabs a normal launch opens. Safe mode never restores whatever this says (ADR-0038). */
   startupTabs: StartupTabs;
+  /** Ctrl+Tab / Ctrl+Shift+Tab order. Ctrl+PageUp/PageDown always follow the strip. */
+  tabSwitchOrder: TabSwitchOrder;
   /** The URL kiosk mode loads fullscreen with no chrome. Only used when `startupMode` is `kiosk`. */
   kioskUrl: string;
   /** Start Tepegöz automatically at system login (Windows Run key / macOS login item / Linux XDG

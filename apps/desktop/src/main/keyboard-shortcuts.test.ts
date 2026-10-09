@@ -35,7 +35,7 @@ const commands = vi.hoisted(() => ({
 }));
 vi.mock('./page-commands', () => commands);
 
-const { handleWindowShortcut } = await import('./keyboard-shortcuts');
+const { handleWindowShortcut, handleWindowKeyUp } = await import('./keyboard-shortcuts');
 
 /** A `before-input-event` Input with every modifier explicit — the shape the matcher reduces. */
 function press(key: string, mods: Partial<Omit<Input, 'type' | 'key'>> = {}): Input {
@@ -218,15 +218,34 @@ describe('the window-level shortcuts', () => {
   });
 
   it.each([
-    ['Tab', { control: true }, 1],
-    ['PageDown', { control: true }, 1],
-    ['Tab', { control: true, shift: true }, -1],
-    ['PageUp', { control: true }, -1],
-    ['Tab', { meta: true }, 1],
-  ] as const)('%s with %j steps the tab by %i', (key, mods, delta) => {
+    ['Tab', { control: true }, 1, 'tab'],
+    ['PageDown', { control: true }, 1, 'page'],
+    ['Tab', { control: true, shift: true }, -1, 'tab'],
+    ['PageUp', { control: true }, -1, 'page'],
+    ['Tab', { meta: true }, 1, 'tab'],
+  ] as const)('%s with %j steps the tab by %i (via %s)', (key, mods, delta, via) => {
     const activateAdjacentTab = vi.fn();
     expect(handleWindowShortcut(win, press(key, mods), { page, activateAdjacentTab })).toBe(true);
-    expect(activateAdjacentTab).toHaveBeenCalledWith(delta);
+    // Only the Tab key follows the "recent" preference; PageUp/PageDown stay on the strip.
+    expect(activateAdjacentTab).toHaveBeenCalledWith(delta, via);
+  });
+
+  it.each(['Control', 'Meta'])(
+    'releasing %s ends a recent-order walk, without consuming the key',
+    (key) => {
+      const endTabCycle = vi.fn();
+      const up: Input = { ...press(key), type: 'keyUp' };
+      handleWindowKeyUp(up, { page, endTabCycle });
+      expect(endTabCycle).toHaveBeenCalledTimes(1);
+    },
+  );
+
+  it('does not end the walk for another key, a key-down, or when no tab model is wired', () => {
+    const endTabCycle = vi.fn();
+    handleWindowKeyUp({ ...press('Shift'), type: 'keyUp' }, { page, endTabCycle });
+    handleWindowKeyUp(press('Control'), { page, endTabCycle }); // keyDown
+    expect(endTabCycle).not.toHaveBeenCalled();
+    expect(() => handleWindowKeyUp({ ...press('Control'), type: 'keyUp' }, { page })).not.toThrow();
   });
 
   it('Ctrl+1…8 select that tab and Ctrl+9 selects the LAST one', () => {

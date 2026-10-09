@@ -10,7 +10,7 @@ import { openPrivateWindow, setPrivateWindowOpener } from './private-window-open
 import { isQuitting } from './quit-state';
 import { notifyHiddenToTrayOnce } from './tray';
 import { reconcileTrayPowerBlocker } from './power-lifecycle';
-import { handleWindowShortcut } from './keyboard-shortcuts';
+import { handleWindowKeyUp, handleWindowShortcut } from './keyboard-shortcuts';
 import { handleZoomShortcut } from './site-zoom';
 import NotificationHost from './notifications/notification-host';
 import PasswordHost from './password/password-host';
@@ -110,7 +110,9 @@ export function openWindow(opts?: {
       // Through the model, not `pageWc`: the omnibox often holds focus when Ctrl+R is pressed on a
       // `tepegoz://…` tab, whose webContents `activeWebContents()` never returns.
       reloadActiveTab: (hard: boolean) => tabs?.reloadActive(hard),
-      activateAdjacentTab: (delta: 1 | -1) => tabs?.activateAdjacentTab(delta),
+      activateAdjacentTab: (delta: 1 | -1, via: 'tab' | 'page') =>
+        tabs?.activateAdjacentTab(delta, via),
+      endTabCycle: () => tabs?.endTabCycle(),
       activateTabAtPosition: (position: number | 'last') => tabs?.activateTabAtPosition(position),
       closeActiveTab: () => {
         const activeId = tabs?.getState().activeId ?? null;
@@ -118,6 +120,7 @@ export function openWindow(opts?: {
       },
       openPrivateWindow,
     };
+    handleWindowKeyUp(input, targets);
     if (handleWindowShortcut(win, input, targets)) event.preventDefault();
   });
   // Close-to-tray: the X button hides the window (keeping every tab rendering for the agent) instead of

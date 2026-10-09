@@ -20,7 +20,8 @@ const handleWindowShortcut = vi.hoisted(() =>
     () => false,
   ),
 );
-vi.mock('./keyboard-shortcuts', () => ({ handleWindowShortcut }));
+const handleWindowKeyUp = vi.hoisted(() => vi.fn());
+vi.mock('./keyboard-shortcuts', () => ({ handleWindowShortcut, handleWindowKeyUp }));
 
 const openPrivateWindow = vi.hoisted(() => vi.fn());
 vi.mock('./private-window-opener', () => ({ openPrivateWindow }));

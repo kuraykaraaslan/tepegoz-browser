@@ -92,7 +92,9 @@ vi.mock('./tabs-internal-page-view', () => ({
   unwireInternalPageView: vi.fn(),
 }));
 vi.mock('./navigation/unload-broker', () => ({ askBeforeClose: vi.fn() }));
+const switchOrder = vi.hoisted((): { v: 'positional' | 'recent' } => ({ v: 'positional' }));
 vi.mock('./tabs-shared', () => ({
+  tabSwitchOrder: () => switchOrder.v,
   rememberClosedTab: vi.fn(),
   internalBaseUrl: (u: string) => u,
   internalTitleFor: () => 'Internal',
@@ -196,6 +198,7 @@ let wc: Wc;
 beforeEach(() => {
   vi.clearAllMocks();
   devVerdict.v = { allowed: true };
+  switchOrder.v = 'positional';
   navUrl.internalPageUrl.mockReturnValue(null);
   tabs = new Harness(fakeWindow() as never, false);
   wc = mkWc();
@@ -546,5 +549,82 @@ describe('keyboard tab switching', () => {
     ).viewWiringHost();
     host.activateAdjacentTab(1);
     expect(tabs.activeId()).toBe(b);
+  });
+});
+
+describe('keyboard tab switching in recent order', () => {
+  /** Four tabs, visited a → b → c → d, so the history is d, c, b, a (d current). */
+  function visited(): [string, string, string, string] {
+    const ids = [tabs.addWeb(), tabs.addWeb(), tabs.addWeb(), tabs.addWeb()] as [
+      string,
+      string,
+      string,
+      string,
+    ];
+    for (const id of ids) tabs.activate(id);
+    return ids;
+  }
+
+  it('Ctrl+Tab toggles to the previous tab, and a quick second round toggles back', () => {
+    switchOrder.v = 'recent';
+    const [, , c, d] = visited();
+    tabs.activateAdjacentTab(1, 'tab');
+    expect(tabs.activeId()).toBe(c);
+    tabs.endTabCycle(); // Ctrl released
+    tabs.activateAdjacentTab(1, 'tab');
+    expect(tabs.activeId()).toBe(d);
+  });
+
+  it('holding Ctrl walks deeper into history, and releasing makes the landing tab the most recent', () => {
+    switchOrder.v = 'recent';
+    const [a, b, , d] = visited();
+    tabs.activateAdjacentTab(1, 'tab');
+    tabs.activateAdjacentTab(1, 'tab');
+    expect(tabs.activeId()).toBe(b);
+    tabs.activateAdjacentTab(1, 'tab');
+    expect(tabs.activeId()).toBe(a);
+    tabs.activateAdjacentTab(-1, 'tab'); // Shift+Tab steps back toward the newest
+    expect(tabs.activeId()).toBe(b);
+    tabs.endTabCycle();
+    // History is now b, d, c, a — so the next walk's first step is d, the tab we were on before b.
+    tabs.activateAdjacentTab(1, 'tab');
+    expect(tabs.activeId()).toBe(d);
+  });
+
+  it('PageUp/PageDown keep following the strip in recent mode', () => {
+    switchOrder.v = 'recent';
+    const [a, b, , d] = visited();
+    tabs.activate(a);
+    tabs.activateAdjacentTab(1, 'page');
+    expect(tabs.activeId()).toBe(b);
+    tabs.activate(d);
+    tabs.activateAdjacentTab(1, 'page'); // wraps to the first
+    expect(tabs.activeId()).toBe(a);
+  });
+
+  it('the Tab key stays positional unless the preference says otherwise', () => {
+    const [a, b] = visited();
+    tabs.activate(a);
+    tabs.activateAdjacentTab(1, 'tab');
+    expect(tabs.activeId()).toBe(b);
+  });
+
+  it('clicking a tab mid-walk ends the walk and makes the clicked tab the most recent', () => {
+    switchOrder.v = 'recent';
+    const [a, b, c] = visited();
+    tabs.activateAdjacentTab(1, 'tab'); // previewing c
+    tabs.activate(a); // the user clicked a instead
+    tabs.activateAdjacentTab(1, 'tab'); // a fresh walk from a: its previous tab is c
+    expect(tabs.activeId()).toBe(c);
+    expect(b).toBeDefined();
+  });
+
+  it('skips a tab closed after it was visited', () => {
+    switchOrder.v = 'recent';
+    const [, , c, d] = visited();
+    tabs.closeTab(c);
+    tabs.activateAdjacentTab(1, 'tab');
+    expect(tabs.activeId()).not.toBe(c);
+    expect(tabs.activeId()).not.toBe(d);
   });
 });

@@ -58,6 +58,7 @@ vi.mock('./tray', () => ({ notifyHiddenToTrayOnce: vi.fn() }));
 const power = vi.hoisted(() => ({ reconcileTrayPowerBlocker: vi.fn() }));
 vi.mock('./power-lifecycle', () => power);
 const shortcut = vi.hoisted(() => ({
+  handleWindowKeyUp: vi.fn(),
   handleWindowShortcut: vi.fn<
     (
       win: unknown,

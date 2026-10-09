@@ -5,6 +5,7 @@ import {
   type Session,
   type WebContents,
 } from 'electron';
+import { TabRecency } from './tab-recency';
 import { Logger } from '@tepegoz/libs';
 import { INTERNAL_NEWTAB_URL, IpcChannels, type TabsState } from '@tepegoz/desktop-ipc';
 import { classifyPageSecurity } from '@tepegoz/shared-types';
@@ -253,8 +254,16 @@ export class WindowTabsBase {
     this.store.placeAfter(newId, openerId);
   }
 
+  /** Most-recently-used history for Ctrl+Tab in "recent" mode. */
+  protected readonly recency = new TabRecency();
+  /** True while a Ctrl+Tab walk is previewing a tab, so its own `activate` is not mistaken for a click. */
+  protected cycleStepping = false;
+
   activate(id: string): void {
     if (!this.store.has(id)) return;
+    // Anything but the walk itself (a click, a new tab, a close) ends a held-Ctrl walk: Ctrl was released
+    // while the window had no focus, or the user moved on. The tab they chose is then the most recent.
+    if (this.recency.cycling && !this.cycleStepping) this.recency.endCycle();
 
     // Detach the previously-active view (kept alive in the background), attach the new one. Internal
     // tabs have no view — the chrome renders their page over the (empty) content area.
@@ -270,6 +279,7 @@ export class WindowTabsBase {
       if (prevInternalView !== undefined) hideInternalPageView(this.win, prevInternalView);
     }
     this.store.setActive(id);
+    this.recency.touch(id);
     const view = this.views.get(id);
     if (this.contentVisible && view !== undefined) {
       this.win.contentView.addChildView(view);
@@ -395,6 +405,7 @@ export class WindowTabsBase {
       },
       closeTab: () => undefined,
       activateAdjacentTab: () => undefined,
+      endTabCycle: () => undefined,
       activateTabAtPosition: () => undefined,
       isPrivate: this.isPrivate,
     };

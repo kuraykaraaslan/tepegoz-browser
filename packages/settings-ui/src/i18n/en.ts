@@ -84,6 +84,12 @@ export const en = {
   homepagePlaceholder: 'https://example.com',
   showHomeButtonLabel: 'Show Home button',
   showHomeButtonDesc: 'Adds a Home button to the toolbar that opens your homepage.',
+  tabSwitchTitle: 'Ctrl+Tab switches tabs',
+  tabSwitchPositional: 'In tab-strip order',
+  tabSwitchPositionalDesc: 'Ctrl+Tab moves to the next tab, Ctrl+Shift+Tab to the previous one.',
+  tabSwitchRecent: 'Most recently used first',
+  tabSwitchRecentDesc:
+    'Ctrl+Tab jumps back to the tab you used before; keep Ctrl held and press Tab again to go further back. Ctrl+PageUp and Ctrl+PageDown always follow the strip.',
 
   // --- Downloads ---
   downloadsTitle: 'Downloads',

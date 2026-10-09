@@ -133,6 +133,20 @@ describe('PreferenceStore', () => {
     expect(PreferenceStore.getAll().showHomeButton).toBe(false);
   });
 
+  it('defaults tabSwitchOrder to positional, round-trips recent, and rejects an unknown order', () => {
+    writeFileSync(filePath, JSON.stringify({ locale: 'tr' }), 'utf8');
+    PreferenceStore.init({ filePath });
+    expect(PreferenceStore.getAll().tabSwitchOrder).toBe('positional');
+    PreferenceStore.update({ tabSwitchOrder: 'recent' });
+    PreferenceStore.reset();
+    PreferenceStore.init({ filePath });
+    expect(PreferenceStore.getAll().tabSwitchOrder).toBe('recent');
+    expect(() =>
+      PreferenceStore.update({ tabSwitchOrder: 'random' as unknown as 'recent' }),
+    ).toThrow();
+    expect(PreferenceStore.getAll().tabSwitchOrder).toBe('recent');
+  });
+
   it('defaults mcpServers to [] and round-trips a valid stdio server', () => {
     PreferenceStore.init({ filePath });
     expect(PreferenceStore.getAll().mcpServers).toEqual([]);

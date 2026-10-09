@@ -8,7 +8,7 @@ import {
 import { HistoryStore } from '@tepegoz/persistence';
 import { type TabStore } from '@tepegoz/tab-engine';
 import { isWebUrl } from './lib/navigation-url';
-import { handleWindowShortcut } from './keyboard-shortcuts';
+import { handleWindowKeyUp, handleWindowShortcut } from './keyboard-shortcuts';
 import { openPrivateWindow } from './private-window-opener';
 import { installUnloadPrompt } from './navigation/unload-broker';
 import { applyStoredZoom, handleZoomShortcut } from './site-zoom';
@@ -63,7 +63,9 @@ export interface ViewWiringHost {
   /** Close the wired tab (Ctrl+W arrives while the PAGE has focus, so the view answers it). */
   closeTab(id: string): void;
   /** Ctrl+Tab & co. arrive while the PAGE has focus; the window's tab model answers them. */
-  activateAdjacentTab(delta: 1 | -1): void;
+  activateAdjacentTab(delta: 1 | -1, via: 'tab' | 'page'): void;
+  /** Ctrl was released: end a recent-order Ctrl+Tab walk. */
+  endTabCycle(): void;
   activateTabAtPosition(position: number | 'last'): void;
   /** True in a private window. Read at event time, not captured, so it can never go stale. */
   readonly isPrivate: boolean;
@@ -138,14 +140,18 @@ export function wireView(host: ViewWiringHost, id: string, view: WebContentsView
         host.closeTab(id);
       },
       // The window's tab model, not this page: Ctrl+Tab moves relative to the ACTIVE tab.
-      activateAdjacentTab: (delta: 1 | -1) => {
-        host.activateAdjacentTab(delta);
+      activateAdjacentTab: (delta: 1 | -1, via: 'tab' | 'page') => {
+        host.activateAdjacentTab(delta, via);
+      },
+      endTabCycle: () => {
+        host.endTabCycle();
       },
       activateTabAtPosition: (position: number | 'last') => {
         host.activateTabAtPosition(position);
       },
       openPrivateWindow,
     };
+    handleWindowKeyUp(input, targets);
     if (handleWindowShortcut(host.win, input, targets)) event.preventDefault();
   });
 

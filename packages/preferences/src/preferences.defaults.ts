@@ -114,6 +114,8 @@ export const DEFAULT_PREFERENCES: Preferences = {
   startupMode: 'window',
   // A normal launch continues where the last session left off (the long-standing behaviour).
   startupTabs: 'restore',
+  // Strip order is the long-standing browser default; most-recently-used is opt-in.
+  tabSwitchOrder: 'positional',
   kioskUrl: '',
   // Do not auto-start at system login by default.
   launchAtLogin: false,

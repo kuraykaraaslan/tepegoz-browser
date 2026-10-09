@@ -40,6 +40,10 @@ const DEFAULT_HOME_URL = 'https://duckduckgo.com/';
 export function homeUrl(): string {
   return PreferenceStore.getAll().homepageUrl || DEFAULT_HOME_URL;
 }
+/** How Ctrl+Tab walks the tabs (from prefs). */
+export function tabSwitchOrder(): 'positional' | 'recent' {
+  return PreferenceStore.getAll().tabSwitchOrder === 'recent' ? 'recent' : 'positional';
+}
 /** Resolve a typed omnibox query to a search URL via the selected engine (built-in or user-custom). */
 export function searchUrlForQuery(query: string): string {
   const prefs = PreferenceStore.getAll();

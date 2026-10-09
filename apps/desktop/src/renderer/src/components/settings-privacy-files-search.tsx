@@ -8,9 +8,9 @@ import {
   isSafeSearchTemplate,
   normalizeWebUrlInput,
 } from '@tepegoz/shared-types';
-import type { Preferences } from '@tepegoz/desktop-ipc';
+import type { Preferences, TabSwitchOrder } from '@tepegoz/desktop-ipc';
 import { useCommitOnPause } from '../lib/use-commit-on-pause';
-import { Select } from './settings-shared';
+import { OptionList, Select } from './settings-shared';
 
 /**
  * Homepage URL + default/custom search engines.
@@ -124,6 +124,24 @@ export function SearchStartupSection({
             }}
           />
         </div>
+      </Card>
+
+      <Card title={s.tabSwitchTitle}>
+        <OptionList<TabSwitchOrder>
+          name="tab-switch-order"
+          value={prefs.tabSwitchOrder}
+          options={[
+            {
+              value: 'positional',
+              title: s.tabSwitchPositional,
+              desc: s.tabSwitchPositionalDesc,
+            },
+            { value: 'recent', title: s.tabSwitchRecent, desc: s.tabSwitchRecentDesc },
+          ]}
+          onChange={(order) => {
+            setPref({ tabSwitchOrder: order });
+          }}
+        />
       </Card>
 
       <Card title={s.searchEngineLabel} subtitle={s.searchEngineDesc}>

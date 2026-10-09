@@ -48,11 +48,22 @@ export interface ShortcutTargets {
   closeActiveTab?: () => void;
   /** Switch to the neighbouring tab of the window the key arrived on (wraps). Absent where there is no
    *  tab model. */
-  activateAdjacentTab?: (delta: 1 | -1) => void;
+  activateAdjacentTab?: (delta: 1 | -1, via: 'tab' | 'page') => void;
+  /** Ctrl/Cmd was released — ends a recent-order Ctrl+Tab walk. */
+  endTabCycle?: () => void;
   /** Switch to the tab at a 1-based position, or the last tab. Absent where there is no tab model. */
   activateTabAtPosition?: (position: number | 'last') => void;
   /** Open a new private (disposable) window. Injected for the same cycle reason as `page`. */
   openPrivateWindow?: () => void;
+}
+
+/**
+ * Releasing Ctrl (Cmd on macOS) ends a Ctrl+Tab walk in "recent" order. Never consumes the event — the
+ * page still sees the key-up — and does nothing when no walk is running.
+ */
+export function handleWindowKeyUp(input: Input, targets: ShortcutTargets): void {
+  if (input.type !== 'keyUp') return;
+  if (input.key === 'Control' || input.key === 'Meta') targets.endTabCycle?.();
 }
 
 export function handleWindowShortcut(
@@ -140,12 +151,12 @@ export function handleWindowShortcut(
     case 'nextTab':
     case 'nextTabAlt':
       if (targets.activateAdjacentTab === undefined) return false;
-      targets.activateAdjacentTab(1);
+      targets.activateAdjacentTab(1, shortcutId === 'nextTab' ? 'tab' : 'page');
       return true;
     case 'prevTab':
     case 'prevTabAlt':
       if (targets.activateAdjacentTab === undefined) return false;
-      targets.activateAdjacentTab(-1);
+      targets.activateAdjacentTab(-1, shortcutId === 'prevTab' ? 'tab' : 'page');
       return true;
     case 'selectTab1':
     case 'selectTab2':

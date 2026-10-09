@@ -43,6 +43,7 @@ export class WindowTabsClosing extends WindowTabsBase {
       this.internalPageViews.delete(id);
     }
     const wasActive = this.store.activeId === id;
+    this.recency.forget(id);
     this.store.delete(id);
     this.afterRemove(wasActive);
   }

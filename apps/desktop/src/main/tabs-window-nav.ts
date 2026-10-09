@@ -12,7 +12,7 @@ import ClipboardService from './clipboard/clipboard-service.electron';
 import DownloadService from './downloads/download-service.electron';
 import { WindowTabsMoves } from './tabs-window-moves';
 import { type ViewWiringHost } from './tabs-view-wiring';
-import { homeUrl, searchUrlForQuery } from './tabs-shared';
+import { homeUrl, searchUrlForQuery, tabSwitchOrder } from './tabs-shared';
 import { adjacentTabId, tabIdAtPosition } from './tab-cycle';
 
 /**
@@ -160,8 +160,11 @@ export class WindowTabsNav extends WindowTabsMoves {
   protected override viewWiringHost(): ViewWiringHost {
     return {
       ...super.viewWiringHost(),
-      activateAdjacentTab: (delta) => {
-        this.activateAdjacentTab(delta);
+      activateAdjacentTab: (delta, via) => {
+        this.activateAdjacentTab(delta, via);
+      },
+      endTabCycle: () => {
+        this.endTabCycle();
       },
       activateTabAtPosition: (position) => {
         this.activateTabAtPosition(position);
@@ -188,9 +191,30 @@ export class WindowTabsNav extends WindowTabsMoves {
     this.activate(id);
   }
 
-  /** Ctrl+Tab / Ctrl+PageDown (`1`) and Ctrl+Shift+Tab / Ctrl+PageUp (`-1`): the neighbouring tab. */
-  activateAdjacentTab(delta: 1 | -1): void {
-    this.activateFromKeyboard(adjacentTabId(this.stripTabIds(), this.store.activeId, delta));
+  /**
+   * Ctrl+Tab / Ctrl+PageDown (`1`) and Ctrl+Shift+Tab / Ctrl+PageUp (`-1`): the neighbouring tab.
+   * `via: 'tab'` is the Tab key, which follows the "recent" preference; PageUp/PageDown (`'page'`) always
+   * follow the strip, as in Firefox.
+   */
+  activateAdjacentTab(delta: 1 | -1, via: 'tab' | 'page' = 'page'): void {
+    const ids = this.stripTabIds();
+    if (via === 'tab' && tabSwitchOrder() === 'recent') {
+      const next = this.recency.step(ids, this.store.activeId, delta);
+      if (next === null) return;
+      this.cycleStepping = true;
+      try {
+        this.activateFromKeyboard(next);
+      } finally {
+        this.cycleStepping = false;
+      }
+      return;
+    }
+    this.activateFromKeyboard(adjacentTabId(ids, this.store.activeId, delta));
+  }
+
+  /** Ctrl released: the tab a recent-order walk stopped on becomes the most recently used. */
+  endTabCycle(): void {
+    this.recency.endCycle();
   }
 
   /** Ctrl+1…8 (a 1-based position) and Ctrl+9 (`'last'`). */

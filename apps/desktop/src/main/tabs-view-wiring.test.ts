@@ -27,13 +27,15 @@ const handleWindowShortcut = vi.hoisted(() =>
       input: unknown,
       targets: {
         closeActiveTab: () => void;
-        activateAdjacentTab: (d: 1 | -1) => void;
+        activateAdjacentTab: (d: 1 | -1, via: 'tab' | 'page') => void;
+        endTabCycle: () => void;
         activateTabAtPosition: (p: number | 'last') => void;
       },
     ) => boolean
   >(() => false),
 );
-vi.mock('./keyboard-shortcuts', () => ({ handleWindowShortcut }));
+const handleWindowKeyUp = vi.hoisted(() => vi.fn());
+vi.mock('./keyboard-shortcuts', () => ({ handleWindowShortcut, handleWindowKeyUp }));
 
 const openPrivateWindow = vi.hoisted(() => vi.fn());
 vi.mock('./private-window-opener', () => ({ openPrivateWindow }));
@@ -186,17 +188,20 @@ describe('wireView', () => {
         _win: unknown,
         _input: unknown,
         targets: {
-          activateAdjacentTab: (d: 1 | -1) => void;
+          activateAdjacentTab: (d: 1 | -1, via: 'tab' | 'page') => void;
+          endTabCycle: () => void;
           activateTabAtPosition: (p: number | 'last') => void;
         },
       ) => {
-        targets.activateAdjacentTab(-1);
+        targets.activateAdjacentTab(-1, 'tab');
+        targets.endTabCycle();
         targets.activateTabAtPosition('last');
         return true;
       },
     );
     onKey({ preventDefault: vi.fn() }, { type: 'keyDown' });
-    expect(h.activateAdjacentTab).toHaveBeenCalledWith(-1);
+    expect(h.activateAdjacentTab).toHaveBeenCalledWith(-1, 'tab');
+    expect(h.endTabCycle).toHaveBeenCalledTimes(1);
     expect(h.activateTabAtPosition).toHaveBeenCalledWith('last');
   });
 

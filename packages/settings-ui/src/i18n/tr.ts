@@ -83,6 +83,12 @@ export const tr: SettingsStrings = {
   homepagePlaceholder: 'https://ornek.com',
   showHomeButtonLabel: 'Ana sayfa düğmesini göster',
   showHomeButtonDesc: 'Araç çubuğuna ana sayfanızı açan bir Ana sayfa düğmesi ekler.',
+  tabSwitchTitle: 'Ctrl+Tab sekmeleri şöyle değiştirir',
+  tabSwitchPositional: 'Sekme çubuğu sırasıyla',
+  tabSwitchPositionalDesc: 'Ctrl+Tab sonraki sekmeye, Ctrl+Shift+Tab önceki sekmeye geçer.',
+  tabSwitchRecent: 'En son kullanılan önce',
+  tabSwitchRecentDesc:
+    'Ctrl+Tab bir önce kullandığınız sekmeye döner; Ctrl’ü basılı tutup Tab’a tekrar basarak daha geriye gidebilirsiniz. Ctrl+PageUp ve Ctrl+PageDown her zaman sekme çubuğu sırasını izler.',
 
   // --- İndirilenler ---
   downloadsTitle: 'İndirilenler',
