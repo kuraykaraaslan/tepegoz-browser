@@ -117,6 +117,7 @@ export const SETTINGS_VISIBILITY: Record<keyof Preferences, 'public' | 'private'
   kioskUrl: 'private',
   launchAtLogin: 'private',
   startupTabs: 'private',
+  startupPages: 'private',
   tabSwitchOrder: 'private',
   switchToLinkTabs: 'private',
   trayHintShown: 'private',

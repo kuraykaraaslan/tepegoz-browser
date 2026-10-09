@@ -247,6 +247,52 @@ describe('openWindow', () => {
     expect(wt.restoreWindow).not.toHaveBeenCalled();
   });
 
+  it('startupTabs "pages" opens the listed pages: the first focused, the rest behind it', async () => {
+    prefs.getAll.mockReturnValue({
+      closeToTray: false,
+      kioskUrl: '',
+      onboardingCompleted: true,
+      startupTabs: 'pages',
+      startupPages: ['https://a.test/', 'https://b.test/', 'https://c.test/'],
+    });
+    const { openWindow } = await load();
+    openWindow();
+    expect(wt.restoreWindow).not.toHaveBeenCalled();
+    expect(wt.createTab.mock.calls).toEqual([
+      ['https://a.test/'],
+      ['https://b.test/', { background: true }],
+      ['https://c.test/', { background: true }],
+    ]);
+  });
+
+  it('startupTabs "pages" with an empty list opens one New Tab page, not an empty window', async () => {
+    prefs.getAll.mockReturnValue({
+      closeToTray: false,
+      kioskUrl: '',
+      onboardingCompleted: true,
+      startupTabs: 'pages',
+      startupPages: [],
+    });
+    const { openWindow } = await load();
+    openWindow();
+    expect(wt.createTab).toHaveBeenCalledTimes(1);
+    expect(wt.createTab).toHaveBeenCalledWith(undefined);
+  });
+
+  it('safe mode ignores the pages list and opens a plain New Tab page', async () => {
+    safeMode.isSafeMode.mockReturnValue(true);
+    prefs.getAll.mockReturnValue({
+      closeToTray: false,
+      kioskUrl: '',
+      onboardingCompleted: true,
+      startupTabs: 'pages',
+      startupPages: ['https://a.test/'],
+    });
+    const { openWindow } = await load();
+    openWindow();
+    expect(wt.createTab.mock.calls).toEqual([[]]);
+  });
+
   it('a second restore-mode open this launch just gets a default tab (session already bootstrapped)', async () => {
     const { openWindow } = await load();
     openWindow(); // first restore-mode open consumes the one-time session bootstrap

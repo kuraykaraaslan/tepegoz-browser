@@ -221,12 +221,20 @@ function bootstrapTabs(win: BrowserWindow, mode: TabBootstrap): void {
   // whole session back, and Ctrl+Shift+T / the recently-closed list cover the meantime.
   // "Open the New Tab page" skips the restore but leaves the saved snapshot alone until the first state
   // change overwrites it — the same trade Chrome makes.
-  if (
-    isSafeMode() ||
-    PreferenceStore.getAll().startupTabs === 'newtab' ||
-    !restoreSessionWindows(win)
-  )
+  const { startupTabs, startupPages } = PreferenceStore.getAll();
+  if (isSafeMode() || startupTabs === 'newtab') {
     wt.createTab();
+    return;
+  }
+  if (startupTabs === 'pages') {
+    // A fixed set of pages: the first takes focus, the rest open behind it. An empty list is a New Tab
+    // page rather than an empty window.
+    const [first, ...rest] = startupPages;
+    wt.createTab(first);
+    for (const url of rest) wt.createTab(url, { background: true });
+    return;
+  }
+  if (!restoreSessionWindows(win)) wt.createTab();
 }
 
 /** Restore the saved multi-window session: the first window's tabs into `firstWin`, and one extra

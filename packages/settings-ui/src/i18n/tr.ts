@@ -816,6 +816,12 @@ export const tr: SettingsStrings = {
     tabsRestoreDesc: 'Son oturumunuzdaki sekmeleri ve grupları yeniden açar.',
     tabsNewTab: 'Yeni Sekme sayfasını aç',
     tabsNewTabDesc: 'Tek bir boş sekmeyle başlar. Son oturumdaki sekmeler yeniden açılmaz.',
+    tabsPages: 'Belirli sayfaları aç',
+    tabsPagesDesc: 'Son oturumunuz yerine aşağıda listelediğiniz adresleri sırayla açar.',
+    pagesLabel: 'Açılacak sayfalar',
+    pagesHint: 'Her satıra bir http:// veya https:// adresi, en fazla {max} tane.',
+    pagesPlaceholder: 'https://example.com',
+    pagesInvalid: 'Her satır tam bir http:// veya https:// adresi olmalı.',
     modeWindowDesc: 'Normal bir tarayıcı penceresi açar.',
     modeBackgroundDesc:
       'Pencere açmadan sistem tepsisinde başlar. Sekmeler çizilmeye devam eder ve siz hiçbir şey açmadan ajan çalışabilir.',

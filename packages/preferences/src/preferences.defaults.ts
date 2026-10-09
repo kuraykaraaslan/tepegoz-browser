@@ -114,6 +114,7 @@ export const DEFAULT_PREFERENCES: Preferences = {
   startupMode: 'window',
   // A normal launch continues where the last session left off (the long-standing behaviour).
   startupTabs: 'restore',
+  startupPages: [],
   // Strip order is the long-standing browser default; most-recently-used is opt-in.
   tabSwitchOrder: 'positional',
   // A target=_blank link takes focus, as it always has; opt out to keep reading the page you are on.

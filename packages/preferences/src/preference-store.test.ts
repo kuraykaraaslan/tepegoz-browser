@@ -96,7 +96,7 @@ describe('PreferenceStore', () => {
   it('rejects an unknown startupTabs value and falls back when the stored one is corrupt', () => {
     PreferenceStore.init({ filePath });
     expect(() =>
-      PreferenceStore.update({ startupTabs: 'pages' as unknown as 'restore' }),
+      PreferenceStore.update({ startupTabs: 'sessions' as unknown as 'restore' }),
     ).toThrow();
     expect(PreferenceStore.getAll().startupTabs).toBe('restore');
     PreferenceStore.reset();
@@ -155,6 +155,22 @@ describe('PreferenceStore', () => {
     PreferenceStore.reset();
     PreferenceStore.init({ filePath });
     expect(PreferenceStore.getAll().switchToLinkTabs).toBe(false);
+  });
+
+  it('startupPages: defaults to none, round-trips http(s) pages, and refuses anything else', () => {
+    writeFileSync(filePath, JSON.stringify({ locale: 'tr' }), 'utf8');
+    PreferenceStore.init({ filePath });
+    expect(PreferenceStore.getAll().startupPages).toEqual([]);
+    PreferenceStore.update({ startupTabs: 'pages', startupPages: ['https://a.example/'] });
+    PreferenceStore.reset();
+    PreferenceStore.init({ filePath });
+    expect(PreferenceStore.getAll().startupPages).toEqual(['https://a.example/']);
+    for (const bad of [['javascript:alert(1)'], ['file:///etc/passwd'], [''], ['not a url']]) {
+      expect(() => PreferenceStore.update({ startupPages: bad })).toThrow();
+    }
+    const eleven = Array.from({ length: 11 }, (_, i) => `https://p${String(i)}.example/`);
+    expect(() => PreferenceStore.update({ startupPages: eleven })).toThrow();
+    expect(PreferenceStore.getAll().startupPages).toEqual(['https://a.example/']);
   });
 
   it('defaults mcpServers to [] and round-trips a valid stdio server', () => {

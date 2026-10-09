@@ -17,6 +17,16 @@ import { OptionList } from './settings-shared';
  * Closing-to-tray, keep-awake, sleep and tab discarding stay behind — they are power behaviour, not
  * startup behaviour, and they are what that page is now only about.
  */
+const MAX_STARTUP_PAGES = 10;
+
+/** The non-blank, trimmed, normalized lines of the pages box. */
+function parsePageLines(text: string): string[] {
+  return text
+    .split('\n')
+    .map((l) => normalizeWebUrlInput(l.trim()))
+    .filter((l) => l !== '');
+}
+
 export function StartupSection({
   prefs,
   setPref,
@@ -38,6 +48,19 @@ export function StartupSection({
   });
   const kioskInvalid =
     kiosk.draft.trim() !== '' && !isNavigableWebUrl(normalizeWebUrlInput(kiosk.draft));
+
+  // One address per line; committed when typing pauses. Blank lines are ignored, and nothing is stored
+  // while any line is not a navigable address (the schema would refuse it, and a silent failed write
+  // would leave the box showing text that is not saved).
+  const pages = useCommitOnPause(prefs.startupPages.join('\n'), (value) => {
+    const lines = parsePageLines(value);
+    if (lines.every((l) => isNavigableWebUrl(l)) && lines.length <= MAX_STARTUP_PAGES) {
+      setPref({ startupPages: lines });
+    }
+  });
+  const pageLines = parsePageLines(pages.draft);
+  const pagesInvalid =
+    pageLines.some((l) => !isNavigableWebUrl(l)) || pageLines.length > MAX_STARTUP_PAGES;
 
   const modeOptions: { value: StartupMode; title: string; desc: string }[] = [
     { value: 'window', title: t.modeWindow, desc: st.modeWindowDesc },
@@ -79,11 +102,42 @@ export function StartupSection({
               options={[
                 { value: 'restore', title: st.tabsRestore, desc: st.tabsRestoreDesc },
                 { value: 'newtab', title: st.tabsNewTab, desc: st.tabsNewTabDesc },
+                { value: 'pages', title: st.tabsPages, desc: st.tabsPagesDesc },
               ]}
               onChange={(tabs) => {
                 setPref({ startupTabs: tabs });
               }}
             />
+          </div>
+        )}
+
+        {prefs.startupMode !== 'kiosk' && prefs.startupTabs === 'pages' && (
+          <div className="space-y-1">
+            <label htmlFor="startup-pages" className="block text-sm font-medium text-text-primary">
+              {st.pagesLabel}
+            </label>
+            <textarea
+              id="startup-pages"
+              rows={4}
+              spellCheck={false}
+              className={`w-full resize-y rounded-md border bg-surface-raised px-3 py-2 text-sm text-text-primary placeholder:text-text-disabled focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus ${pagesInvalid ? 'border-error' : 'border-border'}`}
+              placeholder={st.pagesPlaceholder}
+              value={pages.draft}
+              aria-invalid={pagesInvalid}
+              aria-describedby="startup-pages-hint"
+              onChange={(e) => {
+                pages.set(e.target.value);
+              }}
+              onBlur={pages.flush}
+            />
+            <p
+              id="startup-pages-hint"
+              className={`text-xs ${pagesInvalid ? 'text-error-fg' : 'text-text-secondary'}`}
+            >
+              {pagesInvalid
+                ? st.pagesInvalid
+                : st.pagesHint.replace('{max}', String(MAX_STARTUP_PAGES))}
+            </p>
           </div>
         )}
 

@@ -114,8 +114,8 @@ export interface NewTabBackground {
 /** How the app presents on launch: a normal window, hidden in the tray, or a fullscreen locked kiosk. */
 export type StartupMode = 'window' | 'background' | 'kiosk';
 
-/** What a normal launch opens: the tabs of the last session, or one fresh New Tab page. */
-export type StartupTabs = 'restore' | 'newtab';
+/** What a normal launch opens: the last session's tabs, one fresh New Tab page, or a fixed set of pages. */
+export type StartupTabs = 'restore' | 'newtab' | 'pages';
 
 /** How Ctrl+Tab walks the tabs: strip order, or most recently used first. */
 export type TabSwitchOrder = 'positional' | 'recent';
@@ -277,6 +277,8 @@ export interface Preferences {
   startupMode: StartupMode;
   /** Which tabs a normal launch opens. Safe mode never restores whatever this says (ADR-0038). */
   startupTabs: StartupTabs;
+  /** The pages `startupTabs: 'pages'` opens, in order (http/https only, at most 10). */
+  startupPages: string[];
   /** Ctrl+Tab / Ctrl+Shift+Tab order. Ctrl+PageUp/PageDown always follow the strip. */
   tabSwitchOrder: TabSwitchOrder;
   /** A link that opens in a new tab (target=_blank, window.open) takes focus. Ctrl/middle-click links

@@ -829,6 +829,12 @@ export const en = {
     tabsRestoreDesc: 'Reopens the tabs and groups from your last session.',
     tabsNewTab: 'Open the New Tab page',
     tabsNewTabDesc: 'Starts with one empty tab. The tabs from your last session are not reopened.',
+    tabsPages: 'Open specific pages',
+    tabsPagesDesc: 'Opens the addresses you list below, in order, in place of your last session.',
+    pagesLabel: 'Pages to open',
+    pagesHint: 'One http:// or https:// address per line, up to {max}.',
+    pagesPlaceholder: 'https://example.com',
+    pagesInvalid: 'Every line must be a full http:// or https:// address.',
     modeWindowDesc: 'Opens a normal browser window.',
     modeBackgroundDesc:
       'Starts in the system tray with no window. Tabs keep rendering and the agent can work before you open anything.',

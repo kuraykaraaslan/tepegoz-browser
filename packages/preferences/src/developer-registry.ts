@@ -106,6 +106,7 @@ export const PREFERENCE_METADATA = {
   pauseTasksOnSleep: stable,
   startupMode: stable,
   startupTabs: stable,
+  startupPages: stable,
   tabSwitchOrder: stable,
   switchToLinkTabs: stable,
   kioskUrl: stable,

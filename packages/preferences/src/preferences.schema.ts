@@ -282,7 +282,17 @@ export const PreferencesSchema = z.object({
   keepAwakeInTray: z.boolean(),
   pauseTasksOnSleep: z.boolean(),
   startupMode: z.enum(['window', 'background', 'kiosk']),
-  startupTabs: z.enum(['restore', 'newtab']),
+  startupTabs: z.enum(['restore', 'newtab', 'pages']),
+  // Navigated on every launch in 'pages' mode, so each must be a real http/https address — the same
+  // bar as the homepage. Capped so a hand-edited file cannot open hundreds of tabs at startup.
+  startupPages: z
+    .array(
+      z
+        .string()
+        .max(2048)
+        .refine((v) => isNavigableWebUrl(v), 'startupPages entries must be http(s) URLs'),
+    )
+    .max(10),
   tabSwitchOrder: z.enum(['positional', 'recent']),
   switchToLinkTabs: z.boolean(),
   // '' until kiosk mode is chosen. Loaded fullscreen with no chrome, so it gets the same scheme check

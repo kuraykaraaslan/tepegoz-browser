@@ -201,7 +201,12 @@ work lives in Phase 2; agent orchestration (multi-tab parallelism) stays in Phas
   - [x] _Landed 2026-10-09 (unit-tested, not run in the packaged app):_ **"On startup" tabs** —
         Preferences → On startup now offers "Continue where I left off" (default, unchanged behaviour) or
         "Open the New Tab page" (`startupTabs`, private pref; hidden in kiosk mode; safe mode still never
-        restores). The "open a specific set of pages" option, hover cards and network prediction remain open.
+        restores). Hover cards and network prediction remain open.
+  - [x] _Landed 2026-10-09 (unit-tested, not run in the packaged app):_ **"open a specific set of pages"**
+        — a third On-startup choice (`startupTabs: 'pages'` + `startupPages`, up to 10 http/https
+        addresses, one per line). The first opens focused, the rest behind it; an empty list is one New
+        Tab page; safe mode ignores the list. The schema refuses anything that is not a navigable web
+        address, so a hand-edited preferences file cannot make startup navigate to `javascript:`/`file:`.
   - [x] _Landed 2026-10-09 (unit-tested, not run in the packaged app):_ **"switch to a new tab opened from
         a link"** — Preferences, on by default (`switchToLinkTabs`, the long-standing behaviour). Off, a
         plain `target=_blank` / `window.open` tab opens in the background; Ctrl/middle-click is always
