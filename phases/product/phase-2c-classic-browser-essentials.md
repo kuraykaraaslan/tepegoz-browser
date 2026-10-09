@@ -730,6 +730,24 @@ permissions reuse the single Policy/PermissionGuard (no parallel permission flow
         native context-menu suggestions in every input; ext-typo is a richer opt-in assistant, and Chrome
         itself ships both), so this is a product call — not a coding task. `spellcheck:false` is still the
         live setting, so today neither path underlines anything in a plain text input.
+  - [x] **Decision recorded 2026-10-09: do NOT enable Chromium's spellchecker in core yet.** Three reasons,
+        the first two checked against how the engine behaves rather than assumed:
+        1. **It reaches out on its own.** On Windows and Linux Chromium fetches the `.bdic` dictionary for
+           each language from Google's servers the first time it is needed, from the browser process — not
+           through a tab's session, so a tab bound to Tor, a VPN or a proxy would still make that request
+           from the user's own address. That contradicts the one promise this browser is built around
+           (what a tunnel hides is not quietly re-exposed by a feature), and it is a network call the user
+           never asked for. (macOS uses the OS checker and has no such download.)
+        2. **`ext-typo` already does the user-controlled version.** It ships en/tr dictionaries the user
+           downloads explicitly, with progress and cancel, and per-site lists — the same capability with
+           consent in front of the network request.
+        3. **It cannot be verified offline here.** Without the download there are no squiggles to observe,
+           so an implementation would ship unproven.
+        **What would change the answer:** bundling the en/tr dictionaries with the app and pointing the
+        spellchecker at them (`session.setSpellCheckerDictionaryDownloadURL` to an app-served location), so
+        nothing is fetched; then the toggle is a one-line `spellcheck: true` plus
+        `setSpellCheckerLanguages`, default off. Until then `spellcheck:false` is intentional, not an
+        oversight, and a plain text field has no underline unless `ext-typo` is on.
 - [x] **Unified "Clear browsing data" dialog with a time range** (last hour / 24 h / 7 days / 4 weeks /
       all time) + the full category list in one place — ~~today only "clear history" and "clear download
       history" exist, plus the Site Info bubble's per-site "clear site data".~~ _Built 2026-09-02.
