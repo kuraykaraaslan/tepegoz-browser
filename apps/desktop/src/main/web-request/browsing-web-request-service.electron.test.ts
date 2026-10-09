@@ -49,6 +49,12 @@ function fakeWebRequest() {
         callback: (response: Electron.HeadersReceivedResponse) => void,
       ) => void)
     | null = null;
+  let sendHeaders:
+    | ((
+        details: Electron.OnBeforeSendHeadersListenerDetails,
+        callback: (response: Electron.BeforeSendResponse) => void,
+      ) => void)
+    | null = null;
   let completed: ((details: Electron.OnCompletedListenerDetails) => void) | null = null;
   let errorOccurred: ((details: Electron.OnErrorOccurredListenerDetails) => void) | null = null;
 
@@ -59,6 +65,9 @@ function fakeWebRequest() {
       },
       onHeadersReceived: (listener: NonNullable<typeof headers>) => {
         headers = listener;
+      },
+      onBeforeSendHeaders: (listener: NonNullable<typeof sendHeaders>) => {
+        sendHeaders = listener;
       },
       onCompleted: (listener: NonNullable<typeof completed>) => {
         completed = listener;
@@ -77,6 +86,12 @@ function fakeWebRequest() {
         if (headers === null) throw new Error('headers listener missing');
         headers(details, resolve);
       }),
+    sendHeaders: (requestHeaders: Record<string, string> = { Accept: '*/*' }) =>
+      new Promise<Electron.BeforeSendResponse>((resolve) => {
+        if (sendHeaders === null) throw new Error('send-headers listener missing');
+        sendHeaders({ ...beforeDetails(), requestHeaders }, resolve);
+      }),
+    hasSendHeadersListener: () => sendHeaders !== null,
     completed: (details: Electron.OnCompletedListenerDetails) => {
       if (completed === null) throw new Error('completed listener missing');
       completed(details);
@@ -434,6 +449,46 @@ describe('BrowsingWebRequestService', () => {
       BrowsingWebRequestService.attach(fake.webRequest, { stampResponseHeaders: STAMP });
       const res = await fake.headers();
       expect(res.responseHeaders?.['x-dns-prefetch-control']).toEqual(['off']);
+    });
+  });
+
+  describe('stampRequestHeaders', () => {
+    it('registers no send-headers listener unless asked (nothing else is slowed down)', () => {
+      const fake = fakeWebRequest();
+      BrowsingWebRequestService.attach(fake.webRequest);
+      expect(fake.hasSendHeadersListener()).toBe(false);
+    });
+
+    it('adds the stamp to the request headers, keeping the ones already there', async () => {
+      const fake = fakeWebRequest();
+      BrowsingWebRequestService.attach(fake.webRequest, {
+        stampRequestHeaders: () => ({ 'Sec-GPC': '1' }),
+      });
+      await expect(fake.sendHeaders({ Accept: '*/*' })).resolves.toEqual({
+        requestHeaders: { Accept: '*/*', 'Sec-GPC': '1' },
+      });
+    });
+
+    it('is asked on EVERY request, so a setting change needs no re-attach', async () => {
+      const fake = fakeWebRequest();
+      let on = true;
+      BrowsingWebRequestService.attach(fake.webRequest, {
+        stampRequestHeaders: () => (on ? { DNT: '1' } : {}),
+      });
+      expect((await fake.sendHeaders()).requestHeaders?.['DNT']).toBe('1');
+      on = false;
+      expect(await fake.sendHeaders()).toEqual({});
+    });
+
+    it('a stamp that throws fails open — the request goes out unmodified, and it is logged', async () => {
+      const fake = fakeWebRequest();
+      BrowsingWebRequestService.attach(fake.webRequest, {
+        stampRequestHeaders: () => {
+          throw new Error('prefs unreadable');
+        },
+      });
+      await expect(fake.sendHeaders()).resolves.toEqual({});
+      expect(logger.warn).toHaveBeenCalled();
     });
   });
 

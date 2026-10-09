@@ -76,6 +76,11 @@ export const DEFAULT_PREFERENCES: Preferences = {
   httpsFirstEverywhere: false,
   // Chromium's own default; opt out for privacy.
   preloadPages: true,
+  // Global Privacy Control is a legally recognised opt-out signal (CCPA/CPRA, GDPR via the EDPB's view); a
+  // privacy-first browser sends it unless the user turns it off. Do Not Track is the opposite case: no
+  // site is obliged to honour it and the extra header makes a browser easier to tell apart, so it is off.
+  globalPrivacyControl: true,
+  doNotTrack: false,
   typo: {
     enabled: true,
     autoDetectLanguage: true,

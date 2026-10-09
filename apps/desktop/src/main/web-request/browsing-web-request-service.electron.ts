@@ -27,7 +27,11 @@ export type ErrorOccurredHandler = (
 
 type WebRequestLike = Pick<
   Electron.WebRequest,
-  'onBeforeRequest' | 'onHeadersReceived' | 'onCompleted' | 'onErrorOccurred'
+  | 'onBeforeRequest'
+  | 'onBeforeSendHeaders'
+  | 'onHeadersReceived'
+  | 'onCompleted'
+  | 'onErrorOccurred'
 >;
 
 const beforeRequestHandlers = new Map<string, BeforeRequestHandler>();
@@ -165,6 +169,9 @@ const BrowsingWebRequestService = {
       /** Headers stamped onto every response of this session. A function is asked per response, so a
        *  setting can change them without re-attaching (a session attaches only once). */
       stampResponseHeaders?: Record<string, string> | (() => Record<string, string>);
+      /** Headers added to every request this session sends (privacy signals). Asked per request, so a
+       *  setting can change them without re-attaching. Overwrites a header the page set itself. */
+      stampRequestHeaders?: () => Record<string, string>;
       partition?: string;
     },
   ): void {
@@ -185,6 +192,25 @@ const BrowsingWebRequestService = {
         callback({});
       });
     });
+
+    const requestStamp = opts?.stampRequestHeaders;
+    if (requestStamp !== undefined) {
+      // Owned here, like every other listener on this session: Electron keeps only the LAST listener per
+      // event, so a feature registering its own `onBeforeSendHeaders` would silently evict this one.
+      webRequest.onBeforeSendHeaders((details, callback) => {
+        try {
+          const stamp = requestStamp();
+          if (Object.keys(stamp).length === 0) {
+            callback({});
+            return;
+          }
+          callback({ requestHeaders: { ...details.requestHeaders, ...stamp } });
+        } catch (err) {
+          Logger.warn('webRequest onBeforeSendHeaders stamp failed open', { err: String(err) });
+          callback({});
+        }
+      });
+    }
 
     webRequest.onHeadersReceived((details, callback) => {
       void runHeadersReceived(details).then(

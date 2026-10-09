@@ -203,6 +203,18 @@ describe('PreferenceStore', () => {
     expect(PreferenceStore.getAll().preloadPages).toBe(false);
   });
 
+  it('defaults Global Privacy Control on and Do Not Track off for an old file, and round-trips both', () => {
+    writeFileSync(filePath, JSON.stringify({ locale: 'tr' }), 'utf8');
+    PreferenceStore.init({ filePath });
+    expect(PreferenceStore.getAll().globalPrivacyControl).toBe(true);
+    expect(PreferenceStore.getAll().doNotTrack).toBe(false);
+    PreferenceStore.update({ globalPrivacyControl: false, doNotTrack: true });
+    PreferenceStore.reset();
+    PreferenceStore.init({ filePath });
+    expect(PreferenceStore.getAll().globalPrivacyControl).toBe(false);
+    expect(PreferenceStore.getAll().doNotTrack).toBe(true);
+  });
+
   it('defaults httpsFirstEverywhere to off for an old file, and round-trips on', () => {
     writeFileSync(filePath, JSON.stringify({ locale: 'tr' }), 'utf8');
     PreferenceStore.init({ filePath });

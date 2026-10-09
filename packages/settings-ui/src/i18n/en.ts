@@ -523,6 +523,14 @@ export const en = {
     title: 'Use secure connections for all sites',
     desc: 'Tries the https address first whenever you open a plain http link. If a site has no https, you are asked before it loads over http. Addresses on your own network (a router, a printer) are left alone.',
   },
+  privacySignals: {
+    gpcTitle: 'Send a Global Privacy Control signal',
+    gpcDesc:
+      'Tells every site you visit that you opt out of the sale or sharing of your data. Unlike Do Not Track, this signal has legal force in several places, such as California and the EU. Sites can still ignore it where no law applies.',
+    dntTitle: 'Send a Do Not Track request',
+    dntDesc:
+      'Adds the older Do Not Track header. Almost no site honours it, and sending it makes your browser a little easier to tell apart from others, so it is off by default.',
+  },
   preload: {
     title: 'Pre-resolve addresses of linked pages',
     desc: 'Lets the browser look up the addresses of links on a page before you click them, so pages open a little faster. Turn it off to stop those lookups reaching your DNS provider. Tabs routed through Tor, a VPN or a proxy never do this.',

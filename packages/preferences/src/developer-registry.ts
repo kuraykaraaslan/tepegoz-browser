@@ -97,6 +97,8 @@ export const PREFERENCE_METADATA = {
   secureDnsCustomUrl: stable,
   httpsFirstEverywhere: stable,
   preloadPages: stable,
+  globalPrivacyControl: stable,
+  doNotTrack: stable,
   typo: stable,
   translate: stable,
   videoPlayer: stable,

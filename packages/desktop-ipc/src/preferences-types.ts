@@ -261,6 +261,10 @@ export interface Preferences {
   /** Let Chromium pre-resolve the hostnames a page links to (a speed win). Off sends
    *  `X-DNS-Prefetch-Control: off` on normal tabs; tunnel tabs never pre-resolve either way. */
   preloadPages: boolean;
+  /** Send `Sec-GPC: 1` (Global Privacy Control) on every browsing request. On by default. */
+  globalPrivacyControl: boolean;
+  /** Send `DNT: 1` (Do Not Track) on every browsing request. Off by default — see the defaults file. */
+  doNotTrack: boolean;
   /** Typo extension settings. Dictionaries live in userData/dictionaries and are not persisted here. */
   typo: TypoSettings;
   /** Translate extension settings. Translation memory lives outside preferences. */

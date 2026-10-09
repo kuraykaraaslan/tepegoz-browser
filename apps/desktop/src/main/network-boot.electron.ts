@@ -5,6 +5,7 @@ import { registerCertificateHandler } from './auth/certificate-broker';
 import { registerClientCertificateHandler } from './auth/client-certificate-broker';
 import { passwordVault } from './stores.electron';
 import BrowsingSessions from './network/browsing-sessions.electron';
+import { privacySignalHeaders } from './network/privacy-signal-stamp';
 import { dnsPrefetchStamp } from './network/dns-prefetch-stamp';
 import { registerCertificateRecorder } from './network/certificate-recorder.electron';
 import ConnectionPool from './network/connection-pool.electron';
@@ -53,6 +54,8 @@ export function initBrowsingNetwork(safeMode: boolean): void {
               BrowsingSessions.isTunnelPartition(partition),
               PreferenceStore.getAll().preloadPages,
             ),
+          // Opt-out signals (Global Privacy Control / Do Not Track), read per request for the same reason.
+          stampRequestHeaders: () => privacySignalHeaders(PreferenceStore.getAll()),
           partition,
         },
       );

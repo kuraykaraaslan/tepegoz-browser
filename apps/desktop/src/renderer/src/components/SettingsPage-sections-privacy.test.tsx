@@ -362,3 +362,24 @@ describe('privacyAndAdvancedSections — pre-resolve linked addresses', () => {
     expect(setPref).toHaveBeenCalledWith({ preloadPages: true });
   });
 });
+
+describe('privacyAndAdvancedSections — privacy signals', () => {
+  it('Global Privacy Control is on by default and writes false when switched off', () => {
+    const { setPref } = renderPrivacy({ globalPrivacyControl: true });
+    expect(screen.getByText(s.privacySignals.gpcTitle)).toBeTruthy();
+    fireEvent.click(screen.getByTestId('toggle-global-privacy-control'));
+    expect(setPref).toHaveBeenCalledWith({ globalPrivacyControl: false });
+  });
+
+  it('Do Not Track is off by default and writes true when switched on', () => {
+    const { setPref } = renderPrivacy({ doNotTrack: false });
+    fireEvent.click(screen.getByTestId('toggle-do-not-track'));
+    expect(setPref).toHaveBeenCalledWith({ doNotTrack: true });
+  });
+
+  it('both are found by settings search', () => {
+    const section = privacyAndAdvancedSections(ctx().ctx).find((sec) => sec.id === 'privacy');
+    expect(section!.searchText).toContain(s.privacySignals.gpcTitle);
+    expect(section!.searchText).toContain(s.privacySignals.dntTitle);
+  });
+});
