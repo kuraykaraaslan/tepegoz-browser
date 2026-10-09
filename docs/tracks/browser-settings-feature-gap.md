@@ -76,7 +76,7 @@ Legend: **C** Chrome · **B** Brave · **S** Safari · **F** Firefox · _all_ = 
 | ------------------------------------------------------------------------------------- | ------------ | --------------------------------------------------------------- | ------------------------------------------------------------------------------ |
 | **Live query suggestions from the search engine** (toggle)                            | all          | deliberately absent — omnibox is deterministic, injected-source | owner decision (see above)                                                     |
 | Search-engine **keyword / shortcut** + "**@site** to search within a site"            | C/B/F        | custom engines have no keyword                                  | [omnibox-competitive-parity](../parities/omnibox-competitive-parity.md) Tier E |
-| **Separate search engine for private windows**                                        | B/F          | shared                                                          | 2c (private mode)                                                              |
+| **Separate search engine for private windows**                                        | B/F          | **Built** (`privateSearchEngineId`)                             | 2c (private mode)                                                              |
 | Address-bar content switches: history / bookmarks / open tabs / shortcuts / clipboard | F (detailed) | fixed source set                                                | [omnibox-competitive-parity](../parities/omnibox-competitive-parity.md)        |
 
 ## 5. Privacy / tracking protection

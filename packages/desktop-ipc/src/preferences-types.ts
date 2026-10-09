@@ -169,6 +169,8 @@ export interface Preferences {
   dateFormat: string;
   /** The selected default search engine id (see @tepegoz/shared-types/search-engines). */
   searchEngineId: string;
+  /** Search engine for private windows; '' = the same one as normal windows. */
+  privateSearchEngineId: string;
   /** One-time first-run sentinel. False only for a brand-new profile that has not completed welcome. */
   onboardingCompleted: boolean;
   /** User-added search engines, merged with the built-in list in the picker + omnibox resolution. */

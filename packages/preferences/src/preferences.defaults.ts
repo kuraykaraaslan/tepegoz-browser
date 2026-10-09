@@ -18,6 +18,7 @@ export const DEFAULT_PREFERENCES: Preferences = {
   region: '',
   dateFormat: 'medium',
   searchEngineId: 'google',
+  privateSearchEngineId: '',
   onboardingCompleted: false,
   customSearchEngines: [],
   networkConnections: [],

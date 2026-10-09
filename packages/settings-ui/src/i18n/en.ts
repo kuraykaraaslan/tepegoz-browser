@@ -71,6 +71,10 @@ export const en = {
   preferencesTitle: 'Preferences',
   searchEngineLabel: 'Search engine',
   searchEngineDesc: 'The engine used when you search from the address bar.',
+  privateSearchEngineLabel: 'Search engine in private windows',
+  privateSearchEngineSame: 'Same as normal windows',
+  privateSearchEngineDesc:
+    'Private windows can search with a different engine, so those searches never go to the one you use every day.',
   searchEngineCustom: 'Add a custom engine',
   searchEngineCustomName: 'Name',
   searchEngineCustomUrl: 'Search URL',

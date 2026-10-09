@@ -60,6 +60,7 @@ export const PreferencesSchema = z.object({
   region: z.string().max(16),
   dateFormat: z.string().max(16),
   searchEngineId: z.string().max(64),
+  privateSearchEngineId: z.string().max(64),
   // First-run welcome sentinel. Private: not exposed to extensions.
   onboardingCompleted: z.boolean(),
   // User-added search engines. The template must carry `{q}` AND resolve to an http/https URL once it

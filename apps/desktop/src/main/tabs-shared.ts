@@ -49,9 +49,14 @@ export function tabSwitchOrder(): 'positional' | 'recent' {
   return PreferenceStore.getAll().tabSwitchOrder === 'recent' ? 'recent' : 'positional';
 }
 /** Resolve a typed omnibox query to a search URL via the selected engine (built-in or user-custom). */
-export function searchUrlForQuery(query: string): string {
+export function searchUrlForQuery(query: string, isPrivate = false): string {
   const prefs = PreferenceStore.getAll();
-  return buildSearchUrl(prefs.searchEngineId, query, allSearchEngines(prefs.customSearchEngines));
+  const engines = allSearchEngines(prefs.customSearchEngines);
+  // A private window may use its own engine. A stale choice (a custom engine since deleted) falls back
+  // to the normal one rather than to whatever `buildSearchUrl` picks for an unknown id.
+  const privateId = prefs.privateSearchEngineId ?? '';
+  const useOwn = isPrivate && privateId !== '' && engines.some((e) => e.id === privateId);
+  return buildSearchUrl(useOwn ? privateId : prefs.searchEngineId, query, engines);
 }
 /** Cap for page-controlled titles before they reach the history DB (hostile-page DoS guard). */
 export const MAX_TITLE_LENGTH = 2048;

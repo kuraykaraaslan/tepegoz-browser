@@ -53,6 +53,7 @@ export const SETTINGS_VISIBILITY: Record<keyof Preferences, 'public' | 'private'
   region: 'private',
   dateFormat: 'private',
   searchEngineId: 'private',
+  privateSearchEngineId: 'private',
   onboardingCompleted: 'private',
   customSearchEngines: 'private',
   // Private, and emphatically so: which tunnels a user has configured, and whether they are using one,

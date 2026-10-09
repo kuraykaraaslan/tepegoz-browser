@@ -31,7 +31,7 @@ export class WindowTabsNav extends WindowTabsMoves {
     }
     const rec = this.store.active();
     if (rec === undefined) return;
-    const url = toNavigationUrl(rawUrl, homeUrl(), searchUrlForQuery);
+    const url = toNavigationUrl(rawUrl, homeUrl(), (q) => searchUrlForQuery(q, this.isPrivate));
     const view = this.views.get(rec.id);
     if (view === undefined) {
       this.createTab(url); // typing a URL while on an internal page opens a new web tab
@@ -47,7 +47,7 @@ export class WindowTabsNav extends WindowTabsMoves {
     if (!this.store.has(id)) return false;
     const view = this.views.get(id);
     if (view === undefined) return false;
-    const url = toNavigationUrl(rawUrl, homeUrl(), searchUrlForQuery);
+    const url = toNavigationUrl(rawUrl, homeUrl(), (q) => searchUrlForQuery(q, this.isPrivate));
     void view.webContents.loadURL(url).catch((err: unknown) => {
       Logger.warn('Navigation failed', { url, err: String(err) });
     });

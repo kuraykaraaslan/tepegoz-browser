@@ -60,6 +60,7 @@ export const PREFERENCE_METADATA = {
   region: stable,
   dateFormat: stable,
   searchEngineId: stable,
+  privateSearchEngineId: stable,
   // First-run welcome sentinel.
   onboardingCompleted: internal,
   customSearchEngines: stable,

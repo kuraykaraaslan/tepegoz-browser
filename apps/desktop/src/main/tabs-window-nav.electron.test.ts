@@ -47,7 +47,8 @@ vi.mock('./lib/i18n-main', () => ({
 const navUrl = vi.hoisted(() => ({
   isWebUrl: (u: string) => u.startsWith('http'),
   internalPageUrl: vi.fn<(u: string) => string | null>(() => null),
-  toNavigationUrl: (u: string) => u,
+  toNavigationUrl: (u: string, _home?: string, search?: (q: string) => string) =>
+    u.includes(' ') && search !== undefined ? search(u) : u,
 }));
 vi.mock('./lib/navigation-url', () => navUrl);
 vi.mock('./tabs-popup-policy', () => ({ asGroupColor: (c: string) => c }));
@@ -92,6 +93,9 @@ vi.mock('./tabs-internal-page-view', () => ({
   unwireInternalPageView: vi.fn(),
 }));
 vi.mock('./navigation/unload-broker', () => ({ askBeforeClose: vi.fn() }));
+const searchSpy = vi.hoisted(() =>
+  vi.fn<(q: string, isPrivate?: boolean) => string>((q) => `search:${q}`),
+);
 const switchOrder = vi.hoisted((): { v: 'positional' | 'recent' } => ({ v: 'positional' }));
 vi.mock('./tabs-shared', () => ({
   tabSwitchOrder: () => switchOrder.v,
@@ -100,7 +104,7 @@ vi.mock('./tabs-shared', () => ({
   internalTitleFor: () => 'Internal',
   browsedViewWebPreferences: () => ({}),
   homeUrl: () => 'https://example.com/',
-  searchUrlForQuery: (q: string) => q,
+  searchUrlForQuery: searchSpy,
   persistSession: vi.fn(),
   involuntaryGroupExitObservers: new Set(),
   takeClosedTab: () => undefined,
@@ -641,5 +645,23 @@ describe('keyboard tab switching in recent order', () => {
     tabs.activateAdjacentTab(1, 'tab');
     expect(tabs.activeId()).not.toBe(c);
     expect(tabs.activeId()).not.toBe(d);
+  });
+});
+
+describe('search engine by window kind', () => {
+  it('a private window searches with the private engine, a normal one without the flag set', () => {
+    for (const isPrivate of [true, false]) {
+      searchSpy.mockClear();
+      const win = new Harness(fakeWindow() as never, isPrivate);
+      const id = win.addWeb();
+      win.setActive(id);
+      const local = mkWc();
+      win.putView(id, local);
+      win.navigateActive('two words');
+      expect(searchSpy).toHaveBeenLastCalledWith('two words', isPrivate);
+      expect(local.loadURL).toHaveBeenLastCalledWith('search:two words');
+      win.navigateTab(id, 'more words');
+      expect(searchSpy).toHaveBeenLastCalledWith('more words', isPrivate);
+    }
   });
 });

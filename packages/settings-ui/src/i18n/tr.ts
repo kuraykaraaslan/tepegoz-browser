@@ -70,6 +70,10 @@ export const tr: SettingsStrings = {
   preferencesTitle: 'Tercihler',
   searchEngineLabel: 'Arama motoru',
   searchEngineDesc: 'Adres çubuğundan arama yaptığınızda kullanılan motor.',
+  privateSearchEngineLabel: 'Gizli pencerelerdeki arama motoru',
+  privateSearchEngineSame: 'Normal pencerelerle aynı',
+  privateSearchEngineDesc:
+    'Gizli pencereler farklı bir arama motoruyla arama yapabilir; böylece bu aramalar her gün kullandığınız motora gitmez.',
   searchEngineCustom: 'Özel motor ekle',
   searchEngineCustomName: 'Ad',
   searchEngineCustomUrl: 'Arama URL’si',

@@ -76,8 +76,32 @@ describe('SearchStartupSection', () => {
 
   it('changes the default search engine', () => {
     const { setPref } = renderSection();
-    fireEvent.change(screen.getByRole('combobox'), { target: { value: 'duckduckgo' } });
+    fireEvent.change(document.getElementById('search-engine')!, {
+      target: { value: 'duckduckgo' },
+    });
     expect(setPref).toHaveBeenCalledWith({ searchEngineId: 'duckduckgo' });
+  });
+
+  it('chooses a separate engine for private windows, "same as normal" being the empty value', () => {
+    const { setPref } = renderSection();
+    const select = document.getElementById('private-search-engine') as HTMLSelectElement;
+    expect(select.value).toBe('');
+    expect(select.options[0]!.textContent).toBe(s.privateSearchEngineSame);
+    fireEvent.change(select, { target: { value: 'duckduckgo' } });
+    expect(setPref).toHaveBeenCalledWith({ privateSearchEngineId: 'duckduckgo' });
+    fireEvent.change(select, { target: { value: '' } });
+    expect(setPref).toHaveBeenLastCalledWith({ privateSearchEngineId: '' });
+  });
+
+  it('puts a private window pointed at a removed custom engine back to "same as normal"', () => {
+    const custom = { id: 'custom-1', name: 'Mine', searchUrlTemplate: 'https://m.example/?q={q}' };
+    const { setPref } = renderSection({
+      customSearchEngines: [custom],
+      searchEngineId: 'google',
+      privateSearchEngineId: 'custom-1',
+    });
+    fireEvent.click(screen.getByRole('button', { name: s.searchEngineRemove }));
+    expect(lastPatch(setPref)).toEqual({ customSearchEngines: [], privateSearchEngineId: '' });
   });
 
   it('falls the default back to the built-in when the selected custom engine is removed', () => {

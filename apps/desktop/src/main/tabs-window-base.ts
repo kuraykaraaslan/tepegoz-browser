@@ -194,7 +194,7 @@ export class WindowTabsBase {
       return this.createInternalTab(internal, opts);
     }
     const home = homeUrl();
-    const target = toNavigationUrl(rawUrl, home, searchUrlForQuery);
+    const target = toNavigationUrl(rawUrl, home, (q) => searchUrlForQuery(q, this.isPrivate));
     if (
       ActionInterceptorService.shouldBlock('tab:create', {
         url: target,

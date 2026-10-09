@@ -183,6 +183,16 @@ describe('PreferenceStore', () => {
     expect(PreferenceStore.getAll().bookmarksBarOnlyNewTab).toBe(true);
   });
 
+  it('defaults privateSearchEngineId to "same as normal" for an old file, and round-trips a choice', () => {
+    writeFileSync(filePath, JSON.stringify({ locale: 'tr' }), 'utf8');
+    PreferenceStore.init({ filePath });
+    expect(PreferenceStore.getAll().privateSearchEngineId).toBe('');
+    PreferenceStore.update({ privateSearchEngineId: 'duckduckgo' });
+    PreferenceStore.reset();
+    PreferenceStore.init({ filePath });
+    expect(PreferenceStore.getAll().privateSearchEngineId).toBe('duckduckgo');
+  });
+
   it('defaults mcpServers to [] and round-trips a valid stdio server', () => {
     PreferenceStore.init({ filePath });
     expect(PreferenceStore.getAll().mcpServers).toEqual([]);

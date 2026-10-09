@@ -75,6 +75,8 @@ export function SearchStartupSection({
       customSearchEngines: prefs.customSearchEngines.filter((e) => e.id !== id),
       // If the removed engine was the selected default, fall back to the built-in default.
       ...(prefs.searchEngineId === id ? { searchEngineId: DEFAULT_SEARCH_ENGINE_ID } : {}),
+      // A private window pointed at the removed engine goes back to "same as normal".
+      ...(prefs.privateSearchEngineId === id ? { privateSearchEngineId: '' } : {}),
     });
   }
 
@@ -170,6 +172,25 @@ export function SearchStartupSection({
             </option>
           ))}
         </Select>
+
+        <div className="mt-4">
+          <Select
+            id="private-search-engine"
+            label={s.privateSearchEngineLabel}
+            value={prefs.privateSearchEngineId}
+            onChange={(v) => {
+              setPref({ privateSearchEngineId: v });
+            }}
+          >
+            <option value="">{s.privateSearchEngineSame}</option>
+            {engines.map((e) => (
+              <option key={e.id} value={e.id}>
+                {e.name}
+              </option>
+            ))}
+          </Select>
+          <p className="mt-1 text-xs text-text-secondary">{s.privateSearchEngineDesc}</p>
+        </div>
 
         {prefs.customSearchEngines.length > 0 && (
           <ul className="mt-4 space-y-2">

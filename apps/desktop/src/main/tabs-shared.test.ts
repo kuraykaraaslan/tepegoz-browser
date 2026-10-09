@@ -191,6 +191,43 @@ describe('homeUrl / searchUrlForQuery', () => {
   });
 });
 
+describe('searchUrlForQuery in a private window', () => {
+  const hostOf = (u: string): string => new URL(u).hostname;
+
+  it('uses the private engine there and the normal engine everywhere else', () => {
+    prefs.getAll.mockReturnValue({
+      searchEngineId: 'google',
+      privateSearchEngineId: 'duckduckgo',
+      customSearchEngines: [],
+    });
+    expect(hostOf(shared.searchUrlForQuery('x', true))).toContain('duckduckgo');
+    expect(hostOf(shared.searchUrlForQuery('x', false))).toContain('google');
+    expect(hostOf(shared.searchUrlForQuery('x'))).toContain('google');
+  });
+
+  it('"same as normal" (empty), an absent value, and a deleted custom engine all fall back', () => {
+    for (const privateSearchEngineId of ['', undefined, 'custom-gone']) {
+      prefs.getAll.mockReturnValue({
+        searchEngineId: 'google',
+        ...(privateSearchEngineId === undefined ? {} : { privateSearchEngineId }),
+        customSearchEngines: [],
+      });
+      expect(hostOf(shared.searchUrlForQuery('x', true))).toContain('google');
+    }
+  });
+
+  it('can point at a user-added custom engine', () => {
+    prefs.getAll.mockReturnValue({
+      searchEngineId: 'google',
+      privateSearchEngineId: 'custom-1',
+      customSearchEngines: [
+        { id: 'custom-1', name: 'Mine', searchUrlTemplate: 'https://m.example/?q={q}' },
+      ],
+    });
+    expect(shared.searchUrlForQuery('a b', true)).toBe('https://m.example/?q=a%20b');
+  });
+});
+
 describe('popupWindowOptions', () => {
   it('hands the OPENER session straight through with the hardened webPreferences', () => {
     const opener = { id: 'opener-session' } as unknown as Session;
