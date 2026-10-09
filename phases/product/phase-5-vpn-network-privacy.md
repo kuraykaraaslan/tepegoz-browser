@@ -190,7 +190,7 @@ endpoint** (one loopback port per active connection), never an OS-level system p
         like "Tor is broken." Normalize whitespace and strip invisible characters on paste, then validate
         the line's shape before accepting it. Tiny, and it is a documented real-world failure, not a
         hypothetical.
-    - [x] _Landed 2026-10-09 (code, unit-tested; not yet exercised against a live bridge):_
+    - [x] _Landed 2026-10-09 (code, unit-tested; the IPC/storage boundary is **e2e-verified** in `e2e/tor-bridge-connection.spec.ts`; not yet exercised against a live bridge):_
           `bridge-line.ts` normalizes (NFKC, invisible characters, smart quotes, dashes, whitespace, a
           `Bridge ` prefix) and shape-validates (transport, address/port, 40-hex fingerprint, `key=value`
           args, obfs4 needs `cert=`); `networkAddConnection` stores only the canonical line and refuses a
