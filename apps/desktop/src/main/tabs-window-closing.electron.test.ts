@@ -54,6 +54,7 @@ vi.mock('./tabs-shared', () => ({
 }));
 
 const ipv = await import('./tabs-internal-page-view');
+const shared = await import('./tabs-shared');
 
 beforeEach(() => {
   sent.length = 0;
@@ -125,6 +126,29 @@ describe('closeTab', () => {
     expect(tabs.hasView(doomed)).toBe(false);
     expect(wc.closeCalls).toEqual([{ waitForBeforeUnload: true }, undefined]); // pass-1 ask + pass-2 close()
     expect(win.contentView.children).not.toContain(view);
+  });
+
+  it('remembers the group a closed tab belonged to, and nothing for an ungrouped one', () => {
+    vi.mocked(shared.rememberClosedTab).mockClear();
+    const { tabs, win } = harness();
+    tabs.seedWebTab(new FakeView()); // survivor so the window stays open
+    const grouped = new FakeView();
+    const groupedId = tabs.seedWebTab(grouped);
+    tabs.seedGroup(groupedId, 'Research', 'green');
+    const plain = new FakeView();
+    const plainId = tabs.seedWebTab(plain);
+    win.contentView.addChildView(grouped);
+    win.contentView.addChildView(plain);
+
+    tabs.closeTab(groupedId);
+    grouped.webContents!.emit('destroyed');
+    tabs.closeTab(plainId);
+    plain.webContents!.emit('destroyed');
+
+    const calls = vi.mocked(shared.rememberClosedTab).mock.calls;
+    expect(calls).toHaveLength(2);
+    expect(calls[0]?.[3]).toEqual({ name: 'Research', color: 'green' });
+    expect(calls[1]?.[3]).toBeUndefined();
   });
 
   it('destroys the internal-page view of a closed internal tab that owns one', () => {

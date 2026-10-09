@@ -79,7 +79,14 @@ export class WindowTabsClosing extends WindowTabsBase {
     if (isWebUrl(closedUrl)) {
       // The title comes from the STORE, never from the contents: by the time a two-pass close gets
       // here the page that knew its own title is already gone.
-      rememberClosedTab(closedUrl, this.store.get(id)?.title ?? '', Date.now());
+      const groupId = this.store.get(id)?.groupId ?? null;
+      const group = groupId === null ? undefined : this.store.getGroup(groupId);
+      rememberClosedTab(
+        closedUrl,
+        this.store.get(id)?.title ?? '',
+        Date.now(),
+        group === undefined ? undefined : { name: group.name, color: group.color },
+      );
     }
     if (!this.win.isDestroyed()) this.win.contentView.removeChildView(view);
     if (live) {

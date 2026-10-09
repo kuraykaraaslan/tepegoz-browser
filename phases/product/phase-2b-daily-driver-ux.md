@@ -84,6 +84,14 @@ work lives in Phase 2; agent orchestration (multi-tab parallelism) stays in Phas
         name and colour intact. Fits ADR-0020 cleanly — group identity is a **binding/UI** property, which
         is exactly what a restore entry needs to carry, and no policy scope travels with it. Captured, not
         scheduled: [`../tracks/min-browser-agent-parity.md`](../../docs/parities/min-browser-agent-parity.md) P1.
+    - [x] _Landed 2026-10-09 (unit-tested; not run in the packaged app):_ **Close group** records its tabs as
+          one batch carrying the group's name and colour (`closed-tabs.ts`); the History menu shows it as one
+          row ("Research — 8 tabs"); Ctrl+Shift+T or picking the row restores the tabs as a group with that
+          name and colour. A tab closed on its own out of a group stays a plain row and reopens as a plain
+          tab. No policy scope travels with the entry (ADR-0020).
+    - [ ] _Still owed:_ a group whose close is deferred by a page's `beforeunload` prompt loses its batch
+          (those tabs come back as separate rows); the strip's own context menu has no "reopen group" entry;
+          no e2e spec, and nothing restores a closed group's route or collapsed state.
   - [ ] **Context-driven automatic grouping** — "open a group for this task and collect the related tabs into
         it." Dia ships this; here it is a smaller step than it looks, because groups are **already** the key
         for agent conversations (`groupId`) and the agent already auto-groups tabs it opens per task. The

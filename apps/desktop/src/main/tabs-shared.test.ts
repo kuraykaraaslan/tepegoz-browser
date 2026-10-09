@@ -88,8 +88,14 @@ describe('browsedViewWebPreferences', () => {
   });
 });
 
-const { closedTabs, rememberClosedTab, takeClosedTab, recentlyClosedTabs } =
-  await import('./tabs-shared');
+const {
+  closedTabs,
+  rememberClosedTab,
+  runAsClosedBatch,
+  takeClosedBatch,
+  takeClosedTab,
+  recentlyClosedTabs,
+} = await import('./tabs-shared');
 
 describe('the recently-closed list', () => {
   beforeEach(() => {
@@ -235,5 +241,69 @@ describe('internalBaseUrl / internalTitleFor', () => {
     vi.mocked(ext.extensionLabel).mockReturnValue({ name: 'My Extension' } as never);
     expect(shared.internalTitleFor('tepegoz://ext-abc')).toBe('My Extension');
     extIdFromUrl.mockReturnValue(null);
+  });
+});
+
+describe('group-aware recently closed', () => {
+  const g = { name: 'Research', color: 'blue' };
+  beforeEach(() => {
+    closedTabs.length = 0;
+  });
+
+  it('collapses a closed group into one row and restores it as a batch, in close order', () => {
+    rememberClosedTab('https://solo.example/', 'Solo', 1);
+    runAsClosedBatch(() => {
+      rememberClosedTab('https://a.example/', 'A', 2, g);
+      rememberClosedTab('https://b.example/', 'B', 3, g);
+      rememberClosedTab('https://c.example/', 'C', 4, g);
+    });
+    const rows = recentlyClosedTabs();
+    expect(rows).toHaveLength(2);
+    expect(rows[0]?.group).toEqual({ name: 'Research', color: 'blue', count: 3 });
+    const { tabs, group } = takeClosedBatch(rows[0]?.id);
+    expect(tabs.map((t) => t.url)).toEqual([
+      'https://a.example/',
+      'https://b.example/',
+      'https://c.example/',
+    ]);
+    expect(group).toEqual(g);
+    expect(recentlyClosedTabs().map((t) => t.url)).toEqual(['https://solo.example/']);
+  });
+
+  it('keeps tabs closed one at a time from a group as separate rows', () => {
+    rememberClosedTab('https://a.example/', 'A', 1, g);
+    rememberClosedTab('https://b.example/', 'B', 2, g);
+    expect(recentlyClosedTabs().every((t) => t.group === undefined)).toBe(true);
+    expect(takeClosedBatch().tabs).toHaveLength(1);
+  });
+
+  it('keeps two separate group closes as two units', () => {
+    runAsClosedBatch(() => {
+      rememberClosedTab('https://a.example/', 'A', 1, g);
+    });
+    runAsClosedBatch(() => {
+      rememberClosedTab('https://b.example/', 'B', 2, g);
+      rememberClosedTab('https://c.example/', 'C', 3, g);
+    });
+    expect(recentlyClosedTabs().map((t) => t.group?.count)).toEqual([2, 1]);
+    expect(takeClosedBatch().tabs.map((t) => t.url)).toEqual([
+      'https://b.example/',
+      'https://c.example/',
+    ]);
+  });
+
+  it('returns nothing for an unknown id and an empty list', () => {
+    expect(takeClosedBatch('rc-missing').tabs).toEqual([]);
+    expect(takeClosedBatch().tabs).toEqual([]);
+  });
+
+  it('records no batch outside runAsClosedBatch, and restores the batch if fn throws', () => {
+    expect(() =>
+      runAsClosedBatch(() => {
+        throw new Error('boom');
+      }),
+    ).toThrow('boom');
+    rememberClosedTab('https://a.example/', 'A', 1, g);
+    expect(recentlyClosedTabs()[0]?.group).toBeUndefined();
   });
 });

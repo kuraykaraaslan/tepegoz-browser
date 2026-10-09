@@ -139,6 +139,9 @@ export const en = {
     sessionRestoredUndo: 'Undo',
     // Recently closed (History submenu): the section over the recent-history rows.
     recentlyClosed: 'Recently closed',
+    closedGroupOne: '{name} — 1 tab',
+    closedGroupOther: '{name} — {count} tabs',
+    closedGroupUntitled: 'Tab group',
     // Network privacy (Phase 5) — the per-tab / per-group route picker in the native context menus.
     routeTabThrough: 'Route this tab through…',
     routeGroupThrough: 'Route this group through…',

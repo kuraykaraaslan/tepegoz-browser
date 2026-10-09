@@ -127,6 +127,9 @@ export const tr: AppStrings = {
     sessionRestoredUndo: 'Geri al',
     // Yakında kapatılanlar (Geçmiş alt menüsü): son geçmiş satırlarının üstündeki bölüm.
     recentlyClosed: 'Yakında kapatılanlar',
+    closedGroupOne: '{name} — 1 sekme',
+    closedGroupOther: '{name} — {count} sekme',
+    closedGroupUntitled: 'Sekme grubu',
     // Ağ gizliliği (Faz 5) — yerel sağ tık menülerindeki sekme/grup rota seçici.
     routeTabThrough: 'Bu sekmeyi şu bağlantıdan geçir…',
     routeGroupThrough: 'Bu grubu şu bağlantıdan geçir…',

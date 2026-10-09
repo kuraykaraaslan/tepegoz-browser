@@ -48,6 +48,8 @@ export interface ClosedTab {
   title: string;
   /** Epoch millis it was closed, newest first in the list. */
   closedAt: number;
+  /** Present when this row stands for a whole group closed together; reopening restores them all. */
+  group?: { name: string; color: string; count: number };
 }
 
 export interface TabInfo {

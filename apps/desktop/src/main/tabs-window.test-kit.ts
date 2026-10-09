@@ -55,6 +55,17 @@ export class Harness extends WindowTabs {
   group(id: string): { name: string; collapsed: boolean } | undefined {
     return this.store.groupsInOrder().find((g) => g.id === id);
   }
+  /** Every group with its colour and member URLs, in strip order. */
+  groupsWithMembers(): { name: string; color: string; urls: string[] }[] {
+    return this.store.groupsInOrder().map((g) => ({
+      name: g.name,
+      color: g.color,
+      urls: this.store
+        .records()
+        .filter((r) => r.groupId === g.id)
+        .map((r) => r.url),
+    }));
+  }
   makeGroup(name: string, memberIds: string[]): string {
     return this.store.createGroup({ name, color: 'blue', collapsed: false, memberIds });
   }

@@ -83,8 +83,8 @@ vi.mock('./tabs-internal-page-view', () => ({
 }));
 vi.mock('./navigation/unload-broker', () => ({ askBeforeClose: vi.fn() }));
 
-const closedStack = vi.hoisted((): { items: { url: string; id?: string }[] } => ({ items: [] }));
 const persistSession = vi.hoisted(() => vi.fn());
+const { closedTabs, rememberClosedTab, runAsClosedBatch } = await import('./closed-tabs');
 vi.mock('./tabs-shared', () => ({
   rememberClosedTab: vi.fn(),
   internalBaseUrl: (u: string) => u,
@@ -94,19 +94,13 @@ vi.mock('./tabs-shared', () => ({
   searchUrlForQuery: (q: string) => q,
   persistSession,
   involuntaryGroupExitObservers: new Set(),
-  takeClosedTab: (id?: string) => {
-    if (closedStack.items.length === 0) return undefined;
-    if (id === undefined) return closedStack.items.pop();
-    const i = closedStack.items.findIndex((c) => c.id === id);
-    return i === -1 ? undefined : closedStack.items.splice(i, 1)[0];
-  },
 }));
 
 let tabs: Harness;
 let win: ReturnType<typeof fakeWindow>;
 beforeEach(() => {
   vi.clearAllMocks();
-  closedStack.items = [];
+  closedTabs.length = 0;
   loadBehavior.reject = false;
   interceptor.shouldBlock.mockReturnValue(false);
   certRec.get.mockReturnValue(undefined);
@@ -159,10 +153,30 @@ describe('snapshot', () => {
 
 describe('reopenClosedTab', () => {
   it('recreates the most recent closed tab', () => {
-    closedStack.items = [{ url: 'https://reopened.test/' }];
+    rememberClosedTab('https://reopened.test/', 'R', 1);
     const before = tabs.count();
     tabs.reopenClosedTab();
     expect(tabs.count()).toBe(before + 1);
+  });
+
+  it('restores a group closed as a unit as one group with its name and colour', () => {
+    runAsClosedBatch(() => {
+      rememberClosedTab('https://a.test/', 'A', 1, { name: 'Research', color: 'green' });
+      rememberClosedTab('https://b.test/', 'B', 2, { name: 'Research', color: 'green' });
+    });
+    tabs.reopenClosedTab();
+    // The records' URLs fill in only after the pages load, so the pinned facts are name, colour, size.
+    expect(tabs.groupsWithMembers().map((g) => [g.name, g.color, g.urls.length])).toEqual([
+      ['Research', 'green', 2],
+    ]);
+    expect(closedTabs).toHaveLength(0);
+  });
+
+  it('reopens a single tab closed out of a group as a plain tab, not a group', () => {
+    rememberClosedTab('https://a.test/', 'A', 1, { name: 'Research', color: 'green' });
+    tabs.reopenClosedTab();
+    expect(tabs.count()).toBe(1);
+    expect(tabs.groupsWithMembers()).toEqual([]);
   });
 
   it('is a no-op when there is nothing to reopen', () => {

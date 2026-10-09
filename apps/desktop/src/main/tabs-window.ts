@@ -2,7 +2,7 @@ import { type PersistedGroup, type PersistedTab, type WindowSnapshot } from '@te
 import { isWebUrl } from './lib/navigation-url';
 import { asGroupColor } from './tabs-popup-policy';
 import { WindowTabsDiscard } from './tabs-window-discard';
-import { takeClosedTab } from './tabs-shared';
+import { takeClosedBatch } from './closed-tabs';
 
 /**
  * L0 tab model. Each tab is an isolated `WebContentsView` in a SEPARATE browsing partition
@@ -30,8 +30,18 @@ export class WindowTabs extends WindowTabsDiscard {
   /** Reopen a closed tab: the most recent one (Ctrl+Shift+T), or the entry `id` names (the History
    *  menu's "Recently closed" section). No-op when the list is empty or the id is already gone. */
   reopenClosedTab(id?: string): void {
-    const closed = takeClosedTab(id);
-    if (closed !== undefined) this.createTab(closed.url);
+    const { tabs, group } = takeClosedBatch(id);
+    if (group === undefined) {
+      const only = tabs[0];
+      if (only !== undefined) this.createTab(only.url);
+      return;
+    }
+    // A group closed as a unit comes back as a unit, with its name and colour.
+    const ids = tabs.flatMap((t) => this.createTab(t.url) ?? []);
+    if (ids.length === 0) return;
+    const groupId = this.createGroup(ids);
+    this.renameGroup(groupId, group.name);
+    this.recolorGroup(groupId, asGroupColor(group.color));
   }
 
   /** This window's restorable snapshot: ordered web tabs (URL + pin + group membership), group metadata,

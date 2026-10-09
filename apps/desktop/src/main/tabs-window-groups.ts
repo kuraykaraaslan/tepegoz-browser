@@ -2,6 +2,7 @@ import { type TabGroupSettingValue } from '@tepegoz/desktop-ipc';
 import { type TabGroupColor } from '@tepegoz/tab-engine';
 import { Logger } from '@tepegoz/libs';
 import { WindowTabsClosing } from './tabs-window-closing';
+import { runAsClosedBatch } from './closed-tabs';
 import { involuntaryGroupExitObservers } from './tabs-shared';
 
 /**
@@ -100,7 +101,10 @@ export class WindowTabsGroups extends WindowTabsClosing {
       .records()
       .filter((r) => r.groupId === groupId)
       .map((r) => r.id);
-    for (const id of memberIds) this.closeTab(id);
+    // One batch: the list shows the group as a unit and reopening restores it as one.
+    runAsClosedBatch(() => {
+      for (const id of memberIds) this.closeTab(id);
+    });
   }
 
   /** The colors + current color of a group, for building the native group menu (undefined if unknown). */

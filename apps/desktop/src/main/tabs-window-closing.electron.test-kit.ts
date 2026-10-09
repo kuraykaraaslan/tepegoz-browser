@@ -92,6 +92,10 @@ export class Harness extends WindowTabsClosing {
     this.views.set(id, view as unknown as Electron.WebContentsView);
     return id;
   }
+  /** Put `id` into a fresh named group. */
+  seedGroup(id: string, name: string, color: 'blue' | 'green'): void {
+    this.store.createGroup({ name, color, memberIds: [id] });
+  }
   seedInternalTab(url: string): string {
     return this.store.add({
       kind: 'internal',

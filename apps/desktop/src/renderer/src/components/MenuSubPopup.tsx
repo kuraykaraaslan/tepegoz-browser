@@ -15,6 +15,7 @@ import { browserDict, menuDict } from '../../../i18n';
 import { extensionLabel, extensionPageUrl } from '../../../shared/extension-urls';
 import { iconNodeFor } from '../extensions/icon-registry';
 import { applyTheme } from '../lib/theme';
+import { closedRowLabel } from '../lib/closed-row-label';
 
 /**
  * Standalone render target for a submenu flyout window (loaded with `?surface=menu-sub&kind=<k>`). It's
@@ -95,7 +96,7 @@ export function MenuSubPopup({ kind }: { kind: string }) {
                 { kind: 'label', id: 'rc-title', text: b.recentlyClosed },
                 ...closed.slice(0, RECENT_CLOSED_COUNT).map((t): MenuItem => ({
                   id: `rc:${t.id}`,
-                  label: t.title.length > 0 ? t.title : t.url,
+                  label: closedRowLabel(t, b),
                   icon: <Icon name="history" />,
                   onSelect: () => act(() => window.tepegoz.reopenClosedTab(t.id)),
                 })),
