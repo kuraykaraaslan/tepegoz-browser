@@ -229,7 +229,7 @@ work lives in Phase 2; agent orchestration (multi-tab parallelism) stays in Phas
         under the Homepage field in Preferences (`showHomeButton`, on by default so nothing changes
         until it is turned off); `NavToolbar` gained a `showHome` prop and `BrowserChrome` passes it
         through. The Home button was already built; only its visibility is new.
-  - [x] _Landed 2026-10-09 (unit-tested, not run in the packaged app):_ **warn before closing a window with
+  - [x] _Landed 2026-10-09 (unit-tested; **e2e-verified** in `e2e/close-window-warning.spec.ts`, native dialog scripted):_ **warn before closing a window with
         several tabs** — Preferences → System tray & power, off by default (`confirmCloseMultiTab`). A native
         "Close this window? This will close N tabs." with Keep open as the default; skipped on a real quit,
         in eval mode, and while close-to-tray is on (that only hides the window, nothing is lost). One
