@@ -1,5 +1,6 @@
 import { join } from 'node:path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { parseBridgeLine } from './bridge-line';
 
 /**
  * `TorProvider` — one `tor` process per connection with its own DataDirectory. Pinned: `connect`
@@ -56,6 +57,15 @@ beforeEach(() => {
 });
 
 describe('connect', () => {
+  it('writes bridge lines and the transport plugin into the torrc', async () => {
+    const bridge = parseBridgeLine('obfs4 192.0.2.1:443 cert=abc');
+    await new TorProvider('c3', null, [bridge], { obfs4: '/opt/lyrebird' }).connect();
+    const torrc = (fs.writeFileSync.mock.calls[0] as [string, string])[1];
+    expect(torrc).toContain('UseBridges 1');
+    expect(torrc).toContain('ClientTransportPlugin obfs4 exec /opt/lyrebird');
+    expect(torrc).toContain('Bridge obfs4 192.0.2.1:443 cert=abc');
+  });
+
   it('writes a torrc without an upstream proxy and reports an unchained route', async () => {
     const res = await new TorProvider('c1', null).connect();
     const [path, torrc, opts] = fs.writeFileSync.mock.calls[0] as [string, string, unknown];

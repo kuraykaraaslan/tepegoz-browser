@@ -111,3 +111,27 @@ export function parseBridgeLine(raw: string): BridgeLine {
     .join(' ');
   return { transport, address, fingerprint, args, line };
 }
+
+/**
+ * Torrc lines that make Tor connect through `bridges`. Empty input yields no lines (direct to the public
+ * relays). A bridge with a pluggable transport needs the transport binary — Tor cannot speak obfs4 or
+ * snowflake itself — so a missing entry in `transportBinaries` is refused here rather than written into a
+ * torrc that Tor would then fail on with an opaque message.
+ */
+export function bridgeTorrcLines(
+  bridges: readonly BridgeLine[],
+  transportBinaries: Readonly<Record<string, string>>,
+): string[] {
+  if (bridges.length === 0) return [];
+  const transports = [
+    ...new Set(bridges.flatMap((b) => (b.transport === null ? [] : [b.transport]))),
+  ];
+  const plugins = transports.map((t) => {
+    const bin = transportBinaries[t];
+    if (bin === undefined || /[\r\n]/.test(bin)) {
+      throw new BridgeLineError(`No "${t}" transport binary is available to run this bridge.`);
+    }
+    return `ClientTransportPlugin ${t} exec ${bin}`;
+  });
+  return ['UseBridges 1', ...plugins, ...bridges.map((b) => `Bridge ${b.line}`)];
+}

@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { BridgeLineError, normalizeBridgeLine, parseBridgeLine } from './bridge-line';
+import {
+  BridgeLineError,
+  bridgeTorrcLines,
+  normalizeBridgeLine,
+  parseBridgeLine,
+} from './bridge-line';
 
 const FP = 'A'.repeat(40);
 const OBFS4 = `obfs4 192.0.2.1:443 ${FP} cert=abc123+/xyz iat-mode=0`;
@@ -53,5 +58,26 @@ describe('parseBridgeLine', () => {
   ])('rejects %j', (input, msg) => {
     expect(() => parseBridgeLine(input)).toThrow(BridgeLineError);
     expect(() => parseBridgeLine(input)).toThrow(msg);
+  });
+});
+
+describe('bridgeTorrcLines', () => {
+  it('emits nothing without bridges', () => {
+    expect(bridgeTorrcLines([], {})).toEqual([]);
+  });
+
+  it('emits UseBridges, one plugin per transport, and each bridge', () => {
+    const a = parseBridgeLine(OBFS4);
+    const b = parseBridgeLine('192.0.2.9:9001');
+    expect(bridgeTorrcLines([a, b], { obfs4: '/opt/lyrebird' })).toEqual([
+      'UseBridges 1',
+      'ClientTransportPlugin obfs4 exec /opt/lyrebird',
+      `Bridge ${OBFS4}`,
+      'Bridge 192.0.2.9:9001',
+    ]);
+  });
+
+  it('refuses a transport with no binary', () => {
+    expect(() => bridgeTorrcLines([parseBridgeLine(OBFS4)], {})).toThrow(/transport binary/);
   });
 });

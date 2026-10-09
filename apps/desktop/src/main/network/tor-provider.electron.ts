@@ -3,6 +3,7 @@ import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { app } from 'electron';
 import { Logger } from '@tepegoz/libs';
+import { bridgeTorrcLines, type BridgeLine } from './bridge-line';
 import { probeSocksPort, type NetworkPrivacyProvider } from './connection-provider.electron';
 import { locateBinary } from './vpn-binaries.electron';
 import { reserveLoopbackPort, waitForSocksPort } from './loopback-port.electron';
@@ -46,6 +47,8 @@ export class TorProvider implements NetworkPrivacyProvider {
   constructor(
     private readonly connectionId: string,
     private readonly resolveUpstream: UpstreamResolver | null,
+    private readonly bridges: readonly BridgeLine[] = [],
+    private readonly transportBinaries: Readonly<Record<string, string>> = {},
   ) {}
 
   async connect(): Promise<{ socksPort: number }> {
@@ -66,6 +69,7 @@ export class TorProvider implements NetworkPrivacyProvider {
       // control port is a local privilege surface with no user here.
       'ControlPort 0',
       ...(upstreamPort === null ? [] : [`Socks5Proxy 127.0.0.1:${String(upstreamPort)}`]),
+      ...bridgeTorrcLines(this.bridges, this.transportBinaries),
       '',
     ].join('\n');
     const torrcPath = join(dataDir, 'torrc');
