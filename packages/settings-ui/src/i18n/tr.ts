@@ -799,6 +799,9 @@ export const tr: SettingsStrings = {
     clearPerSite: 'Tüm siteleri sıfırla',
     clearPerSiteBody:
       '{count} sitenin tamamındaki yakınlaştırma düzeyi unutulur. Yukarıdaki varsayılana dönerler; başka hiçbir şey değişmez.',
+    perSiteListLabel: 'Kendi yakınlaştırması olan siteler',
+    resetSite: 'Sıfırla',
+    resetSiteLabel: '{site} için yakınlaştırmayı sıfırla',
     reduceMotion: 'Hareketi azalt',
     reduceMotionDesc:
       'Animasyonları ve geçişleri sıfıra indirir. Sistem ayarın zaten uygulanıyor — sisteminin istediğinden daha az hareket istiyorsan bunu aç.',

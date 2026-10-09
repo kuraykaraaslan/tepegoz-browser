@@ -1,5 +1,5 @@
 import { settingsDict } from '@tepegoz/settings-ui';
-import { Card, Toggle } from '@tepegoz/ui';
+import { Button, Card, Toggle } from '@tepegoz/ui';
 import { useLocale, useT } from '@tepegoz/i18n/react';
 import type { Preferences } from '@tepegoz/desktop-ipc';
 import { ConfirmAction } from './settings-confirm';
@@ -36,7 +36,8 @@ export function AccessibilitySection({
   const t = s.accessibility;
   const locale = useLocale();
 
-  const perSiteCount = Object.keys(prefs.siteZoomFactors).length;
+  const perSiteSites = Object.keys(prefs.siteZoomFactors).sort((a, b) => a.localeCompare(b));
+  const perSiteCount = perSiteSites.length;
   const percent = (factor: number): string => `${Math.round(factor * 100).toLocaleString(locale)}%`;
 
   return (
@@ -67,6 +68,34 @@ export function AccessibilitySection({
               <p className="mb-2 text-xs text-text-secondary">
                 {t.perSiteCount.replace('{count}', String(perSiteCount))}
               </p>
+              <ul aria-label={t.perSiteListLabel} className="mb-3 max-w-md divide-y divide-border">
+                {perSiteSites.map((site) => (
+                  <li key={site} className="flex items-center justify-between gap-3 py-1.5">
+                    <span className="min-w-0 truncate text-sm text-text-primary" title={site}>
+                      {site}
+                    </span>
+                    <span className="flex shrink-0 items-center gap-3">
+                      <span className="text-sm tabular-nums text-text-secondary">
+                        {percent(prefs.siteZoomFactors[site] ?? prefs.defaultPageZoom)}
+                      </span>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        aria-label={t.resetSiteLabel.replace('{site}', site)}
+                        onClick={() => {
+                          setPref({
+                            siteZoomFactors: Object.fromEntries(
+                              Object.entries(prefs.siteZoomFactors).filter(([o]) => o !== site),
+                            ),
+                          });
+                        }}
+                      >
+                        {t.resetSite}
+                      </Button>
+                    </span>
+                  </li>
+                ))}
+              </ul>
               <ConfirmAction
                 label={t.clearPerSite}
                 title={t.clearPerSite}

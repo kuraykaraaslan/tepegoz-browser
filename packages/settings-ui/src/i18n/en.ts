@@ -812,6 +812,9 @@ export const en = {
     clearPerSite: 'Reset every site',
     clearPerSiteBody:
       'Forgets the zoom level on all {count} of them. They go back to the default above; nothing else changes.',
+    perSiteListLabel: 'Sites with their own zoom',
+    resetSite: 'Reset',
+    resetSiteLabel: 'Reset zoom for {site}',
     reduceMotion: 'Reduce motion',
     reduceMotionDesc:
       'Cut animations and transitions down to nothing. Your system setting is already followed — turn this on if you want less motion than your system asks for.',
