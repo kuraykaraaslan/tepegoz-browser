@@ -145,8 +145,8 @@ export class Harness extends WindowTabsClosing {
   }
 }
 
-export function harness(): { tabs: Harness; win: ReturnType<typeof fakeWindow> } {
+export function harness(isPrivate = false): { tabs: Harness; win: ReturnType<typeof fakeWindow> } {
   const win = fakeWindow();
-  const tabs = new Harness(win as unknown as Electron.BrowserWindow, false);
+  const tabs = new Harness(win as unknown as Electron.BrowserWindow, isPrivate);
   return { tabs, win };
 }

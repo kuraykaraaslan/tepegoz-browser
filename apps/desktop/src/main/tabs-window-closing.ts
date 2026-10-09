@@ -81,7 +81,9 @@ export class WindowTabsClosing extends WindowTabsBase {
     const closedUrl = live
       ? wc.getURL() || this.store.get(id)?.url || ''
       : (this.store.get(id)?.url ?? '');
-    if (isWebUrl(closedUrl)) {
+    // A private window leaves no trace: its URLs, titles and group names must not reach the shared
+    // recently-closed list (History menu / Ctrl+Shift+T) that normal windows read.
+    if (isWebUrl(closedUrl) && !this.isPrivate) {
       // The title comes from the STORE, never from the contents: by the time a two-pass close gets
       // here the page that knew its own title is already gone.
       const groupId = this.store.get(id)?.groupId ?? null;

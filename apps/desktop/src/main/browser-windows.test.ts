@@ -28,6 +28,8 @@ vi.mock('./window-placement', () => ({
 const wt = vi.hoisted(() => ({
   createTab: vi.fn(),
   tabCount: vi.fn(() => 1),
+  visibleTabCount: vi.fn(() => 1),
+  endTabCycle: vi.fn(),
   restoreWindow: vi.fn(() => [] as string[]),
   getState: vi.fn(() => ({ activeId: 'a1' })),
   closeTab: vi.fn(),
@@ -310,26 +312,58 @@ describe('warn before closing a multi-tab window', () => {
   it('holds the close while it asks, and closes for real once the user confirms', async () => {
     guard.shouldConfirmClose.mockReturnValue(true);
     guard.confirmCloseWindow.mockResolvedValue(true);
-    wt.tabCount.mockReturnValue(3);
+    wt.visibleTabCount.mockReturnValue(3);
     const { openWindow } = await load();
     openWindow();
     const onClose = handlerFor(winInstance, 'close')!;
+    // Electron's win.close() emits 'close' synchronously, which is the re-entry the flag has to cover.
+    const reentry = { preventDefault: vi.fn() };
+    winInstance.close.mockImplementation(() => {
+      onClose(reentry);
+    });
     const ev = { preventDefault: vi.fn() };
     onClose(ev);
     expect(ev.preventDefault).toHaveBeenCalled();
     expect(guard.confirmCloseWindow).toHaveBeenCalledWith(winInstance, 3);
     await tick();
     expect(winInstance.close).toHaveBeenCalledTimes(1);
-    // The close it triggers must not ask a second time.
-    const again = { preventDefault: vi.fn() };
-    onClose(again);
-    expect(again.preventDefault).not.toHaveBeenCalled();
+    // The close it triggered did not ask a second time ...
+    expect(reentry.preventDefault).not.toHaveBeenCalled();
     expect(guard.confirmCloseWindow).toHaveBeenCalledTimes(1);
+    // ... but the confirmation does not outlive it: a later close (say it was vetoed, and tried again)
+    // asks again instead of slipping through.
+    const later = { preventDefault: vi.fn() };
+    winInstance.close.mockReset();
+    onClose(later);
+    expect(later.preventDefault).toHaveBeenCalled();
+    expect(guard.confirmCloseWindow).toHaveBeenCalledTimes(2);
+  });
+
+  it('counts the VISIBLE tabs for the prompt, not the hidden kept-alive ones', async () => {
+    guard.shouldConfirmClose.mockReturnValue(true);
+    wt.tabCount.mockReturnValue(5);
+    wt.visibleTabCount.mockReturnValue(2);
+    const { openWindow } = await load();
+    openWindow();
+    handlerFor(winInstance, 'close')!({ preventDefault: vi.fn() });
+    expect(guard.shouldConfirmClose).toHaveBeenLastCalledWith(
+      expect.objectContaining({ tabCount: 2 }),
+    );
+    expect(guard.confirmCloseWindow).toHaveBeenCalledWith(winInstance, 2);
+  });
+
+  it('ends a half-finished Ctrl+Tab walk when the window loses focus or hides', async () => {
+    const { openWindow } = await load();
+    openWindow();
+    handlerFor(winInstance, 'blur')!();
+    expect(wt.endTabCycle).toHaveBeenCalledTimes(1);
+    handlerFor(winInstance, 'hide')!();
+    expect(wt.endTabCycle).toHaveBeenCalledTimes(2);
   });
 
   it('keeps the window open when the user cancels, and asks again on the next attempt', async () => {
     guard.shouldConfirmClose.mockReturnValue(true);
-    wt.tabCount.mockReturnValue(3);
+    wt.visibleTabCount.mockReturnValue(3);
     const { openWindow } = await load();
     openWindow();
     const onClose = handlerFor(winInstance, 'close')!;

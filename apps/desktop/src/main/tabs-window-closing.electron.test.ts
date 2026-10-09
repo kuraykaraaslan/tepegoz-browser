@@ -151,6 +151,20 @@ describe('closeTab', () => {
     expect(calls[1]?.[3]).toBeUndefined();
   });
 
+  it('records nothing for a tab closed in a PRIVATE window — not its URL, title or group', () => {
+    vi.mocked(shared.rememberClosedTab).mockClear();
+    const { tabs, win } = harness(true);
+    tabs.seedWebTab(new FakeView()); // survivor
+    const view = new FakeView();
+    const id = tabs.seedWebTab(view);
+    tabs.seedGroup(id, 'Secret plans', 'green');
+    win.contentView.addChildView(view);
+    tabs.closeTab(id);
+    view.webContents!.emit('destroyed');
+    expect(tabs.tabIds()).not.toContain(id);
+    expect(shared.rememberClosedTab).not.toHaveBeenCalled();
+  });
+
   it('destroys the internal-page view of a closed internal tab that owns one', () => {
     vi.mocked(ipv.hasRealPage).mockReturnValueOnce(true);
     const view = ipView();

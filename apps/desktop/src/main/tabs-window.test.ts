@@ -288,3 +288,14 @@ describe('restoreWindow', () => {
     });
   });
 });
+
+describe('visibleTabCount', () => {
+  it('counts the tabs the strip shows, not the hidden kept-alive ones', () => {
+    tabs.addWeb('https://a.test/');
+    const hidden = tabs.addWeb('https://b.test/');
+    tabs.addWeb('https://c.test/');
+    tabs.hideTab(hidden);
+    expect(tabs.tabCount()).toBe(3);
+    expect(tabs.visibleTabCount()).toBe(2);
+  });
+});

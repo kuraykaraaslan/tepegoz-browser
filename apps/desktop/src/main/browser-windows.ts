@@ -133,7 +133,7 @@ export function openWindow(opts?: {
   win.on('close', (event) => {
     const prefs = PreferenceStore.getAll();
     if (!closeConfirmed && process.env.TEPEGOZ_EVAL !== '1') {
-      const tabCount = TabManager.forWindow(win)?.tabCount() ?? 0;
+      const tabCount = TabManager.forWindow(win)?.visibleTabCount() ?? 0;
       if (
         shouldConfirmClose({
           enabled: prefs.confirmCloseMultiTab,
@@ -148,8 +148,14 @@ export function openWindow(opts?: {
         void confirmCloseWindow(win, tabCount).then((ok) => {
           confirmingClose = false;
           if (!ok || win.isDestroyed()) return;
+          // `close()` emits 'close' synchronously, so the flag only has to cover that one re-entry. Left
+          // set, a close vetoed later (close-to-tray switched on meanwhile) would skip every future prompt.
           closeConfirmed = true;
-          win.close();
+          try {
+            win.close();
+          } finally {
+            closeConfirmed = false;
+          }
         });
         return;
       }
@@ -161,6 +167,13 @@ export function openWindow(opts?: {
     notifyHiddenToTrayOnce();
     reconcileTrayPowerBlocker(); // start keep-awake if enabled + a window is now hidden
   });
+  // A Ctrl+Tab walk ends when Ctrl is released — but if the window loses focus first (Alt-Tab with Ctrl
+  // held) the key-up goes to another app and never arrives, leaving the walk half-open.
+  const endWalk = (): void => {
+    TabManager.forWindow(win)?.endTabCycle();
+  };
+  win.on('blur', endWalk);
+  win.on('hide', endWalk);
   win.on('closed', () => {
     TabManager.persistNow(); // capture the final tab set BEFORE unregister clears the store
     TabManager.unregister(win);

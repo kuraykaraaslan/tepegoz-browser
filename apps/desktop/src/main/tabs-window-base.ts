@@ -359,6 +359,12 @@ export class WindowTabsBase {
     return this.store.ids().length;
   }
 
+  /** How many tabs the strip shows — `tabCount()` minus the hidden, kept-alive ones the user cannot see.
+   *  What a "close this window?" prompt should count. */
+  visibleTabCount(): number {
+    return this.store.records().filter((r) => r.hidden !== true).length;
+  }
+
   /** The active tab's WebContentsView, or undefined for no-active / internal (view-less) tabs. */
   protected activeView(): WebContentsView | undefined {
     const id = this.store.activeId;
