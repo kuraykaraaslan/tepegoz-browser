@@ -96,6 +96,9 @@ export const EventTypeEnum = z.enum([
   // sending a client certificate. A refusal restores the default and leaves nothing to audit.
   'CertificateErrorProceeded',
   'ClientCertificateSent',
+  // The user chose to load one plain-http host on a tunnel-bound tab despite HTTPS-only. Host and
+  // tunnel kind only; the weakening choice is the only thing recorded.
+  'HttpsOnlyBypassed',
   'UploadStaged',
   'UploadBound',
   'UploadSubmitting',
