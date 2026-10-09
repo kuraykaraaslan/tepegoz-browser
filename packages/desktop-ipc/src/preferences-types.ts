@@ -114,6 +114,9 @@ export interface NewTabBackground {
 /** How the app presents on launch: a normal window, hidden in the tray, or a fullscreen locked kiosk. */
 export type StartupMode = 'window' | 'background' | 'kiosk';
 
+/** What a normal launch opens: the tabs of the last session, or one fresh New Tab page. */
+export type StartupTabs = 'restore' | 'newtab';
+
 export interface Preferences {
   theme: ThemePref;
   /**
@@ -265,6 +268,8 @@ export interface Preferences {
    *  (`background`, parked off-screen but rendering), or a fullscreen locked-down `kiosk` (no chrome,
    *  single `kioskUrl`). All keep tabs rendering for the agent. Device-local. */
   startupMode: StartupMode;
+  /** Which tabs a normal launch opens. Safe mode never restores whatever this says (ADR-0038). */
+  startupTabs: StartupTabs;
   /** The URL kiosk mode loads fullscreen with no chrome. Only used when `startupMode` is `kiosk`. */
   kioskUrl: string;
   /** Start Tepegöz automatically at system login (Windows Run key / macOS login item / Linux XDG

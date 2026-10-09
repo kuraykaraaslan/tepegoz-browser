@@ -198,6 +198,11 @@ work lives in Phase 2; agent orchestration (multi-tab parallelism) stays in Phas
       hover-preview cards, and **page preload / network prediction** (interacts with the Phase 5 tunnel
       DNS-prefetch stamping). Captured, not scheduled:
       [`../tracks/browser-settings-feature-gap.md`](../../docs/tracks/browser-settings-feature-gap.md) §§1–2, 16.
+  - [x] _Landed 2026-10-09 (unit-tested, not run in the packaged app):_ **"On startup" tabs** —
+        Preferences → On startup now offers "Continue where I left off" (default, unchanged behaviour) or
+        "Open the New Tab page" (`startupTabs`, private pref; hidden in kiosk mode; safe mode still never
+        restores). The "open a specific set of pages" option, Home button, multi-tab close warning,
+        link-opening behaviour, MRU Ctrl+Tab, hover cards and network prediction remain open.
 
 ### Cross-cutting (as in every phase)
 

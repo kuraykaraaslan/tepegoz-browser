@@ -34,9 +34,21 @@ describe('StartupSection', () => {
 
   it('writes the chosen startup mode', () => {
     const { setPref } = renderSection();
-    const radios = screen.getAllByRole('radio');
-    fireEvent.click(radios[radios.length - 1]!); // kiosk is the last option
+    const modes = document.querySelectorAll<HTMLInputElement>('input[name="startup-mode"]');
+    fireEvent.click(modes[modes.length - 1]!); // kiosk is the last option
     expect(setPref).toHaveBeenCalledWith({ startupMode: 'kiosk' });
+  });
+
+  it('writes which tabs a normal launch opens, and shows the choice only outside kiosk mode', () => {
+    const { setPref } = renderSection();
+    const tabs = document.querySelectorAll<HTMLInputElement>('input[name="startup-tabs"]');
+    expect(tabs).toHaveLength(2);
+    expect(tabs[0]!.checked).toBe(true); // restore is the default
+    fireEvent.click(tabs[1]!);
+    expect(setPref).toHaveBeenCalledWith({ startupTabs: 'newtab' });
+    cleanup();
+    renderSection({ startupMode: 'kiosk' });
+    expect(document.querySelectorAll('input[name="startup-tabs"]')).toHaveLength(0);
   });
 
   it('shows the kiosk URL field only in kiosk mode', () => {

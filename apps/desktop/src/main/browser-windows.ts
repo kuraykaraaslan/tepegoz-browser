@@ -189,7 +189,14 @@ function bootstrapTabs(win: BrowserWindow, mode: TabBootstrap): void {
   // user cannot escape from inside the browser. Nothing is discarded: the snapshot is left untouched
   // (`TabManagerBase.persistNow` does not write in safe mode), so the next normal launch brings the
   // whole session back, and Ctrl+Shift+T / the recently-closed list cover the meantime.
-  if (isSafeMode() || !restoreSessionWindows(win)) wt.createTab();
+  // "Open the New Tab page" skips the restore but leaves the saved snapshot alone until the first state
+  // change overwrites it — the same trade Chrome makes.
+  if (
+    isSafeMode() ||
+    PreferenceStore.getAll().startupTabs === 'newtab' ||
+    !restoreSessionWindows(win)
+  )
+    wt.createTab();
 }
 
 /** Restore the saved multi-window session: the first window's tabs into `firstWin`, and one extra

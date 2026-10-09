@@ -797,6 +797,11 @@ export const en = {
   // --- On startup (moved out of System tray & power, which is where these used to hide) ---
   startup: {
     title: 'On startup',
+    tabsTitle: 'When Tepegöz opens',
+    tabsRestore: 'Continue where I left off',
+    tabsRestoreDesc: 'Reopens the tabs and groups from your last session.',
+    tabsNewTab: 'Open the New Tab page',
+    tabsNewTabDesc: 'Starts with one empty tab. The tabs from your last session are not reopened.',
     modeWindowDesc: 'Opens a normal browser window.',
     modeBackgroundDesc:
       'Starts in the system tray with no window. Tabs keep rendering and the agent can work before you open anything.',

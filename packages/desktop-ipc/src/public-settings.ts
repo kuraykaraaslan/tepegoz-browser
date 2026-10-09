@@ -114,6 +114,7 @@ export const SETTINGS_VISIBILITY: Record<keyof Preferences, 'public' | 'private'
   startupMode: 'private',
   kioskUrl: 'private',
   launchAtLogin: 'private',
+  startupTabs: 'private',
   trayHintShown: 'private',
   // Private — browser-tab memory management; extensions have no need for it.
   tabDiscardEnabled: 'private',

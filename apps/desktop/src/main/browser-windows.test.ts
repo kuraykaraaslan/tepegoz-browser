@@ -84,7 +84,11 @@ vi.mock('./recovery/safe-mode', () => safeMode);
 const restoreUndo = vi.hoisted(() => ({ recordRestoredTabs: vi.fn() }));
 vi.mock('./recovery/session-restore-undo', () => restoreUndo);
 const prefs = vi.hoisted(() => ({
-  getAll: vi.fn(() => ({ closeToTray: false, kioskUrl: '', onboardingCompleted: false })),
+  getAll: vi.fn((): Record<string, unknown> => ({
+    closeToTray: false,
+    kioskUrl: '',
+    onboardingCompleted: false,
+  })),
   update: vi.fn(),
 }));
 vi.mock('@tepegoz/preferences', () => ({ default: prefs }));
@@ -218,6 +222,19 @@ describe('openWindow', () => {
     const onShow = onceHandlerFor(winInstance, 'show')!;
     onShow();
     expect(power.reconcileTrayPowerBlocker).toHaveBeenCalledTimes(1);
+  });
+
+  it('startupTabs "newtab" opens one fresh tab and never reads the saved session', async () => {
+    prefs.getAll.mockReturnValue({
+      closeToTray: false,
+      kioskUrl: '',
+      onboardingCompleted: true,
+      startupTabs: 'newtab',
+    });
+    const { openWindow } = await load();
+    openWindow();
+    expect(wt.createTab).toHaveBeenCalledTimes(1);
+    expect(wt.restoreWindow).not.toHaveBeenCalled();
   });
 
   it('a second restore-mode open this launch just gets a default tab (session already bootstrapped)', async () => {

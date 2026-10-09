@@ -2,7 +2,7 @@ import { settingsDict } from '@tepegoz/settings-ui';
 import { Card, Input, Toggle } from '@tepegoz/ui';
 import { useT } from '@tepegoz/i18n/react';
 import { isNavigableWebUrl, normalizeWebUrlInput } from '@tepegoz/shared-types';
-import type { Preferences, StartupMode } from '@tepegoz/desktop-ipc';
+import type { Preferences, StartupMode, StartupTabs } from '@tepegoz/desktop-ipc';
 import { useCommitOnPause } from '../lib/use-commit-on-pause';
 import { OptionList } from './settings-shared';
 
@@ -69,6 +69,23 @@ export function StartupSection({
             }}
           />
         </div>
+
+        {prefs.startupMode !== 'kiosk' && (
+          <div>
+            <p className="mb-2 text-sm font-medium text-text-primary">{st.tabsTitle}</p>
+            <OptionList<StartupTabs>
+              name="startup-tabs"
+              value={prefs.startupTabs}
+              options={[
+                { value: 'restore', title: st.tabsRestore, desc: st.tabsRestoreDesc },
+                { value: 'newtab', title: st.tabsNewTab, desc: st.tabsNewTabDesc },
+              ]}
+              onChange={(tabs) => {
+                setPref({ startupTabs: tabs });
+              }}
+            />
+          </div>
+        )}
 
         {prefs.startupMode === 'kiosk' && (
           <Input

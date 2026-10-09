@@ -103,6 +103,7 @@ export const PREFERENCE_METADATA = {
   keepAwakeInTray: stable,
   pauseTasksOnSleep: stable,
   startupMode: stable,
+  startupTabs: stable,
   kioskUrl: stable,
   launchAtLogin: stable,
   // One-time tray hint sentinel.

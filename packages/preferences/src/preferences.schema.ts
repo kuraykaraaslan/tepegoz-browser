@@ -280,6 +280,7 @@ export const PreferencesSchema = z.object({
   keepAwakeInTray: z.boolean(),
   pauseTasksOnSleep: z.boolean(),
   startupMode: z.enum(['window', 'background', 'kiosk']),
+  startupTabs: z.enum(['restore', 'newtab']),
   // '' until kiosk mode is chosen. Loaded fullscreen with no chrome, so it gets the same scheme check
   // as the homepage — there is no address bar in kiosk mode to notice a wrong one with.
   kioskUrl: z

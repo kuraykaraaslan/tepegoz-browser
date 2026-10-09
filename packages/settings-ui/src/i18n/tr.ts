@@ -784,6 +784,11 @@ export const tr: SettingsStrings = {
   // --- Açılışta (Sistem tepsisi ve güç sayfasından taşındı; eskiden orada saklıydılar) ---
   startup: {
     title: 'Açılışta',
+    tabsTitle: 'Tepegöz açıldığında',
+    tabsRestore: 'Kaldığım yerden devam et',
+    tabsRestoreDesc: 'Son oturumunuzdaki sekmeleri ve grupları yeniden açar.',
+    tabsNewTab: 'Yeni Sekme sayfasını aç',
+    tabsNewTabDesc: 'Tek bir boş sekmeyle başlar. Son oturumdaki sekmeler yeniden açılmaz.',
     modeWindowDesc: 'Normal bir tarayıcı penceresi açar.',
     modeBackgroundDesc:
       'Pencere açmadan sistem tepsisinde başlar. Sekmeler çizilmeye devam eder ve siz hiçbir şey açmadan ajan çalışabilir.',

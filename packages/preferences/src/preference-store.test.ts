@@ -83,6 +83,28 @@ describe('PreferenceStore', () => {
     expect(PreferenceStore.getAll().httpsOnlyOnTunnel).toBe(true);
   });
 
+  it('defaults startupTabs to restore for an old file, and round-trips newtab', () => {
+    writeFileSync(filePath, JSON.stringify({ locale: 'tr' }), 'utf8');
+    PreferenceStore.init({ filePath });
+    expect(PreferenceStore.getAll().startupTabs).toBe('restore');
+    PreferenceStore.update({ startupTabs: 'newtab' });
+    PreferenceStore.reset();
+    PreferenceStore.init({ filePath });
+    expect(PreferenceStore.getAll().startupTabs).toBe('newtab');
+  });
+
+  it('rejects an unknown startupTabs value and falls back when the stored one is corrupt', () => {
+    PreferenceStore.init({ filePath });
+    expect(() =>
+      PreferenceStore.update({ startupTabs: 'pages' as unknown as 'restore' }),
+    ).toThrow();
+    expect(PreferenceStore.getAll().startupTabs).toBe('restore');
+    PreferenceStore.reset();
+    writeFileSync(filePath, JSON.stringify({ startupTabs: 'nope' }), 'utf8');
+    PreferenceStore.init({ filePath });
+    expect(PreferenceStore.getAll().startupTabs).toBe('restore');
+  });
+
   it('defaults mcpServers to [] and round-trips a valid stdio server', () => {
     PreferenceStore.init({ filePath });
     expect(PreferenceStore.getAll().mcpServers).toEqual([]);

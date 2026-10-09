@@ -109,6 +109,8 @@ export const DEFAULT_PREFERENCES: Preferences = {
   pauseTasksOnSleep: true,
   // Normal foreground window by default; opt in to background/kiosk.
   startupMode: 'window',
+  // A normal launch continues where the last session left off (the long-standing behaviour).
+  startupTabs: 'restore',
   kioskUrl: '',
   // Do not auto-start at system login by default.
   launchAtLogin: false,
