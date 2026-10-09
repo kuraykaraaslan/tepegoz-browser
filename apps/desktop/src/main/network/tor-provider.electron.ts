@@ -1,9 +1,9 @@
 import { spawn, type ChildProcess } from 'node:child_process';
-import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { app } from 'electron';
 import { Logger } from '@tepegoz/libs';
-import { bridgeTorrcLines, type BridgeLine } from './bridge-line';
+import { bridgeTorrcLines, torTransportBinaries, type BridgeLine } from './bridge-line';
 import { probeSocksPort, type NetworkPrivacyProvider } from './connection-provider.electron';
 import { locateBinary } from './vpn-binaries.electron';
 import { reserveLoopbackPort, waitForSocksPort } from './loopback-port.electron';
@@ -48,7 +48,7 @@ export class TorProvider implements NetworkPrivacyProvider {
     private readonly connectionId: string,
     private readonly resolveUpstream: UpstreamResolver | null,
     private readonly bridges: readonly BridgeLine[] = [],
-    private readonly transportBinaries: Readonly<Record<string, string>> = {},
+    private readonly transportBinaries?: Readonly<Record<string, string>>,
   ) {}
 
   async connect(): Promise<{ socksPort: number }> {
@@ -69,7 +69,12 @@ export class TorProvider implements NetworkPrivacyProvider {
       // control port is a local privilege surface with no user here.
       'ControlPort 0',
       ...(upstreamPort === null ? [] : [`Socks5Proxy 127.0.0.1:${String(upstreamPort)}`]),
-      ...bridgeTorrcLines(this.bridges, this.transportBinaries),
+      ...bridgeTorrcLines(
+        this.bridges,
+        // Default: the transports Tor Browser keeps beside the tor we are about to run.
+        this.transportBinaries ??
+          (this.bridges.length > 0 ? torTransportBinaries(binary, existsSync) : {}),
+      ),
       '',
     ].join('\n');
     const torrcPath = join(dataDir, 'torrc');

@@ -9,6 +9,8 @@
  * Validation is shape-only on purpose: whether a bridge is reachable is the connection test's job.
  */
 
+import { dirname, join } from 'node:path';
+
 export class BridgeLineError extends Error {
   constructor(message: string) {
     super(message);
@@ -134,4 +136,34 @@ export function bridgeTorrcLines(
     return `ClientTransportPlugin ${t} exec ${bin}`;
   });
   return ['UseBridges 1', ...plugins, ...bridges.map((b) => `Bridge ${b.line}`)];
+}
+
+/** Which Tor Browser pluggable-transport program serves each transport name. */
+const TRANSPORT_PROGRAM: Readonly<Record<string, string>> = {
+  obfs4: 'lyrebird',
+  meek_lite: 'lyrebird',
+  webtunnel: 'lyrebird',
+  scramblesuit: 'lyrebird',
+  snowflake: 'snowflake-client',
+};
+
+/**
+ * Transport binaries that sit next to a located `tor`. Tor Browser ships them in
+ * `<tor dir>/PluggableTransports/`, so anyone who already has Tor Browser on disk has them too — nothing
+ * is downloaded or bundled here. Only transports whose program actually exists are returned; the rest are
+ * left for `bridgeTorrcLines` to refuse by name.
+ */
+export function torTransportBinaries(
+  torPath: string,
+  exists: (path: string) => boolean,
+  platform: NodeJS.Platform = process.platform,
+): Record<string, string> {
+  const dir = join(dirname(torPath), 'PluggableTransports');
+  const suffix = platform === 'win32' ? '.exe' : '';
+  const found: Record<string, string> = {};
+  for (const [transport, program] of Object.entries(TRANSPORT_PROGRAM)) {
+    const candidate = join(dir, program + suffix);
+    if (exists(candidate)) found[transport] = candidate;
+  }
+  return found;
 }

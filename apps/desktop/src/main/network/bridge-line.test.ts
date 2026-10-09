@@ -4,6 +4,7 @@ import {
   bridgeTorrcLines,
   normalizeBridgeLine,
   parseBridgeLine,
+  torTransportBinaries,
 } from './bridge-line';
 
 const FP = 'A'.repeat(40);
@@ -79,5 +80,30 @@ describe('bridgeTorrcLines', () => {
 
   it('refuses a transport with no binary', () => {
     expect(() => bridgeTorrcLines([parseBridgeLine(OBFS4)], {})).toThrow(/transport binary/);
+  });
+});
+
+describe('torTransportBinaries', () => {
+  const torPath = '/tb/Browser/TorBrowser/Tor/tor';
+
+  it('maps transports to the programs that exist beside tor', () => {
+    const present = new Set(['/tb/Browser/TorBrowser/Tor/PluggableTransports/lyrebird']);
+    expect(torTransportBinaries(torPath, (p) => present.has(p), 'linux')).toEqual({
+      obfs4: '/tb/Browser/TorBrowser/Tor/PluggableTransports/lyrebird',
+      meek_lite: '/tb/Browser/TorBrowser/Tor/PluggableTransports/lyrebird',
+      webtunnel: '/tb/Browser/TorBrowser/Tor/PluggableTransports/lyrebird',
+      scramblesuit: '/tb/Browser/TorBrowser/Tor/PluggableTransports/lyrebird',
+    });
+  });
+
+  it('adds .exe on Windows and returns nothing when no transport is installed', () => {
+    const found = torTransportBinaries(
+      'C:/tb/Tor/tor.exe',
+      (p) => p.endsWith('snowflake-client.exe'),
+      'win32',
+    );
+    expect(Object.keys(found)).toEqual(['snowflake']);
+    expect(found['snowflake']?.endsWith('snowflake-client.exe')).toBe(true);
+    expect(torTransportBinaries(torPath, () => false, 'linux')).toEqual({});
   });
 });
