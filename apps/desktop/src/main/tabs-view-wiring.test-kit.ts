@@ -4,6 +4,7 @@ import { vi } from 'vitest';
 
 export function fakeWc(url = 'https://page.test/') {
   return {
+    id: 1,
     on: vi.fn<(event: string, listener: (...a: unknown[]) => unknown) => void>(),
     removeAllListeners: vi.fn<(event: string) => void>(),
     setWindowOpenHandler: vi.fn<(fn: (d: unknown) => unknown) => void>(),

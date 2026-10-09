@@ -77,6 +77,13 @@ vi.mock('./tabs-shared', () => shared);
 const tunnel = vi.hoisted(() => ({ hardenIfTunneled: vi.fn() }));
 vi.mock('./network/tunnel-session.electron', () => tunnel);
 
+const httpsOnlyNav = vi.hoisted(() => ({
+  handleHttpsOnlyNavigation: vi.fn<() => string>(() => 'ignore'),
+}));
+vi.mock('./security/https-only-interstitial.electron', () => httpsOnlyNav);
+const httpsOnlyWiring = vi.hoisted(() => ({ wireHttpsOnly: vi.fn() }));
+vi.mock('./network/https-only-wiring', () => httpsOnlyWiring);
+
 const { wireView, unwireView } = await import('./tabs-view-wiring');
 
 beforeEach(() => {
@@ -93,6 +100,7 @@ beforeEach(() => {
   nav.isWebUrl.mockImplementation((u: string) => u.startsWith('http'));
   getDb.mockReturnValue(null);
   safeBrowsing.handleSafeBrowsingNavigation.mockReturnValue('continue');
+  httpsOnlyNav.handleHttpsOnlyNavigation.mockReturnValue('ignore');
   faviconDataUrl.mockResolvedValue(null);
 });
 
@@ -113,6 +121,7 @@ describe('unwireView', () => {
       'did-stop-loading',
       'did-navigate',
       'did-navigate-in-page',
+      'did-fail-load',
     ]);
   });
 });
@@ -235,6 +244,38 @@ describe('wireView', () => {
       expect(popup.blockNonWeb).toHaveBeenCalledWith(ev, 'https://x.test/');
       expect(ev.preventDefault).toHaveBeenCalled();
       expect(interceptor.shouldBlock).not.toHaveBeenCalled(); // returned before the interceptor
+    });
+
+    it('wires HTTPS-only for the tab id', () => {
+      const wc = fakeWc();
+      wireView(host() as never, 't1', { webContents: wc } as never);
+      expect(httpsOnlyWiring.wireHttpsOnly).toHaveBeenCalledWith(wc, 't1');
+    });
+
+    it('will-navigate: an HTTPS-only bypass sentinel is consumed before Safe Browsing runs', () => {
+      const wc = fakeWc();
+      wireView(host() as never, 't1', { webContents: wc } as never);
+      const onNav = handlerFor(wc, 'will-navigate')!;
+
+      httpsOnlyNav.handleHttpsOnlyNavigation.mockReturnValue('proceed');
+      const ev = { preventDefault: vi.fn() };
+      onNav(ev, 'http://old.test/#x');
+      expect(httpsOnlyNav.handleHttpsOnlyNavigation).toHaveBeenCalledWith(wc, 'http://old.test/#x');
+      expect(ev.preventDefault).toHaveBeenCalled();
+      expect(safeBrowsing.handleSafeBrowsingNavigation).not.toHaveBeenCalled();
+      expect(interceptor.shouldBlock).not.toHaveBeenCalled();
+    });
+
+    it('will-navigate: an ignored HTTPS-only URL falls through to Safe Browsing and the interceptor', () => {
+      const wc = fakeWc();
+      wireView(host() as never, 't1', { webContents: wc } as never);
+      const onNav = handlerFor(wc, 'will-navigate')!;
+
+      const ev = { preventDefault: vi.fn() };
+      onNav(ev, 'http://old.test/');
+      expect(safeBrowsing.handleSafeBrowsingNavigation).toHaveBeenCalled();
+      expect(interceptor.shouldBlock).toHaveBeenCalled();
+      expect(ev.preventDefault).not.toHaveBeenCalled();
     });
 
     it('will-navigate: the navigate interceptor can veto a non-redirect navigation', () => {

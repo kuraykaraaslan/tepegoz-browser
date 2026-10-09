@@ -15,6 +15,8 @@ import { applyStoredZoom, handleZoomShortcut } from './site-zoom';
 import { getDb } from './db/database.electron';
 import ActionInterceptorService from './extensions/action-interceptors.electron';
 import { handleSafeBrowsingNavigation } from './security/safe-browsing-interstitial.electron';
+import { handleHttpsOnlyNavigation } from './security/https-only-interstitial.electron';
+import { wireHttpsOnly } from './network/https-only-wiring';
 import { hardenIfTunneled } from './network/tunnel-session.electron';
 import { faviconDataUrl } from './tabs-favicon.electron';
 import {
@@ -77,6 +79,7 @@ const WIRED_EVENTS = [
   'did-stop-loading',
   'did-navigate',
   'did-navigate-in-page',
+  'did-fail-load',
 ] as const;
 
 /** Drop everything `wireView` attached BEFORE closing the contents (or before re-homing the view in
@@ -104,6 +107,8 @@ export function wireView(host: ViewWiringHost, id: string, view: WebContentsView
   // idempotent and outlives `unwireView`, because whether a page has unsaved work does not change when
   // the tab is dragged into another window.
   installUnloadPrompt(wc);
+  // HTTPS-only on tunnels: explain a failed upgraded load (ADR-0050).
+  wireHttpsOnly(wc, id);
 
   // Track discrete user input so the popup blocker can tell a user-clicked new-tab link (which must
   // open) from an unsolicited auto-popup (which is blocked). See the window-open handler below.
@@ -181,6 +186,11 @@ export function wireView(host: ViewWiringHost, id: string, view: WebContentsView
   // native popup windows (`wirePopupWindow`) skip this second check, they have no tracked tab id.
   wc.on('will-navigate', (event, url) => {
     blockNonWeb(event, url);
+    // HTTPS-only bypass sentinel first, ahead of Safe Browsing (ADR-0050).
+    if (handleHttpsOnlyNavigation(wc, url) === 'proceed') {
+      event.preventDefault();
+      return;
+    }
     // Safe Browsing: a "proceed anyway" sentinel is consumed here (re-load the clean URL); any other
     // http(s) navigation kicks off a background check that shows the interstitial on a confirmed hit.
     if (handleSafeBrowsingNavigation(wc, url) === 'proceed') {

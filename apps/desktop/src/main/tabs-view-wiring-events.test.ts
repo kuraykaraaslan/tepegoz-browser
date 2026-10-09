@@ -72,6 +72,13 @@ vi.mock('./tabs-shared', () => shared);
 const tunnel = vi.hoisted(() => ({ hardenIfTunneled: vi.fn() }));
 vi.mock('./network/tunnel-session.electron', () => tunnel);
 
+const httpsOnlyNav = vi.hoisted(() => ({
+  handleHttpsOnlyNavigation: vi.fn<() => string>(() => 'ignore'),
+}));
+vi.mock('./security/https-only-interstitial.electron', () => httpsOnlyNav);
+const httpsOnlyWiring = vi.hoisted(() => ({ wireHttpsOnly: vi.fn() }));
+vi.mock('./network/https-only-wiring', () => httpsOnlyWiring);
+
 const { wireView } = await import('./tabs-view-wiring');
 
 beforeEach(() => {

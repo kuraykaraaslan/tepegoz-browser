@@ -11,6 +11,7 @@ import { broadcastNetworkState } from './ipc/ipc-network';
 import userAgentHost from './extensions/user-agent-host.electron';
 import DownloadService from './downloads/download-service.electron';
 import SafeBrowsingService from './security/safe-browsing-service.electron';
+import { registerHttpsOnly } from './network/https-only.electron';
 import UploadService from './uploads/upload-service.electron';
 import BrowsingWebRequestService from './web-request/browsing-web-request-service.electron';
 
@@ -60,6 +61,9 @@ export function initBrowsingNetwork(safeMode: boolean): void {
   // a download, load the SQLite projection, and route every file through quarantine first. The
   // download's source origin is checked against Safe Browsing (`unsafe` → auto-`blocked`).
   DownloadService.init(SafeBrowsingService.downloadTrustProvider());
+  // HTTPS-only on tunnel partitions (ADR-0050). Registered here, ahead of adblock (deferred-init) and
+  // also in safe mode: cleartext must not reach a tunnel exit in either.
+  registerHttpsOnly();
   UploadService.init();
   // Network privacy (Phase 5): load the configured connections (nothing is dialled here — a
   // connection comes up only when something binds to it) and push the routing picture to the chrome
