@@ -201,8 +201,14 @@ work lives in Phase 2; agent orchestration (multi-tab parallelism) stays in Phas
   - [x] _Landed 2026-10-09 (unit-tested, not run in the packaged app):_ **"On startup" tabs** —
         Preferences → On startup now offers "Continue where I left off" (default, unchanged behaviour) or
         "Open the New Tab page" (`startupTabs`, private pref; hidden in kiosk mode; safe mode still never
-        restores). The "open a specific set of pages" option, link-opening behaviour, MRU Ctrl+Tab, hover
-        cards and network prediction remain open.
+        restores). The "open a specific set of pages" option, link-opening behaviour, MRU-order Ctrl+Tab,
+        hover cards and network prediction remain open.
+  - [x] _Landed 2026-10-09 (unit-tested, not run in the packaged app):_ **keyboard tab switching** — found
+        missing while picking up the MRU item (the feature-gap table said Ctrl+Tab was "positional"; no
+        binding existed at all). Registry entries in `@tepegoz/shortcuts`: Ctrl+Tab / Ctrl+PageDown next,
+        Ctrl+Shift+Tab / Ctrl+PageUp previous (wrapping), Ctrl+1…8 by position, Ctrl+9 the last tab. They
+        work while a page or the chrome has focus, skip hidden (kept-alive) tabs, and expand a collapsed
+        group the tab lands in. Positional order only — **MRU order is still open**.
   - [x] _Landed 2026-10-09 (unit-tested, not run in the packaged app):_ **Show Home button** — a toggle
         under the Homepage field in Preferences (`showHomeButton`, on by default so nothing changes
         until it is turned off); `NavToolbar` gained a `showHome` prop and `BrowserChrome` passes it

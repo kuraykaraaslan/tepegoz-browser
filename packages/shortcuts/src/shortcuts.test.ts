@@ -135,6 +135,36 @@ describe('a shortcut can be shown to a person', () => {
   });
 });
 
+describe('the tab-switching shortcuts', () => {
+  const byId = (id: string) => ALL.find((s) => s.id === id)!;
+
+  it('are written the way people read them', () => {
+    expect(formatShortcut(byId('nextTab'), 'win32')).toBe('Ctrl+Tab');
+    expect(formatShortcut(byId('prevTab'), 'win32')).toBe('Ctrl+Shift+Tab');
+    expect(formatShortcut(byId('nextTabAlt'), 'win32')).toBe('Ctrl+PgDn');
+    expect(formatShortcut(byId('prevTabAlt'), 'darwin')).toBe('⌘PgUp');
+    expect(formatShortcut(byId('selectLastTab'), 'win32')).toBe('Ctrl+9');
+  });
+
+  it('match Electron key names case-insensitively, and only exactly', () => {
+    const ctrl = { ctrlOrCmd: true, shift: false, alt: false };
+    expect(shortcutFor({ key: 'Tab', ...ctrl }, 'main')).toBe('nextTab');
+    expect(shortcutFor({ key: 'Tab', ...ctrl, shift: true }, 'main')).toBe('prevTab');
+    expect(shortcutFor({ key: 'PageDown', ...ctrl }, 'main')).toBe('nextTabAlt');
+    expect(shortcutFor({ key: 'PageUp', ...ctrl }, 'main')).toBe('prevTabAlt');
+    expect(shortcutFor({ key: '9', ...ctrl }, 'main')).toBe('selectLastTab');
+    expect(shortcutFor({ key: 'Tab', ...ctrl, alt: true }, 'main')).toBeNull();
+    expect(
+      shortcutFor({ key: 'Tab', ctrlOrCmd: false, shift: false, alt: false }, 'main'),
+    ).toBeNull();
+  });
+
+  it('cover Ctrl+1 to Ctrl+8 plus "last", with no gaps', () => {
+    for (let n = 1; n <= 8; n++) expect(byId(`selectTab${String(n)}`).key).toBe(String(n));
+    expect(ALL.filter((s) => s.id.startsWith('selectTab')).length).toBe(8);
+  });
+});
+
 describe('matchesShortcut is the primitive both of those use', () => {
   it('is false when a required modifier is missing', () => {
     expect(matchesShortcut(ALL[0]!, press({ key: 't' }))).toBe(false);

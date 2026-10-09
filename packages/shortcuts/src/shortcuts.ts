@@ -106,6 +106,22 @@ export const SHORTCUTS = [
   { id: 'devToolsF12', key: 'f12', scope: 'main' },
   { id: 'hardReload', key: 'r', ctrlOrCmd: true, shift: true, scope: 'main' },
   { id: 'closeTab', key: 'w', ctrlOrCmd: true, scope: 'main' },
+  // Keyboard tab switching. 'main' because the key usually arrives while a PAGE has focus, and the
+  // chrome never sees it. Two bindings per direction (Chrome/Firefox answer both), and Ctrl+9 is "the
+  // last tab", not tab 9 — the convention every major browser shares.
+  { id: 'nextTab', key: 'tab', ctrlOrCmd: true, scope: 'main' },
+  { id: 'nextTabAlt', key: 'pagedown', ctrlOrCmd: true, scope: 'main' },
+  { id: 'prevTab', key: 'tab', ctrlOrCmd: true, shift: true, scope: 'main' },
+  { id: 'prevTabAlt', key: 'pageup', ctrlOrCmd: true, scope: 'main' },
+  { id: 'selectTab1', key: '1', ctrlOrCmd: true, scope: 'main' },
+  { id: 'selectTab2', key: '2', ctrlOrCmd: true, scope: 'main' },
+  { id: 'selectTab3', key: '3', ctrlOrCmd: true, scope: 'main' },
+  { id: 'selectTab4', key: '4', ctrlOrCmd: true, scope: 'main' },
+  { id: 'selectTab5', key: '5', ctrlOrCmd: true, scope: 'main' },
+  { id: 'selectTab6', key: '6', ctrlOrCmd: true, scope: 'main' },
+  { id: 'selectTab7', key: '7', ctrlOrCmd: true, scope: 'main' },
+  { id: 'selectTab8', key: '8', ctrlOrCmd: true, scope: 'main' },
+  { id: 'selectLastTab', key: '9', ctrlOrCmd: true, scope: 'main' },
 ] as const satisfies readonly ShortcutSpec[];
 
 export type ShortcutId = (typeof SHORTCUTS)[number]['id'];
@@ -166,6 +182,13 @@ export function pressFromInput(input: {
   };
 }
 
+/** Keys whose written form is not just the upper-cased `key` ('PAGEDOWN' reads as a typo). */
+const KEY_LABELS: Readonly<Record<string, string>> = {
+  tab: 'Tab',
+  pagedown: 'PgDn',
+  pageup: 'PgUp',
+};
+
 /**
  * Render a shortcut the way the platform writes it, for a help list or a menu.
  *
@@ -178,6 +201,6 @@ export function formatShortcut(spec: ShortcutSpec, platform: string): string {
   if (spec.ctrlOrCmd === true) parts.push(mac ? '⌘' : 'Ctrl');
   if (spec.shift === true) parts.push(mac ? '⇧' : 'Shift');
   if (spec.alt === true) parts.push(mac ? '⌥' : 'Alt');
-  parts.push(spec.key.length === 1 ? spec.key.toUpperCase() : spec.key.toUpperCase());
+  parts.push(KEY_LABELS[spec.key] ?? spec.key.toUpperCase());
   return parts.join(mac ? '' : '+');
 }

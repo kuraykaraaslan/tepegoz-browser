@@ -21,9 +21,17 @@ const zoom = vi.hoisted(() => ({
 vi.mock('./site-zoom', () => zoom);
 
 const handleWindowShortcut = vi.hoisted(() =>
-  vi.fn<(win: unknown, input: unknown, targets: { closeActiveTab: () => void }) => boolean>(
-    () => false,
-  ),
+  vi.fn<
+    (
+      win: unknown,
+      input: unknown,
+      targets: {
+        closeActiveTab: () => void;
+        activateAdjacentTab: (d: 1 | -1) => void;
+        activateTabAtPosition: (p: number | 'last') => void;
+      },
+    ) => boolean
+  >(() => false),
 );
 vi.mock('./keyboard-shortcuts', () => ({ handleWindowShortcut }));
 
@@ -166,6 +174,30 @@ describe('wireView', () => {
     onKey(ev2, { type: 'keyDown' });
     expect(ev2.preventDefault).toHaveBeenCalled();
     expect(h.closeTab).toHaveBeenCalledWith('t1');
+  });
+
+  it('before-input-event: the tab-switch targets reach the window tab model, not the page', () => {
+    const h = host();
+    const wc = fakeWc();
+    wireView(h as never, 't1', { webContents: wc } as never);
+    const onKey = handlerFor(wc, 'before-input-event')!;
+    handleWindowShortcut.mockImplementation(
+      (
+        _win: unknown,
+        _input: unknown,
+        targets: {
+          activateAdjacentTab: (d: 1 | -1) => void;
+          activateTabAtPosition: (p: number | 'last') => void;
+        },
+      ) => {
+        targets.activateAdjacentTab(-1);
+        targets.activateTabAtPosition('last');
+        return true;
+      },
+    );
+    onKey({ preventDefault: vi.fn() }, { type: 'keyDown' });
+    expect(h.activateAdjacentTab).toHaveBeenCalledWith(-1);
+    expect(h.activateTabAtPosition).toHaveBeenCalledWith('last');
   });
 
   describe('the popup window-open handler', () => {

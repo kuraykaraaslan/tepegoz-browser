@@ -46,6 +46,11 @@ export interface ShortcutTargets {
   reloadActiveTab?: (hard: boolean) => void;
   /** Close the active tab of the window the key arrived on. Absent where there is no tab model. */
   closeActiveTab?: () => void;
+  /** Switch to the neighbouring tab of the window the key arrived on (wraps). Absent where there is no
+   *  tab model. */
+  activateAdjacentTab?: (delta: 1 | -1) => void;
+  /** Switch to the tab at a 1-based position, or the last tab. Absent where there is no tab model. */
+  activateTabAtPosition?: (position: number | 'last') => void;
   /** Open a new private (disposable) window. Injected for the same cycle reason as `page`. */
   openPrivateWindow?: () => void;
 }
@@ -61,7 +66,8 @@ export function handleWindowShortcut(
   // The combinations themselves live in `@tepegoz/shortcuts`, shared with the renderer, so the two
   // halves cannot drift and a collision between them is a failing test rather than two handlers firing
   // for one press. This file keeps only what is genuinely main's: what each one DOES to a window.
-  switch (shortcutFor(pressFromInput(input), 'main')) {
+  const shortcutId = shortcutFor(pressFromInput(input), 'main');
+  switch (shortcutId) {
     case 'fullScreen':
       toggleFullScreen(win);
       return true;
@@ -130,6 +136,30 @@ export function handleWindowShortcut(
     case 'closeTab':
       if (targets.closeActiveTab === undefined) return false;
       targets.closeActiveTab();
+      return true;
+    case 'nextTab':
+    case 'nextTabAlt':
+      if (targets.activateAdjacentTab === undefined) return false;
+      targets.activateAdjacentTab(1);
+      return true;
+    case 'prevTab':
+    case 'prevTabAlt':
+      if (targets.activateAdjacentTab === undefined) return false;
+      targets.activateAdjacentTab(-1);
+      return true;
+    case 'selectTab1':
+    case 'selectTab2':
+    case 'selectTab3':
+    case 'selectTab4':
+    case 'selectTab5':
+    case 'selectTab6':
+    case 'selectTab7':
+    case 'selectTab8':
+    case 'selectLastTab':
+      if (targets.activateTabAtPosition === undefined) return false;
+      targets.activateTabAtPosition(
+        shortcutId === 'selectLastTab' ? 'last' : Number(shortcutId.slice('selectTab'.length)),
+      );
       return true;
     case 'exitKiosk':
       if (!win.isKiosk()) return false;

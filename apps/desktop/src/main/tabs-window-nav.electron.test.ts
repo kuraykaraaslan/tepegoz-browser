@@ -177,6 +177,18 @@ class Harness extends WindowTabs {
   count(): number {
     return this.store.records().length;
   }
+  activeId(): string | null {
+    return this.store.activeId;
+  }
+  hide(id: string): void {
+    this.store.setHidden(id, true);
+  }
+  collapsedGroup(ids: string[]): string {
+    return this.store.createGroup({ name: 'G', collapsed: true, memberIds: ids });
+  }
+  isCollapsed(groupId: string): boolean | undefined {
+    return this.store.getGroup(groupId)?.collapsed;
+  }
 }
 
 let tabs: Harness;
@@ -470,5 +482,69 @@ describe('applyUserAgent', () => {
     expect(wcA.setUserAgent).toHaveBeenCalledWith('TepegozUA/1');
     expect(wcB.setUserAgent).toHaveBeenCalledWith('TepegozUA/1');
     expect(wcA.reload).toHaveBeenCalled();
+  });
+});
+
+describe('keyboard tab switching', () => {
+  it('steps to the neighbouring tab, wrapping at both ends', () => {
+    const [a, b, c] = [tabs.addWeb(), tabs.addWeb(), tabs.addWeb()] as [string, string, string];
+    tabs.setActive(a);
+    tabs.activateAdjacentTab(1);
+    expect(tabs.activeId()).toBe(b);
+    tabs.activateAdjacentTab(-1);
+    tabs.activateAdjacentTab(-1);
+    expect(tabs.activeId()).toBe(c);
+    tabs.activateAdjacentTab(1);
+    expect(tabs.activeId()).toBe(a);
+  });
+
+  it('never lands on a hidden, kept-alive tab', () => {
+    const [a, b, c] = [tabs.addWeb(), tabs.addWeb(), tabs.addWeb()] as [string, string, string];
+    tabs.hide(b);
+    tabs.setActive(a);
+    tabs.activateAdjacentTab(1);
+    expect(tabs.activeId()).toBe(c);
+    tabs.activateTabAtPosition(2); // position counts strip tabs only, so 2 is `c`
+    expect(tabs.activeId()).toBe(c);
+  });
+
+  it('switches by position, "last", and ignores a position past the end', () => {
+    const [a, , c] = [tabs.addWeb(), tabs.addWeb(), tabs.addWeb()] as [string, string, string];
+    tabs.setActive(c);
+    tabs.activateTabAtPosition(1);
+    expect(tabs.activeId()).toBe(a);
+    tabs.activateTabAtPosition('last');
+    expect(tabs.activeId()).toBe(c);
+    tabs.activateTabAtPosition(8);
+    expect(tabs.activeId()).toBe(c);
+  });
+
+  it('expands a collapsed group so the tab it lands on is visible', () => {
+    const [a, b] = [tabs.addWeb(), tabs.addWeb()] as [string, string];
+    const g = tabs.collapsedGroup([b]);
+    tabs.setActive(a);
+    tabs.activateAdjacentTab(1);
+    expect(tabs.activeId()).toBe(b);
+    expect(tabs.isCollapsed(g)).toBe(false);
+  });
+
+  it('does nothing in a window with no tabs or one tab', () => {
+    tabs.activateAdjacentTab(1);
+    tabs.activateTabAtPosition('last');
+    expect(tabs.activeId()).toBeNull();
+    const only = tabs.addWeb();
+    tabs.setActive(only);
+    tabs.activateAdjacentTab(1);
+    expect(tabs.activeId()).toBe(only);
+  });
+
+  it('hands the shortcuts to a wired view through the view-wiring host', () => {
+    const [a, b] = [tabs.addWeb(), tabs.addWeb()] as [string, string];
+    tabs.setActive(a);
+    const host = (
+      tabs as unknown as { viewWiringHost(): { activateAdjacentTab(d: 1 | -1): void } }
+    ).viewWiringHost();
+    host.activateAdjacentTab(1);
+    expect(tabs.activeId()).toBe(b);
   });
 });

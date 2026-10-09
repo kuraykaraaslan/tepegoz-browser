@@ -11,7 +11,9 @@ import { printPage, savePage, viewSourcePage } from './page-commands';
 import ClipboardService from './clipboard/clipboard-service.electron';
 import DownloadService from './downloads/download-service.electron';
 import { WindowTabsMoves } from './tabs-window-moves';
+import { type ViewWiringHost } from './tabs-view-wiring';
 import { homeUrl, searchUrlForQuery } from './tabs-shared';
+import { adjacentTabId, tabIdAtPosition } from './tab-cycle';
 
 /**
  * Navigation, page actions, content-area bounds/visibility and webContents accessors for the per-window
@@ -152,6 +154,48 @@ export class WindowTabsNav extends WindowTabsMoves {
       wc.openDevTools();
     }
     return verdict;
+  }
+
+  /** Hand the tab-switching shortcuts to a wired view (the base host's versions are inert). */
+  protected override viewWiringHost(): ViewWiringHost {
+    return {
+      ...super.viewWiringHost(),
+      activateAdjacentTab: (delta) => {
+        this.activateAdjacentTab(delta);
+      },
+      activateTabAtPosition: (position) => {
+        this.activateTabAtPosition(position);
+      },
+    };
+  }
+
+  /** Visible tab ids in strip order. A hidden tab is kept alive for the agent but is not in the strip, so a
+   *  keyboard switch must never land on one. */
+  private stripTabIds(): string[] {
+    return this.store
+      .records()
+      .filter((r) => r.hidden !== true)
+      .map((r) => r.id);
+  }
+
+  /** Activate a tab from the keyboard, expanding its group first so the user can see where they landed. */
+  private activateFromKeyboard(id: string | null): void {
+    if (id === null) return;
+    const groupId = this.store.get(id)?.groupId ?? null;
+    if (groupId !== null && this.store.getGroup(groupId)?.collapsed === true) {
+      this.store.setGroupCollapsed(groupId, false);
+    }
+    this.activate(id);
+  }
+
+  /** Ctrl+Tab / Ctrl+PageDown (`1`) and Ctrl+Shift+Tab / Ctrl+PageUp (`-1`): the neighbouring tab. */
+  activateAdjacentTab(delta: 1 | -1): void {
+    this.activateFromKeyboard(adjacentTabId(this.stripTabIds(), this.store.activeId, delta));
+  }
+
+  /** Ctrl+1…8 (a 1-based position) and Ctrl+9 (`'last'`). */
+  activateTabAtPosition(position: number | 'last'): void {
+    this.activateFromKeyboard(tabIdAtPosition(this.stripTabIds(), position));
   }
 
   /** Navigate the active tab to the home / start page. */

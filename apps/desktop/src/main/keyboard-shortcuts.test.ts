@@ -217,6 +217,51 @@ describe('the window-level shortcuts', () => {
     expect(win2.loadBrowser).toHaveBeenCalledWith(win);
   });
 
+  it.each([
+    ['Tab', { control: true }, 1],
+    ['PageDown', { control: true }, 1],
+    ['Tab', { control: true, shift: true }, -1],
+    ['PageUp', { control: true }, -1],
+    ['Tab', { meta: true }, 1],
+  ] as const)('%s with %j steps the tab by %i', (key, mods, delta) => {
+    const activateAdjacentTab = vi.fn();
+    expect(handleWindowShortcut(win, press(key, mods), { page, activateAdjacentTab })).toBe(true);
+    expect(activateAdjacentTab).toHaveBeenCalledWith(delta);
+  });
+
+  it('Ctrl+1…8 select that tab and Ctrl+9 selects the LAST one', () => {
+    const activateTabAtPosition = vi.fn();
+    for (const n of [1, 4, 8]) {
+      handleWindowShortcut(win, press(String(n), { control: true }), {
+        page,
+        activateTabAtPosition,
+      });
+    }
+    handleWindowShortcut(win, press('9', { control: true }), { page, activateTabAtPosition });
+    expect(activateTabAtPosition.mock.calls).toEqual([[1], [4], [8], ['last']]);
+  });
+
+  it('does not treat Ctrl+Alt+Tab, Ctrl+Alt+1 or a bare Tab/1 as a tab switch', () => {
+    const activateAdjacentTab = vi.fn();
+    const activateTabAtPosition = vi.fn();
+    const targets = { page, activateAdjacentTab, activateTabAtPosition };
+    expect(handleWindowShortcut(win, press('Tab', { control: true, alt: true }), targets)).toBe(
+      false,
+    );
+    expect(handleWindowShortcut(win, press('1', { control: true, alt: true }), targets)).toBe(
+      false,
+    );
+    expect(handleWindowShortcut(win, press('Tab'), targets)).toBe(false);
+    expect(handleWindowShortcut(win, press('1'), targets)).toBe(false);
+    expect(activateAdjacentTab).not.toHaveBeenCalled();
+    expect(activateTabAtPosition).not.toHaveBeenCalled();
+  });
+
+  it('leaves the keys unhandled when the caller wired no tab model', () => {
+    expect(handleWindowShortcut(win, press('Tab', { control: true }), { page })).toBe(false);
+    expect(handleWindowShortcut(win, press('3', { control: true }), { page })).toBe(false);
+  });
+
   it('Ctrl+W is NOT handled when the caller wired no closeActiveTab', () => {
     expect(handleWindowShortcut(win, press('w', { control: true }), { page })).toBe(false);
   });

@@ -394,6 +394,8 @@ export class WindowTabsBase {
         this.emitState();
       },
       closeTab: () => undefined,
+      activateAdjacentTab: () => undefined,
+      activateTabAtPosition: () => undefined,
       isPrivate: this.isPrivate,
     };
   }

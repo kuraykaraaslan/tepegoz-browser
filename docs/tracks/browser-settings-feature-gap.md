@@ -50,7 +50,7 @@ Legend: **C** Chrome · **B** Brave · **S** Safari · **F** Firefox · _all_ = 
 | --------------------------------------------------------------- | -------- | ------------------------------------------------------------------------------------------ | --------------- |
 | "Open links in a new **tab** instead of a new window"           | F/S      | —                                                                                          | 2b              |
 | "When I open a link in a new tab, **switch to it immediately**" | F/S      | —                                                                                          | 2b              |
-| Ctrl+Tab cycles tabs in **most-recently-used** order            | F        | positional                                                                                 | 2b              |
+| Ctrl+Tab cycles tabs in **most-recently-used** order            | F        | positional (Ctrl+Tab/PgUp/PgDn, Ctrl+1–9 landed); MRU order not built                      | 2b              |
 | Tab **hover preview / thumbnail cards**                         | C/F      | —                                                                                          | 2b              |
 | **Saved / named tab groups** management surface                 | C/S/F    | groups exist ([ADR-0020](../../docs/adr/0020-tab-boundary-model.md)); no settings for them | 2b (workspaces) |
 

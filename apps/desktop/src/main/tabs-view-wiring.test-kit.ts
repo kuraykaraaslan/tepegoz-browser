@@ -24,6 +24,8 @@ export const host = () => ({
   createTab: vi.fn(),
   emitState: vi.fn(),
   closeTab: vi.fn(),
+  activateAdjacentTab: vi.fn(),
+  activateTabAtPosition: vi.fn(),
   isPrivate: false,
 });
 export const handlerFor = (wc: FakeWc, ev: string) =>

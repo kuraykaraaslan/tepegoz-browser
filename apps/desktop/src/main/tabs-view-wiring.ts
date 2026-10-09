@@ -62,6 +62,9 @@ export interface ViewWiringHost {
   emitState(): void;
   /** Close the wired tab (Ctrl+W arrives while the PAGE has focus, so the view answers it). */
   closeTab(id: string): void;
+  /** Ctrl+Tab & co. arrive while the PAGE has focus; the window's tab model answers them. */
+  activateAdjacentTab(delta: 1 | -1): void;
+  activateTabAtPosition(position: number | 'last'): void;
   /** True in a private window. Read at event time, not captured, so it can never go stale. */
   readonly isPrivate: boolean;
 }
@@ -133,6 +136,13 @@ export function wireView(host: ViewWiringHost, id: string, view: WebContentsView
       page: wc,
       closeActiveTab: () => {
         host.closeTab(id);
+      },
+      // The window's tab model, not this page: Ctrl+Tab moves relative to the ACTIVE tab.
+      activateAdjacentTab: (delta: 1 | -1) => {
+        host.activateAdjacentTab(delta);
+      },
+      activateTabAtPosition: (position: number | 'last') => {
+        host.activateTabAtPosition(position);
       },
       openPrivateWindow,
     };
