@@ -69,11 +69,11 @@ async function ensureBinding(wc: WebContents): Promise<void> {
     // The page found an eligible video but the heavy bundle isn't loaded — inject it, then rescan.
     if (payload.needBundle === true) {
       void wc
-        .executeJavaScript(VIDEO_PLAYER_EMBED_JS, true)
+        .executeJavaScript(VIDEO_PLAYER_EMBED_JS, false)
         .then(() =>
           wc.executeJavaScript(
             'window.__tepegozVideoPlayerRescan&&window.__tepegozVideoPlayerRescan()',
-            true,
+            false,
           ),
         )
         .catch((err) => Logger.warn('Video player bundle injection failed', { err: String(err) }));
@@ -101,14 +101,18 @@ async function ensureBinding(wc: WebContents): Promise<void> {
   });
 }
 
+// userGesture is deliberately FALSE. `executeJavaScript(code, true)` simulates a user click, which gives the
+// PAGE sticky user activation the moment this runs — unattended, on load. That defeats the autoplay policy,
+// the popup blocker and every other check keyed on "the user has interacted". Injection is plumbing, not
+// an action the user took.
 async function inject(url: string, wc: WebContents): Promise<void> {
   if (wc.isDestroyed() || !videoPlayerHost.isActiveForPage(url)) return;
   try {
     await ensureBinding(wc);
-    await wc.executeJavaScript(VIDEO_PLAYER_BOOTSTRAP, true);
+    await wc.executeJavaScript(VIDEO_PLAYER_BOOTSTRAP, false);
     await wc.executeJavaScript(
       `window.__tepegozVideoPlayerSetEnabled&&window.__tepegozVideoPlayerSetEnabled(true,${skinOptionsJson(originOf(url))})`,
-      true,
+      false,
     );
   } catch (err) {
     Logger.warn('Video player page injection failed', { err: String(err) });
@@ -120,7 +124,7 @@ async function disableOn(wc: WebContents): Promise<void> {
   await wc
     .executeJavaScript(
       'window.__tepegozVideoPlayerSetEnabled&&window.__tepegozVideoPlayerSetEnabled(false)',
-      true,
+      false,
     )
     .catch(() => undefined);
   if (wc === TabManager.activeWebContents()) broadcastPageState(null);
@@ -145,7 +149,7 @@ const VideoPlayerPageInjector = {
       await wc
         .executeJavaScript(
           `window.__tepegozVideoPlayerApplyOptions&&window.__tepegozVideoPlayerApplyOptions(${skinOptionsJson(originOf(url))})`,
-          true,
+          false,
         )
         .catch(() => undefined);
     } else {

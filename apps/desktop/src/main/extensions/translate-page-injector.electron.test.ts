@@ -80,7 +80,7 @@ describe('inject / ensureBinding', () => {
       name: '__tepegozTranslatePost',
     });
     expect(wc.debugger.on).toHaveBeenCalledWith('message', bindingListener);
-    expect(wc.executeJavaScript).toHaveBeenCalledWith(TRANSLATE_PAGE_SCRIPT, true);
+    expect(wc.executeJavaScript).toHaveBeenCalledWith(TRANSLATE_PAGE_SCRIPT, false);
   });
 
   it('does not re-attach a debugger that is already attached', async () => {

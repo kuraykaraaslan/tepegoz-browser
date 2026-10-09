@@ -84,7 +84,7 @@ async function inject(url: string, wc: WebContents): Promise<void> {
   try {
     await ensureBinding(wc);
     await wc.insertCSS(typoCss()).catch(() => undefined);
-    await wc.executeJavaScript(TYPO_SCRIPT, true);
+    await wc.executeJavaScript(TYPO_SCRIPT, false); // no gesture: see the note on the video-player injector
   } catch (err) {
     Logger.warn('Typo page injection failed', { err: String(err) });
   }

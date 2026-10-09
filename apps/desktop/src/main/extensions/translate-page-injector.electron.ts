@@ -272,5 +272,5 @@ async function ensureBinding(wc: WebContents): Promise<void> {
 
 export async function inject(wc: WebContents): Promise<void> {
   await ensureBinding(wc);
-  await wc.executeJavaScript(TRANSLATE_PAGE_SCRIPT, true);
+  await wc.executeJavaScript(TRANSLATE_PAGE_SCRIPT, false); // no gesture: see the note on the video-player injector
 }

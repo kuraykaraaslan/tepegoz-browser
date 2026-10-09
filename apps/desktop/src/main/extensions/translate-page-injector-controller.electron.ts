@@ -20,7 +20,7 @@ let started = false;
 async function pageLanguage(wc: WebContents): Promise<string> {
   const raw: unknown = await wc.executeJavaScript(
     "(document.documentElement.getAttribute('lang') || document.body?.getAttribute('lang') || navigator.language || '').slice(0, 16)",
-    true,
+    false,
   );
   return typeof raw === 'string' ? raw : '';
 }
@@ -44,7 +44,7 @@ async function startTranslation(
       origin,
       reason,
     })}) ?? null;`,
-    true,
+    false,
   );
   return translateHost.pageState();
 }
@@ -89,7 +89,7 @@ const TranslatePageInjector = {
     await inject(wc);
     const raw: unknown = await wc.executeJavaScript(
       'window.__tepegozTranslateRestore?.() ?? null;',
-      true,
+      false,
     );
     const parsed = PageScriptStateSchema.safeParse(raw);
     const url = wc.getURL();
@@ -134,7 +134,7 @@ const TranslatePageInjector = {
     await inject(wc);
     const raw: unknown = await wc.executeJavaScript(
       'window.__tepegozTranslateRestore?.() ?? null;',
-      true,
+      false,
     );
     const parsed = PageScriptStateSchema.safeParse(raw);
     const url = wc.getURL();

@@ -102,10 +102,10 @@ describe('start + inject', () => {
     tab.nav!('https://video.test/watch', wc);
     await flush();
     expect(wc.debugger.attach).toHaveBeenCalledWith('1.3');
-    expect(wc.executeJavaScript).toHaveBeenCalledWith('BOOT;', true);
+    expect(wc.executeJavaScript).toHaveBeenCalledWith('BOOT;', false);
     expect(wc.executeJavaScript).toHaveBeenCalledWith(
       expect.stringContaining('__tepegozVideoPlayerSetEnabled(true,{"theme":"dark"})'),
-      true,
+      false,
     );
   });
 
@@ -170,10 +170,10 @@ describe('the Runtime.bindingCalled listener', () => {
       ...call(JSON.stringify({ url: 'https://video.test/watch', needBundle: true })),
     );
     await flush();
-    expect(wc.executeJavaScript).toHaveBeenCalledWith('EMBED;', true);
+    expect(wc.executeJavaScript).toHaveBeenCalledWith('EMBED;', false);
     expect(wc.executeJavaScript).toHaveBeenCalledWith(
       expect.stringContaining('__tepegozVideoPlayerRescan'),
-      true,
+      false,
     );
   });
 
@@ -242,10 +242,10 @@ describe('refreshActive', () => {
     const wc = fakeWc();
     tab.active = wc;
     await injector.refreshActive();
-    expect(wc.executeJavaScript).toHaveBeenCalledWith('BOOT;', true);
+    expect(wc.executeJavaScript).toHaveBeenCalledWith('BOOT;', false);
     expect(wc.executeJavaScript).toHaveBeenCalledWith(
       expect.stringContaining('__tepegozVideoPlayerApplyOptions'),
-      true,
+      false,
     );
   });
 
@@ -257,7 +257,7 @@ describe('refreshActive', () => {
     await injector.refreshActive();
     expect(wc.executeJavaScript).toHaveBeenCalledWith(
       expect.stringContaining('__tepegozVideoPlayerSetEnabled(false)'),
-      true,
+      false,
     );
     expect(windows.list[0]!.webContents.send).toHaveBeenCalledWith('vp:state', null);
     expect(getState()).toBeNull();

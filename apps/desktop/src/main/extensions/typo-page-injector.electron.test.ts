@@ -83,7 +83,7 @@ describe('start + inject', () => {
     expect(wc.debugger.attach).toHaveBeenCalledWith('1.3');
     expect(wc.debugger.sendCommand).toHaveBeenCalledWith('Runtime.enable');
     expect(wc.insertCSS).toHaveBeenCalledWith('.typo{}');
-    expect(wc.executeJavaScript).toHaveBeenCalledWith('HEAD;TAIL;', true);
+    expect(wc.executeJavaScript).toHaveBeenCalledWith('HEAD;TAIL;', false);
   });
 
   it('skips a destroyed or inactive tab', async () => {
