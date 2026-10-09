@@ -237,6 +237,9 @@ export interface Preferences {
   /** Upgrade http:// to https:// on tunneled (Tor/VPN/proxy) tabs and fail closed instead of sending
    *  cleartext through the exit. Also the rollback switch. Private (not in PublicSettings). */
   httpsOnlyOnTunnel: boolean;
+  /** Let Chromium pre-resolve the hostnames a page links to (a speed win). Off sends
+   *  `X-DNS-Prefetch-Control: off` on normal tabs; tunnel tabs never pre-resolve either way. */
+  preloadPages: boolean;
   /** Typo extension settings. Dictionaries live in userData/dictionaries and are not persisted here. */
   typo: TypoSettings;
   /** Translate extension settings. Translation memory lives outside preferences. */

@@ -1,9 +1,11 @@
 import { app } from 'electron';
+import PreferenceStore from '@tepegoz/preferences';
 import { registerBasicAuthHandler } from './auth/basic-auth-broker';
 import { registerCertificateHandler } from './auth/certificate-broker';
 import { registerClientCertificateHandler } from './auth/client-certificate-broker';
 import { passwordVault } from './stores.electron';
 import BrowsingSessions from './network/browsing-sessions.electron';
+import { dnsPrefetchStamp } from './network/dns-prefetch-stamp';
 import { registerCertificateRecorder } from './network/certificate-recorder.electron';
 import ConnectionPool from './network/connection-pool.electron';
 import BindingService from './network/binding-service.electron';
@@ -35,13 +37,20 @@ export function initBrowsingNetwork(safeMode: boolean): void {
     (ses, partition) => {
       BrowsingWebRequestService.attach(
         ses.webRequest,
-        // Tunnel partitions only: Chromium pre-resolves hostnames through the host resolver, NOT
-        // through the session's SOCKS proxy, so a page inside a tunnel can still hand the user's
-        // own resolver the list of sites it links to. Direct partitions keep prefetching — it is a
-        // real speed win and nothing there is being hidden.
-        BrowsingSessions.isTunnelPartition(partition)
-          ? { stampResponseHeaders: { 'X-DNS-Prefetch-Control': 'off' }, partition }
-          : { partition },
+        // Chromium pre-resolves hostnames through the host resolver, NOT through the session's SOCKS
+        // proxy, so a page inside a tunnel can still hand the user's own resolver the list of sites it
+        // links to — always suppressed there. Direct sessions keep prefetching (a real speed win) unless
+        // the user turned "pre-resolve linked addresses" off.
+        {
+          // Asked per response, so flipping the setting needs no restart. Tunnel partitions never
+          // pre-resolve; the rule lives in `dnsPrefetchStamp`.
+          stampResponseHeaders: () =>
+            dnsPrefetchStamp(
+              BrowsingSessions.isTunnelPartition(partition),
+              PreferenceStore.getAll().preloadPages,
+            ),
+          partition,
+        },
       );
     },
     { critical: true },

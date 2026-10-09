@@ -403,6 +403,32 @@ describe('BrowsingWebRequestService', () => {
       expect(res).toEqual({ cancel: true });
     });
 
+    it('can be a function, asked on EVERY response so a setting change needs no re-attach', async () => {
+      const fake = fakeWebRequest();
+      let on = false;
+      BrowsingWebRequestService.attach(fake.webRequest, {
+        stampResponseHeaders: () => (on ? STAMP : {}),
+      });
+      const before = await fake.headers();
+      expect(before.responseHeaders?.['x-dns-prefetch-control']).toBeUndefined();
+      on = true;
+      const during = await fake.headers();
+      expect(during.responseHeaders?.['x-dns-prefetch-control']).toEqual(['off']);
+      on = false;
+      const after = await fake.headers();
+      expect(after.responseHeaders?.['x-dns-prefetch-control']).toBeUndefined();
+    });
+
+    it('a function stamp is still applied when the pipeline itself fails', async () => {
+      const fake = fakeWebRequest();
+      BrowsingWebRequestService.attach(fake.webRequest, { stampResponseHeaders: () => STAMP });
+      BrowsingWebRequestService.onHeadersReceived('boom', () => {
+        throw new Error('handler blew up');
+      });
+      const res = await fake.headers();
+      expect(res.responseHeaders?.['x-dns-prefetch-control']).toEqual(['off']);
+    });
+
     it('is still applied when there were no handlers at all', async () => {
       const fake = fakeWebRequest();
       BrowsingWebRequestService.attach(fake.webRequest, { stampResponseHeaders: STAMP });

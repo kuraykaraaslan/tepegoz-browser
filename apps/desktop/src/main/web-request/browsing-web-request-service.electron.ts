@@ -161,11 +161,21 @@ const BrowsingWebRequestService = {
    */
   attach(
     webRequest: WebRequestLike,
-    opts?: { stampResponseHeaders?: Record<string, string>; partition?: string },
+    opts?: {
+      /** Headers stamped onto every response of this session. A function is asked per response, so a
+       *  setting can change them without re-attaching (a session attaches only once). */
+      stampResponseHeaders?: Record<string, string> | (() => Record<string, string>);
+      partition?: string;
+    },
   ): void {
     if (attachedTo.has(webRequest)) return;
     attachedTo.add(webRequest);
-    const stamp = opts?.stampResponseHeaders;
+    const stampOpt = opts?.stampResponseHeaders;
+    const currentStamp = (): Record<string, string> | undefined => {
+      if (stampOpt === undefined) return undefined;
+      const s = typeof stampOpt === 'function' ? stampOpt() : stampOpt;
+      return Object.keys(s).length === 0 ? undefined : s;
+    };
     const ctx: BeforeRequestContext =
       opts?.partition === undefined ? {} : { partition: opts.partition };
 
@@ -178,13 +188,16 @@ const BrowsingWebRequestService = {
 
     webRequest.onHeadersReceived((details, callback) => {
       void runHeadersReceived(details).then(
-        (response) =>
-          callback(stamp === undefined ? response : withStamp(details, response, stamp)),
+        (response) => {
+          const stamp = currentStamp();
+          callback(stamp === undefined ? response : withStamp(details, response, stamp));
+        },
         (err: unknown) => {
           Logger.warn('webRequest onHeadersReceived pipeline failed open', { err: String(err) });
           // Even on a pipeline failure the stamp is applied: it is a per-SESSION privacy header, not a
           // feature handler, and dropping it because some unrelated filter threw would silently
           // re-enable the very behaviour it exists to suppress.
+          const stamp = currentStamp();
           callback(stamp === undefined ? {} : withStamp(details, {}, stamp));
         },
       );

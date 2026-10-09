@@ -272,3 +272,21 @@ describe('privacyAndAdvancedSections — the Back up settings card', () => {
     await screen.findByText(s.importFailed);
   });
 });
+
+describe('privacyAndAdvancedSections — pre-resolve linked addresses', () => {
+  it('is on by default, writes false when switched off, and is found by settings search', () => {
+    const { setPref } = renderPrivacy({ preloadPages: true });
+    expect(screen.getByText(s.preload.title)).toBeTruthy();
+    fireEvent.click(screen.getByTestId('toggle-preload-pages'));
+    expect(setPref).toHaveBeenCalledWith({ preloadPages: false });
+    const section = privacyAndAdvancedSections(ctx().ctx).find((sec) => sec.id === 'privacy');
+    expect(section!.searchText).toContain(s.preload.title);
+    expect(s.preload.desc).toMatch(/VPN/);
+  });
+
+  it('writes true when switched back on', () => {
+    const { setPref } = renderPrivacy({ preloadPages: false });
+    fireEvent.click(screen.getByTestId('toggle-preload-pages'));
+    expect(setPref).toHaveBeenCalledWith({ preloadPages: true });
+  });
+});

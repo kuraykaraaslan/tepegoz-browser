@@ -224,7 +224,7 @@ unbuilt tail). The File System Access row is already tracked open in phase-2c.
 
 | Gap                                                            | Ships in | Today                         | Home                                                      |
 | -------------------------------------------------------------- | -------- | ----------------------------- | --------------------------------------------------------- |
-| **Page preload / network prediction** toggle                   | C/B/F    | **none**                      | 2b or 5 (interacts with tunnel DNS-prefetch, see phase-5) |
+| **Page preload / network prediction** toggle                   | C/B/F    | **Partial** — `preloadPages` turns off DNS pre-resolution of linked hosts (Direct tabs; tunnel tabs always off). Not covered: preconnect / prerender / speculative prefetch | 2b or 5 (interacts with tunnel DNS-prefetch, see phase-5) |
 | Content-process limit / "use recommended performance settings" | F        | —                             | 2b                                                        |
 | **Energy Saver** / battery-based throttling                    | C/Edge   | partial — `pauseTasksOnSleep` | 2b                                                        |
 

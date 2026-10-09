@@ -270,7 +270,7 @@ export function privacyAndAdvancedSections(ctx: SettingsSectionsCtx): SettingsSe
       group: s.groupPrivacy,
       label: s.privacyTitle,
       icon: <IconShield />,
-      searchText: `${s.privacyTitle} ${s.telemetry} ${s.telemetryDesc} ${s.telemetryNothingSent} ${s.safeBrowsing.title} ${s.safeBrowsing.desc} ${s.httpsOnly.title} ${s.httpsOnly.desc} ${s.clearData.title} ${s.clearData.desc} ${s.clearHistoryLabel} ${s.forgetSite.title} ${s.clientCerts.title}`,
+      searchText: `${s.privacyTitle} ${s.telemetry} ${s.telemetryDesc} ${s.telemetryNothingSent} ${s.safeBrowsing.title} ${s.safeBrowsing.desc} ${s.httpsOnly.title} ${s.httpsOnly.desc} ${s.preload.title} ${s.preload.desc} ${s.clearData.title} ${s.clearData.desc} ${s.clearHistoryLabel} ${s.forgetSite.title} ${s.clientCerts.title}`,
       content: (
         <Card title={s.privacyTitle}>
           <div className="space-y-4">
@@ -310,6 +310,15 @@ export function privacyAndAdvancedSections(ctx: SettingsSectionsCtx): SettingsSe
               checked={prefs.httpsOnlyOnTunnel}
               onChange={(v) => {
                 setPref({ httpsOnlyOnTunnel: v });
+              }}
+            />
+            <Toggle
+              id="preload-pages"
+              label={s.preload.title}
+              description={s.preload.desc}
+              checked={prefs.preloadPages}
+              onChange={(v) => {
+                setPref({ preloadPages: v });
               }}
             />
             <ClearBrowsingDataRow s={s} />

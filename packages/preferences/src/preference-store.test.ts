@@ -193,6 +193,16 @@ describe('PreferenceStore', () => {
     expect(PreferenceStore.getAll().privateSearchEngineId).toBe('duckduckgo');
   });
 
+  it('defaults preloadPages to on for an old file, and round-trips off', () => {
+    writeFileSync(filePath, JSON.stringify({ locale: 'tr' }), 'utf8');
+    PreferenceStore.init({ filePath });
+    expect(PreferenceStore.getAll().preloadPages).toBe(true);
+    PreferenceStore.update({ preloadPages: false });
+    PreferenceStore.reset();
+    PreferenceStore.init({ filePath });
+    expect(PreferenceStore.getAll().preloadPages).toBe(false);
+  });
+
   it('defaults mcpServers to [] and round-trips a valid stdio server', () => {
     PreferenceStore.init({ filePath });
     expect(PreferenceStore.getAll().mcpServers).toEqual([]);
