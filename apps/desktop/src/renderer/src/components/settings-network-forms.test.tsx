@@ -207,6 +207,18 @@ describe('AddConnectionRow', () => {
     });
   });
 
+  it('shows the connection help only for Tor, with all three steps', () => {
+    renderRow();
+    expect(screen.queryByText(s.network.torHelpTitle)).toBeNull();
+    fireEvent.change(kindSelect(), { target: { value: 'tor' } });
+    expect(screen.getByText(s.network.torHelpTitle)).toBeTruthy();
+    for (const step of [s.network.torHelpStep1, s.network.torHelpStep2, s.network.torHelpStep3]) {
+      expect(screen.getByText(step)).toBeTruthy();
+    }
+    fireEvent.change(kindSelect(), { target: { value: 'byo-socks' } });
+    expect(screen.queryByText(s.network.torHelpTitle)).toBeNull();
+  });
+
   it('keeps the profile already picked when a second pick is cancelled', async () => {
     // Cancelling a file dialog is not a choice to discard what was already chosen. Without the early
     // return the cancel would null the profile out and re-disable Add.

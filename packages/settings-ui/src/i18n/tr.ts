@@ -894,6 +894,13 @@ export const tr: SettingsStrings = {
     torBridge: 'Köprü (isteğe bağlı)',
     torBridgePlaceholder: 'Bir köprü satırı yapıştırın',
     torBridgeHint: 'Köprüler Tor’un engellendiği yerlerde işe yarar ama daha yavaştır.',
+    torHelpTitle: 'Tor bağlanmıyor mu?',
+    torHelpStep1:
+      'Protokol olarak Tor’u seçin, bir ad verin ve Ekle’ye basın. Sonra onu bir sekme veya sekme grubu için yol olarak seçin.',
+    torHelpStep2:
+      'Tor ağınızda ya da ülkenizde engelliyse bridges.torproject.org adresinden bir köprü alın, satırın tamamını Köprü alanına yapıştırın ve bağlantıyı yeniden ekleyin.',
+    torHelpStep3:
+      'Önüne bir VPN koymak istemiyorsanız üst bağlantıyı “Doğrudan Tor’a” olarak bırakın. Köprüler normal Tor bağlantısından daha yavaştır.',
     torNotTorBrowserTitle: 'Tor’a yönlendirilen bir sekme, Tor Browser oturumu değildir',
     torNotTorBrowserBody:
       'Doğrudan trafik ve Tor trafiği bu tarayıcıda aynı anda çalışır. İkisi arasında ilişkilendirilen etkinlik, anonim bir oturumu yeniden ilişkilendirebilir — Tor Browser’ın tam da önlemek için var olduğu durum. Güçlü anonimlik için tek bir sekmeyi yönlendirmek yerine Tor Browser kullanın.',

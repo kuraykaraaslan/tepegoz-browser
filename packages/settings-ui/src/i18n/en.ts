@@ -905,6 +905,13 @@ export const en = {
     torBridge: 'Bridge (optional)',
     torBridgePlaceholder: 'Paste a bridge line',
     torBridgeHint: 'Bridges help where Tor is blocked, but they are slower.',
+    torHelpTitle: 'Tor will not connect?',
+    torHelpStep1:
+      'Pick Tor as the protocol, give it a name and press Add. Then choose it as the route for a tab or a tab group.',
+    torHelpStep2:
+      'If Tor is blocked on your network or in your country, get a bridge from bridges.torproject.org, paste the whole line into the Bridge field and add the connection again.',
+    torHelpStep3:
+      'Leave the upstream on "Straight to Tor" unless you want a VPN in front of it. Bridges are slower than a normal Tor connection.',
     torNotTorBrowserTitle: 'A Tor-routed tab is not a Tor Browser session',
     torNotTorBrowserBody:
       'Direct and Tor traffic run in this browser at the same time. Activity correlated across the two can re-link an anonymous session — the pattern Tor Browser exists to prevent. For strong anonymity, use Tor Browser rather than routing a single tab.',

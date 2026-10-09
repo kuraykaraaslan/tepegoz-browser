@@ -236,6 +236,16 @@ export function AddConnectionRow({
       {kind === 'tor' && bridge.trim().length > 0 && (
         <p className="mt-1 text-xs text-text-secondary">{s.network.torBridgeHint}</p>
       )}
+      {kind === 'tor' && (
+        <details className="mt-2 text-xs text-text-secondary">
+          <summary className="cursor-pointer select-none">{s.network.torHelpTitle}</summary>
+          <ol className="mt-1 list-decimal space-y-1 pl-5">
+            <li>{s.network.torHelpStep1}</li>
+            <li>{s.network.torHelpStep2}</li>
+            <li>{s.network.torHelpStep3}</li>
+          </ol>
+        </details>
+      )}
       {error !== null && <p className="mt-1 text-xs text-error-fg">{error}</p>}
     </div>
   );

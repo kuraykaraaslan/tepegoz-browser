@@ -199,6 +199,10 @@ endpoint** (one loopback port per active connection), never an OS-level system p
         complaint corpus shows Turkish users' questions cluster on _finding_ the bridge/settings panel and
         knowing which option to pick — navigation, not cryptography. This is the one place where being
         Turkish-first is a functional advantage rather than a courtesy.
+    - [x] _Landed 2026-10-09 (static copy, en+tr): picking Tor in Settings → Network privacy shows a
+          collapsible "Tor will not connect?" with three steps — add and route it, where to get a bridge and
+          where to paste it, and which upstream option to leave alone. Not yet checked with Turkish-speaking
+          users; the wording is the first draft._
 - [x] **A "new identity" affordance.** Per-connection circuit isolation is landed, but nothing let a user
       say "burn this circuit and start clean" — Tor Browser's New Identity resets both the circuit and the
       site state. Here the two halves already existed separately (a connection can be rebuilt; per-site data
