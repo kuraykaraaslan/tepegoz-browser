@@ -283,6 +283,82 @@ describe('BrowsingWebRequestService', () => {
     expect(seen).toHaveBeenCalledTimes(1);
   });
 
+  describe('the per-session partition context', () => {
+    it('hands the attach() partition to a handler as its second argument', async () => {
+      const fake = fakeWebRequest();
+      BrowsingWebRequestService.attach(fake.webRequest, {
+        partition: 'persist:tepegoz-web--conn-a',
+      });
+      const seen = vi.fn();
+      BrowsingWebRequestService.onBeforeRequest('ctx', (details, ctx) => {
+        seen(details.id, ctx);
+      });
+      await fake.before(beforeDetails(3));
+      expect(seen).toHaveBeenCalledWith(3, { partition: 'persist:tepegoz-web--conn-a' });
+    });
+
+    it('passes an empty context when no partition was supplied', async () => {
+      const fake = fakeWebRequest();
+      BrowsingWebRequestService.attach(fake.webRequest);
+      const seen = vi.fn();
+      BrowsingWebRequestService.onBeforeRequest('ctx', (_d, ctx) => {
+        seen(ctx);
+      });
+      await fake.before();
+      expect(seen).toHaveBeenCalledWith({});
+    });
+
+    it('still runs an old one-argument handler', async () => {
+      const fake = fakeWebRequest();
+      BrowsingWebRequestService.attach(fake.webRequest, { partition: 'p' });
+      BrowsingWebRequestService.onBeforeRequest('old', (details) => ({
+        cancel: details.id === 9,
+      }));
+      await expect(fake.before(beforeDetails(9))).resolves.toEqual({ cancel: true });
+    });
+
+    it('keeps failing open when a handler throws, and still delivers the context to later ones', async () => {
+      const fake = fakeWebRequest();
+      BrowsingWebRequestService.attach(fake.webRequest, { partition: 'p' });
+      const later = vi.fn();
+      BrowsingWebRequestService.onBeforeRequest('boom', () => {
+        throw new Error('nope');
+      });
+      BrowsingWebRequestService.onBeforeRequest('later', (_d, ctx) => {
+        later(ctx);
+      });
+      await expect(fake.before()).resolves.toEqual({});
+      expect(later).toHaveBeenCalledWith({ partition: 'p' });
+    });
+
+    it('does not re-attach the same session with a different partition', async () => {
+      const fake = fakeWebRequest();
+      BrowsingWebRequestService.attach(fake.webRequest, { partition: 'first' });
+      BrowsingWebRequestService.attach(fake.webRequest, { partition: 'second' });
+      const seen = vi.fn();
+      BrowsingWebRequestService.onBeforeRequest('ctx', (_d, ctx) => {
+        seen(ctx?.partition);
+      });
+      await fake.before();
+      expect(seen).toHaveBeenCalledTimes(1);
+      expect(seen).toHaveBeenCalledWith('first');
+    });
+
+    it('delivers each session its own partition', async () => {
+      const a = fakeWebRequest();
+      const b = fakeWebRequest();
+      BrowsingWebRequestService.attach(a.webRequest, { partition: 'pa' });
+      BrowsingWebRequestService.attach(b.webRequest, { partition: 'pb' });
+      const seen: Array<string | undefined> = [];
+      BrowsingWebRequestService.onBeforeRequest('ctx', (_d, ctx) => {
+        seen.push(ctx?.partition);
+      });
+      await a.before();
+      await b.before();
+      expect(seen).toEqual(['pa', 'pb']);
+    });
+  });
+
   describe('the per-session response-header stamp', () => {
     const STAMP = { 'x-dns-prefetch-control': 'off' };
 

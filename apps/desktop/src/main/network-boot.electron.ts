@@ -39,8 +39,8 @@ export function initBrowsingNetwork(safeMode: boolean): void {
         // own resolver the list of sites it links to. Direct partitions keep prefetching — it is a
         // real speed win and nothing there is being hidden.
         BrowsingSessions.isTunnelPartition(partition)
-          ? { stampResponseHeaders: { 'X-DNS-Prefetch-Control': 'off' } }
-          : {},
+          ? { stampResponseHeaders: { 'X-DNS-Prefetch-Control': 'off' }, partition }
+          : { partition },
       );
     },
     { critical: true },

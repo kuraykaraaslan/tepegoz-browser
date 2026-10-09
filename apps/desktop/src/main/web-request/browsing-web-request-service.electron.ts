@@ -1,7 +1,16 @@
 import { Logger } from '@tepegoz/libs';
 
+/**
+ * Per-session context handed to every onBeforeRequest handler. `partition` is the Electron partition
+ * name of the session the request runs in (absent when the attacher did not supply one).
+ */
+export interface BeforeRequestContext {
+  readonly partition?: string;
+}
+
 export type BeforeRequestHandler = (
   details: Electron.OnBeforeRequestListenerDetails,
+  ctx?: BeforeRequestContext,
 ) => Electron.CallbackResponse | void | Promise<Electron.CallbackResponse | void>;
 
 export type HeadersReceivedHandler = (
@@ -63,10 +72,11 @@ function mergeResponseHeaders(
 
 async function runBeforeRequest(
   details: Electron.OnBeforeRequestListenerDetails,
+  ctx: BeforeRequestContext,
 ): Promise<Electron.CallbackResponse> {
   for (const [id, handler] of beforeRequestHandlers) {
     try {
-      const response = await handler(details);
+      const response = await handler(details, ctx);
       if (isDecisiveBeforeResponse(response)) return response;
     } catch (err) {
       Logger.warn('webRequest onBeforeRequest handler failed open', { id, err: String(err) });
@@ -151,14 +161,16 @@ const BrowsingWebRequestService = {
    */
   attach(
     webRequest: WebRequestLike,
-    opts?: { stampResponseHeaders?: Record<string, string> },
+    opts?: { stampResponseHeaders?: Record<string, string>; partition?: string },
   ): void {
     if (attachedTo.has(webRequest)) return;
     attachedTo.add(webRequest);
     const stamp = opts?.stampResponseHeaders;
+    const ctx: BeforeRequestContext =
+      opts?.partition === undefined ? {} : { partition: opts.partition };
 
     webRequest.onBeforeRequest((details, callback) => {
-      void runBeforeRequest(details).then(callback, (err: unknown) => {
+      void runBeforeRequest(details, ctx).then(callback, (err: unknown) => {
         Logger.warn('webRequest onBeforeRequest pipeline failed open', { err: String(err) });
         callback({});
       });
