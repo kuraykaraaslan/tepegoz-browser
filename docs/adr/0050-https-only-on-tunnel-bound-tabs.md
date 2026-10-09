@@ -38,7 +38,12 @@ With the preference on, on a tunnel partition, for `http:`:
   cancelled with reason `loop`.
 - **Main-frame non-GET:** cancelled (`non-get`). Upgrading would reload as a GET and lose the body.
 - **Sub-resource GET:** upgraded; other methods cancelled. **`ws:`** is cancelled, not upgraded.
-- **Bypassed `(partition, host)`:** allowed. A sub-resource uses the top-level host.
+- **Bypassed `(partition, host)`:** allowed for the main frame, and for sub-resources **of that same host
+  only** (matched against the tab's top-level host). A third party the page loads over `http:` is still
+  upgraded or cancelled, so one click does not open cleartext to everyone the page talks to.
+- **Loop guard:** the exact http URL just upgraded is remembered per tab (10 s). A second request for it
+  while the first navigation is still in flight is a redirect loop and is cancelled; the record is dropped
+  when the navigation commits or stops, so reopening the same link is not a loop.
 
 ### 3. Fail closed, deliberately
 
@@ -49,10 +54,13 @@ deliberate deviation: a tunnel-bound tab that cannot be checked must not fall th
 ### 4. The interstitial and the closed error-code list
 
 A main-frame `did-fail-load` is matched against a per-tab pending record (host, http URL, reason,
-timestamp; 60 s TTL; cleared on `did-navigate`). The bypass is offered **only** for `-102`, `-101`,
-`-107`, `-118`, `-324` (no HTTPS on the host) and for reason `loop`. Only **Back** is offered for
-certificate errors (`-2xx`), `-105` (DNS; a bypass would not help), `-115`, `-130`, a non-GET cancel, or
-when `BindingService.mayEgress(tabId)` is false. A tunnel that is down says "tunnel not connected", never
+timestamp; 60 s TTL; cleared on `did-navigate` and `did-stop-loading`). The bypass is offered **only** for
+`-102`, `-101`, `-107`, `-118`, `-324` (no HTTPS on the host), `-120`/`-121` (the SOCKS5 client's
+"connect failed / host unreachable" — how a refused :443 looks behind a local SOCKS tunnel; **to be
+confirmed against a live tunnel in the UAT**) and for reason `loop`. For certificate errors (`-2xx`),
+`-105` (DNS; a bypass would not help), `-115` and `-130` **no interstitial is shown at all** — the user
+sees Chromium's own error page, with no way past it. A **Back-only** page is shown for a non-GET cancel
+and when `BindingService.mayEgress(tabId)` is false. A tunnel that is down says "tunnel not connected", never
 "no HTTPS". `-3` is ignored. Certificate errors stay with the certificate broker; this feature never
 offers to continue past one. Copy comes from the app dictionary (`mainStrings()`, en + tr).
 

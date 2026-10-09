@@ -219,10 +219,21 @@ describe('httpsOnlyHandler: bypass', () => {
     });
   });
 
-  it('allows a subresource when the top-level page host is bypassed', () => {
+  it('allows a same-host subresource when the top-level page host is bypassed', () => {
     https.addHttpsOnlyBypass(TOR, 'old.example');
     electron.urls.set(5, 'http://old.example/page');
-    expect(run(details('http://cdn.example/x.js', { resourceType: 'script' }))).toBeUndefined();
+    expect(run(details('http://old.example/x.js', { resourceType: 'script' }))).toBeUndefined();
+  });
+
+  it('still upgrades a THIRD-PARTY http subresource on a bypassed page', () => {
+    https.addHttpsOnlyBypass(TOR, 'old.example');
+    electron.urls.set(5, 'http://old.example/page');
+    expect(run(details('http://tracker.example/p.png', { resourceType: 'image' }))).toEqual({
+      redirectURL: 'https://tracker.example/p.png',
+    });
+    expect(
+      run(details('http://tracker.example/', { resourceType: 'xhr', method: 'POST' })),
+    ).toEqual({ cancel: true });
   });
 
   it('still enforces a subresource when the top-level host is not bypassed', () => {
@@ -257,6 +268,19 @@ describe('httpsOnlyHandler: loop guard and pending record', () => {
     expect(run(details('http://old.example/'))).toEqual({ redirectURL: 'https://old.example/' });
     expect(run(details('http://old.example/'))).toEqual({ cancel: true });
     expect(https.getPendingHttpsOnly(5)?.reason).toBe('loop');
+  });
+
+  it('does not mistake the same link opened again after the navigation ended for a loop', () => {
+    expect(run(details('http://old.example/'))).toEqual({ redirectURL: 'https://old.example/' });
+    https.clearPendingHttpsOnly(5);
+    expect(run(details('http://old.example/'))).toEqual({ redirectURL: 'https://old.example/' });
+  });
+
+  it('keeps the loop guard per tab: another tab opening the same link is not a loop', () => {
+    expect(run(details('http://old.example/'))).toEqual({ redirectURL: 'https://old.example/' });
+    expect(run(details('http://old.example/', { webContentsId: 6 }))).toEqual({
+      redirectURL: 'https://old.example/',
+    });
   });
 
   it('records the upgrade for the tab and expires it after 60s', () => {

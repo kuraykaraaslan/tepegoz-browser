@@ -83,7 +83,11 @@ interface TrackerEntry {
   at: number;
 }
 
-/** Loop guard: remembers (partition, exact http URL) we just upgraded, for a short TTL. */
+/**
+ * Loop guard: remembers (owner, exact http URL) we just upgraded, for a short TTL. The owner is one tab
+ * (its webContents), so the same link opened twice in a partition is not mistaken for a redirect loop;
+ * the entries for a tab are dropped when its navigation commits or stops.
+ */
 export class UpgradeTracker {
   private readonly entries = new Map<string, TrackerEntry>();
 
@@ -129,6 +133,14 @@ export class UpgradeTracker {
     }
   }
 
+  /** Drop every entry recorded for `owner` (the navigation ended; nothing is in flight any more). */
+  clearOwner(owner: string): void {
+    const prefix = `${owner}\u0000`;
+    for (const k of this.entries.keys()) {
+      if (k.startsWith(prefix)) this.entries.delete(k);
+    }
+  }
+
   get size(): number {
     return this.entries.size;
   }
@@ -136,7 +148,9 @@ export class UpgradeTracker {
 
 export type LoadFailureClass = 'offer-bypass' | 'ignore' | 'no-bypass';
 
-const OFFER_BYPASS = new Set([-102, -101, -107, -118, -324]);
+// -120/-121 are the SOCKS5 client's "connect failed / host unreachable": how a refused :443 looks when
+// the tunnel is a local SOCKS endpoint (Tor, wireproxy, BYO-SOCKS) rather than a direct connection.
+const OFFER_BYPASS = new Set([-102, -101, -107, -118, -120, -121, -324]);
 
 /** Closed allowlist: an unknown code can only cost the user Chromium's plain error page. */
 export function classifyLoadFailure(errorCode: number): LoadFailureClass {

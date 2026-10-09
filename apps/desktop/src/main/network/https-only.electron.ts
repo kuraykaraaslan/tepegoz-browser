@@ -115,6 +115,12 @@ export function getPendingHttpsOnly(wcId: number): PendingHttpsOnly | undefined 
 
 export function clearPendingHttpsOnly(wcId: number): void {
   pending.delete(wcId);
+  tracker.clearOwner(ownerOf(wcId, undefined));
+}
+
+/** Loop-guard owner: the tab when the request has one, else the partition (service workers). */
+function ownerOf(wcId: number | undefined, partition: string | undefined): string {
+  return wcId !== undefined ? `wc:${String(wcId)}` : `partition:${partition ?? ''}`;
 }
 
 /** The host a request is made on behalf of: itself for the main frame, else the tab's top-level page. */
@@ -141,19 +147,24 @@ function handle(
   // An unparseable URL would be waved through by the pure core; here it throws and so fails closed.
   const requestHost = normalizeHost(new URL(details.url).hostname);
   const top = topLevelHost(details);
+  const owner = ownerOf(details.webContentsId, partition);
   const decision = decide({
     url: details.url,
     method: details.method,
     resourceType: details.resourceType,
     tunnelKind: tunnelKindOfPartition(partition),
     enabled: true,
-    bypassed: top !== null && isHttpsOnlyBypassed(partition, top),
-    recentlyUpgraded: tracker.has(partition, details.url),
+    // A bypass covers the host the user clicked through for — not third parties its page happens to load.
+    bypassed:
+      top !== null &&
+      isHttpsOnlyBypassed(partition, top) &&
+      (details.resourceType === 'mainFrame' || requestHost === normalizeHost(top)),
+    recentlyUpgraded: tracker.has(owner, details.url),
   });
   if (decision.action === 'allow') return undefined;
   const mainFrame = details.resourceType === 'mainFrame';
   if (mainFrame) {
-    if (decision.action === 'upgrade') tracker.record(partition, details.url);
+    if (decision.action === 'upgrade') tracker.record(owner, details.url);
     if (details.webContentsId !== undefined) {
       recordPending(details.webContentsId, {
         host: requestHost,

@@ -45,6 +45,9 @@ function wire() {
     navigated: () => {
       listeners.get('did-navigate')!({}, 'x');
     },
+    stopped: () => {
+      listeners.get('did-stop-loading')!({});
+    },
   };
 }
 
@@ -61,23 +64,29 @@ beforeEach(() => {
 });
 
 describe('wireHttpsOnly did-fail-load', () => {
-  it.each([-102, -101, -107, -118, -324])('offers the bypass for allowlisted code %i', (code) => {
-    const t = wire();
-    t.fail(code);
-    expect(ui.showHttpsOnlyInterstitial).toHaveBeenCalledWith(
-      t.wc,
-      'bypass',
-      'old.example',
-      'http://old.example/p',
-      'tor',
-    );
-    expect(pending.clear).toHaveBeenCalledWith(7);
-  });
+  it.each([-102, -101, -107, -118, -120, -121, -324])(
+    'offers the bypass for allowlisted code %i',
+    (code) => {
+      const t = wire();
+      t.fail(code);
+      expect(ui.showHttpsOnlyInterstitial).toHaveBeenCalledWith(
+        t.wc,
+        'bypass',
+        'old.example',
+        'http://old.example/p',
+        'tor',
+      );
+      expect(pending.clear).toHaveBeenCalledWith(7);
+    },
+  );
 
-  it.each([-3, -200, -201, -202, -105, -115, -130, -20])('shows no bypass for code %i', (code) => {
-    wire().fail(code);
-    expect(ui.showHttpsOnlyInterstitial).not.toHaveBeenCalled();
-  });
+  it.each([-3, -200, -201, -202, -105, -109, -115, -130, -20])(
+    'shows no bypass for code %i',
+    (code) => {
+      wire().fail(code);
+      expect(ui.showHttpsOnlyInterstitial).not.toHaveBeenCalled();
+    },
+  );
 
   it('a loop cancel offers the bypass whatever the code', () => {
     pending.record = { ...pending.record!, reason: 'loop' };
@@ -142,6 +151,14 @@ describe('wireHttpsOnly did-fail-load', () => {
   it('matches the host case-insensitively', () => {
     wire().fail(-102, 'https://OLD.example/p');
     expect(ui.showHttpsOnlyInterstitial).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('wireHttpsOnly did-stop-loading', () => {
+  it('clears a record whose load stopped without committing (download / 204)', () => {
+    const w = wire();
+    w.stopped();
+    expect(pending.clear).toHaveBeenCalledWith(7);
   });
 });
 

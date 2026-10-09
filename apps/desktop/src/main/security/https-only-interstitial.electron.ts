@@ -40,7 +40,11 @@ function escapeHtml(s: string): string {
 }
 
 function fill(template: string, host: string, tunnel: string): string {
-  return template.replaceAll('{host}', host).replaceAll('{tunnel}', tunnel);
+  // One pass with a function replacer: a host such as `a$&b.com` must not be read as a replacement
+  // pattern, nor a substituted value re-scanned for the other placeholder.
+  return template.replace(/\{(host|tunnel)\}/g, (_m, key: string) =>
+    key === 'host' ? host : tunnel,
+  );
 }
 
 export interface InterstitialInput {

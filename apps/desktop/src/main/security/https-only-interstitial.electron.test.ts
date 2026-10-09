@@ -63,6 +63,17 @@ beforeEach(() => {
 describe('httpsOnlyInterstitialHtml', () => {
   const base = { host: 'old.example', url: 'http://old.example/', tunnel: 'Tor' } as const;
 
+  it('renders a host with replacement-pattern characters literally', () => {
+    const html = httpsOnlyInterstitialHtml({
+      ...base,
+      host: 'a$&b.example',
+      kind: 'bypass',
+      proceedHref: `http://a.example/${BYPASS_FRAGMENT_KEY}n`,
+    });
+    expect(html).toContain('a$&amp;b.example');
+    expect(html).not.toContain('{host}');
+  });
+
   it('bypass variant names host and tunnel, warns about interference and offers both actions', () => {
     const html = httpsOnlyInterstitialHtml({
       ...base,

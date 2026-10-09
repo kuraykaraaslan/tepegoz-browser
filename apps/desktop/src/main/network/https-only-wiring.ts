@@ -45,8 +45,14 @@ export function wireHttpsOnly(wc: WebContents, tabId: string): void {
       showHttpsOnlyInterstitial(wc, 'bypass', record.host, record.httpUrl, kind);
     }
   });
-  // A committed navigation (including the interstitial itself) ends the episode.
+  // A committed navigation (including the interstitial itself) ends the episode — and so does a load
+  // that stops without committing (a download, a 204): otherwise its record would linger and make an
+  // unrelated later failure on the same host look like an HTTPS-only fallback. did-fail-load fires
+  // BEFORE did-stop-loading, so a real failure is still handled above.
   wc.on('did-navigate', () => {
+    clearPendingHttpsOnly(wc.id);
+  });
+  wc.on('did-stop-loading', () => {
     clearPendingHttpsOnly(wc.id);
   });
 }

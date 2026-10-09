@@ -241,13 +241,13 @@ describe('UpgradeTracker', () => {
 });
 
 describe('classifyLoadFailure', () => {
-  it.each([-102, -101, -107, -118, -324])('offers bypass for %i', (c) => {
+  it.each([-102, -101, -107, -118, -120, -121, -324])('offers bypass for %i', (c) => {
     expect(classifyLoadFailure(c)).toBe('offer-bypass');
   });
   it('ignores -3 (aborted)', () => {
     expect(classifyLoadFailure(-3)).toBe('ignore');
   });
-  it.each([-200, -201, -202, -207, -213, -299, -105, -115, -130, -6, -2, 0, 5, -9999])(
+  it.each([-200, -201, -202, -207, -213, -299, -105, -109, -115, -130, -6, -2, 0, 5, -9999])(
     'offers no bypass for %i (cert, DNS, tunnel, unknown)',
     (c) => {
       expect(classifyLoadFailure(c)).toBe('no-bypass');
