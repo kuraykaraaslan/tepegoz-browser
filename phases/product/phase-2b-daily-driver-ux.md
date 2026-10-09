@@ -202,7 +202,7 @@ work lives in Phase 2; agent orchestration (multi-tab parallelism) stays in Phas
         Preferences → On startup now offers "Continue where I left off" (default, unchanged behaviour) or
         "Open the New Tab page" (`startupTabs`, private pref; hidden in kiosk mode; safe mode still never
         restores). Hover cards and network prediction remain open.
-  - [x] _Landed 2026-10-09 (unit-tested, not run in the packaged app):_ **"open a specific set of pages"**
+  - [x] _Landed 2026-10-09 (unit-tested; **e2e-verified** in `e2e/startup-settings.spec.ts` against a real launch):_ **"open a specific set of pages"**
         — a third On-startup choice (`startupTabs: 'pages'` + `startupPages`, up to 10 http/https
         addresses, one per line). The first opens focused, the rest behind it; an empty list is one New
         Tab page; safe mode ignores the list. The schema refuses anything that is not a navigable web
@@ -225,7 +225,7 @@ work lives in Phase 2; agent orchestration (multi-tab parallelism) stays in Phas
         Ctrl while pressing Tab again walks deeper (Shift walks back); releasing Ctrl commits the landing
         tab as the most recent. Ctrl+PageUp/PageDown always follow the strip. There is **no switcher
         overlay** — the walk previews by activating each tab as it goes. A click mid-walk ends it.
-  - [x] _Landed 2026-10-09 (unit-tested, not run in the packaged app):_ **Show Home button** — a toggle
+  - [x] _Landed 2026-10-09 (unit-tested; **e2e-verified** in `e2e/startup-settings.spec.ts`):_ **Show Home button** — a toggle
         under the Homepage field in Preferences (`showHomeButton`, on by default so nothing changes
         until it is turned off); `NavToolbar` gained a `showHome` prop and `BrowserChrome` passes it
         through. The Home button was already built; only its visibility is new.
