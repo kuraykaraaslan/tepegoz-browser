@@ -184,6 +184,15 @@ endpoint** (one loopback port per active connection), never an OS-level system p
         like "Tor is broken." Normalize whitespace and strip invisible characters on paste, then validate
         the line's shape before accepting it. Tiny, and it is a documented real-world failure, not a
         hypothetical.
+    - [x] _Landed 2026-10-09 (code, unit-tested; not yet exercised against a live bridge):_
+          `bridge-line.ts` normalizes (NFKC, invisible characters, smart quotes, dashes, whitespace, a
+          `Bridge ` prefix) and shape-validates (transport, address/port, 40-hex fingerprint, `key=value`
+          args, obfs4 needs `cert=`); `networkAddConnection` stores only the canonical line and refuses a
+          bad paste with `networkInvalidBridge` (en+tr); the Tor row in Settings has a bridge field with
+          the "slower" caveat. `TorProvider` writes `UseBridges`/`ClientTransportPlugin`/`Bridge`.
+    - [ ] _Still owed on the bridge line:_ transports resolve only from a Tor Browser install
+          (`PluggableTransports/` beside `tor`) — nothing is bundled; one bridge per add and no edit of an
+          existing connection; no run against a real obfs4/snowflake bridge, so the parent box stays open.
   - [ ] **Turkish-language connection help is the highest-leverage localization in this phase.** The Tor
         complaint corpus shows Turkish users' questions cluster on _finding_ the bridge/settings panel and
         knowing which option to pick — navigation, not cryptography. This is the one place where being
