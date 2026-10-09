@@ -1,3 +1,4 @@
+import { parseBridgeLine } from '../network/bridge-line';
 import { basename } from 'node:path';
 import { readFileSync } from 'node:fs';
 import { BrowserWindow, dialog } from 'electron';
@@ -315,12 +316,26 @@ export function registerNetworkIpc(): void {
           'networkNoSuchConnection',
         );
       }
+      // Sanitized and shape-checked here, so what is persisted is the canonical line and a bad paste is
+      // refused at the form instead of surfacing later as "Tor is broken".
+      const bridges = (input.bridges ?? []).map((raw) => {
+        try {
+          return parseBridgeLine(raw).line;
+        } catch (err) {
+          throw new AppError(
+            err instanceof Error ? err.message : 'Invalid bridge line',
+            400,
+            'networkInvalidBridge',
+          );
+        }
+      });
       ConnectionPool.add({
         ...meta,
         id,
         label: input.label,
         kind: 'tor',
         upstreamConnectionId: input.upstreamConnectionId,
+        ...(bridges.length > 0 ? { bridges } : {}),
       });
     } else {
       ConnectionPool.add({

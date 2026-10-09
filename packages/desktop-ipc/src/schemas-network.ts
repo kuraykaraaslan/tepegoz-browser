@@ -52,6 +52,8 @@ export const AddNetworkConnectionSchema = z.discriminatedUnion('kind', [
     ...connectionInputBase,
     kind: z.literal('tor'),
     upstreamConnectionId: ConnectionIdSchema.nullable(),
+    /** Raw pasted bridge lines; the main process sanitizes and validates each (renderer is untrusted). */
+    bridges: z.array(z.string().min(1).max(2048)).max(16).optional(),
   }),
   z.object({
     ...connectionInputBase,

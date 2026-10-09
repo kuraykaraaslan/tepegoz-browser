@@ -127,6 +127,8 @@ export const tr: Resources = {
       "Yapılandırılmış bir bulut yapay zekâ anahtarı yok. Ayarlar → Sağlayıcılar'dan bir tane ekleyin.",
     localModelNotLoaded: 'Bu yerel model yüklü değil. Yükleyip yeniden deneyin.',
     networkNoSuchConnection: 'Bu bağlantı artık mevcut değil.',
+    networkInvalidBridge:
+      "Bu köprü satırı geçerli değil. Tor Projesi'nin gönderdiği şekliyle yapıştırın.",
     networkChainLoop:
       'Bu bağlantılar birbirine geri zincirleniyor. Birinin üst bağlantısını değiştirip yeniden deneyin.',
     networkSecretsUnavailable:

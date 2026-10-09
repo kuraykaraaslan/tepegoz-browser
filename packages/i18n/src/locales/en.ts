@@ -139,6 +139,8 @@ export const en = {
       'No cloud AI provider key is configured. Add one in Settings → Providers.',
     localModelNotLoaded: 'That local model is not loaded. Load it and try again.',
     networkNoSuchConnection: 'That connection no longer exists.',
+    networkInvalidBridge:
+      'That bridge line is not valid. Paste it exactly as the Tor Project sent it.',
     networkChainLoop:
       'Those connections chain back into each other. Change one of their upstreams and try again.',
     networkSecretsUnavailable:

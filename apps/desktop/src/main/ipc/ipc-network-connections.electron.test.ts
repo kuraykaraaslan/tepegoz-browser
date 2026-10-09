@@ -265,6 +265,33 @@ describe('networkBindGroup', () => {
   });
 });
 
+describe('networkAddConnection — Tor bridges', () => {
+  const tor = (bridges: string[]) => ({
+    kind: 'tor',
+    label: 'Onion',
+    note: '',
+    upstreamConnectionId: null,
+    bridges,
+  });
+
+  it('persists the canonical form of a pasted bridge line', async () => {
+    schemas.AddNetworkConnectionSchema.parse.mockReturnValue(
+      tor(['Bridge\u00A0\u201C192.0.2.1:9001\u201D']),
+    );
+    await call(IpcChannels.networkAddConnection, {});
+    expect(pool.add).toHaveBeenCalledWith(expect.objectContaining({ bridges: ['192.0.2.1:9001'] }));
+  });
+
+  it('400s a malformed bridge line instead of storing it', async () => {
+    schemas.AddNetworkConnectionSchema.parse.mockReturnValue(tor(['not a bridge']));
+    await expect(call(IpcChannels.networkAddConnection, {})).rejects.toMatchObject({
+      statusCode: 400,
+      code: 'networkInvalidBridge',
+    });
+    expect(pool.add).not.toHaveBeenCalled();
+  });
+});
+
 describe('networkAddConnection — Tor', () => {
   it('adds a Tor connection chained onto a known upstream', async () => {
     schemas.AddNetworkConnectionSchema.parse.mockReturnValue({

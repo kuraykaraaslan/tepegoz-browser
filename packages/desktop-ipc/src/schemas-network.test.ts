@@ -62,6 +62,14 @@ describe('AddNetworkConnectionSchema', () => {
     expect(
       AddNetworkConnectionSchema.parse({ ...base, kind: 'tor', upstreamConnectionId: null }),
     ).toMatchObject({ kind: 'tor' });
+    expect(() =>
+      AddNetworkConnectionSchema.parse({
+        ...base,
+        kind: 'tor',
+        upstreamConnectionId: null,
+        bridges: Array.from({ length: 17 }, () => '192.0.2.1:1'),
+      }),
+    ).toThrow();
     expect(
       AddNetworkConnectionSchema.parse({ ...base, kind: 'byo-socks', socksPort: 9050 }),
     ).toMatchObject({ socksPort: 9050 });
