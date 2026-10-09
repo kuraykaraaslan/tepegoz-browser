@@ -128,7 +128,10 @@ describe('starting the native binding', () => {
     getLlama.mockRejectedValueOnce(new Error('no binary yet'));
     const mod = await load();
     const eng = mod.llamaEngine();
-    await flush(); // the warm-up has failed
+    // Wait for the warm-up to actually REACH getLlama (the dynamic import ahead of it can take many ticks
+    // on a busy machine), then let its rejection settle. A fixed tick count raced the import under load.
+    await vi.waitFor(() => expect(getLlama).toHaveBeenCalledTimes(1));
+    await flush();
     expect(eng.isAvailable()).toBe(false);
     const handle = await eng.load('m1', '/models/m1.gguf', 2048);
     expect(handle).toEqual({ modelId: 'm1', ctxSize: 2048 });
