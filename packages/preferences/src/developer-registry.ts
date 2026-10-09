@@ -87,6 +87,7 @@ export const PREFERENCE_METADATA = {
   popupBlocker: stable,
   adblock: stable,
   safeBrowsingEnabled: stable,
+  httpsOnlyOnTunnel: stable,
   typo: stable,
   translate: stable,
   videoPlayer: stable,

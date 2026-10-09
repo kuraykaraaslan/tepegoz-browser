@@ -60,6 +60,8 @@ export const DEFAULT_PREFERENCES: Preferences = {
   // Safe Browsing protection on by default (ADR-0043). Inert until the desktop service + a Google
   // Safe Browsing API key are wired; the honest default is still "on".
   safeBrowsingEnabled: true,
+  // HTTPS-only on tunneled partitions: on by default.
+  httpsOnlyOnTunnel: true,
   typo: {
     enabled: true,
     autoDetectLanguage: true,

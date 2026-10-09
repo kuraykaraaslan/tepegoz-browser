@@ -222,6 +222,9 @@ export interface Preferences {
    *  database is refreshed, no full-hash request is made to Google Safe Browsing, the navigation
    *  check is skipped and every download settles `unknown` — see ADR-0043. Device-local; private. */
   safeBrowsingEnabled: boolean;
+  /** Upgrade http:// to https:// on tunneled (Tor/VPN/proxy) tabs and fail closed instead of sending
+   *  cleartext through the exit. Also the rollback switch. Private (not in PublicSettings). */
+  httpsOnlyOnTunnel: boolean;
   /** Typo extension settings. Dictionaries live in userData/dictionaries and are not persisted here. */
   typo: TypoSettings;
   /** Translate extension settings. Translation memory lives outside preferences. */

@@ -193,6 +193,8 @@ export const PreferencesSchema = z.object({
   // Safe Browsing protection (ADR-0043). On by default; off makes the whole feature inert (no prefix
   // DB refresh, no Google full-hash request, no navigation check, downloads settle `unknown`).
   safeBrowsingEnabled: z.boolean(),
+  // HTTPS-only on tunneled partitions. Private; on by default; also the rollback switch.
+  httpsOnlyOnTunnel: z.boolean(),
   // Typo extension settings. Dictionaries are profile files, not preference payloads.
   typo: z.object({
     enabled: z.boolean(),

@@ -55,6 +55,34 @@ describe('PreferenceStore', () => {
     expect(PreferenceStore.getAll().theme).toBe('system');
   });
 
+  it('defaults httpsOnlyOnTunnel to true for an old file without the key', () => {
+    writeFileSync(filePath, JSON.stringify({ locale: 'tr' }), 'utf8');
+    PreferenceStore.init({ filePath });
+    expect(PreferenceStore.getAll().httpsOnlyOnTunnel).toBe(true);
+  });
+
+  it('round-trips httpsOnlyOnTunnel=false across re-init', () => {
+    PreferenceStore.init({ filePath });
+    PreferenceStore.update({ httpsOnlyOnTunnel: false });
+    PreferenceStore.reset();
+    PreferenceStore.init({ filePath });
+    expect(PreferenceStore.getAll().httpsOnlyOnTunnel).toBe(false);
+  });
+
+  it('rejects a non-boolean httpsOnlyOnTunnel patch and leaves the store unchanged', () => {
+    PreferenceStore.init({ filePath });
+    expect(() =>
+      PreferenceStore.update({ httpsOnlyOnTunnel: 'yes' as unknown as boolean }),
+    ).toThrow();
+    expect(PreferenceStore.getAll().httpsOnlyOnTunnel).toBe(true);
+  });
+
+  it('falls back to the default when the stored httpsOnlyOnTunnel is corrupt', () => {
+    writeFileSync(filePath, JSON.stringify({ httpsOnlyOnTunnel: 'nope' }), 'utf8');
+    PreferenceStore.init({ filePath });
+    expect(PreferenceStore.getAll().httpsOnlyOnTunnel).toBe(true);
+  });
+
   it('defaults mcpServers to [] and round-trips a valid stdio server', () => {
     PreferenceStore.init({ filePath });
     expect(PreferenceStore.getAll().mcpServers).toEqual([]);
