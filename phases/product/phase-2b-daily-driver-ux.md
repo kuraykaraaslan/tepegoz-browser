@@ -201,8 +201,13 @@ work lives in Phase 2; agent orchestration (multi-tab parallelism) stays in Phas
   - [x] _Landed 2026-10-09 (unit-tested, not run in the packaged app):_ **"On startup" tabs** —
         Preferences → On startup now offers "Continue where I left off" (default, unchanged behaviour) or
         "Open the New Tab page" (`startupTabs`, private pref; hidden in kiosk mode; safe mode still never
-        restores). The "open a specific set of pages" option, link-opening behaviour, hover cards and
-        network prediction remain open.
+        restores). The "open a specific set of pages" option, hover cards and network prediction remain open.
+  - [x] _Landed 2026-10-09 (unit-tested, not run in the packaged app):_ **"switch to a new tab opened from
+        a link"** — Preferences, on by default (`switchToLinkTabs`, the long-standing behaviour). Off, a
+        plain `target=_blank` / `window.open` tab opens in the background; Ctrl/middle-click is always
+        background. "Open links in a tab not a window" needed no work: plain http(s) popups already become
+        tabs, and only popups that need a scriptable window reference, geometry or a POST body open
+        natively.
   - [x] _Landed 2026-10-09 (unit-tested, not run in the packaged app):_ **keyboard tab switching** — found
         missing while picking up the MRU item (the feature-gap table said Ctrl+Tab was "positional"; no
         binding existed at all). Registry entries in `@tepegoz/shortcuts`: Ctrl+Tab / Ctrl+PageDown next,

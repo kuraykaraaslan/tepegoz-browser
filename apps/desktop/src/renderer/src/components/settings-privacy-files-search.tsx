@@ -126,6 +126,18 @@ export function SearchStartupSection({
         </div>
       </Card>
 
+      <Card>
+        <Toggle
+          id="switch-to-link-tabs"
+          label={s.switchToLinkTabsLabel}
+          description={s.switchToLinkTabsDesc}
+          checked={prefs.switchToLinkTabs}
+          onChange={(v) => {
+            setPref({ switchToLinkTabs: v });
+          }}
+        />
+      </Card>
+
       <Card title={s.tabSwitchTitle}>
         <OptionList<TabSwitchOrder>
           name="tab-switch-order"

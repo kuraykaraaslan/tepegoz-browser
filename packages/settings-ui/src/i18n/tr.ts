@@ -89,6 +89,9 @@ export const tr: SettingsStrings = {
   tabSwitchRecent: 'En son kullanılan önce',
   tabSwitchRecentDesc:
     'Ctrl+Tab bir önce kullandığınız sekmeye döner; Ctrl’ü basılı tutup Tab’a tekrar basarak daha geriye gidebilirsiniz. Ctrl+PageUp ve Ctrl+PageDown her zaman sekme çubuğu sırasını izler.',
+  switchToLinkTabsLabel: 'Bağlantıdan açılan yeni sekmeye geç',
+  switchToLinkTabsDesc:
+    'Bir bağlantı yeni sekmede açıldığında hemen o sekmeye geçer. Okuduğunuz sayfada kalmak için kapatın; Ctrl+tıklama her zaman arka planda açar.',
 
   // --- İndirilenler ---
   downloadsTitle: 'İndirilenler',

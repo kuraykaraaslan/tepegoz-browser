@@ -81,6 +81,7 @@ const shared = vi.hoisted(() => ({
   MAX_TITLE_LENGTH: 100,
   navigationObservers: new Set(),
   popupWindowOptions: vi.fn(() => ({ __opts: true })),
+  switchToLinkTabs: vi.fn(() => true),
 }));
 vi.mock('./tabs-shared', () => shared);
 
@@ -250,6 +251,30 @@ describe('wireView', () => {
         'https://y.test/',
         expect.objectContaining({ background: false }),
       );
+    });
+
+    it('with "switch to link tabs" off, a plain target=_blank click opens in the background', () => {
+      shared.switchToLinkTabs.mockReturnValue(false);
+      const { h, run } = openHandler();
+      run({ url: 'https://y.test/', disposition: 'foreground-tab' });
+      expect(h.createTab).toHaveBeenLastCalledWith(
+        'https://y.test/',
+        expect.objectContaining({ background: true }),
+      );
+      shared.switchToLinkTabs.mockReturnValue(true);
+    });
+
+    it('with it off, a Ctrl-click is still background and the setting is not read for it', () => {
+      shared.switchToLinkTabs.mockReturnValue(false);
+      const { h, run } = openHandler();
+      shared.switchToLinkTabs.mockClear();
+      run({ url: 'https://x.test/', disposition: 'background-tab' });
+      expect(h.createTab).toHaveBeenLastCalledWith(
+        'https://x.test/',
+        expect.objectContaining({ background: true }),
+      );
+      expect(shared.switchToLinkTabs).not.toHaveBeenCalled();
+      shared.switchToLinkTabs.mockReturnValue(true);
     });
 
     it('denies a non-web target that did not need a native window', () => {

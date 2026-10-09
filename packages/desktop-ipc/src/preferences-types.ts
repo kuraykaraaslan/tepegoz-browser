@@ -279,6 +279,9 @@ export interface Preferences {
   startupTabs: StartupTabs;
   /** Ctrl+Tab / Ctrl+Shift+Tab order. Ctrl+PageUp/PageDown always follow the strip. */
   tabSwitchOrder: TabSwitchOrder;
+  /** A link that opens in a new tab (target=_blank, window.open) takes focus. Ctrl/middle-click links
+   *  still open in the background whatever this says. */
+  switchToLinkTabs: boolean;
   /** The URL kiosk mode loads fullscreen with no chrome. Only used when `startupMode` is `kiosk`. */
   kioskUrl: string;
   /** Start Tepegöz automatically at system login (Windows Run key / macOS login item / Linux XDG

@@ -90,6 +90,9 @@ export const en = {
   tabSwitchRecent: 'Most recently used first',
   tabSwitchRecentDesc:
     'Ctrl+Tab jumps back to the tab you used before; keep Ctrl held and press Tab again to go further back. Ctrl+PageUp and Ctrl+PageDown always follow the strip.',
+  switchToLinkTabsLabel: 'Switch to a new tab opened from a link',
+  switchToLinkTabsDesc:
+    'When a link opens in a new tab, go to it right away. Turn this off to keep reading the page you are on; Ctrl-click always opens in the background.',
 
   // --- Downloads ---
   downloadsTitle: 'Downloads',

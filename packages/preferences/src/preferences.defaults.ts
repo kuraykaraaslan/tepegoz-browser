@@ -116,6 +116,8 @@ export const DEFAULT_PREFERENCES: Preferences = {
   startupTabs: 'restore',
   // Strip order is the long-standing browser default; most-recently-used is opt-in.
   tabSwitchOrder: 'positional',
+  // A target=_blank link takes focus, as it always has; opt out to keep reading the page you are on.
+  switchToLinkTabs: true,
   kioskUrl: '',
   // Do not auto-start at system login by default.
   launchAtLogin: false,

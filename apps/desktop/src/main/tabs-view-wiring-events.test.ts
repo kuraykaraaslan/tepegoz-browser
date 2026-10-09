@@ -67,6 +67,7 @@ const shared = vi.hoisted(() => ({
   MAX_TITLE_LENGTH: 100,
   navigationObservers: new Set(),
   popupWindowOptions: vi.fn(() => ({ __opts: true })),
+  switchToLinkTabs: vi.fn(() => true),
 }));
 vi.mock('./tabs-shared', () => shared);
 

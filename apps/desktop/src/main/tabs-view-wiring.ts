@@ -34,6 +34,7 @@ import {
   MAX_TITLE_LENGTH,
   navigationObservers,
   popupWindowOptions,
+  switchToLinkTabs,
 } from './tabs-shared';
 
 /**
@@ -183,7 +184,7 @@ export function wireView(host: ViewWiringHost, id: string, view: WebContentsView
       details.disposition === 'background-tab'
         ? true
         : details.disposition === 'foreground-tab'
-          ? false
+          ? !switchToLinkTabs() // Ctrl/middle-click above is always background; this is the plain click
           : id !== host.store.activeId;
     // Spawned by the page → the opener is THIS tab, so the new tab inherits its group (ADR-0020).
     // The new tab inherits the OPENER'S session, not the Direct one. A page-opened tab is a

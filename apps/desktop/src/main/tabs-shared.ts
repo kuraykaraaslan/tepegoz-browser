@@ -40,6 +40,10 @@ const DEFAULT_HOME_URL = 'https://duckduckgo.com/';
 export function homeUrl(): string {
   return PreferenceStore.getAll().homepageUrl || DEFAULT_HOME_URL;
 }
+/** Whether a page-opened foreground tab (target=_blank) takes focus (from prefs). */
+export function switchToLinkTabs(): boolean {
+  return PreferenceStore.getAll().switchToLinkTabs !== false;
+}
 /** How Ctrl+Tab walks the tabs (from prefs). */
 export function tabSwitchOrder(): 'positional' | 'recent' {
   return PreferenceStore.getAll().tabSwitchOrder === 'recent' ? 'recent' : 'positional';

@@ -100,6 +100,14 @@ describe('SearchStartupSection', () => {
     expect(lastPatch(setPref)).toEqual({ customSearchEngines: [] });
   });
 
+  it('writes the "switch to link tabs" toggle, on by default', () => {
+    const { setPref } = renderSection();
+    const toggle = screen.getByRole('switch', { name: /switch to a new tab/i });
+    expect(toggle.getAttribute('aria-checked')).toBe('true');
+    fireEvent.click(toggle);
+    expect(setPref).toHaveBeenCalledWith({ switchToLinkTabs: false });
+  });
+
   it('writes the Ctrl+Tab order, strip order by default', () => {
     const { setPref } = renderSection();
     const radios = document.querySelectorAll<HTMLInputElement>('input[name="tab-switch-order"]');

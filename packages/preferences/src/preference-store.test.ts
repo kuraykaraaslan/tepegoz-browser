@@ -147,6 +147,16 @@ describe('PreferenceStore', () => {
     expect(PreferenceStore.getAll().tabSwitchOrder).toBe('recent');
   });
 
+  it('defaults switchToLinkTabs to on for an old file, and round-trips off', () => {
+    writeFileSync(filePath, JSON.stringify({ locale: 'tr' }), 'utf8');
+    PreferenceStore.init({ filePath });
+    expect(PreferenceStore.getAll().switchToLinkTabs).toBe(true);
+    PreferenceStore.update({ switchToLinkTabs: false });
+    PreferenceStore.reset();
+    PreferenceStore.init({ filePath });
+    expect(PreferenceStore.getAll().switchToLinkTabs).toBe(false);
+  });
+
   it('defaults mcpServers to [] and round-trips a valid stdio server', () => {
     PreferenceStore.init({ filePath });
     expect(PreferenceStore.getAll().mcpServers).toEqual([]);
