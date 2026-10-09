@@ -364,6 +364,11 @@ export const tr: SettingsStrings = {
       'Seçilen kategoriler tarayıcı her kapandığında temizlenir. Varsayılan olarak hiçbiri seçili değildir.',
     // Diğer tarayıcılardan farkı burada: süreç öldürülmüşse çıkış kancası çalışamaz; bu yüzden bu
     // temizlik bir sonraki açılışta da tamamlanır.
+    keepSitesLabel: 'Bu siteler için çerezleri ve site verilerini koru',
+    keepSitesPlaceholder: 'example.com',
+    keepSitesHint:
+      'Her satıra bir site, en fazla {max}. Listelenen site, alt alan adları dâhil tüm çerezlerini korur. Diğer saklanan verileri (yerel depolama, IndexedDB) yalnızca tam o adres için korunur.',
+    keepSitesInvalid: 'Her satır example.com gibi bir site adresi olmalı.',
     onExitNote: 'Tarayıcı beklenmedik şekilde kapanırsa temizlik bir sonraki açılışta tamamlanır.',
     confirm: 'Verileri temizle',
     clearing: 'Temizleniyor…',

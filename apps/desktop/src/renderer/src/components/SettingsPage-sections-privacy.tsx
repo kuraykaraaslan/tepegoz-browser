@@ -370,6 +370,10 @@ export function privacyAndAdvancedSections(ctx: SettingsSectionsCtx): SettingsSe
               onChange={(clearOnExit) => {
                 setPref({ clearOnExit });
               }}
+              keepSites={prefs.clearOnExitKeepSites}
+              onChangeKeepSites={(clearOnExitKeepSites) => {
+                setPref({ clearOnExitKeepSites });
+              }}
             />
             <div>
               <p className="text-sm font-medium text-text-primary">{s.clearHistoryLabel}</p>

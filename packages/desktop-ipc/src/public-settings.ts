@@ -71,6 +71,7 @@ export const SETTINGS_VISIBILITY: Record<keyof Preferences, 'public' | 'private'
   downloadDirectory: 'private',
   downloadAskEachTime: 'private',
   clearOnExit: 'private',
+  clearOnExitKeepSites: 'private',
   // Private like every other download setting: a page has no business reading how the user keeps
   // their download list, and a browsing-habit signal is exactly what a fingerprinting script wants.
   downloadHistoryRetention: 'private',

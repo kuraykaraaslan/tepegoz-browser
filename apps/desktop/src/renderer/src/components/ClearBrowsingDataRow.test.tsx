@@ -35,10 +35,19 @@ beforeEach(() => {
 afterEach(cleanup);
 
 describe('ClearOnExitRow', () => {
-  function renderRow(selected: BrowsingDataCategory[] = []) {
+  function renderRow(selected: BrowsingDataCategory[] = [], keepSites: string[] = []) {
     const onChange = vi.fn();
-    render(<ClearOnExitRow s={s} selected={selected} onChange={onChange} />);
-    return { onChange };
+    const onChangeKeepSites = vi.fn();
+    render(
+      <ClearOnExitRow
+        s={s}
+        selected={selected}
+        onChange={onChange}
+        keepSites={keepSites}
+        onChangeKeepSites={onChangeKeepSites}
+      />,
+    );
+    return { onChange, onChangeKeepSites };
   }
 
   it('adds an unchecked category on toggle', () => {
@@ -51,6 +60,54 @@ describe('ClearOnExitRow', () => {
     const { onChange } = renderRow(['history', 'cookies']);
     fireEvent.click(screen.getByRole('checkbox', { name: /browsing history/i }));
     expect(onChange).toHaveBeenCalledWith(['cookies']);
+  });
+});
+
+describe('ClearOnExitRow — keep these sites', () => {
+  const box = () => screen.getByLabelText<HTMLTextAreaElement>(s.clearData.keepSitesLabel);
+  function renderRow(selected: BrowsingDataCategory[], keepSites: string[] = []) {
+    const onChangeKeepSites = vi.fn();
+    render(
+      <ClearOnExitRow
+        s={s}
+        selected={selected}
+        onChange={vi.fn()}
+        keepSites={keepSites}
+        onChangeKeepSites={onChangeKeepSites}
+      />,
+    );
+    return { onChangeKeepSites };
+  }
+
+  it('is offered only while cookies are part of the exit clear', () => {
+    renderRow(['history']);
+    expect(screen.queryByLabelText(s.clearData.keepSitesLabel)).toBeNull();
+    cleanup();
+    renderRow(['cookies']);
+    expect(box()).toBeTruthy();
+  });
+
+  it('shows the stored hosts one per line', () => {
+    renderRow(['cookies'], ['a.example.com', 'b.example.org']);
+    expect(box().value).toBe('a.example.com\nb.example.org');
+  });
+
+  it('stores normalized, de-duplicated hosts when the box is left', () => {
+    const { onChangeKeepSites } = renderRow(['cookies']);
+    fireEvent.change(box(), {
+      target: { value: 'https://Example.com/login\n\nexample.com\n www.shop.test ' },
+    });
+    fireEvent.blur(box());
+    expect(onChangeKeepSites).toHaveBeenCalledWith(['example.com', 'www.shop.test']);
+  });
+
+  it('stores nothing and says so while any line is not a site', () => {
+    const { onChangeKeepSites } = renderRow(['cookies']);
+    fireEvent.change(box(), { target: { value: 'example.com\nnot a site' } });
+    fireEvent.blur(box());
+    expect(onChangeKeepSites).not.toHaveBeenCalled();
+    expect(screen.getByText(s.clearData.keepSitesInvalid)).toBeTruthy();
+    expect(box().getAttribute('aria-invalid')).toBe('true');
   });
 });
 

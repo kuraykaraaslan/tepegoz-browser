@@ -5,6 +5,7 @@ import {
   NetworkConnectionSchema,
   NetworkGeneralBindingSchema,
   isNavigableWebUrl,
+  normalizeSiteHost,
   isSecureDnsServerUrl,
   isSafeSearchTemplate,
   type WebPermissionCapability,
@@ -136,6 +137,19 @@ export const PreferencesSchema = z.object({
    * for the same act is how one of them ends up quietly narrower than the other.
    */
   clearOnExit: z.array(BrowsingDataCategorySchema).max(8),
+  // Sites whose cookies and site data the exit clear leaves alone. Stored already normalized, so a
+  // hand-edited file cannot smuggle in something the clear would then misread.
+  clearOnExitKeepSites: z
+    .array(
+      z
+        .string()
+        .max(253)
+        .refine(
+          (v) => normalizeSiteHost(v) === v,
+          'clearOnExitKeepSites entries must be bare hosts',
+        ),
+    )
+    .max(50),
   /**
    * How long a finished download stays in the list. `manual` is the default and the only one that
    * never deletes anything on its own — a download list that quietly empties itself is a list the

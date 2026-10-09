@@ -76,6 +76,7 @@ export const PREFERENCE_METADATA = {
   downloadDirectory: stable,
   downloadAskEachTime: stable,
   clearOnExit: stable,
+  clearOnExitKeepSites: stable,
   downloadHistoryRetention: stable,
   showDownloadsWhenDone: stable,
   // Read once at startup, before `whenReady` (crash-reporter-boot.ts).

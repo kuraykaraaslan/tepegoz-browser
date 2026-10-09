@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import { Button, Modal } from '@tepegoz/ui';
+import { useCommitOnPause } from '../lib/use-commit-on-pause';
 import type { SettingsStrings } from '@tepegoz/settings-ui';
 import {
   BROWSING_DATA_CATEGORIES,
   BROWSING_DATA_RANGES,
   isTimeRangeable,
+  normalizeSiteHost,
   type BrowsingDataCategory,
   type BrowsingDataClearResult,
   type BrowsingDataRange,
@@ -36,16 +38,42 @@ const DEFAULT_SELECTION: BrowsingDataCategory[] = ['history', 'cookies', 'cache'
  * choose. This one is finished at the next launch when that happens, and saying so is what makes the
  * difference worth having.
  */
+const MAX_KEEP_SITES = 50;
+
+/** The distinct, normalized hosts in the keep-sites box (one per line); blank lines are ignored. */
+function parseKeepSites(text: string): { hosts: string[]; invalid: boolean } {
+  const lines = text
+    .split('\n')
+    .map((l) => l.trim())
+    .filter((l) => l !== '');
+  const hosts = lines.map((l) => normalizeSiteHost(l));
+  return {
+    hosts: [...new Set(hosts.filter((h) => h !== ''))],
+    invalid: hosts.some((h) => h === '') || new Set(hosts).size > MAX_KEEP_SITES,
+  };
+}
+
 export function ClearOnExitRow({
   s,
   selected,
   onChange,
+  keepSites,
+  onChangeKeepSites,
 }: {
   s: SettingsStrings;
   selected: readonly BrowsingDataCategory[];
   onChange: (next: BrowsingDataCategory[]) => void;
+  keepSites: readonly string[];
+  onChangeKeepSites: (next: string[]) => void;
 }) {
   const t = s.clearData;
+  // Committed on pause/blur; nothing is stored while any line is not a host (the schema would refuse it,
+  // and a silent failed write would leave the box showing text that is not saved).
+  const sites = useCommitOnPause(keepSites.join('\n'), (value) => {
+    const parsed = parseKeepSites(value);
+    if (!parsed.invalid) onChangeKeepSites(parsed.hosts);
+  });
+  const sitesInvalid = parseKeepSites(sites.draft).invalid;
   return (
     <div>
       <p className="text-sm font-medium text-text-primary">{t.onExitTitle}</p>
@@ -68,6 +96,38 @@ export function ClearOnExitRow({
           </label>
         ))}
       </div>
+      {selected.includes('cookies') && (
+        <div className="mt-3 space-y-1">
+          <label
+            htmlFor="clear-on-exit-keep-sites"
+            className="block text-sm font-medium text-text-primary"
+          >
+            {t.keepSitesLabel}
+          </label>
+          <textarea
+            id="clear-on-exit-keep-sites"
+            rows={3}
+            spellCheck={false}
+            className={`w-full resize-y rounded-md border bg-surface-raised px-3 py-2 text-sm text-text-primary placeholder:text-text-disabled focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus ${sitesInvalid ? 'border-error' : 'border-border'}`}
+            placeholder={t.keepSitesPlaceholder}
+            value={sites.draft}
+            aria-invalid={sitesInvalid}
+            aria-describedby="clear-on-exit-keep-sites-hint"
+            onChange={(e) => {
+              sites.set(e.target.value);
+            }}
+            onBlur={sites.flush}
+          />
+          <p
+            id="clear-on-exit-keep-sites-hint"
+            className={`text-xs ${sitesInvalid ? 'text-error-fg' : 'text-text-secondary'}`}
+          >
+            {sitesInvalid
+              ? t.keepSitesInvalid
+              : t.keepSitesHint.replace('{max}', String(MAX_KEEP_SITES))}
+          </p>
+        </div>
+      )}
       <p className="mt-2 text-xs text-text-secondary">{t.onExitNote}</p>
     </div>
   );

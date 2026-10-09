@@ -35,7 +35,11 @@ const sessions = vi.hoisted(
   (): {
     list: {
       partition: string;
-      session: { clearStorageData: () => Promise<void>; clearCache: () => Promise<void> };
+      session: {
+        clearStorageData: () => Promise<void>;
+        clearData: () => Promise<void>;
+        clearCache: () => Promise<void>;
+      };
     }[];
   } => ({ list: [] }),
 );
@@ -51,6 +55,7 @@ const partition = (ok = true) => ({
     clearStorageData: ok
       ? vi.fn(() => Promise.resolve())
       : vi.fn(() => Promise.reject(new Error('no'))),
+    clearData: ok ? vi.fn(() => Promise.resolve()) : vi.fn(() => Promise.reject(new Error('no'))),
     clearCache: ok ? vi.fn(() => Promise.resolve()) : vi.fn(() => Promise.reject(new Error('no'))),
   },
 });
@@ -150,6 +155,47 @@ describe('the Chromium half', () => {
     });
     expect(p2.session.clearCache).toHaveBeenCalled();
     expect(r).toMatchObject({ cookiePartitions: 2, cachePartitions: 2, failed: [] });
+  });
+
+  describe('with sites to keep (clear-on-exit)', () => {
+    it('clears by origin, EXCLUDING both schemes of every kept host', async () => {
+      const p1 = partition();
+      sessions.list = [p1];
+      const r = await clearBrowsingData(DB, req(['cookies']), 0, {
+        keepSites: ['example.com', 'shop.test'],
+      });
+      expect(p1.session.clearData).toHaveBeenCalledWith({
+        dataTypes: ['cookies', 'localStorage', 'indexedDB', 'serviceWorkers', 'fileSystems'],
+        excludeOrigins: [
+          'https://example.com',
+          'http://example.com',
+          'https://shop.test',
+          'http://shop.test',
+        ],
+      });
+      // What `clearData` cannot filter by origin is cleared outright rather than left behind.
+      expect(p1.session.clearStorageData).toHaveBeenCalledWith({
+        storages: ['cachestorage', 'shadercache'],
+      });
+      expect(r).toMatchObject({ cookiePartitions: 1, failed: [] });
+    });
+
+    it('does the plain all-or-nothing clear when there is nothing to keep', async () => {
+      const p1 = partition();
+      sessions.list = [p1];
+      await clearBrowsingData(DB, req(['cookies']), 0, { keepSites: [] });
+      expect(p1.session.clearData).not.toHaveBeenCalled();
+      expect(p1.session.clearStorageData).toHaveBeenCalledTimes(1);
+    });
+
+    it('applies the same exclusions to EVERY browsing partition, tunnels included', async () => {
+      const a = partition();
+      const b = partition();
+      sessions.list = [a, b];
+      await clearBrowsingData(DB, req(['cookies']), 0, { keepSites: ['example.com'] });
+      expect(a.session.clearData).toHaveBeenCalledTimes(1);
+      expect(b.session.clearData).toHaveBeenCalledTimes(1);
+    });
   });
 
   it('reports cookies/cache failed only when there were targets and none cleared', async () => {

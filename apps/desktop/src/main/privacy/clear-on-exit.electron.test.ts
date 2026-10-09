@@ -9,13 +9,25 @@ import type { BrowsingDataClearRequest } from '@tepegoz/shared-types';
  * the setting does nothing on the one exit the user did not choose. This module closes that with a
  * marker, and these tests are about the marker, because the marker IS the feature.
  */
-const prefs = vi.hoisted(() => ({ value: { clearOnExit: [] as string[] } }));
+const prefs = vi.hoisted(() => ({
+  value: { clearOnExit: [] as string[], clearOnExitKeepSites: [] as string[] },
+}));
 vi.mock('@tepegoz/preferences', () => ({ default: { getAll: () => prefs.value } }));
 
-const cleared = vi.hoisted(() => ({ calls: [] as BrowsingDataClearRequest[], fail: false }));
+const cleared = vi.hoisted(() => ({
+  calls: [] as BrowsingDataClearRequest[],
+  keep: [] as (readonly string[] | undefined)[],
+  fail: false,
+}));
 vi.mock('./clear-browsing-data.electron', () => ({
-  clearBrowsingData: (_db: unknown, request: BrowsingDataClearRequest) => {
+  clearBrowsingData: (
+    _db: unknown,
+    request: BrowsingDataClearRequest,
+    _now?: number,
+    opts?: { keepSites?: readonly string[] },
+  ) => {
     cleared.calls.push(request);
+    cleared.keep.push(opts?.keepSites);
     return cleared.fail ? Promise.reject(new Error('nope')) : Promise.resolve({});
   },
 }));
@@ -29,8 +41,9 @@ let db: Db;
 beforeEach(() => {
   db = openDatabase(':memory:');
   migrate(db);
-  prefs.value = { clearOnExit: [] };
+  prefs.value = { clearOnExit: [], clearOnExitKeepSites: [] };
   cleared.calls = [];
+  cleared.keep = [];
   cleared.fail = false;
 });
 
@@ -38,7 +51,7 @@ describe('settleClearOnExit', () => {
   it('finishes what a killed session left owing, then arms this one', async () => {
     // The previous run set the marker and never got to remove it — a crash, a kill, a flat battery.
     MetaStore.set(db, PENDING_KEY, JSON.stringify(['history', 'cookies']));
-    prefs.value = { clearOnExit: ['cache'] };
+    prefs.value = { clearOnExit: ['cache'], clearOnExitKeepSites: [] };
 
     await settleClearOnExit(db);
 
@@ -48,7 +61,7 @@ describe('settleClearOnExit', () => {
   });
 
   it('clears nothing when the previous session had nothing owing', async () => {
-    prefs.value = { clearOnExit: ['history'] };
+    prefs.value = { clearOnExit: ['history'], clearOnExitKeepSites: [] };
     await settleClearOnExit(db);
     expect(cleared.calls).toEqual([]);
     expect(pendingCategories(db)).toEqual(['history']);
@@ -56,7 +69,7 @@ describe('settleClearOnExit', () => {
 
   it('disarms the marker when the preference is turned off', async () => {
     MetaStore.set(db, PENDING_KEY, JSON.stringify(['history']));
-    prefs.value = { clearOnExit: [] };
+    prefs.value = { clearOnExit: [], clearOnExitKeepSites: [] };
     await settleClearOnExit(db);
     expect(pendingCategories(db)).toEqual([]);
   });
@@ -83,7 +96,7 @@ describe('settleClearOnExit', () => {
 describe('clearOnExitNow', () => {
   it('runs the configured clear and retires the marker once it finishes', async () => {
     MetaStore.set(db, PENDING_KEY, JSON.stringify(['history']));
-    prefs.value = { clearOnExit: ['history'] };
+    prefs.value = { clearOnExit: ['history'], clearOnExitKeepSites: [] };
 
     clearOnExitNow(db);
     await Promise.resolve();
@@ -96,7 +109,7 @@ describe('clearOnExitNow', () => {
   it('LEAVES the marker when the clear fails, so the next launch does it', async () => {
     // The whole design in one case: only a clear that finished may retire the marker.
     MetaStore.set(db, PENDING_KEY, JSON.stringify(['history']));
-    prefs.value = { clearOnExit: ['history'] };
+    prefs.value = { clearOnExit: ['history'], clearOnExitKeepSites: [] };
     cleared.fail = true;
 
     clearOnExitNow(db);
@@ -113,7 +126,7 @@ describe('clearOnExitNow', () => {
 
   it('swallows a MetaStore write failure while retiring the marker — the DB may be closing', async () => {
     MetaStore.set(db, PENDING_KEY, JSON.stringify(['history']));
-    prefs.value = { clearOnExit: ['history'] };
+    prefs.value = { clearOnExit: ['history'], clearOnExitKeepSites: [] };
     const setSpy = vi.spyOn(MetaStore, 'set').mockImplementation(() => {
       throw new Error('database is closing');
     });
@@ -127,5 +140,38 @@ describe('clearOnExitNow', () => {
       setSpy.mockRestore();
     }
     expect(cleared.calls).toEqual([{ range: 'all-time', categories: ['history'] }]);
+  });
+});
+
+describe('sites to keep', () => {
+  it('passes the configured hosts to the quit-time clear', async () => {
+    prefs.value = { clearOnExit: ['cookies'], clearOnExitKeepSites: ['example.com'] };
+    clearOnExitNow(db);
+    await Promise.resolve();
+    expect(cleared.keep).toEqual([['example.com']]);
+  });
+
+  it('passes them to the catch-up clear of a killed session as well', async () => {
+    MetaStore.set(db, PENDING_KEY, JSON.stringify(['cookies']));
+    prefs.value = { clearOnExit: ['cookies'], clearOnExitKeepSites: ['example.com'] };
+    await settleClearOnExit(db);
+    expect(cleared.keep).toEqual([['example.com']]);
+  });
+
+  it('drops anything that is not an already-normalized host (a hand-edited file)', async () => {
+    prefs.value = {
+      clearOnExit: ['cookies'],
+      clearOnExitKeepSites: [
+        'example.com',
+        'Example.COM',
+        'https://x.test/',
+        '',
+        'nodot',
+        5 as never,
+      ],
+    };
+    clearOnExitNow(db);
+    await Promise.resolve();
+    expect(cleared.keep).toEqual([['example.com']]);
   });
 });

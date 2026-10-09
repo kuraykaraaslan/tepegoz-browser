@@ -43,6 +43,7 @@ export const DEFAULT_PREFERENCES: Preferences = {
   downloadDirectory: '',
   downloadAskEachTime: false,
   clearOnExit: [],
+  clearOnExitKeepSites: [],
   downloadHistoryRetention: 'manual',
   showDownloadsWhenDone: true,
   crashReportingEnabled: false,

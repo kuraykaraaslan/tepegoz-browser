@@ -106,3 +106,27 @@ export function isSecureDnsServerUrl(value: string): boolean {
     parsed.hostname !== ''
   );
 }
+
+/**
+ * Reduce what a person typed for a "site" (`Example.com`, `https://www.example.com/path?x`) to the bare
+ * lowercase host the rest of the code compares, or `''` when it is not one. Used for lists of sites a
+ * setting applies to; the stored form is always the normalized one, so equality is a plain string compare.
+ *
+ * A host needs a dot (so `com` or a typo like `exmaple` is refused rather than silently matching nothing)
+ * or to be `localhost`; IPv4 literals pass, a port, userinfo or whitespace do not.
+ */
+export function normalizeSiteHost(input: string): string {
+  const trimmed = input.trim();
+  if (trimmed === '' || /\s/.test(trimmed)) return '';
+  let host: string;
+  try {
+    host = new URL(/^[a-z][a-z0-9+.-]*:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`)
+      .hostname;
+  } catch {
+    return '';
+  }
+  host = host.toLowerCase().replace(/\.$/, '');
+  if (host.length === 0 || host.length > 253) return '';
+  if (!/^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)*$/.test(host)) return '';
+  return host === 'localhost' || host.includes('.') ? host : '';
+}

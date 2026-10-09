@@ -215,6 +215,21 @@ describe('PreferenceStore', () => {
     expect(PreferenceStore.getAll().doNotTrack).toBe(true);
   });
 
+  it('keeps clearOnExitKeepSites empty by default, round-trips hosts, and refuses a non-host', () => {
+    writeFileSync(filePath, JSON.stringify({ locale: 'tr' }), 'utf8');
+    PreferenceStore.init({ filePath });
+    expect(PreferenceStore.getAll().clearOnExitKeepSites).toEqual([]);
+    PreferenceStore.update({ clearOnExitKeepSites: ['example.com'] });
+    PreferenceStore.reset();
+    PreferenceStore.init({ filePath });
+    expect(PreferenceStore.getAll().clearOnExitKeepSites).toEqual(['example.com']);
+    // Not stored in normalized form → the schema refuses it, so the clear never has to guess.
+    expect(() =>
+      PreferenceStore.update({ clearOnExitKeepSites: ['https://Example.com/'] }),
+    ).toThrow();
+    expect(PreferenceStore.getAll().clearOnExitKeepSites).toEqual(['example.com']);
+  });
+
   it('defaults httpsFirstEverywhere to off for an old file, and round-trips on', () => {
     writeFileSync(filePath, JSON.stringify({ locale: 'tr' }), 'utf8');
     PreferenceStore.init({ filePath });

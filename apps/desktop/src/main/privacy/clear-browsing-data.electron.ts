@@ -34,10 +34,16 @@ import BrowsingSessions from '../network/browsing-sessions.electron';
  * whole point of a single clear button is that the user stops checking, so it has to be the one place
  * that cannot quietly do less than it says.
  */
+/** The origins `excludeOrigins` needs for a list of kept hosts: both schemes, since a site is one or the other. */
+export function keptOrigins(hosts: readonly string[]): string[] {
+  return hosts.flatMap((h) => [`https://${h}`, `http://${h}`]);
+}
+
 export async function clearBrowsingData(
   db: Db | null,
   request: BrowsingDataClearRequest,
   now = Date.now(),
+  opts: { keepSites?: readonly string[] } = {},
 ): Promise<BrowsingDataClearResult> {
   const cutoff = browsingDataCutoff(request.range, now);
   const wanted = new Set<BrowsingDataCategory>(request.categories);
@@ -97,19 +103,31 @@ export async function clearBrowsingData(
 
   if (wanted.has('cookies')) {
     let cleared = 0;
+    const keepOrigins = keptOrigins(opts.keepSites ?? []);
     for (const { partition, session: ses } of targets) {
       try {
-        await ses.clearStorageData({
-          storages: [
-            'cookies',
-            'localstorage',
-            'indexdb',
-            'cachestorage',
-            'serviceworkers',
-            'shadercache',
-            'filesystem',
-          ],
-        });
+        if (keepOrigins.length > 0) {
+          // `excludeOrigins` takes cookies at the registrable-domain level (the site, as a person means
+          // it) and the other storage per origin. Cache Storage and the shader cache have no origin
+          // filter in this API, so they are cleared outright below.
+          await ses.clearData({
+            dataTypes: ['cookies', 'localStorage', 'indexedDB', 'serviceWorkers', 'fileSystems'],
+            excludeOrigins: keepOrigins,
+          });
+          await ses.clearStorageData({ storages: ['cachestorage', 'shadercache'] });
+        } else {
+          await ses.clearStorageData({
+            storages: [
+              'cookies',
+              'localstorage',
+              'indexdb',
+              'cachestorage',
+              'serviceworkers',
+              'shadercache',
+              'filesystem',
+            ],
+          });
+        }
         cleared++;
       } catch (err) {
         Logger.warn('Clear browsing data: a partition refused a storage clear', {

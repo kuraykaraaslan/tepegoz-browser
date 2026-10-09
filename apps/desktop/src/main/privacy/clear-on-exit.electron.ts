@@ -1,7 +1,11 @@
 import { Logger } from '@tepegoz/libs';
 import PreferenceStore from '@tepegoz/preferences';
 import { MetaStore, type Db } from '@tepegoz/persistence';
-import { BrowsingDataCategorySchema, type BrowsingDataCategory } from '@tepegoz/shared-types';
+import {
+  BrowsingDataCategorySchema,
+  normalizeSiteHost,
+  type BrowsingDataCategory,
+} from '@tepegoz/shared-types';
 import { clearBrowsingData } from './clear-browsing-data.electron';
 
 /**
@@ -39,6 +43,16 @@ export function configuredCategories(): BrowsingDataCategory[] {
   });
 }
 
+/** The sites the exit clear must leave alone, ignoring anything that is not a bare host. */
+export function configuredKeepSites(): string[] {
+  const raw: unknown = PreferenceStore.getAll().clearOnExitKeepSites;
+  if (!Array.isArray(raw)) return [];
+  return raw.flatMap((v) => {
+    const host = typeof v === 'string' ? normalizeSiteHost(v) : '';
+    return host !== '' && host === v ? [host] : [];
+  });
+}
+
 /** What the previous session left owing. Empty when nothing is pending or the marker is unreadable. */
 export function pendingCategories(db: Db): BrowsingDataCategory[] {
   const raw = MetaStore.get(db, PENDING_KEY);
@@ -67,7 +81,9 @@ export async function settleClearOnExit(db: Db | null): Promise<void> {
     Logger.info('Finishing a clear-on-exit the previous session did not complete', {
       categories: owed.join(','),
     });
-    await clearBrowsingData(db, { range: 'all-time', categories: owed });
+    await clearBrowsingData(db, { range: 'all-time', categories: owed }, Date.now(), {
+      keepSites: configuredKeepSites(),
+    });
     MetaStore.set(db, PENDING_KEY, '');
   }
   const next = configuredCategories();
@@ -83,7 +99,9 @@ export function clearOnExitNow(db: Db | null): void {
   if (db === null) return;
   const categories = configuredCategories();
   if (categories.length === 0) return;
-  void clearBrowsingData(db, { range: 'all-time', categories }).then(
+  void clearBrowsingData(db, { range: 'all-time', categories }, Date.now(), {
+    keepSites: configuredKeepSites(),
+  }).then(
     () => {
       // Only a clear that finished may retire the marker. Anything else leaves it for the next launch.
       try {

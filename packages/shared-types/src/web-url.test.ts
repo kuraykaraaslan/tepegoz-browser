@@ -3,6 +3,7 @@ import {
   isNavigableWebUrl,
   isSafeSearchTemplate,
   isSecureDnsServerUrl,
+  normalizeSiteHost,
   normalizeWebUrlInput,
 } from './web-url';
 
@@ -104,4 +105,28 @@ describe('isSecureDnsServerUrl', () => {
     'https://',
     'not a url',
   ])('rejects %j', (v) => expect(isSecureDnsServerUrl(v)).toBe(false));
+});
+
+describe('normalizeSiteHost', () => {
+  it.each([
+    ['example.com', 'example.com'],
+    ['  Example.COM ', 'example.com'],
+    ['https://www.example.com/path?x=1#y', 'www.example.com'],
+    ['http://example.com:8080/', 'example.com'],
+    ['example.com.', 'example.com'],
+    ['localhost', 'localhost'],
+    ['127.0.0.1', '127.0.0.1'],
+  ])('reduces %j to %j', (input, host) => expect(normalizeSiteHost(input)).toBe(host));
+
+  it.each([
+    '',
+    '   ',
+    'com',
+    'exmaple',
+    'two words.com',
+    'a..b.com',
+    '-bad.com',
+    'http://',
+    'user:pw@x.com y',
+  ])('refuses %j', (input) => expect(normalizeSiteHost(input)).toBe(''));
 });

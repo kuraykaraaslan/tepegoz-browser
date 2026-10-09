@@ -213,6 +213,9 @@ export interface Preferences {
   downloadAskEachTime: boolean;
   /** Categories cleared when the browser closes; empty is off. Same vocabulary as the clear dialog. */
   clearOnExit: ('history' | 'downloads' | 'cookies' | 'cache' | 'agentHistory')[];
+  /** Hosts whose cookies and site data the exit clear keeps (normalized, up to 50). Only meaningful with
+   *  `cookies` in `clearOnExit`. A kept host keeps its whole site's cookies; storage only for that host. */
+  clearOnExitKeepSites: string[];
   /** How long a finished download stays in the LIST. Files on disk are never involved. */
   downloadHistoryRetention: 'manual' | 'after-day' | 'on-completion';
   /** Open the transfers panel when a transfer reaches its end. */

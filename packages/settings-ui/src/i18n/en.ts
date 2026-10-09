@@ -367,6 +367,11 @@ export const en = {
       'Chosen categories are cleared every time the browser closes. Nothing is selected by default.',
     // Worth saying, because it is the difference from how other browsers ship this: a quit handler
     // cannot run if the process was killed, so this one also finishes on the next launch.
+    keepSitesLabel: 'Keep cookies and site data for these sites',
+    keepSitesPlaceholder: 'example.com',
+    keepSitesHint:
+      'One site per line, up to {max}. A listed site keeps all of its cookies, including its subdomains. Its other stored data (local storage, IndexedDB) is kept for that exact address only.',
+    keepSitesInvalid: 'Each line must be a site address such as example.com.',
     onExitNote:
       'If the browser is closed unexpectedly, the clear is finished the next time it starts.',
     confirm: 'Clear data',
