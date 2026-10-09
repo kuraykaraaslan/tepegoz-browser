@@ -198,6 +198,7 @@ export const PreferencesSchema = z.object({
   safeBrowsingEnabled: z.boolean(),
   // HTTPS-only on tunneled partitions. Private; on by default; also the rollback switch.
   httpsOnlyOnTunnel: z.boolean(),
+  httpsFirstEverywhere: z.boolean(),
   preloadPages: z.boolean(),
   // Typo extension settings. Dictionaries are profile files, not preference payloads.
   typo: z.object({

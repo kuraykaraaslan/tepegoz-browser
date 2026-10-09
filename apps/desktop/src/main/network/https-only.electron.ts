@@ -65,7 +65,7 @@ export function addHttpsOnlyBypass(partition: string, host: string): void {
 /** The kind of tunnel a partition is bound to. An unknown connection is never treated as Tor. */
 export function tunnelKindOfPartition(partition: string): TunnelKind {
   const id = connectionIdOfPartition(partition);
-  if (id === null) return 'unknown';
+  if (id === null) return 'direct'; // not bound to any connection
   switch (ConnectionPool.get(id)?.kind) {
     case 'tor':
       return 'tor';
@@ -81,6 +81,8 @@ export function tunnelKindOfPartition(partition: string): TunnelKind {
 /** Proper-noun label for the interstitial's `{tunnel}` placeholder. */
 export function tunnelLabel(kind: TunnelKind): string {
   switch (kind) {
+    case 'direct':
+      return '';
     case 'tor':
       return 'Tor';
     case 'vpn':
@@ -143,7 +145,9 @@ function handle(
   details: Electron.OnBeforeRequestListenerDetails,
   partition: string,
 ): Electron.CallbackResponse | undefined {
-  if (!PreferenceStore.getAll().httpsOnlyOnTunnel) return undefined;
+  const kind = tunnelKindOfPartition(partition);
+  const prefs = PreferenceStore.getAll();
+  if (!(kind === 'direct' ? prefs.httpsFirstEverywhere : prefs.httpsOnlyOnTunnel)) return undefined;
   // An unparseable URL would be waved through by the pure core; here it throws and so fails closed.
   const requestHost = normalizeHost(new URL(details.url).hostname);
   const top = topLevelHost(details);
@@ -152,7 +156,7 @@ function handle(
     url: details.url,
     method: details.method,
     resourceType: details.resourceType,
-    tunnelKind: tunnelKindOfPartition(partition),
+    tunnelKind: kind,
     enabled: true,
     // A bypass covers the host the user clicked through for — not third parties its page happens to load.
     bypassed:
@@ -184,10 +188,21 @@ export function httpsOnlyHandler(
   // Cheapest checks first: this runs for every request in every session.
   if (!/^(?:http|ws):/i.test(details.url)) return undefined;
   const partition = ctx?.partition;
-  if (partition === undefined || !isTunneledPartition(partition)) return undefined;
+  if (partition === undefined) return undefined;
+  const tunneled = isTunneledPartition(partition);
+  // A Direct session is only ever touched for a top-level GET navigation, and that test is cheap — so the
+  // (copying) preference read below is never paid for the page's sub-resources.
+  if (!tunneled && !(details.resourceType === 'mainFrame' && details.method === 'GET')) {
+    return undefined;
+  }
   try {
     return handle(details, partition);
   } catch (err: unknown) {
+    if (!tunneled) {
+      // The everywhere mode is a convenience, not a containment: if it cannot decide, the page loads.
+      Logger.warn('HTTPS-first handler failed; letting the request through', { err: String(err) });
+      return undefined;
+    }
     Logger.warn('HTTPS-only handler failed; cancelling on a tunnel partition', {
       err: String(err),
     });

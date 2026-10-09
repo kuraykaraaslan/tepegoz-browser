@@ -237,6 +237,9 @@ export interface Preferences {
   /** Upgrade http:// to https:// on tunneled (Tor/VPN/proxy) tabs and fail closed instead of sending
    *  cleartext through the exit. Also the rollback switch. Private (not in PublicSettings). */
   httpsOnlyOnTunnel: boolean;
+  /** Try https:// first for top-level navigations on EVERY tab (Chrome's HTTPS-First), with a warning page
+   *  and a per-site bypass when a site has no https. Local-network hosts are exempt. */
+  httpsFirstEverywhere: boolean;
   /** Let Chromium pre-resolve the hostnames a page links to (a speed win). Off sends
    *  `X-DNS-Prefetch-Control: off` on normal tabs; tunnel tabs never pre-resolve either way. */
   preloadPages: boolean;

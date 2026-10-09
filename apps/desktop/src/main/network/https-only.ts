@@ -9,7 +9,13 @@
  * because the tunnel proxy is deny-by-default for them and cleartext must never leave.
  */
 
-export type TunnelKind = 'tor' | 'vpn' | 'socks' | 'unknown';
+/**
+ * What the partition is bound to. `'direct'` is not a tunnel at all: it is the HTTPS-first-everywhere mode
+ * applied to an ordinary (or private) window, which follows Chrome's HTTPS-First model rather than the
+ * tunnel's fail-closed one — main-frame GET navigations only, local-network hosts exempt, and never
+ * cancelling a request (a form POST or a WebSocket to an `http:` site is left to the page).
+ */
+export type TunnelKind = 'tor' | 'vpn' | 'socks' | 'unknown' | 'direct';
 export type CancelReason = 'non-get' | 'ws' | 'loop';
 
 export type HttpsOnlyDecision =
@@ -43,9 +49,32 @@ function isLoopbackHost(host: string): boolean {
   return /^127\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(host);
 }
 
+/**
+ * A host that is on the user's own network, where HTTPS is rarely available (a router, a NAS, a printer, a
+ * dev box): dotless names, the usual private suffixes, and private/link-local address literals. A public
+ * address literal is NOT local. Only the direct mode exempts these — a tunnel's proxy refuses them anyway.
+ */
+export function isLocalNetworkHost(host: string): boolean {
+  if (!host.includes('.') && !host.includes(':')) return true; // dotless: `printer`, `nas`
+  if (/\.(local|localhost|internal|lan|intranet|corp|home|home\.arpa)$/.test(host)) return true;
+  const v4 = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec(host);
+  if (v4) {
+    const [a, b] = [Number(v4[1]), Number(v4[2])];
+    return (
+      a === 10 ||
+      (a === 172 && b >= 16 && b <= 31) ||
+      (a === 192 && b === 168) ||
+      (a === 169 && b === 254)
+    );
+  }
+  if (host.includes(':')) return /^(f[cd][0-9a-f]{2}:|fe[89ab][0-9a-f]:)/.test(host); // ULA, link-local
+  return false;
+}
+
 export function isExemptHost(hostname: string, kind: TunnelKind): boolean {
   const host = normalizeHost(hostname);
   if (isLoopbackHost(host)) return true;
+  if (kind === 'direct') return isLocalNetworkHost(host);
   return kind === 'tor' && host.endsWith('.onion');
 }
 
@@ -70,10 +99,15 @@ export function decide(input: HttpsOnlyInput): HttpsOnlyDecision {
   if (u.protocol !== 'http:' && u.protocol !== 'ws:') return ALLOW;
   if (!input.enabled || input.bypassed) return ALLOW;
   if (isExemptHost(u.hostname, input.tunnelKind)) return ALLOW;
-  if (u.protocol === 'ws:') return { action: 'cancel', reason: 'ws' };
-
   const method = input.method.toUpperCase();
   const mainFrame = input.resourceType === 'mainFrame';
+  // Direct mode only ever upgrades a top-level GET navigation: sub-resources are the browser's
+  // mixed-content business, and cancelling a POST or a WebSocket on the open web would break forms.
+  if (input.tunnelKind === 'direct' && (u.protocol === 'ws:' || method !== 'GET' || !mainFrame)) {
+    return ALLOW;
+  }
+  if (u.protocol === 'ws:') return { action: 'cancel', reason: 'ws' };
+
   if (method !== 'GET') return { action: 'cancel', reason: 'non-get' };
   if (mainFrame && input.recentlyUpgraded) return { action: 'cancel', reason: 'loop' };
   return { action: 'upgrade', url: upgradeUrl(input.url) };

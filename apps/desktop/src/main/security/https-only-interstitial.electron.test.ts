@@ -74,6 +74,20 @@ describe('httpsOnlyInterstitialHtml', () => {
     expect(html).not.toContain('{host}');
   });
 
+  it('the no-tunnel (HTTPS-first) page does not mention a tunnel, but still names the host', () => {
+    const html = httpsOnlyInterstitialHtml({
+      ...base,
+      tunnel: '',
+      direct: true,
+      kind: 'bypass',
+      proceedHref: `http://old.example/${BYPASS_FRAGMENT_KEY}n`,
+    });
+    expect(html).toContain(en.httpsOnly.bodyDirect.replace('{host}', 'old.example'));
+    expect(html).not.toContain('{tunnel}');
+    expect(html).not.toContain('Tor');
+    expect(html).toContain(en.httpsOnly.proceed);
+  });
+
   it('bypass variant names host and tunnel, warns about interference and offers both actions', () => {
     const html = httpsOnlyInterstitialHtml({
       ...base,

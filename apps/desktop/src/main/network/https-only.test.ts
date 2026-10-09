@@ -3,6 +3,7 @@ import {
   classifyLoadFailure,
   decide,
   isExemptHost,
+  isLocalNetworkHost,
   upgradeUrl,
   UpgradeTracker,
   type HttpsOnlyInput,
@@ -253,4 +254,79 @@ describe('classifyLoadFailure', () => {
       expect(classifyLoadFailure(c)).toBe('no-bypass');
     },
   );
+});
+
+describe('direct mode (HTTPS-first on an ordinary tab)', () => {
+  const base = {
+    method: 'GET',
+    resourceType: 'mainFrame',
+    tunnelKind: 'direct' as const,
+    enabled: true,
+    bypassed: false,
+    recentlyUpgraded: false,
+  };
+
+  it('upgrades only a top-level GET, and allows everything else', () => {
+    expect(decide({ ...base, url: 'http://example.test/a' })).toEqual({
+      action: 'upgrade',
+      url: 'https://example.test/a',
+    });
+    expect(decide({ ...base, url: 'http://example.test/a', resourceType: 'script' })).toEqual({
+      action: 'allow',
+    });
+    expect(decide({ ...base, url: 'http://example.test/a', method: 'POST' })).toEqual({
+      action: 'allow',
+    });
+    expect(decide({ ...base, url: 'ws://example.test/a' })).toEqual({ action: 'allow' });
+  });
+
+  it('exempts the local network but not a tunnel-style .onion', () => {
+    expect(decide({ ...base, url: 'http://printer/' })).toEqual({ action: 'allow' });
+    expect(decide({ ...base, url: 'http://abcd.onion/' })).toMatchObject({ action: 'upgrade' });
+  });
+
+  it('still cancels a repeated upgrade as a loop', () => {
+    expect(decide({ ...base, url: 'http://example.test/', recentlyUpgraded: true })).toEqual({
+      action: 'cancel',
+      reason: 'loop',
+    });
+  });
+
+  it('keeps the strict tunnel rules for a tunnel kind (POST and ws are cancelled there)', () => {
+    const tunnel = { ...base, tunnelKind: 'tor' as const };
+    expect(decide({ ...tunnel, url: 'http://example.test/', method: 'POST' })).toEqual({
+      action: 'cancel',
+      reason: 'non-get',
+    });
+    expect(decide({ ...tunnel, url: 'ws://example.test/' })).toEqual({
+      action: 'cancel',
+      reason: 'ws',
+    });
+  });
+});
+
+describe('isLocalNetworkHost', () => {
+  it.each([
+    'printer',
+    'nas.local',
+    'x.internal',
+    'a.lan',
+    'host.home.arpa',
+    '10.1.2.3',
+    '172.16.0.1',
+    '172.31.255.1',
+    '192.168.0.9',
+    '169.254.0.1',
+    'fd00::1',
+    'fe80::1',
+  ])('%s is local', (h) => expect(isLocalNetworkHost(h)).toBe(true));
+  it.each([
+    'example.com',
+    '8.8.8.8',
+    '172.15.0.1',
+    '172.32.0.1',
+    '192.169.0.1',
+    '2001:db8::1',
+    'local.example.com',
+  ])('%s is not local', (h) => expect(isLocalNetworkHost(h)).toBe(false));
 });

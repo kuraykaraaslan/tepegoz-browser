@@ -131,6 +131,7 @@ export const SETTINGS_VISIBILITY: Record<keyof Preferences, 'public' | 'private'
   // Private — a navigation/download safety posture is a main-process decision; no extension reads it.
   safeBrowsingEnabled: 'private',
   httpsOnlyOnTunnel: 'private',
+  httpsFirstEverywhere: 'private',
   preloadPages: 'private',
   // Private for now. They are presentation settings an extension's UI could reasonably follow, but
   // widening the public contract for a consumer that does not exist yet is surface added on

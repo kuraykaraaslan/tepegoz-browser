@@ -92,6 +92,30 @@ downgrade a host by linking to `http://bank#...`.
 - Safe Browsing's own bypass sentinel has no nonce (this feature's does).
 - The bypass is not persisted across restarts.
 
+## Amendment: HTTPS-first on every tab (2026-10-09)
+
+The same handler, interstitial, bypass and loop guard now also serve ordinary and private windows when the
+user turns on **"Use secure connections for all sites"** (`httpsFirstEverywhere`, off by default). The
+decisions, chosen on engineering grounds and following Chrome's HTTPS-First model rather than the tunnel's
+fail-closed one:
+
+- **Only a top-level `GET` navigation is upgraded.** Sub-resources are the browser's mixed-content business,
+  and cancelling a form `POST` or a WebSocket to an `http:` site on the open web would break pages. Unlike
+  on a tunnel, this mode **never cancels** a request, except the redirect-loop guard.
+- **The local network is exempt:** loopback, dotless names, `.local`/`.lan`/`.internal`/`.home.arpa`-style
+  suffixes and private or link-local address literals (a router, a NAS, a printer almost never has a
+  certificate). A public address literal is not exempt. On a tunnel nothing is exempt but loopback and Tor's
+  `.onion`, because the tunnel's proxy refuses local addresses anyway.
+- **It fails open.** If the handler throws on a Direct session the page loads; fail-closed stays a tunnel
+  property.
+- **The warning page** reuses the same failure classification, nonce and per-host session-only bypass, with
+  wording that does not mention a tunnel.
+- The two settings are independent: `httpsOnlyOnTunnel` governs tunnel partitions, `httpsFirstEverywhere`
+  governs the rest.
+
+Verified end to end in `e2e/https-first-everywhere.spec.ts` (off by default; on → no cleartext, warning page,
+"Continue over HTTP" loads that site) in addition to the unit tests.
+
 ## Follow-ups (not in this ADR)
 
 1. A persisted per-site bypass list with a Settings list and IPC.

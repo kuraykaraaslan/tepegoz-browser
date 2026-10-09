@@ -53,6 +53,8 @@ export interface InterstitialInput {
   /** The original http URL, shown as text. */
   url: string;
   tunnel: string;
+  /** HTTPS-first on an ordinary tab: no tunnel to name, so the body that mentions one is not used. */
+  direct?: boolean;
   /** Only for kind `bypass`. */
   proceedHref?: string;
 }
@@ -66,7 +68,9 @@ export function httpsOnlyInterstitialHtml(input: InterstitialInput): string {
       ? t.tunnelDownBody
       : input.kind === 'non-get'
         ? t.nonGetBody
-        : t.body;
+        : input.direct === true
+          ? t.bodyDirect
+          : t.body;
   const warning = input.kind === 'bypass' ? `<p>${escapeHtml(t.interferenceWarning)}</p>` : '';
   const proceed =
     input.kind === 'bypass' && input.proceedHref !== undefined
@@ -126,6 +130,7 @@ export function showHttpsOnlyInterstitial(
     host,
     url: cleanUrl,
     tunnel: tunnelLabel(tunnelKind),
+    ...(tunnelKind === 'direct' ? { direct: true } : {}),
     ...(proceedHref !== undefined ? { proceedHref } : {}),
   });
   wc.stop();

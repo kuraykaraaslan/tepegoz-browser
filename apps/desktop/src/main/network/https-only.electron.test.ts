@@ -168,11 +168,14 @@ describe('httpsOnlyHandler: .onion and tunnel kind', () => {
     expect(https.tunnelKindOfPartition(TOR)).toBe('socks');
     pool.kinds.set('tor1', 'wireguard');
     expect(https.tunnelKindOfPartition(TOR)).toBe('vpn');
-    expect(https.tunnelKindOfPartition(DIRECT)).toBe('unknown');
+    expect(https.tunnelKindOfPartition(DIRECT)).toBe('direct');
+    pool.kinds.delete('tor1');
+    expect(https.tunnelKindOfPartition(TOR)).toBe('unknown'); // a tunnel partition whose connection is gone
     expect(https.tunnelLabel('tor')).toBe('Tor');
     expect(https.tunnelLabel('vpn')).toBe('WireGuard');
     expect(https.tunnelLabel('socks')).toBe('SOCKS');
     expect(https.tunnelLabel('unknown')).toBe('VPN');
+    expect(https.tunnelLabel('direct')).toBe(''); // nothing to name: the page uses the no-tunnel wording
   });
 });
 
@@ -349,5 +352,101 @@ describe('registration with the multiplexer', () => {
     BrowsingWebRequestService.attach(fake.webRequest, { partition: TOR });
     https.registerHttpsOnly()();
     await expect(fake.before(details('http://a.example/'))).resolves.toEqual({});
+  });
+});
+
+describe('HTTPS-first everywhere (Direct and private sessions)', () => {
+  beforeEach(() => {
+    prefs.values = { httpsOnlyOnTunnel: true, httpsFirstEverywhere: true };
+  });
+
+  it('upgrades a top-level GET navigation on an ordinary session', () => {
+    expect(run(details('http://example.test/page?q=1'), DIRECT)).toEqual({
+      redirectURL: 'https://example.test/page?q=1',
+    });
+    expect(run(details('http://example.test/'), 'tepegoz-private')).toEqual({
+      redirectURL: 'https://example.test/',
+    });
+  });
+
+  it('does nothing while the setting is off — the tunnel setting alone never reaches a Direct session', () => {
+    prefs.values = { httpsOnlyOnTunnel: true, httpsFirstEverywhere: false };
+    expect(run(details('http://example.test/'), DIRECT)).toBeUndefined();
+    prefs.values = { httpsOnlyOnTunnel: true }; // a preferences object that predates the field
+    expect(run(details('http://example.test/'), DIRECT)).toBeUndefined();
+  });
+
+  it('leaves sub-resources, form posts and WebSockets alone — it never cancels on the open web', () => {
+    expect(
+      run(details('http://cdn.test/x.js', { resourceType: 'script' }), DIRECT),
+    ).toBeUndefined();
+    expect(run(details('http://example.test/post', { method: 'POST' }), DIRECT)).toBeUndefined();
+    expect(
+      run(details('ws://example.test/socket', { resourceType: 'webSocket' }), DIRECT),
+    ).toBeUndefined();
+    expect(
+      run(details('http://example.test/frame', { resourceType: 'subFrame' }), DIRECT),
+    ).toBeUndefined();
+  });
+
+  it.each([
+    'http://localhost/',
+    'http://127.0.0.1:8080/',
+    'http://printer/',
+    'http://nas.local/',
+    'http://192.168.1.1/',
+    'http://10.0.0.5/',
+    'http://172.20.1.1/',
+    'http://169.254.1.1/',
+    'http://[fd12::1]/',
+    'http://[fe80::1]/',
+  ])('exempts the local-network address %s', (url) => {
+    expect(run(details(url), DIRECT)).toBeUndefined();
+  });
+
+  it.each(['http://8.8.8.8/', 'http://172.32.0.1/', 'http://example.com/'])(
+    'does NOT exempt the public address %s',
+    (url) => {
+      const res = run(details(url), DIRECT);
+      expect(res?.redirectURL?.startsWith('https://')).toBe(true);
+    },
+  );
+
+  it('honours a per-site bypass on the Direct session, and does not leak it to a tunnel partition', () => {
+    https.addHttpsOnlyBypass(DIRECT, 'example.test');
+    expect(run(details('http://example.test/'), DIRECT)).toBeUndefined();
+    expect(run(details('http://example.test/'), TOR)).toEqual({
+      redirectURL: 'https://example.test/',
+    });
+  });
+
+  it('guards against a redirect loop with a cancel, as on a tunnel', () => {
+    expect(run(details('http://loop.test/'), DIRECT)).toEqual({
+      redirectURL: 'https://loop.test/',
+    });
+    expect(run(details('http://loop.test/'), DIRECT)).toEqual({ cancel: true });
+    expect(https.getPendingHttpsOnly(5)?.reason).toBe('loop');
+  });
+
+  it('fails OPEN on a Direct session: an internal error lets the page load instead of cancelling it', () => {
+    prefs.values = new Proxy(
+      {},
+      {
+        get: () => {
+          throw new Error('boom');
+        },
+      },
+    );
+    expect(run(details('http://example.test/'), DIRECT)).toBeUndefined();
+    expect(logger.warn).toHaveBeenCalled();
+  });
+
+  it('does not change the tunnel behaviour: a tunnel partition still follows its own setting', () => {
+    prefs.values = { httpsOnlyOnTunnel: false, httpsFirstEverywhere: true };
+    expect(run(details('http://example.test/'), TOR)).toBeUndefined();
+    prefs.values = { httpsOnlyOnTunnel: true, httpsFirstEverywhere: false };
+    expect(run(details('http://example.test/post', { method: 'POST' }), TOR)).toEqual({
+      cancel: true,
+    });
   });
 });

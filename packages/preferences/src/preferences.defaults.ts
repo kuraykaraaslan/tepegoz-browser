@@ -65,6 +65,8 @@ export const DEFAULT_PREFERENCES: Preferences = {
   safeBrowsingEnabled: true,
   // HTTPS-only on tunneled partitions: on by default.
   httpsOnlyOnTunnel: true,
+  // Opt-in: it changes how every plain-http link behaves, which some people's sites depend on.
+  httpsFirstEverywhere: false,
   // Chromium's own default; opt out for privacy.
   preloadPages: true,
   typo: {

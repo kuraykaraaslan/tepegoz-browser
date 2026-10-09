@@ -325,6 +325,11 @@ endpoint** (one loopback port per active connection), never an OS-level system p
       ship a Settings toggle: DoH on/off + provider (or custom resolver), and a global "always use secure
       connections" with an HTTP interstitial. Scoped and not scheduled — see
       [`../tracks/browser-settings-feature-gap.md`](../../docs/tracks/browser-settings-feature-gap.md) §7.
+  - [x] _HTTPS-first half landed 2026-10-09 (e2e-verified in `e2e/https-first-everywhere.spec.ts`):_
+        **"Use secure connections for all sites"** (`httpsFirstEverywhere`, off by default) — see the
+        amendment in [ADR-0050](../../docs/adr/0050-https-only-on-tunnel-bound-tabs.md). Top-level GET only,
+        local network exempt, fails open, same warning page and per-site bypass.
+  - [ ] _Still open:_ the **Secure DNS (DoH)** half — on/off, provider or custom resolver — has no code at all.
 
 ### L10 — Safe-Browsing interplay
 

@@ -350,6 +350,8 @@ export const tr: AppStrings = {
   // Tünelli sekmeler için yalnızca-HTTPS ara sayfası (ana süreçten mainStrings() ile okunur).
   httpsOnly: {
     title: 'Bu site güvenli bağlantıyı desteklemiyor',
+    bodyDirect:
+      'Tepegoz önce {host} için güvenli (HTTPS) adresi denedi ve yüklenmedi. Devam ederseniz bu siteye gönderdiğiniz her şey yolda ağ tarafından okunabilir veya değiştirilebilir.',
     body: 'Sekmeniz {tunnel} üzerinden gidiyor; bu yüzden {host} adresine düz HTTP ile gönderilen her şey yolda ağ tarafından okunabilir veya değiştirilebilir. Tepegoz önce güvenli (HTTPS) adresi denedi ve yüklenmedi.',
     interferenceWarning:
       'Bu, sitenin HTTPS desteklemediği anlamına gelebilir; ancak biri bağlantınıza müdahale ediyor da olabilir. Yalnızca içeriğin hassas olmadığından eminseniz devam edin.',

@@ -495,6 +495,10 @@ export const en = {
     title: 'HTTPS-only on tunnelled tabs',
     desc: 'Upgrade plain http pages to https in tabs routed through Tor, a VPN or a proxy. If a site has no https, you are asked before it loads over http. Turning this off lets tunnelled tabs load plain http; the cleartext warning in Site Info stays.',
   },
+  httpsFirst: {
+    title: 'Use secure connections for all sites',
+    desc: 'Tries the https address first whenever you open a plain http link. If a site has no https, you are asked before it loads over http. Addresses on your own network (a router, a printer) are left alone.',
+  },
   preload: {
     title: 'Pre-resolve addresses of linked pages',
     desc: 'Lets the browser look up the addresses of links on a page before you click them, so pages open a little faster. Turn it off to stop those lookups reaching your DNS provider. Tabs routed through Tor, a VPN or a proxy never do this.',

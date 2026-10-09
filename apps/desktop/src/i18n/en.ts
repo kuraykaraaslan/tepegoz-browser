@@ -381,6 +381,8 @@ export const en = {
   // are interpolated by the caller; {tunnel} is a tunnel kind label such as "Tor" or "WireGuard".
   httpsOnly: {
     title: 'This site does not support a secure connection',
+    bodyDirect:
+      'Tepegoz tried the secure (HTTPS) address for {host} first and it did not load. If you continue, anything you send to this site can be read or changed by the network on the way.',
     body: 'Your tab goes through {tunnel}, so anything sent over plain HTTP to {host} can be read or changed by the network on the way. Tepegoz tried the secure (HTTPS) address first and it did not load.',
     interferenceWarning:
       'This can mean the site has no HTTPS, but it can also mean someone is interfering with your connection. Only continue if you are sure the content is not sensitive.',

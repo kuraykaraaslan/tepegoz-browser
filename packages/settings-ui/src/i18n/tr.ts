@@ -481,6 +481,10 @@ export const tr: SettingsStrings = {
     title: 'Tünelli sekmelerde yalnızca HTTPS',
     desc: "Tor, VPN veya proxy üzerinden giden sekmelerde düz http sayfalarını https'e yükseltir. Bir sitede https yoksa http ile yüklenmeden önce sana sorulur. Kapatırsan tünelli sekmeler düz http yükleyebilir; Site Bilgisi'ndeki şifresiz bağlantı uyarısı yine görünür.",
   },
+  httpsFirst: {
+    title: 'Tüm sitelerde güvenli bağlantı kullan',
+    desc: 'Düz http bağlantısı açtığınızda önce https adresini dener. Bir sitede https yoksa http ile yüklenmeden önce size sorulur. Kendi ağınızdaki adreslere (yönlendirici, yazıcı) dokunulmaz.',
+  },
   preload: {
     title: 'Bağlantılı sayfaların adreslerini önceden çöz',
     desc: 'Bir sayfadaki bağlantıların adreslerini siz tıklamadan önce aramasına izin verir; sayfalar biraz daha hızlı açılır. Bu aramaların DNS sağlayıcınıza ulaşmaması için kapatın. Tor, VPN veya proxy üzerinden giden sekmeler bunu hiçbir zaman yapmaz.',

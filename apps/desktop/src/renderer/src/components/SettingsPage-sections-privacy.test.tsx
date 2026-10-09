@@ -273,6 +273,18 @@ describe('privacyAndAdvancedSections — the Back up settings card', () => {
   });
 });
 
+describe('privacyAndAdvancedSections — HTTPS-first for all sites', () => {
+  it('is off by default, writes true when switched on, and is found by settings search', () => {
+    const { setPref } = renderPrivacy({ httpsFirstEverywhere: false });
+    expect(screen.getByText(s.httpsFirst.title)).toBeTruthy();
+    fireEvent.click(screen.getByTestId('toggle-https-first'));
+    expect(setPref).toHaveBeenCalledWith({ httpsFirstEverywhere: true });
+    const section = privacyAndAdvancedSections(ctx().ctx).find((sec) => sec.id === 'privacy');
+    expect(section!.searchText).toContain(s.httpsFirst.title);
+    expect(s.httpsFirst.desc).toMatch(/your own network/);
+  });
+});
+
 describe('privacyAndAdvancedSections — pre-resolve linked addresses', () => {
   it('is on by default, writes false when switched off, and is found by settings search', () => {
     const { setPref } = renderPrivacy({ preloadPages: true });
