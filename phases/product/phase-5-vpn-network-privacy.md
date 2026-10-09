@@ -172,8 +172,12 @@ endpoint** (one loopback port per active connection), never an OS-level system p
   (warns on http+tunnel, silent on https or Direct)._ - [x] _**force HTTPS-only** for tunnel-bound tabs landed 2026-10-09 ([ADR-0050](../../docs/adr/0050-https-only-on-tunnel-bound-tabs.md)):
   a fail-closed `onBeforeRequest` upgrade on tunnel partitions, a nonce-guarded interstitial with a
   session-only per-site bypass, a journal row, and the private `httpsOnlyOnTunnel` preference with a
-  Privacy toggle. **Not closed:** the live-tunnel UAT (Tor, WireGuard, BYO-SOCKS) has not run, so the
-  parent item stays `[~]` and Phase 5 stays 🟡._
+  Privacy toggle. **Verified live (BYO-SOCKS) 2026-10-09** in `e2e/https-only-tunnel.spec.ts`: an
+  `http://` page on a tunnel-bound tab is upgraded through the SOCKS tunnel, no cleartext request line
+  reaches the far side, and the tab shows the interstitial; with the setting off the same URL reaches the
+  origin in cleartext. That run found `-100` (connection closed) missing from the bypass allowlist — fixed.
+  **Not closed:** the real Tor and WireGuard transports have not been tried, so the parent item stays
+  `[~]` and Phase 5 stays 🟡._
 - [ ] **Bridges + pluggable transports (obfs4 / meek / Snowflake) — absent today, and this is the one Tor
       gap that matters most for the primary market.** `TorProvider` already manages a `tor` process, so
       bridge support is a config surface on something that ships, not new machinery: a bridge line is

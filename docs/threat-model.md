@@ -205,7 +205,7 @@ some path in the browser bypassing it. Both look exactly like everything working
 would, and can modify anything not protected by TLS. Nothing in this feature changes that; it moves who
 is in that position, on the user's instruction. The cleartext warning and HTTPS-only enforcement (upgrade, then an
 interstitial with a per-site, session-only bypass) for tunnel-bound tabs are shipped
-([ADR-0050](adr/0050-https-only-on-tunnel-bound-tabs.md)); the live-tunnel UAT is owed.
+([ADR-0050](adr/0050-https-only-on-tunnel-bound-tabs.md)); verified end to end against a local SOCKS5 tunnel; the real Tor and WireGuard transports are not yet tried.
 
 **The exit region is the user's claim.** A connection's note ("Tor", "Mullvad SE") is free text the user
 typed. The browser cannot verify where a loopback SOCKS port comes out and never presents it as fact.

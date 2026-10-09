@@ -1,6 +1,6 @@
 # ADR-0050: HTTPS-only on tunnel-bound tabs — upgrade first, interstitial with a per-site bypass on failure, never a silent downgrade
 
-- **Status:** Accepted (shipped — policy core, `onBeforeRequest` enforcement, interstitial, journal, `httpsOnlyOnTunnel` preference and Privacy toggle; the live-tunnel UAT is still owed)
+- **Status:** Accepted (shipped — policy core, `onBeforeRequest` enforcement, interstitial, journal, `httpsOnlyOnTunnel` preference and Privacy toggle; verified end to end against a local SOCKS5 tunnel in `e2e/https-only-tunnel.spec.ts`; the real Tor and WireGuard transports are still untried)
 - **Date:** 2026-10-09
 - **Relates to:** [ADR-0011](0011-vpn-network-privacy.md) (the exit is untrusted; fail-closed egress) ·
   [ADR-0043](0043-safe-browsing-service-and-egress.md) (the interstitial precedent) ·
@@ -55,7 +55,8 @@ deliberate deviation: a tunnel-bound tab that cannot be checked must not fall th
 
 A main-frame `did-fail-load` is matched against a per-tab pending record (host, http URL, reason,
 timestamp; 60 s TTL; cleared on `did-navigate` and `did-stop-loading`). The bypass is offered **only** for
-`-102`, `-101`, `-107`, `-118`, `-324` (no HTTPS on the host), `-120`/`-121` (the SOCKS5 client's
+`-100` (the connection was closed — measured end to end, where a non-TLS origin on the HTTPS port
+produced exactly this), `-102`, `-101`, `-107`, `-118`, `-324` (no HTTPS on the host), `-120`/`-121` (the SOCKS5 client's
 "connect failed / host unreachable" — how a refused :443 looks behind a local SOCKS tunnel; **to be
 confirmed against a live tunnel in the UAT**) and for reason `loop`. For certificate errors (`-2xx`),
 `-105` (DNS; a bypass would not help), `-115` and `-130` **no interstitial is shown at all** — the user

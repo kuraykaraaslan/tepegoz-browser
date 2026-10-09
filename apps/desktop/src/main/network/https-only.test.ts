@@ -241,7 +241,7 @@ describe('UpgradeTracker', () => {
 });
 
 describe('classifyLoadFailure', () => {
-  it.each([-102, -101, -107, -118, -120, -121, -324])('offers bypass for %i', (c) => {
+  it.each([-100, -102, -101, -107, -118, -120, -121, -324])('offers bypass for %i', (c) => {
     expect(classifyLoadFailure(c)).toBe('offer-bypass');
   });
   it('ignores -3 (aborted)', () => {

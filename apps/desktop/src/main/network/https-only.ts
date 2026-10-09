@@ -148,9 +148,13 @@ export class UpgradeTracker {
 
 export type LoadFailureClass = 'offer-bypass' | 'ignore' | 'no-bypass';
 
+// -100 (connection closed) is what a server that does not speak TLS on :443 does — measured end to end
+// against a plain-HTTP origin in `e2e/https-only-tunnel.spec.ts`, where it was missing and left the user
+// on Chromium's raw error page. A tunnel that dies mid-handshake looks the same, which is why the
+// tunnel-down check runs before this list is consulted.
 // -120/-121 are the SOCKS5 client's "connect failed / host unreachable": how a refused :443 looks when
 // the tunnel is a local SOCKS endpoint (Tor, wireproxy, BYO-SOCKS) rather than a direct connection.
-const OFFER_BYPASS = new Set([-102, -101, -107, -118, -120, -121, -324]);
+const OFFER_BYPASS = new Set([-100, -102, -101, -107, -118, -120, -121, -324]);
 
 /** Closed allowlist: an unknown code can only cost the user Chromium's plain error page. */
 export function classifyLoadFailure(errorCode: number): LoadFailureClass {

@@ -64,7 +64,7 @@ beforeEach(() => {
 });
 
 describe('wireHttpsOnly did-fail-load', () => {
-  it.each([-102, -101, -107, -118, -120, -121, -324])(
+  it.each([-100, -102, -101, -107, -118, -120, -121, -324])(
     'offers the bypass for allowlisted code %i',
     (code) => {
       const t = wire();
