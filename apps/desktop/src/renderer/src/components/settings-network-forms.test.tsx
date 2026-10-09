@@ -188,6 +188,25 @@ describe('AddConnectionRow', () => {
     });
   });
 
+  it('submits a pasted bridge line with a Tor connection and shows the speed caveat', () => {
+    const { onAdd } = renderRow();
+    fireEvent.change(kindSelect(), { target: { value: 'tor' } });
+    fireEvent.change(nameInput(), { target: { value: 'Bridged' } });
+    expect(screen.queryByText(s.network.torBridgeHint)).toBeNull();
+    fireEvent.change(screen.getByLabelText(s.network.torBridge), {
+      target: { value: '192.0.2.1:9001' },
+    });
+    expect(screen.getByText(s.network.torBridgeHint)).toBeTruthy();
+    fireEvent.click(addBtn());
+    expect(onAdd).toHaveBeenCalledWith({
+      kind: 'tor',
+      label: 'Bridged',
+      note: '',
+      upstreamConnectionId: null,
+      bridges: ['192.0.2.1:9001'],
+    });
+  });
+
   it('keeps the profile already picked when a second pick is cancelled', async () => {
     // Cancelling a file dialog is not a choice to discard what was already chosen. Without the early
     // return the cancel would null the profile out and re-disable Add.

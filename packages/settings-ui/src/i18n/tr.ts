@@ -886,6 +886,9 @@ export const tr: SettingsStrings = {
     torUpstream: 'Üst bağlantı',
     torUpstreamNone: 'Doğrudan Tor’a',
     torUpstreamVia: '{name} üzerinden',
+    torBridge: 'Köprü (isteğe bağlı)',
+    torBridgePlaceholder: 'Bir köprü satırı yapıştırın',
+    torBridgeHint: 'Köprüler Tor’un engellendiği yerlerde işe yarar ama daha yavaştır.',
     torNotTorBrowserTitle: 'Tor’a yönlendirilen bir sekme, Tor Browser oturumu değildir',
     torNotTorBrowserBody:
       'Doğrudan trafik ve Tor trafiği bu tarayıcıda aynı anda çalışır. İkisi arasında ilişkilendirilen etkinlik, anonim bir oturumu yeniden ilişkilendirebilir — Tor Browser’ın tam da önlemek için var olduğu durum. Güçlü anonimlik için tek bir sekmeyi yönlendirmek yerine Tor Browser kullanın.',
@@ -947,8 +950,7 @@ export const tr: SettingsStrings = {
     slowCause: {
       relay_latency:
         'Tünel sağlıklı — bu, üzerinden yönlendirmenin doğal gecikmesi, bir arıza değil.',
-      bridge_or_bootstrap:
-        'Tünel henüz kuruluyor. Bu, doğrudan bağlanmaktan daha uzun sürebilir.',
+      bridge_or_bootstrap: 'Tünel henüz kuruluyor. Bu, doğrudan bağlanmaktan daha uzun sürebilir.',
       exit_blocked_by_site:
         'Tünel sağlıklı, ama bu site çıkış adresini zorluyor ya da kısıtlıyor gibi görünüyor — sorun sizde değil.',
       tunnel_degraded:

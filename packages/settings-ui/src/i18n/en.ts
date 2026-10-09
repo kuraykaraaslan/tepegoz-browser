@@ -422,8 +422,10 @@ export const en = {
     // screen would be exactly what `agentReadOnly` already refuses.
     debug: {
       title: 'Permission history',
-      subtitle: 'Past decisions the agent actually made: what was asked, what was decided, and why.',
-      readOnly: 'Read-only. This is a record of decisions already made — nothing here can be changed.',
+      subtitle:
+        'Past decisions the agent actually made: what was asked, what was decided, and why.',
+      readOnly:
+        'Read-only. This is a record of decisions already made — nothing here can be changed.',
       siteFilter: 'Filter by site',
       siteFilterPlaceholder: 'example.com',
       toolFilter: 'Filter by tool',
@@ -895,6 +897,9 @@ export const en = {
     torUpstream: 'Upstream connection',
     torUpstreamNone: 'Straight to Tor',
     torUpstreamVia: 'Through {name}',
+    torBridge: 'Bridge (optional)',
+    torBridgePlaceholder: 'Paste a bridge line',
+    torBridgeHint: 'Bridges help where Tor is blocked, but they are slower.',
     torNotTorBrowserTitle: 'A Tor-routed tab is not a Tor Browser session',
     torNotTorBrowserBody:
       'Direct and Tor traffic run in this browser at the same time. Activity correlated across the two can re-link an anonymous session — the pattern Tor Browser exists to prevent. For strong anonymity, use Tor Browser rather than routing a single tab.',

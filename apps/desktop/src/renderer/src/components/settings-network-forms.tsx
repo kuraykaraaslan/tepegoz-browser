@@ -38,6 +38,7 @@ export function AddConnectionRow({
   const [note, setNote] = useState('');
   const [port, setPort] = useState('9050');
   const [upstream, setUpstream] = useState('');
+  const [bridge, setBridge] = useState('');
   const [picked, setPicked] = useState<PickedWireguardProfile | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -77,7 +78,12 @@ export function AddConnectionRow({
       kind === 'wireguard'
         ? { ...base, kind, sourcePath: picked?.path ?? '' }
         : kind === 'tor'
-          ? { ...base, kind, upstreamConnectionId: upstream === '' ? null : upstream }
+          ? {
+              ...base,
+              kind,
+              upstreamConnectionId: upstream === '' ? null : upstream,
+              ...(bridge.trim() === '' ? {} : { bridges: [bridge] }),
+            }
           : { ...base, kind, socksPort: portNumber };
 
     void onAdd(input).then(
@@ -86,6 +92,7 @@ export function AddConnectionRow({
         setNote('');
         setPicked(null);
         setUpstream('');
+        setBridge('');
         setPort('9050');
       },
       (err: unknown) => {
@@ -177,6 +184,19 @@ export function AddConnectionRow({
             </Select>
           </div>
         )}
+        {kind === 'tor' && (
+          <div className="min-w-48 flex-1">
+            <Input
+              id="network-bridge"
+              label={s.network.torBridge}
+              placeholder={s.network.torBridgePlaceholder}
+              value={bridge}
+              onChange={(e) => {
+                setBridge(e.target.value);
+              }}
+            />
+          </div>
+        )}
         {kind === 'byo-socks' && (
           <div className="w-24">
             <Input
@@ -212,6 +232,9 @@ export function AddConnectionRow({
       )}
       {kind === 'byo-socks' && !portValid && port.trim().length > 0 && (
         <p className="mt-1 text-xs text-warning-fg">{s.network.portInvalid}</p>
+      )}
+      {kind === 'tor' && bridge.trim().length > 0 && (
+        <p className="mt-1 text-xs text-text-secondary">{s.network.torBridgeHint}</p>
       )}
       {error !== null && <p className="mt-1 text-xs text-error-fg">{error}</p>}
     </div>
