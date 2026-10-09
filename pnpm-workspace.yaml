@@ -19,4 +19,10 @@ overrides:
   esbuild: '>=0.25.0'
   browserslist: '>=4.28.7'
   '@xmldom/xmldom': '>=0.9.12'
-  'plist>@xmldom/xmldom': '0.8.10'
+  # plist 3.x needs the 0.8 API, so it stays on the 0.8 line — at its latest patch, which carries the fixes.
+  'plist>@xmldom/xmldom': '0.8.15'
+  # node-llama-cpp pins simple-git ^3 (vulnerable); it only uses it to clone/patch llama.cpp when no
+  # prebuilt binary exists. The same calls exist in 4.x.
+  simple-git: '>=4.0.1'
+  # vitest's worker pool. Dev tooling only, but a critical advisory.
+  tinypool: '>=2.1.2'
