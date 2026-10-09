@@ -40,6 +40,9 @@ test('Ctrl+K opens the command palette, filters, and closes', async () => {
   try {
     const window = await app.firstWindow();
     await window.waitForLoadState('domcontentloaded');
+    // Mounted, not just loaded: the shortcut reaches the renderer as a message, and one sent before its
+    // listener exists is lost (this bit on a cold start, when the first launch is slow).
+    await expect(window.getByRole('combobox').first()).toBeVisible();
     // The palette's own input, not the omnibox — both are comboboxes.
     const palette = window.getByPlaceholder('Type a command or ask Tepegöz…');
 

@@ -35,6 +35,10 @@ const bridge = {
   clearHistory: vi.fn(() => Promise.resolve()),
   listClientCertificateChoices: vi.fn(() => Promise.resolve([])),
   listAgentCapabilities: vi.fn(() => Promise.resolve([])),
+  // The permission-debug view reads this from a 250 ms debounce timer. The real bridge always has it; without
+  // it here, a timer that fires after the last test finished throws an UNHANDLED error that fails the whole
+  // run (seen once under load, with everything else green).
+  listPermissionDecisions: vi.fn(() => Promise.resolve([])),
   // Read by the Tier D `MirroredSettingsCard` the developer section now also renders (ADR-0041).
   getNetworkState: vi.fn(() =>
     Promise.resolve({
@@ -58,6 +62,7 @@ beforeEach(() => {
   bridge.clearHistory.mockResolvedValue(undefined);
   bridge.listClientCertificateChoices.mockResolvedValue([]);
   bridge.listAgentCapabilities.mockResolvedValue([]);
+  bridge.listPermissionDecisions.mockResolvedValue([]);
   Object.defineProperty(window, 'tepegoz', { configurable: true, value: bridge });
 });
 afterEach(cleanup);
