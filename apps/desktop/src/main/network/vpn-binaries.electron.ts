@@ -98,10 +98,33 @@ function wellKnownPaths(binary: VpnBinary): string[] {
     '/opt/local/bin',
     join(home, '.local', 'bin'),
   ];
-  const extra =
-    binary === 'tor' && process.platform === 'darwin'
-      ? ['/Applications/Tor Browser.app/Contents/MacOS/Tor/tor']
-      : [];
+  let extra: string[] = [];
+  if (binary === 'tor' && process.platform === 'darwin') {
+    extra = ['/Applications/Tor Browser.app/Contents/MacOS/Tor/tor'];
+  } else if (binary === 'tor') {
+    // Tor Browser on Linux: `torbrowser-launcher` (native and Flatpak) keeps it under the user's data
+    // directory; the tarball is usually extracted into the home or Downloads folder. All of them share
+    // the same nested layout, and its `PluggableTransports/` sits beside `tor`, which is what bridges use.
+    const tbRelative = join('Browser', 'TorBrowser', 'Tor', 'tor');
+    const roots = [
+      join(home, '.local', 'share', 'torbrowser', 'tbb', 'x86_64', 'tor-browser'),
+      join(
+        home,
+        '.var',
+        'app',
+        'org.torproject.torbrowser-launcher',
+        'data',
+        'torbrowser',
+        'tbb',
+        'x86_64',
+        'tor-browser',
+      ),
+      join(home, 'tor-browser'),
+      join(home, 'Downloads', 'tor-browser'),
+      join(app.getPath('desktop'), 'tor-browser'),
+    ];
+    extra = roots.map((r) => join(r, tbRelative));
+  }
   return [...unix.map((d) => join(d, binary)), ...extra];
 }
 

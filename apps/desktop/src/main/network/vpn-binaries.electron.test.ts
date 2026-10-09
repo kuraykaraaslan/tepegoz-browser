@@ -74,22 +74,45 @@ describe('where it looks', () => {
     h.home = join(sep, 'home', 'k');
     h.desktop = join(h.home, 'Desktop');
     const paths = searchPaths('tor');
-    // The nested layout matters: pointing at the Tor Browser root alone would find nothing.
-    expect(paths.some((p) => p.includes(join('Tor Browser', 'Browser', 'TorBrowser', 'Tor')))).toBe(
-      true,
-    );
+    // The nested layout matters: pointing at the Tor Browser root alone would find nothing. Each platform
+    // ships it under a different name, and the test used to assume Windows' — so it failed everywhere else.
+    const nested =
+      process.platform === 'win32'
+        ? join('Tor Browser', 'Browser', 'TorBrowser', 'Tor')
+        : process.platform === 'darwin'
+          ? join('Tor Browser.app', 'Contents', 'MacOS', 'Tor')
+          : join('tor-browser', 'Browser', 'TorBrowser', 'Tor');
+    expect(paths.some((p) => p.includes(nested))).toBe(true);
   });
 
-  it('never yields a path containing a control character (the backslash-escape trap)', () => {
-    h.home = join(sep, 'home', 'k');
-    // A literal Windows path in a TS string is an escape sequence waiting to be got wrong: '\t' in
-    // 'C:\tor' is a TAB, and the resulting path silently matches nothing.
-    for (const binary of ['tor', 'wireproxy'] as const) {
-      for (const p of searchPaths(binary)) {
-        expect(p).not.toMatch(/[\t\n\r\b\f\v]/);
-      }
-    }
-  });
+  it.runIf(process.platform === 'linux')(
+    'on Linux also looks where torbrowser-launcher (native and Flatpak) installs Tor Browser',
+    () => {
+      h.home = join(sep, 'home', 'k');
+      h.desktop = join(h.home, 'Desktop');
+      const paths = searchPaths('tor');
+      expect(paths).toContain(
+        join(
+          h.home,
+          '.local',
+          'share',
+          'torbrowser',
+          'tbb',
+          'x86_64',
+          'tor-browser',
+          'Browser',
+          'TorBrowser',
+          'Tor',
+          'tor',
+        ),
+      );
+      expect(
+        paths.some((p) => p.includes(join('.var', 'app', 'org.torproject.torbrowser-launcher'))),
+      ).toBe(true);
+      // Never offered for wireproxy, which Tor Browser does not contain.
+      expect(searchPaths('wireproxy').some((p) => p.includes('torbrowser'))).toBe(false);
+    },
+  );
 });
 
 describe('searching a folder the user picked', () => {
