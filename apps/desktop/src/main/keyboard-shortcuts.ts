@@ -58,12 +58,21 @@ export interface ShortcutTargets {
 }
 
 /**
- * Releasing Ctrl (Cmd on macOS) ends a Ctrl+Tab walk in "recent" order. Never consumes the event — the
- * page still sees the key-up — and does nothing when no walk is running.
+ * Ends a Ctrl+Tab walk in "recent" order. Never consumes the event, and does nothing when no walk is
+ * running.
+ *
+ * Two signals, because one of them is unreliable. Releasing Ctrl (Cmd on macOS) is the obvious end — but
+ * after a key-down that `before-input-event` handled (the Tab that started the walk), Chromium drops the
+ * key-ups that follow until the NEXT key-down, so the Ctrl release often never arrives (measured
+ * end-to-end in `e2e/tab-switching.spec.ts`). A fresh Ctrl key-down always does, and a non-repeat one
+ * means Ctrl was let go and pressed again: the previous chord is over. Auto-repeats of a held Ctrl are
+ * excluded, or holding Ctrl through the walk would end it on every repeat.
  */
 export function handleWindowKeyUp(input: Input, targets: ShortcutTargets): void {
-  if (input.type !== 'keyUp') return;
-  if (input.key === 'Control' || input.key === 'Meta') targets.endTabCycle?.();
+  if (input.key !== 'Control' && input.key !== 'Meta') return;
+  if (input.type === 'keyUp' || (input.type === 'keyDown' && input.isAutoRepeat !== true)) {
+    targets.endTabCycle?.();
+  }
 }
 
 export function handleWindowShortcut(

@@ -240,10 +240,24 @@ describe('the window-level shortcuts', () => {
     },
   );
 
-  it('does not end the walk for another key, a key-down, or when no tab model is wired', () => {
+  it.each(['Control', 'Meta'])(
+    'a fresh %s key-down ends the previous walk — the key-up is not always delivered',
+    (key) => {
+      const endTabCycle = vi.fn();
+      handleWindowKeyUp(press(key), { page, endTabCycle });
+      expect(endTabCycle).toHaveBeenCalledTimes(1);
+    },
+  );
+
+  it('an auto-repeat of a HELD Ctrl does not end the walk', () => {
+    const endTabCycle = vi.fn();
+    handleWindowKeyUp({ ...press('Control'), isAutoRepeat: true }, { page, endTabCycle });
+    expect(endTabCycle).not.toHaveBeenCalled();
+  });
+
+  it('does not end the walk for another key, or when no tab model is wired', () => {
     const endTabCycle = vi.fn();
     handleWindowKeyUp({ ...press('Shift'), type: 'keyUp' }, { page, endTabCycle });
-    handleWindowKeyUp(press('Control'), { page, endTabCycle }); // keyDown
     expect(endTabCycle).not.toHaveBeenCalled();
     expect(() => handleWindowKeyUp({ ...press('Control'), type: 'keyUp' }, { page })).not.toThrow();
   });
