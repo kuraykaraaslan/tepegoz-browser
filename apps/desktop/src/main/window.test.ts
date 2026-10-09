@@ -117,6 +117,7 @@ function fakeWin(over: Record<string, unknown> = {}) {
     setSkipTaskbar: vi.fn(),
     setPosition: vi.fn(),
     showInactive: vi.fn(),
+    once: vi.fn(),
     setBounds: vi.fn(),
     isMinimized: () => false,
     restore: vi.fn(),
@@ -184,6 +185,52 @@ describe('hideToTray / startParkedInTray', () => {
     expect(win.setPosition).toHaveBeenCalledWith(-32000, -32000);
     expect(win.setSkipTaskbar).toHaveBeenCalledWith(true);
     expect(win.showInactive).toHaveBeenCalled();
+  });
+
+  describe('re-parking after the window manager may have placed it', () => {
+    /** The handler `startParkedInTray` registered for the window's one-shot 'show' event. */
+    const showHandler = (win: ReturnType<typeof fakeWin>): (() => void) =>
+      win.once.mock.calls.find((c) => c[0] === 'show')![1] as () => void;
+
+    it('parks again once the window is mapped, on its first "show", and after a short delay', () => {
+      vi.useFakeTimers();
+      const win = fakeWin();
+      mod.startParkedInTray(win as never);
+      // Before the mapping, right after it, on 'show', and on the timer: a position set on an unmapped
+      // window is only a hint on X11.
+      expect(win.setPosition).toHaveBeenCalledTimes(2);
+      showHandler(win)();
+      expect(win.setPosition).toHaveBeenCalledTimes(3);
+      vi.advanceTimersByTime(300);
+      expect(win.setPosition).toHaveBeenCalledTimes(4);
+      expect(win.setPosition).toHaveBeenLastCalledWith(-32000, -32000);
+      // The second park comes AFTER the window was shown, not before.
+      const order = [win.showInactive, win.setPosition].map((f) => f.mock.invocationCallOrder);
+      expect(order[1]![1]!).toBeGreaterThan(order[0]![0]!);
+    });
+
+    it('does not throw a window back off-screen after a tray click has already restored it', () => {
+      vi.useFakeTimers();
+      const win = fakeWin();
+      mod.startParkedInTray(win as never);
+      mod.showFromTray(win as never); // the user clicked the tray before the delayed re-park
+      win.setPosition.mockClear();
+      showHandler(win)();
+      vi.advanceTimersByTime(300);
+      expect(win.setPosition).not.toHaveBeenCalled();
+    });
+
+    it('does nothing for a window destroyed in the meantime', () => {
+      vi.useFakeTimers();
+      let destroyed = false;
+      const win = fakeWin({ isDestroyed: () => destroyed });
+      mod.startParkedInTray(win as never);
+      destroyed = true;
+      win.setPosition.mockClear();
+      showHandler(win)();
+      vi.advanceTimersByTime(300);
+      expect(win.setPosition).not.toHaveBeenCalled();
+    });
   });
 });
 

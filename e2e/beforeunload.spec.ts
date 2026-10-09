@@ -123,6 +123,12 @@ test('a page with unsaved changes asks, and the answer is honoured', async () =>
           wc.sendInputEvent({ type: 'mouseUp', x: 30, y: 20, button: 'left', clickCount: 1 });
           wc.sendInputEvent({ type: 'char', keyCode: 'a' });
           await new Promise((r) => setTimeout(r, 400));
+          // Also grant the activation explicitly. This spec used to get it for free: the extension injectors
+          // ran their scripts with the simulate-a-click flag on every page load, so the page always arrived
+          // "already interacted with" — which silently defeated the autoplay policy and is now fixed. The
+          // injected input above does not reliably activate a page in a headless-ish harness, so the
+          // test supplies it, the way a person's click would.
+          await wc.executeJavaScript('0', true);
           out.activated = await wc.executeJavaScript('navigator.userActivation.hasBeenActive');
           out.urlBefore = wc.getURL();
           void wc.loadURL(`${args.origin}/other`).catch(() => undefined);

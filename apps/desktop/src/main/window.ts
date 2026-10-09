@@ -98,6 +98,17 @@ export function startParkedInTray(win: BrowserWindow): void {
   win.setPosition(PARK_X, PARK_Y);
   win.setSkipTaskbar(true);
   win.showInactive(); // shown (compositor active) but off-screen + unfocused
+  // A position set on a window that is not yet mapped is only a hint: on X11 the window manager may place
+  // the window itself when it first appears, leaving a "parked" window sitting on-screen (measured: about
+  // four launches in ten ended at the default placement and never moved). So park it again now that it is
+  // mapped, and once more when the manager reports it shown. Only while it is STILL parked — a tray click
+  // that already brought it back must not be thrown off-screen again.
+  const repark = (): void => {
+    if (!win.isDestroyed() && trayParked.has(win)) win.setPosition(PARK_X, PARK_Y);
+  };
+  repark();
+  win.once('show', repark);
+  setTimeout(repark, 300);
 }
 
 /**

@@ -48,6 +48,10 @@ const BrowserWindowMock = vi.hoisted(() => {
       add(this._wh, ev, fn);
       return this;
     });
+    once = vi.fn((ev: string, fn: Fn): this => {
+      add(this._wh, ev, fn);
+      return this;
+    });
     fire(ev: string, ...args: unknown[]): void {
       for (const fn of this._wh.get(ev) ?? []) fn(...args);
     }
@@ -214,6 +218,8 @@ describe('createWindow', () => {
     expect(win.showInactive).toHaveBeenCalled();
     expect(win.setSkipTaskbar).toHaveBeenCalledWith(true);
     expect(win.show).not.toHaveBeenCalled();
+    // And it is parked again once mapped, when the window manager reports it shown.
+    expect(win.once).toHaveBeenCalledWith('show', expect.any(Function));
   });
 
   it('the reveal enters kiosk under startupMode "kiosk"', () => {
