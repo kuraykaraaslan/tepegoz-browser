@@ -120,7 +120,7 @@ export async function readPage(
       }
       return { text: typeof text === 'string' ? text : '', sig };
     })()`,
-    true,
+    false,
   );
   const shaped = (result ?? {}) as { text?: unknown; sig?: unknown };
   return {
@@ -188,7 +188,7 @@ export async function waitForCondition(
   if (value.length === 0) return { satisfied: false, waitedMs: 0 };
   const raw: unknown = await wc.executeJavaScript(
     buildWaitConditionExpression(condition.kind, value, timeoutMs),
-    true,
+    false,
   );
   const shaped = (raw ?? {}) as { satisfied?: unknown; waitedMs?: unknown };
   return {
@@ -207,7 +207,7 @@ export async function readArticleText(
   tabId?: string,
 ): Promise<{ url: string; title: string; text: string; source: string }> {
   const wc = await requireWcUntranslated(tabId); // ADR-0042 §3 — untranslated source
-  const result: unknown = await wc.executeJavaScript(buildArticleTextExpression(), true);
+  const result: unknown = await wc.executeJavaScript(buildArticleTextExpression(), false);
   const shaped = (result ?? {}) as { text?: unknown; source?: unknown };
   return {
     url: wc.getURL(),
@@ -255,7 +255,7 @@ export async function scrollToText(
         return { found: false, count: 0 };
       }
     })()`,
-    true,
+    false,
   );
   const shaped = (raw as { found?: unknown; count?: unknown } | null) ?? {};
   const count =
@@ -272,6 +272,6 @@ export async function scrollToText(
  */
 export async function runExtractionScript(script: string, tabId?: string): Promise<unknown> {
   const wc = await requireWcUntranslated(tabId); // ADR-0042 §3 — extract from untranslated DOM
-  const html: unknown = await wc.executeJavaScript('document.documentElement.outerHTML', true);
+  const html: unknown = await wc.executeJavaScript('document.documentElement.outerHTML', false);
   return runExtraction({ html: typeof html === 'string' ? html : '', script });
 }

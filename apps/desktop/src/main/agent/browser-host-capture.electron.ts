@@ -23,7 +23,7 @@ async function pageDimensions(wc: WebContents): Promise<PageDimensions> {
         height: Math.ceil(Math.max(d?.scrollHeight || 0, d?.clientHeight || 0, b?.scrollHeight || 0, b?.clientHeight || 0, 1))
       };
     })()`,
-    true,
+    false,
   );
   if (typeof raw !== 'object' || raw === null) return { width: 1, height: 1 };
   const width = (raw as { width?: unknown }).width;

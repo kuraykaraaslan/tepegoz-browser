@@ -1132,8 +1132,9 @@ permissions reuse the single Policy/PermissionGuard (no parallel permission flow
       typo and translate page injectors ran `executeJavaScript(code, true)` on every page load, and that flag
       simulates a user click — every page got sticky user activation for free, which silently defeated the
       autoplay policy and is exactly what the popup blocker and other "has the user interacted" checks key on.
-      Those automatic injections now pass `false`; user-initiated ones (autofill, context-menu actions, the
-      agent's own actions) are unchanged. There is no "block all" option on purpose: Chromium's stricter mode
+      Those automatic injections now pass `false`, and so do the agent's, tasks' and macros' read-only page reads
+      (a read has no business activating the page). Only three user-initiated actions still pass `true` —
+      autofill and two context-menu items — and `user-activation-guard.test.ts` fails on any new one. There is no "block all" option on purpose: Chromium's stricter mode
       still lets muted video start, so the label would have promised more than it does.
 - [ ] **The content-permission grid beyond the five brokered capabilities.** `main/security.ts`
       default-denies USB / Serial / HID / Bluetooth / MIDI, autoplay, per-site JavaScript+images,

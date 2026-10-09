@@ -60,7 +60,7 @@ async function ensureBinding(wc: WebContents): Promise<void> {
       .then((result) => {
         if (wc.isDestroyed()) return;
         const message = JSON.stringify({ requestId: payload.requestId, result });
-        return wc.executeJavaScript(`window.__tepegozTypoReceive?.(${message});`, true);
+        return wc.executeJavaScript(`window.__tepegozTypoReceive?.(${message});`, false);
       })
       .catch((err) => {
         Logger.warn('Typo page check failed', { err: String(err) });

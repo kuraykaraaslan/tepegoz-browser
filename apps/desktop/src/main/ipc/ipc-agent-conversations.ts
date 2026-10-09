@@ -90,7 +90,7 @@ export function registerAgentConversationIpc(): void {
     if (wc === null || wc.isDestroyed()) return '';
     const result: unknown = await wc.executeJavaScript(
       'window.getSelection() ? window.getSelection().toString() : ""',
-      true,
+      false,
     );
     return typeof result === 'string' ? result : '';
   });

@@ -149,7 +149,7 @@ export function createMacroHost(deps: MacroHostDeps): MacroHost {
     pageContainsText: async (text) => {
       const raw: unknown = await requireWc().executeJavaScript(
         'document.body ? document.body.innerText : ""',
-        true,
+        false,
       );
       return typeof raw === 'string' && raw.includes(text);
     },

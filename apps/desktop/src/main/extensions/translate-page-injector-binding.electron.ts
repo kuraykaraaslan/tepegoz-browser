@@ -91,7 +91,7 @@ export function makeBindingListener(wc: WebContents): BindingListener {
           updatedAt: Date.now(),
         });
         const message = JSON.stringify({ requestId: payload.requestId, result });
-        return wc.executeJavaScript(`window.__tepegozTranslateReceive?.(${message});`, true);
+        return wc.executeJavaScript(`window.__tepegozTranslateReceive?.(${message});`, false);
       })
       .catch((err) => {
         Logger.warn('Translate page batch failed', { err: String(err) });

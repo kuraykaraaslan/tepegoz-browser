@@ -177,7 +177,7 @@ export async function healSelector(chain: SelectorChain): Promise<Selector | nul
 
   let raw: unknown;
   try {
-    raw = await wc.executeJavaScript(candidateScript, true);
+    raw = await wc.executeJavaScript(candidateScript, false);
   } catch {
     return null;
   }

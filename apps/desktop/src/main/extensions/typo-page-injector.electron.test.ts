@@ -147,7 +147,7 @@ describe('the Runtime.bindingCalled listener', () => {
     await vi.waitFor(() =>
       expect(wc.executeJavaScript).toHaveBeenCalledWith(
         expect.stringContaining('__tepegozTypoReceive'),
-        true,
+        false,
       ),
     );
   });

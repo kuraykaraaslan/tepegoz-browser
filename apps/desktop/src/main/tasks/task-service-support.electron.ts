@@ -103,7 +103,7 @@ export async function readPageChangeText(
       trigger.selector !== undefined
         ? `(() => document.querySelector(${JSON.stringify(trigger.selector)})?.textContent ?? "")()`
         : 'document.body ? document.body.innerText : ""';
-    const raw: unknown = await wc.executeJavaScript(script, true);
+    const raw: unknown = await wc.executeJavaScript(script, false);
     return { url: wc.getURL(), text: typeof raw === 'string' ? raw : '' };
   } finally {
     TabManager.closeTab(tabId);
