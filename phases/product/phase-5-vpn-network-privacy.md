@@ -169,9 +169,11 @@ endpoint** (one loopback port per active connection), never an OS-level system p
   bubble renders a kind-specific error line — "a Tor exit node / your VPN / a proxy can read and
   change everything on it" — when `tunnelExit !== null && scheme === 'http:'`, en+tr. Tests:
   page-info schema (`tunnelExit` + its default), `activeTabTunnelExit` mapping, and the bubble
-  (warns on http+tunnel, silent on https or Direct)._ - [ ] _**force HTTPS-only** for tunnel-bound tabs is still open — that is the enforcement half (an
-  upgrade-or-interstitial on `http://`), a heavier change than the warning and one that needs its
-  own decision (upgrade vs block)._
+  (warns on http+tunnel, silent on https or Direct)._ - [x] _**force HTTPS-only** for tunnel-bound tabs landed 2026-10-09 ([ADR-0050](../../docs/adr/0050-https-only-on-tunnel-bound-tabs.md)):
+  a fail-closed `onBeforeRequest` upgrade on tunnel partitions, a nonce-guarded interstitial with a
+  session-only per-site bypass, a journal row, and the private `httpsOnlyOnTunnel` preference with a
+  Privacy toggle. **Not closed:** the live-tunnel UAT (Tor, WireGuard, BYO-SOCKS) has not run, so the
+  parent item stays `[~]` and Phase 5 stays 🟡._
 - [ ] **Bridges + pluggable transports (obfs4 / meek / Snowflake) — absent today, and this is the one Tor
       gap that matters most for the primary market.** `TorProvider` already manages a `tor` process, so
       bridge support is a config surface on something that ships, not new machinery: a bridge line is
