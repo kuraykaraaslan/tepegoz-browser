@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import { ComingSoonCard, type SettingsSection, type SettingsStrings } from '@tepegoz/settings-ui';
 import type { SiteClearPlan } from '@tepegoz/shared-types';
-import type { ClientCertificateChoice } from '@tepegoz/desktop-ipc';
+import type { AutoplayPolicy, ClientCertificateChoice } from '@tepegoz/desktop-ipc';
 import { Button, Card, Toggle } from '@tepegoz/ui';
 import { ConfirmAction } from './settings-confirm';
+import { Select } from './settings-shared';
 import { ClearBrowsingDataRow, ClearOnExitRow } from './ClearBrowsingDataRow';
 import { FileOperationsSection, PasswordsSection } from './settings-privacy-files';
 import { AboutSection } from './settings-about';
@@ -271,7 +272,7 @@ export function privacyAndAdvancedSections(ctx: SettingsSectionsCtx): SettingsSe
       group: s.groupPrivacy,
       label: s.privacyTitle,
       icon: <IconShield />,
-      searchText: `${s.privacyTitle} ${s.telemetry} ${s.telemetryDesc} ${s.telemetryNothingSent} ${s.safeBrowsing.title} ${s.safeBrowsing.desc} ${s.httpsOnly.title} ${s.httpsOnly.desc} ${s.httpsFirst.title} ${s.httpsFirst.desc} ${s.secureDns.title} ${s.secureDns.desc} ${s.preload.title} ${s.preload.desc} ${s.clearData.title} ${s.clearData.desc} ${s.clearHistoryLabel} ${s.forgetSite.title} ${s.clientCerts.title}`,
+      searchText: `${s.privacyTitle} ${s.telemetry} ${s.telemetryDesc} ${s.telemetryNothingSent} ${s.safeBrowsing.title} ${s.safeBrowsing.desc} ${s.httpsOnly.title} ${s.httpsOnly.desc} ${s.httpsFirst.title} ${s.httpsFirst.desc} ${s.autoplay.title} ${s.autoplay.desc} ${s.secureDns.title} ${s.secureDns.desc} ${s.preload.title} ${s.preload.desc} ${s.clearData.title} ${s.clearData.desc} ${s.clearHistoryLabel} ${s.forgetSite.title} ${s.clientCerts.title}`,
       content: (
         <Card title={s.privacyTitle}>
           <div className="space-y-4">
@@ -331,6 +332,18 @@ export function privacyAndAdvancedSections(ctx: SettingsSectionsCtx): SettingsSe
                 setPref({ preloadPages: v });
               }}
             />
+            <Select
+              id="autoplay-policy"
+              label={s.autoplay.title}
+              value={prefs.autoplayPolicy}
+              onChange={(v) => {
+                setPref({ autoplayPolicy: v as AutoplayPolicy });
+              }}
+            >
+              <option value="allow">{s.autoplay.allow}</option>
+              <option value="block-audio">{s.autoplay.blockAudio}</option>
+            </Select>
+            <p className="-mt-3 text-xs text-text-secondary">{s.autoplay.desc}</p>
             <SecureDnsRow s={s} prefs={prefs} setPref={setPref} />
             <ClearBrowsingDataRow s={s} />
             <ClearOnExitRow

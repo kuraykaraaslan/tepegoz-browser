@@ -62,9 +62,14 @@ describe('browsedViewWebPreferences', () => {
     for (const { key, value } of WEB_CONTENT_DEFAULTS) {
       expect(applied[key], `webPreferences.${key}`).toBe(value);
     }
-    // Everything the table claims is applied, and the only extra key is the Session itself.
+    // Everything the table claims is applied, and the only extra keys are the Session itself and the
+    // autoplay policy — a three-way setting from Privacy, not a boolean default, so it is not in the table.
     const tableKeys = new Set<string>(WEB_CONTENT_DEFAULTS.map((d) => d.key));
-    expect(Object.keys(applied).filter((k) => k !== 'session' && !tableKeys.has(k))).toEqual([]);
+    expect(
+      Object.keys(applied).filter(
+        (k) => k !== 'session' && k !== 'autoplayPolicy' && !tableKeys.has(k),
+      ),
+    ).toEqual([]);
   });
 
   it('applies the webContentDefaults preference to the two non-isolation keys only', () => {
@@ -225,6 +230,43 @@ describe('searchUrlForQuery in a private window', () => {
       ],
     });
     expect(shared.searchUrlForQuery('a b', true)).toBe('https://m.example/?q=a%20b');
+  });
+});
+
+describe('autoplay policy on a browsed view', () => {
+  it('maps the two choices to Chromium policies, and an unknown or absent one to the default', () => {
+    expect(shared.electronAutoplayPolicy('allow')).toBe('no-user-gesture-required');
+    expect(shared.electronAutoplayPolicy('block-audio')).toBe('document-user-activation-required');
+    expect(shared.electronAutoplayPolicy(undefined)).toBe('document-user-activation-required');
+    expect(shared.electronAutoplayPolicy('nonsense' as never)).toBe(
+      'document-user-activation-required',
+    );
+  });
+
+  it('is applied to the view from the preference, defaulting to Chrome-like when it is absent', () => {
+    prefs.getAll.mockReturnValue({ autoplayPolicy: 'allow' });
+    expect(shared.browsedViewWebPreferences(FAKE_SESSION).autoplayPolicy).toBe(
+      'no-user-gesture-required',
+    );
+    prefs.getAll.mockReturnValue({ autoplayPolicy: 'block-audio' });
+    expect(shared.browsedViewWebPreferences(FAKE_SESSION).autoplayPolicy).toBe(
+      'document-user-activation-required',
+    );
+    prefs.getAll.mockReturnValue({});
+    expect(shared.browsedViewWebPreferences(FAKE_SESSION).autoplayPolicy).toBe(
+      'document-user-activation-required',
+    );
+  });
+
+  it('never loosens the sandbox: the isolation keys are untouched whatever the autoplay choice', () => {
+    prefs.getAll.mockReturnValue({ autoplayPolicy: 'allow' });
+    const applied = shared.browsedViewWebPreferences(FAKE_SESSION);
+    expect(applied).toMatchObject({
+      contextIsolation: true,
+      sandbox: true,
+      nodeIntegration: false,
+      webSecurity: true,
+    });
   });
 });
 

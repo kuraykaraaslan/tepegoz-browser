@@ -199,6 +199,7 @@ export const PreferencesSchema = z.object({
   safeBrowsingEnabled: z.boolean(),
   // HTTPS-only on tunneled partitions. Private; on by default; also the rollback switch.
   httpsOnlyOnTunnel: z.boolean(),
+  autoplayPolicy: z.enum(['allow', 'block-audio']),
   secureDnsMode: z.enum(['off', 'automatic', 'secure']),
   secureDnsProvider: z.enum(['cloudflare', 'google', 'quad9', 'custom']),
   // An RFC 8484 DoH template. Must be https (a DoH server on plain http would defeat the point), carry no

@@ -1126,6 +1126,15 @@ permissions reuse the single Policy/PermissionGuard (no parallel permission flow
   - [x] _Read-only with no control at all, and the panel says **why**: an editable copy here would be
         the parallel permission flow the line above forbids. A read-only table with no explanation
         reads like a broken one._
+- [x] _Autoplay global policy built 2026-10-09 (e2e-verified in `e2e/autoplay-policy.spec.ts`)._ Settings →
+      Privacy → **Autoplay**: "Block sound until I click" (the default, as in Chrome) or "Allow all autoplay".
+      A `webPreference`, so it applies to tabs opened after a change. **Found while testing it:** the video-player,
+      typo and translate page injectors ran `executeJavaScript(code, true)` on every page load, and that flag
+      simulates a user click — every page got sticky user activation for free, which silently defeated the
+      autoplay policy and is exactly what the popup blocker and other "has the user interacted" checks key on.
+      Those automatic injections now pass `false`; user-initiated ones (autofill, context-menu actions, the
+      agent's own actions) are unchanged. There is no "block all" option on purpose: Chromium's stricter mode
+      still lets muted video start, so the label would have promised more than it does.
 - [ ] **The content-permission grid beyond the five brokered capabilities.** `main/security.ts`
       default-denies USB / Serial / HID / Bluetooth / MIDI, autoplay, per-site JavaScript+images,
       protocol handlers, sensors, idle detection, window management, local fonts, background sync, FedCM,

@@ -131,6 +131,7 @@ export const SETTINGS_VISIBILITY: Record<keyof Preferences, 'public' | 'private'
   // Private — a navigation/download safety posture is a main-process decision; no extension reads it.
   safeBrowsingEnabled: 'private',
   httpsOnlyOnTunnel: 'private',
+  autoplayPolicy: 'private',
   secureDnsMode: 'private',
   secureDnsProvider: 'private',
   secureDnsCustomUrl: 'private',

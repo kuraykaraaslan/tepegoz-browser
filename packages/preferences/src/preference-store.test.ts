@@ -243,6 +243,18 @@ describe('PreferenceStore', () => {
     expect(PreferenceStore.getAll().secureDnsCustomUrl).toBe('https://dns.example/dns-query');
   });
 
+  it('autoplayPolicy: defaults to block-audio (Chrome-like), round-trips, and refuses an unknown value', () => {
+    writeFileSync(filePath, JSON.stringify({ locale: 'tr' }), 'utf8');
+    PreferenceStore.init({ filePath });
+    expect(PreferenceStore.getAll().autoplayPolicy).toBe('block-audio');
+    PreferenceStore.update({ autoplayPolicy: 'allow' });
+    PreferenceStore.reset();
+    PreferenceStore.init({ filePath });
+    expect(PreferenceStore.getAll().autoplayPolicy).toBe('allow');
+    expect(() => PreferenceStore.update({ autoplayPolicy: 'yes' as unknown as 'allow' })).toThrow();
+    expect(PreferenceStore.getAll().autoplayPolicy).toBe('allow');
+  });
+
   it('defaults mcpServers to [] and round-trips a valid stdio server', () => {
     PreferenceStore.init({ filePath });
     expect(PreferenceStore.getAll().mcpServers).toEqual([]);

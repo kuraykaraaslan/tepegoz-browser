@@ -91,6 +91,7 @@ export const PREFERENCE_METADATA = {
   adblock: stable,
   safeBrowsingEnabled: stable,
   httpsOnlyOnTunnel: stable,
+  autoplayPolicy: stable,
   secureDnsMode: stable,
   secureDnsProvider: stable,
   secureDnsCustomUrl: stable,

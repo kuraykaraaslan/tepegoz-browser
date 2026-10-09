@@ -192,7 +192,7 @@ grid is default-denied in `main/security.ts` with **no per-site UI** — asserte
 `security.test.ts`, but a user cannot grant an exception:
 
 - **USB, Serial, HID, Bluetooth, MIDI** per site
-- **Autoplay** per site + a global policy (Block audio / Block audio+video / Allow) — dev surface only today
+- **Autoplay** per site + a global policy. **Global policy built 2026-10-09** (`autoplayPolicy`: Allow / Block sound until I click — Chrome's default; e2e-verified). Per site is still open, and there is deliberately no "block everything" choice: Chromium's stricter mode still lets muted video start
 - **JavaScript / Images** per site — dev surface only today
 - **Protocol handlers** ("let this site open `mailto:`")
 - Motion / orientation sensors, idle detection, window management, local font access, background sync, federated identity (FedCM)

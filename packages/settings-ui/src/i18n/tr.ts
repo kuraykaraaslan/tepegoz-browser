@@ -481,6 +481,12 @@ export const tr: SettingsStrings = {
     title: 'Tünelli sekmelerde yalnızca HTTPS',
     desc: "Tor, VPN veya proxy üzerinden giden sekmelerde düz http sayfalarını https'e yükseltir. Bir sitede https yoksa http ile yüklenmeden önce sana sorulur. Kapatırsan tünelli sekmeler düz http yükleyebilir; Site Bilgisi'ndeki şifresiz bağlantı uyarısı yine görünür.",
   },
+  autoplay: {
+    title: 'Otomatik oynatma',
+    desc: 'Bir sayfanın medyayı kendiliğinden oynatıp oynatamayacağını belirler. Değiştirdikten sonra açtığınız sekmelerde geçerlidir; mevcut bir sekmede görmek için yenileyin ya da yeni sekme açın.',
+    allow: 'Tüm otomatik oynatmaya izin ver',
+    blockAudio: 'Ben tıklayana kadar sesi engelle (önerilen)',
+  },
   secureDns: {
     title: 'Güvenli DNS',
     desc: 'Web sitesi adreslerini şifreli bir bağlantıyla (HTTPS üzerinden DNS) sorgular; böylece ağınız bu sorgulardan hangi siteleri ziyaret ettiğinizi okuyamaz. Normal ve gizli sekmelerde geçerlidir; Tor, VPN veya proxy üzerinden giden sekmeler adları o tünel üzerinden sorgular. Seçtiğiniz sağlayıcı sorgularınızı görür, güvendiğiniz birini seçin.',

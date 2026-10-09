@@ -79,6 +79,13 @@ export const MAX_TITLE_LENGTH = 2048;
  * Takes a concrete `Session`, never a partition NAME: going through `BrowsingSessions` is what
  * guarantees the filtering/quarantine/User-Agent plane is attached before the view can load anything.
  */
+/** The user's autoplay choice, as Chromium's `autoplayPolicy` value. Unknown or absent reads as the default. */
+export function electronAutoplayPolicy(
+  policy: 'allow' | 'block-audio' | undefined,
+): NonNullable<WebPreferences['autoplayPolicy']> {
+  return policy === 'allow' ? 'no-user-gesture-required' : 'document-user-activation-required';
+}
+
 export function browsedViewWebPreferences(session: Session): WebPreferences {
   const base: WebPreferences = {
     contextIsolation: true,
@@ -91,10 +98,11 @@ export function browsedViewWebPreferences(session: Session): WebPreferences {
     // background tab, must keep running at full rate — not just keep painting.
     backgroundThrottling: false,
   };
-  applyWebContentDefaults(
-    base as unknown as Record<string, unknown>,
-    PreferenceStore.getAll().webContentDefaults,
-  );
+  const prefs = PreferenceStore.getAll();
+  applyWebContentDefaults(base as unknown as Record<string, unknown>, prefs.webContentDefaults);
+  // Not part of the boolean `WEB_CONTENT_DEFAULTS` table (it is a three-way policy, set from Settings →
+  // Privacy). A webPreference, so it is fixed when the view is created: a change reaches new tabs.
+  base.autoplayPolicy = electronAutoplayPolicy(prefs.autoplayPolicy);
   return base;
 }
 

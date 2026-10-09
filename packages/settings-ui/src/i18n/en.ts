@@ -495,6 +495,12 @@ export const en = {
     title: 'HTTPS-only on tunnelled tabs',
     desc: 'Upgrade plain http pages to https in tabs routed through Tor, a VPN or a proxy. If a site has no https, you are asked before it loads over http. Turning this off lets tunnelled tabs load plain http; the cleartext warning in Site Info stays.',
   },
+  autoplay: {
+    title: 'Autoplay',
+    desc: 'Controls whether a page may start playing media on its own. It applies to tabs you open after changing it; reload a tab, or open a new one, to see it there.',
+    allow: 'Allow all autoplay',
+    blockAudio: 'Block sound until I click (recommended)',
+  },
   secureDns: {
     title: 'Secure DNS',
     desc: 'Looks up website addresses over an encrypted connection (DNS over HTTPS), so your network cannot read which sites you visit from those lookups. It applies to ordinary and private tabs; a tab routed through Tor, a VPN or a proxy looks names up through that tunnel instead. The provider you pick sees your lookups, so pick one you trust.',

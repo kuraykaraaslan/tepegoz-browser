@@ -65,6 +65,9 @@ export const DEFAULT_PREFERENCES: Preferences = {
   safeBrowsingEnabled: true,
   // HTTPS-only on tunneled partitions: on by default.
   httpsOnlyOnTunnel: true,
+  // Chrome's default: muted media may autoplay, sound waits for a click. Electron's own default is to let
+  // everything play unattended, which is right for an embedded view and wrong for a browser.
+  autoplayPolicy: 'block-audio',
   // The system resolver, exactly as before — secure DNS is a choice, and choosing a provider means trusting it.
   secureDnsMode: 'off',
   secureDnsProvider: 'cloudflare',

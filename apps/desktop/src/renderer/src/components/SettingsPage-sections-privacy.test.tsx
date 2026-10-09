@@ -273,6 +273,21 @@ describe('privacyAndAdvancedSections — the Back up settings card', () => {
   });
 });
 
+describe('privacyAndAdvancedSections — Autoplay', () => {
+  it('shows the current policy, writes a change, and is found by settings search', () => {
+    const { setPref } = renderPrivacy({ autoplayPolicy: 'block-audio' });
+    const select = document.getElementById('autoplay-policy') as HTMLSelectElement;
+    expect(select.value).toBe('block-audio');
+    // Two honest choices — there is no "block everything", which Chromium cannot deliver.
+    expect(Array.from(select.options).map((o) => o.value)).toEqual(['allow', 'block-audio']);
+    fireEvent.change(select, { target: { value: 'allow' } });
+    expect(setPref).toHaveBeenCalledWith({ autoplayPolicy: 'allow' });
+    const section = privacyAndAdvancedSections(ctx().ctx).find((sec) => sec.id === 'privacy');
+    expect(section!.searchText).toContain(s.autoplay.title);
+    expect(s.autoplay.desc).toMatch(/tabs you open after/);
+  });
+});
+
 describe('privacyAndAdvancedSections — Secure DNS', () => {
   const get = (id: string) =>
     document.getElementById(id) as HTMLSelectElement | HTMLInputElement | null;

@@ -123,6 +123,12 @@ export type TabSwitchOrder = 'positional' | 'recent';
 /** Secure DNS (DNS over HTTPS): off = the system resolver as-is; automatic = try the chosen server and fall
  *  back to the system one; secure = the chosen server only, no fallback. */
 export type SecureDnsMode = 'off' | 'automatic' | 'secure';
+
+/** Whether a page may start playing SOUND on its own: `allow` = anything, `block-audio` = muted video may
+ *  autoplay but sound needs a click or tap on the page (Chrome's default). There is deliberately no "block
+ *  everything": Chromium's stricter mode still lets muted video start, so a control with that label would
+ *  promise more than it does. */
+export type AutoplayPolicy = 'allow' | 'block-audio';
 export type SecureDnsProvider = 'cloudflare' | 'google' | 'quad9' | 'custom';
 
 export interface Preferences {
@@ -242,6 +248,8 @@ export interface Preferences {
   /** Upgrade http:// to https:// on tunneled (Tor/VPN/proxy) tabs and fail closed instead of sending
    *  cleartext through the exit. Also the rollback switch. Private (not in PublicSettings). */
   httpsOnlyOnTunnel: boolean;
+  /** Fixed when a tab's view is created, so a change applies to tabs opened afterwards. */
+  autoplayPolicy: AutoplayPolicy;
   /** DNS over HTTPS for ordinary tabs. Tunnel-bound tabs resolve names through their tunnel instead. */
   secureDnsMode: SecureDnsMode;
   secureDnsProvider: SecureDnsProvider;
