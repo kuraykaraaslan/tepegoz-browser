@@ -116,6 +116,13 @@ line above, not something this correction reopens.
 appear as a separate box in _every_ phase's DoD but are one body of work. They are done once and ticked
 everywhere — not re-litigated per phase.
 
+> **Re-measured 2026-10-09 on a Linux dev machine: green.** `pnpm coverage` exits 0 — 889 test files pass
+> (3 skipped), 10,027 tests pass (5 skipped), none fail — at **S97.90 / B93.04 / F95.75 / L97.90**, every
+> threshold met. The `apps/desktop` function floor (97%) is the thin one, at 97.10%; most of what is still
+> uncovered there is older chat code. Getting here meant fixing, not excluding: a native-binding double
+> start in the llama engine that made six tests fail depending on timing, and the function coverage that
+> the session's new wiring had dragged below the floor. No threshold was moved and no file was excluded.
+
 > **Why the coverage numbers changed, and why it is not a relaxation (2026-08-21, re-measured 2026-08-22).**
 > The gate used to read S80/B70/F80/L80 over **27** packages — a scope that left out `credential-vault`
 > (the key crypto), `human-input`, `notary`, `macro-engine`, `http` and `agent-runtime`. It has been
