@@ -3,6 +3,7 @@ import {
   affectedByGeneralChange,
   affectedByGroupChange,
   bindingOnInvoluntaryGroupExit,
+  connectionIdOfPartition,
   isTunneledPartition,
   isValidConnectionId,
   partitionKeyFor,
@@ -178,6 +179,40 @@ describe('isTunneledPartition', () => {
   it('is false for a partition that is not ours at all', () => {
     expect(isTunneledPartition('persist:tepegoz-app')).toBe(false);
     expect(isTunneledPartition('')).toBe(false);
+  });
+});
+
+describe('connectionIdOfPartition', () => {
+  it('round-trips with partitionKeyFor and privatePartitionKey for every valid id', () => {
+    for (const id of ['vpn-a', 'tor-1', 'wg0', 'mullvad-se-sto-001']) {
+      expect(connectionIdOfPartition(partitionKeyFor({ connectionId: id }))).toBe(id);
+      expect(connectionIdOfPartition(privatePartitionKey({ connectionId: id }))).toBe(id);
+    }
+  });
+
+  it('is null for the Direct and unknown partitions', () => {
+    expect(connectionIdOfPartition(partitionKeyFor({ connectionId: null }))).toBeNull();
+    expect(connectionIdOfPartition(privatePartitionKey({ connectionId: null }))).toBeNull();
+    expect(connectionIdOfPartition('persist:tepegoz-app')).toBeNull();
+    expect(connectionIdOfPartition('')).toBeNull();
+  });
+
+  it('is null for an empty id', () => {
+    expect(connectionIdOfPartition('persist:tepegoz-web--conn-')).toBeNull();
+    expect(connectionIdOfPartition('tepegoz-private--conn-')).toBeNull();
+  });
+
+  it('is null for an id with an invalid character, and never sanitizes', () => {
+    expect(connectionIdOfPartition('persist:tepegoz-web--conn-Vpn')).toBeNull();
+    expect(connectionIdOfPartition('persist:tepegoz-web--conn-a/b')).toBeNull();
+    expect(connectionIdOfPartition('persist:tepegoz-web--conn-a b')).toBeNull();
+    expect(connectionIdOfPartition('persist:tepegoz-web--conn--a')).toBeNull();
+    expect(connectionIdOfPartition('persist:tepegoz-web--conn-' + 'a'.repeat(65))).toBeNull();
+  });
+
+  it('does not mis-parse a string that merely contains the infix elsewhere', () => {
+    expect(connectionIdOfPartition('--conn-vpn-a/extra')).toBeNull();
+    expect(connectionIdOfPartition('persist:x--conn-vpn-a--tail')).toBeNull();
   });
 });
 

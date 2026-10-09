@@ -131,6 +131,20 @@ export function isTunneledPartition(partition: string): boolean {
 }
 
 /**
+ * The connection id a tunneled partition is bound to, or `null` when the partition is not a valid
+ * bound partition. Inverse of {@link partitionKeyFor} / `privatePartitionKey` for BOTH spellings, kept
+ * here so the naming knowledge stays in the package that owns it. Connection ids never contain `--`
+ * (see `CONNECTION_ID_PATTERN`), so the infix cannot occur inside an id and the last occurrence is the
+ * one the key builders wrote. An empty or invalid id yields `null` rather than a guess.
+ */
+export function connectionIdOfPartition(partition: string): string | null {
+  const at = partition.lastIndexOf(CONNECTION_INFIX);
+  if (at < 0) return null;
+  const id = partition.slice(at + CONNECTION_INFIX.length);
+  return isValidId(id) ? id : null;
+}
+
+/**
  * The binding a tab must be given IN ITS OWN RIGHT when it is about to lose its group involuntarily.
  *
  * Pinning strips group membership (ADR-0020: pinned ⊥ grouped, a Chrome-parity ordering invariant). That
