@@ -1,4 +1,5 @@
 import { app, BrowserWindow, clipboard, shell, webContents } from 'electron';
+import { applySecureDns } from '../network/secure-dns.electron';
 import {
   IpcChannels,
   type AIAdaptor,
@@ -108,6 +109,7 @@ function syncDefaultProviderFromKeys(): void {
  * the full set. Credentials are never in preferences, so the vault is not part of this.
  */
 function reconcileAfterBulkPreferenceChange(): void {
+  applySecureDns();
   void McpService.reconcile();
   ExtensionCapabilityService.reconcile();
   void BackgroundConnectionService.reconcile();
@@ -190,6 +192,14 @@ export function registerAppIpc(): void {
     // Settings toggle stayed inert until the next app start.
     if (validated.agentStrictGuard !== undefined) {
       applyStrictGuard();
+    }
+    // A different DNS-over-HTTPS choice takes effect for the next lookup, no restart.
+    if (
+      validated.secureDnsMode !== undefined ||
+      validated.secureDnsProvider !== undefined ||
+      validated.secureDnsCustomUrl !== undefined
+    ) {
+      applySecureDns();
     }
     if (validated.adblock !== undefined) {
       adblockHost.init();

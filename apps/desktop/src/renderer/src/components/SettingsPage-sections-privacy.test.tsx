@@ -273,6 +273,51 @@ describe('privacyAndAdvancedSections — the Back up settings card', () => {
   });
 });
 
+describe('privacyAndAdvancedSections — Secure DNS', () => {
+  const get = (id: string) =>
+    document.getElementById(id) as HTMLSelectElement | HTMLInputElement | null;
+
+  it('shows only the mode while off, and writes the chosen mode', () => {
+    const { setPref } = renderPrivacy({ secureDnsMode: 'off' });
+    expect(get('secure-dns-mode')!.value).toBe('off');
+    expect(get('secure-dns-provider')).toBeNull();
+    fireEvent.change(get('secure-dns-mode')!, { target: { value: 'automatic' } });
+    expect(setPref).toHaveBeenCalledWith({ secureDnsMode: 'automatic' });
+  });
+
+  it('shows the provider once on, and writes it; the custom address only for "Custom"', () => {
+    const { setPref } = renderPrivacy({ secureDnsMode: 'secure', secureDnsProvider: 'cloudflare' });
+    expect(get('secure-dns-custom-url')).toBeNull();
+    fireEvent.change(get('secure-dns-provider')!, { target: { value: 'quad9' } });
+    expect(setPref).toHaveBeenCalledWith({ secureDnsProvider: 'quad9' });
+  });
+
+  it('commits a valid custom address on blur, and flags and withholds an invalid one', () => {
+    const { setPref } = renderPrivacy({
+      secureDnsMode: 'secure',
+      secureDnsProvider: 'custom',
+      secureDnsCustomUrl: '',
+    });
+    const input = get('secure-dns-custom-url')!;
+    fireEvent.change(input, { target: { value: 'http://dns.example/dns-query' } });
+    fireEvent.blur(input);
+    expect(screen.getByText(s.secureDns.customUrlInvalid)).toBeTruthy();
+    // Nothing was written for the invalid address (no call carries a custom URL at all).
+    expect(setPref.mock.calls.some(([patch]) => 'secureDnsCustomUrl' in (patch as object))).toBe(
+      false,
+    );
+    fireEvent.change(input, { target: { value: ' https://dns.example/dns-query ' } });
+    fireEvent.blur(input);
+    expect(setPref).toHaveBeenCalledWith({ secureDnsCustomUrl: 'https://dns.example/dns-query' });
+  });
+
+  it('is found by settings search and says who sees the lookups', () => {
+    const section = privacyAndAdvancedSections(ctx().ctx).find((sec) => sec.id === 'privacy');
+    expect(section!.searchText).toContain(s.secureDns.title);
+    expect(s.secureDns.desc).toMatch(/provider you pick sees your lookups/);
+  });
+});
+
 describe('privacyAndAdvancedSections — HTTPS-first for all sites', () => {
   it('is off by default, writes true when switched on, and is found by settings search', () => {
     const { setPref } = renderPrivacy({ httpsFirstEverywhere: false });

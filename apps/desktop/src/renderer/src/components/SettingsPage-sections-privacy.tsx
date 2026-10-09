@@ -10,6 +10,7 @@ import { AboutSection } from './settings-about';
 import { DeveloperSection } from './settings-developer';
 import { SystemSection } from './settings-system';
 import { SiteTrustSection } from './settings-site-trust';
+import { SecureDnsRow } from './settings-secure-dns';
 import { ShortcutsSection } from './settings-shortcuts';
 import { NetworkPrivacySection } from './settings-network-privacy';
 import {
@@ -270,7 +271,7 @@ export function privacyAndAdvancedSections(ctx: SettingsSectionsCtx): SettingsSe
       group: s.groupPrivacy,
       label: s.privacyTitle,
       icon: <IconShield />,
-      searchText: `${s.privacyTitle} ${s.telemetry} ${s.telemetryDesc} ${s.telemetryNothingSent} ${s.safeBrowsing.title} ${s.safeBrowsing.desc} ${s.httpsOnly.title} ${s.httpsOnly.desc} ${s.httpsFirst.title} ${s.httpsFirst.desc} ${s.preload.title} ${s.preload.desc} ${s.clearData.title} ${s.clearData.desc} ${s.clearHistoryLabel} ${s.forgetSite.title} ${s.clientCerts.title}`,
+      searchText: `${s.privacyTitle} ${s.telemetry} ${s.telemetryDesc} ${s.telemetryNothingSent} ${s.safeBrowsing.title} ${s.safeBrowsing.desc} ${s.httpsOnly.title} ${s.httpsOnly.desc} ${s.httpsFirst.title} ${s.httpsFirst.desc} ${s.secureDns.title} ${s.secureDns.desc} ${s.preload.title} ${s.preload.desc} ${s.clearData.title} ${s.clearData.desc} ${s.clearHistoryLabel} ${s.forgetSite.title} ${s.clientCerts.title}`,
       content: (
         <Card title={s.privacyTitle}>
           <div className="space-y-4">
@@ -330,6 +331,7 @@ export function privacyAndAdvancedSections(ctx: SettingsSectionsCtx): SettingsSe
                 setPref({ preloadPages: v });
               }}
             />
+            <SecureDnsRow s={s} prefs={prefs} setPref={setPref} />
             <ClearBrowsingDataRow s={s} />
             <ClearOnExitRow
               s={s}

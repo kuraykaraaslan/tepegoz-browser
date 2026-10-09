@@ -213,6 +213,36 @@ describe('PreferenceStore', () => {
     expect(PreferenceStore.getAll().httpsFirstEverywhere).toBe(true);
   });
 
+  it('secure DNS: defaults to off, round-trips a choice, and refuses a non-https or credentialed custom server', () => {
+    writeFileSync(filePath, JSON.stringify({ locale: 'tr' }), 'utf8');
+    PreferenceStore.init({ filePath });
+    expect(PreferenceStore.getAll()).toMatchObject({
+      secureDnsMode: 'off',
+      secureDnsProvider: 'cloudflare',
+      secureDnsCustomUrl: '',
+    });
+    PreferenceStore.update({
+      secureDnsMode: 'secure',
+      secureDnsProvider: 'custom',
+      secureDnsCustomUrl: 'https://dns.example/dns-query',
+    });
+    PreferenceStore.reset();
+    PreferenceStore.init({ filePath });
+    expect(PreferenceStore.getAll().secureDnsCustomUrl).toBe('https://dns.example/dns-query');
+    for (const bad of [
+      'http://dns.example/q',
+      'https://u:p@dns.example/q',
+      'javascript:1',
+      'nope',
+    ]) {
+      expect(() => PreferenceStore.update({ secureDnsCustomUrl: bad })).toThrow();
+    }
+    expect(() =>
+      PreferenceStore.update({ secureDnsMode: 'always' as unknown as 'secure' }),
+    ).toThrow();
+    expect(PreferenceStore.getAll().secureDnsCustomUrl).toBe('https://dns.example/dns-query');
+  });
+
   it('defaults mcpServers to [] and round-trips a valid stdio server', () => {
     PreferenceStore.init({ filePath });
     expect(PreferenceStore.getAll().mcpServers).toEqual([]);

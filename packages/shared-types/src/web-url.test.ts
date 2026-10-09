@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { isNavigableWebUrl, isSafeSearchTemplate, normalizeWebUrlInput } from './web-url';
+import {
+  isNavigableWebUrl,
+  isSafeSearchTemplate,
+  isSecureDnsServerUrl,
+  normalizeWebUrlInput,
+} from './web-url';
 
 /**
  * The scheme gate for the three preferences that hold an address the browser later navigates to.
@@ -78,4 +83,25 @@ describe('normalizeWebUrlInput', () => {
     expect(normalizeWebUrlInput('')).toBe('');
     expect(normalizeWebUrlInput('   ')).toBe('');
   });
+});
+
+describe('isSecureDnsServerUrl', () => {
+  it.each([
+    'https://cloudflare-dns.com/dns-query',
+    'https://dns.example:8443/dns-query',
+    '  https://dns.example/dns-query  ',
+    'https://192.0.2.1/dns-query',
+  ])('accepts %j', (v) => expect(isSecureDnsServerUrl(v)).toBe(true));
+
+  it.each([
+    '',
+    'dns.example/dns-query',
+    'http://dns.example/dns-query',
+    'ftp://dns.example/',
+    'javascript:alert(1)',
+    'https://user:pass@dns.example/dns-query',
+    'https://user@dns.example/dns-query',
+    'https://',
+    'not a url',
+  ])('rejects %j', (v) => expect(isSecureDnsServerUrl(v)).toBe(false));
 });

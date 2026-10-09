@@ -14,6 +14,7 @@ import userAgentHost from './extensions/user-agent-host.electron';
 import DownloadService from './downloads/download-service.electron';
 import SafeBrowsingService from './security/safe-browsing-service.electron';
 import { registerHttpsOnly } from './network/https-only.electron';
+import { applySecureDns } from './network/secure-dns.electron';
 import UploadService from './uploads/upload-service.electron';
 import BrowsingWebRequestService from './web-request/browsing-web-request-service.electron';
 
@@ -23,6 +24,8 @@ import BrowsingWebRequestService from './web-request/browsing-web-request-servic
  * auth handlers. MUST run after `whenReady` and before the first window opens.
  */
 export function initBrowsingNetwork(safeMode: boolean): void {
+  // The system resolver unless the user chose a DNS-over-HTTPS server. Before any tab can resolve a name.
+  applySecureDns();
   // Apply the persisted User-Agent override to the browsing session BEFORE the first tab opens
   // (a no-op default when the extension is disabled).
   if (!safeMode) userAgentHost.init();

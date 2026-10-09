@@ -65,6 +65,10 @@ export const DEFAULT_PREFERENCES: Preferences = {
   safeBrowsingEnabled: true,
   // HTTPS-only on tunneled partitions: on by default.
   httpsOnlyOnTunnel: true,
+  // The system resolver, exactly as before — secure DNS is a choice, and choosing a provider means trusting it.
+  secureDnsMode: 'off',
+  secureDnsProvider: 'cloudflare',
+  secureDnsCustomUrl: '',
   // Opt-in: it changes how every plain-http link behaves, which some people's sites depend on.
   httpsFirstEverywhere: false,
   // Chromium's own default; opt out for privacy.

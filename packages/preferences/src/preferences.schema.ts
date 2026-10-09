@@ -5,6 +5,7 @@ import {
   NetworkConnectionSchema,
   NetworkGeneralBindingSchema,
   isNavigableWebUrl,
+  isSecureDnsServerUrl,
   isSafeSearchTemplate,
   type WebPermissionCapability,
 } from '@tepegoz/shared-types';
@@ -198,6 +199,18 @@ export const PreferencesSchema = z.object({
   safeBrowsingEnabled: z.boolean(),
   // HTTPS-only on tunneled partitions. Private; on by default; also the rollback switch.
   httpsOnlyOnTunnel: z.boolean(),
+  secureDnsMode: z.enum(['off', 'automatic', 'secure']),
+  secureDnsProvider: z.enum(['cloudflare', 'google', 'quad9', 'custom']),
+  // An RFC 8484 DoH template. Must be https (a DoH server on plain http would defeat the point), carry no
+  // credentials, and stay short. '' is "not set". Whether a custom server actually works is not checked
+  // here — only that what is stored can never be a non-https or credential-bearing URL.
+  secureDnsCustomUrl: z
+    .string()
+    .max(2048)
+    .refine(
+      (v) => v === '' || isSecureDnsServerUrl(v),
+      'secureDnsCustomUrl must be an https URL without credentials',
+    ),
   httpsFirstEverywhere: z.boolean(),
   preloadPages: z.boolean(),
   // Typo extension settings. Dictionaries are profile files, not preference payloads.

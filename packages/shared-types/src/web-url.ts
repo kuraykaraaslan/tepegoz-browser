@@ -85,3 +85,24 @@ export function normalizeHostInput(value: string): string | null {
   const lowered = host.toLowerCase();
   return /^[a-z0-9.-]+$/.test(lowered) && lowered !== '' ? lowered : null;
 }
+
+/**
+ * True for a DNS-over-HTTPS server template (RFC 8484): an absolute `https` URL with a host and no
+ * embedded credentials. `http` is refused outright — a DoH server reached over cleartext would defeat the
+ * point of the setting — and so is `user:pass@host`, which would store a secret in plain JSON preferences.
+ * Whether the server actually answers is not checked here; only that what is stored can never be unsafe.
+ */
+export function isSecureDnsServerUrl(value: string): boolean {
+  let parsed: URL;
+  try {
+    parsed = new URL(value.trim());
+  } catch {
+    return false;
+  }
+  return (
+    parsed.protocol === 'https:' &&
+    parsed.username === '' &&
+    parsed.password === '' &&
+    parsed.hostname !== ''
+  );
+}

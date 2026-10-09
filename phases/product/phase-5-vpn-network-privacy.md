@@ -329,7 +329,14 @@ endpoint** (one loopback port per active connection), never an OS-level system p
         **"Use secure connections for all sites"** (`httpsFirstEverywhere`, off by default) — see the
         amendment in [ADR-0050](../../docs/adr/0050-https-only-on-tunnel-bound-tabs.md). Top-level GET only,
         local network exempt, fails open, same warning page and per-site bypass.
-  - [ ] _Still open:_ the **Secure DNS (DoH)** half — on/off, provider or custom resolver — has no code at all.
+  - [x] _Secure DNS half landed 2026-10-09 (unit-tested; the resolver call shape and live mode changes are
+        **e2e-verified** in `e2e/secure-dns-setting.spec.ts`; **not** verified against a real DoH server):_
+        Privacy → **Secure DNS** — Off / Automatic (falls back to system DNS) / Secure (never falls back),
+        with Cloudflare, Google, Quad9 or a custom https server (`app.configureHostResolver`, applied at
+        startup and live on change). Process-wide: it covers ordinary and private tabs; a tab bound to Tor, a
+        VPN or a proxy hands the proxy the hostname, so its lookups already happen at the far end. An
+        unusable custom address degrades to the system resolver, never to "secure with no server". **Off by
+        default**; the description says the chosen provider sees your lookups.
 
 ### L10 — Safe-Browsing interplay
 

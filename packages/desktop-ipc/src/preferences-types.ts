@@ -120,6 +120,11 @@ export type StartupTabs = 'restore' | 'newtab' | 'pages';
 /** How Ctrl+Tab walks the tabs: strip order, or most recently used first. */
 export type TabSwitchOrder = 'positional' | 'recent';
 
+/** Secure DNS (DNS over HTTPS): off = the system resolver as-is; automatic = try the chosen server and fall
+ *  back to the system one; secure = the chosen server only, no fallback. */
+export type SecureDnsMode = 'off' | 'automatic' | 'secure';
+export type SecureDnsProvider = 'cloudflare' | 'google' | 'quad9' | 'custom';
+
 export interface Preferences {
   theme: ThemePref;
   /**
@@ -237,6 +242,11 @@ export interface Preferences {
   /** Upgrade http:// to https:// on tunneled (Tor/VPN/proxy) tabs and fail closed instead of sending
    *  cleartext through the exit. Also the rollback switch. Private (not in PublicSettings). */
   httpsOnlyOnTunnel: boolean;
+  /** DNS over HTTPS for ordinary tabs. Tunnel-bound tabs resolve names through their tunnel instead. */
+  secureDnsMode: SecureDnsMode;
+  secureDnsProvider: SecureDnsProvider;
+  /** The RFC 8484 URL used when the provider is `custom` (https only; '' when unused). */
+  secureDnsCustomUrl: string;
   /** Try https:// first for top-level navigations on EVERY tab (Chrome's HTTPS-First), with a warning page
    *  and a per-site bypass when a site has no https. Local-network hosts are exempt. */
   httpsFirstEverywhere: boolean;
