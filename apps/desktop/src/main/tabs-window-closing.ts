@@ -2,6 +2,7 @@ import { type WebContents, type WebContentsView } from 'electron';
 import { isWebUrl } from './lib/navigation-url';
 import ActionInterceptorService from './extensions/action-interceptors.electron';
 import { WindowTabsBase } from './tabs-window-base';
+import { keepClosedBatch } from './closed-tabs';
 import { internalBaseUrl, internalTitleFor, rememberClosedTab } from './tabs-shared';
 import { unwireView, type ViewWiringHost } from './tabs-view-wiring';
 import { askBeforeClose } from './navigation/unload-broker';
@@ -66,9 +67,12 @@ export class WindowTabsClosing extends WindowTabsBase {
     // this takes the close over, the tab deliberately stays visible until the user answers.
     if (
       live &&
-      askBeforeClose(wc, () => {
-        this.closeTab(id);
-      })
+      askBeforeClose(
+        wc,
+        keepClosedBatch(() => {
+          this.closeTab(id);
+        }),
+      )
     )
       return false;
     // Remember the URL so Ctrl+Shift+T can reopen it (most-recent first, capped). Read from the store

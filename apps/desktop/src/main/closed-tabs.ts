@@ -33,16 +33,33 @@ let closedSeq = 0;
 let batchSeq = 0;
 let activeBatch: string | null = null;
 
-/** Run `fn` with every tab it closes recorded as ONE restorable batch (used by "Close group"). */
-export function runAsClosedBatch(fn: () => void): void {
+function runInBatch(batch: string, fn: () => void): void {
   const outer = activeBatch;
-  batchSeq += 1;
-  activeBatch = `cb-${String(batchSeq)}`;
+  activeBatch = batch;
   try {
     fn();
   } finally {
     activeBatch = outer;
   }
+}
+
+/** Run `fn` with every tab it closes recorded as ONE restorable batch (used by "Close group"). */
+export function runAsClosedBatch(fn: () => void): void {
+  batchSeq += 1;
+  runInBatch(`cb-${String(batchSeq)}`, fn);
+}
+
+/**
+ * Bind `fn` to the batch that is open right now. A page's `beforeunload` prompt defers a close and the
+ * retry arrives later, outside the original `runAsClosedBatch` call — wrapping the retry keeps that tab
+ * in its group's batch. Outside a batch it returns `fn` unchanged.
+ */
+export function keepClosedBatch(fn: () => void): () => void {
+  const batch = activeBatch;
+  if (batch === null) return fn;
+  return () => {
+    runInBatch(batch, fn);
+  };
 }
 
 /** Record a closed tab at the top of the list, evicting the oldest past the cap. The synthetic id is

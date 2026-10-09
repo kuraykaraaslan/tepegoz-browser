@@ -89,9 +89,10 @@ work lives in Phase 2; agent orchestration (multi-tab parallelism) stays in Phas
           row ("Research — 8 tabs"); Ctrl+Shift+T or picking the row restores the tabs as a group with that
           name and colour. A tab closed on its own out of a group stays a plain row and reopens as a plain
           tab. No policy scope travels with the entry (ADR-0020).
-    - [ ] _Still owed:_ a group whose close is deferred by a page's `beforeunload` prompt loses its batch
-          (those tabs come back as separate rows); the strip's own context menu has no "reopen group" entry;
-          no e2e spec, and nothing restores a closed group's route or collapsed state.
+    - [x] _Fixed 2026-10-09:_ a close deferred by a page's `beforeunload` prompt keeps its batch — the
+          retry is bound to the batch that was open when the close started (`keepClosedBatch`).
+    - [ ] _Still owed:_ the strip's own context menu has no "reopen group" entry; no e2e spec, and nothing
+          restores a closed group's route or collapsed state.
   - [ ] **Context-driven automatic grouping** — "open a group for this task and collect the related tabs into
         it." Dia ships this; here it is a smaller step than it looks, because groups are **already** the key
         for agent conversations (`groupId`) and the agent already auto-groups tabs it opens per task. The

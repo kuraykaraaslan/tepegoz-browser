@@ -143,6 +143,7 @@ export interface DetachedTab {
 
 export {
   closedTabs,
+  keepClosedBatch,
   recentlyClosedTabs,
   rememberClosedTab,
   runAsClosedBatch,

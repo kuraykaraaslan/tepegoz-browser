@@ -90,6 +90,7 @@ describe('browsedViewWebPreferences', () => {
 
 const {
   closedTabs,
+  keepClosedBatch,
   rememberClosedTab,
   runAsClosedBatch,
   takeClosedBatch,
@@ -305,5 +306,29 @@ describe('group-aware recently closed', () => {
     ).toThrow('boom');
     rememberClosedTab('https://a.example/', 'A', 1, g);
     expect(recentlyClosedTabs()[0]?.group).toBeUndefined();
+  });
+
+  it('keeps a deferred close (a beforeunload retry) in the batch it was started in', () => {
+    let retry: () => void = () => undefined;
+    runAsClosedBatch(() => {
+      rememberClosedTab('https://a.example/', 'A', 1, g);
+      retry = keepClosedBatch(() => {
+        rememberClosedTab('https://b.example/', 'B', 2, g);
+      });
+    });
+    rememberClosedTab('https://other.example/', 'O', 3); // unrelated, closed before the retry
+    retry();
+    const rows = recentlyClosedTabs();
+    expect(rows.map((r) => r.group?.count ?? 1)).toEqual([2, 1]);
+    expect(
+      takeClosedBatch(rows[0]?.id)
+        .tabs.map((t) => t.url)
+        .sort(),
+    ).toEqual(['https://a.example/', 'https://b.example/']);
+  });
+
+  it('leaves a retry outside any batch alone', () => {
+    const fn = () => undefined;
+    expect(keepClosedBatch(fn)).toBe(fn);
   });
 });
