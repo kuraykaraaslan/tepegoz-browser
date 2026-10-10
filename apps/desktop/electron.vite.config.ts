@@ -1,4 +1,5 @@
 import { execFileSync } from 'node:child_process';
+import { resolve } from 'node:path';
 import { defineConfig, externalizeDepsPlugin } from 'electron-vite';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
@@ -92,10 +93,17 @@ export default defineConfig(({ command }) => {
     },
     preload: {
       plugins: [externalizeDepsPlugin({ exclude: WORKSPACE_PACKAGES })],
-      // Force CJS single-file preload (sandbox:true requires CJS) at a stable path matching window.ts.
+      // Force CJS single-file preloads (sandbox:true requires CJS) at stable paths matching window.ts.
+      // Two entries: the chrome bridge (`index`) and the input-less preload browsed pages get (`page-gpc`,
+      // ADR-0051). They are separate files on purpose — the page-facing one must not share a bundle with
+      // anything that can reach the IPC contract.
       build: {
         rollupOptions: {
-          output: { format: 'cjs', entryFileNames: 'index.js' },
+          input: {
+            index: resolve(__dirname, 'src/preload/index.ts'),
+            'page-gpc': resolve(__dirname, 'src/preload/page-gpc.ts'),
+          },
+          output: { format: 'cjs', entryFileNames: '[name].js' },
         },
       },
     },

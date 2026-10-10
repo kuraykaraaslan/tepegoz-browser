@@ -5,6 +5,7 @@ import { registerCertificateHandler } from './auth/certificate-broker';
 import { registerClientCertificateHandler } from './auth/client-certificate-broker';
 import { passwordVault } from './stores.electron';
 import BrowsingSessions from './network/browsing-sessions.electron';
+import { registerGpcPreload } from './network/gpc-preload.electron';
 import { privacySignalHeaders } from './network/privacy-signal-stamp';
 import { dnsPrefetchStamp } from './network/dns-prefetch-stamp';
 import { registerCertificateRecorder } from './network/certificate-recorder.electron';
@@ -63,6 +64,9 @@ export function initBrowsingNetwork(safeMode: boolean): void {
     },
     { critical: true },
   );
+  // `navigator.globalPrivacyControl` on top-level pages (ADR-0051): the input-less page preload, attached
+  // to every browsing session while the setting is on. Also in safe mode — it is a privacy signal, not a feature.
+  registerGpcPreload();
   // Observe every TLS verification so the Site Info bubble can show a certificate viewer for a
   // page that loaded fine (Electron exposes no cert for a live page otherwise). The proc only
   // records — it defers the trust decision to Chromium — so it is a non-critical attacher.

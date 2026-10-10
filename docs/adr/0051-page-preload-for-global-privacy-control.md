@@ -1,7 +1,10 @@
 # ADR-0051: A one-line page preload for `navigator.globalPrivacyControl` — main frame only, registered and unregistered with the setting, no IPC from the page
 
-- **Status:** Proposed (nothing is built; every number below was measured on 2026-10-10 against the shipping
-  app with a throwaway spike that is not in the tree)
+- **Status:** Accepted (shipped 2026-10-10 — `preload/page-gpc.js`, `network/gpc-preload.electron.ts`, the
+  prefs reconciler and `e2e/gpc-property.spec.ts`; accepted by the implementer under the owner's standing
+  "you select for best engineering case" for design questions, as a LOCAL commit the owner reviews before any
+  push. A **packaged-build** check is still owed: it was verified against the unpackaged `out/` tree, not an
+  asar.) Every number in the table was measured against the shipping app before any code was written.
 - **Date:** 2026-10-10
 - **Relates to:** [ADR-0012](0012-browser-tab-model.md) (browsed tabs are born with no preload) ·
   [ADR-0026](0026-agent-code-execution.md) (a sandbox is claimed only once measured) ·

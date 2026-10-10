@@ -1,5 +1,6 @@
 import { app, BrowserWindow, clipboard, shell, webContents } from 'electron';
 import { applySecureDns } from '../network/secure-dns.electron';
+import { reconcileGpcPreload } from '../network/gpc-preload.electron';
 import {
   IpcChannels,
   type AIAdaptor,
@@ -110,6 +111,7 @@ function syncDefaultProviderFromKeys(): void {
  */
 function reconcileAfterBulkPreferenceChange(): void {
   applySecureDns();
+  reconcileGpcPreload();
   void McpService.reconcile();
   ExtensionCapabilityService.reconcile();
   void BackgroundConnectionService.reconcile();
@@ -200,6 +202,11 @@ export function registerAppIpc(): void {
       validated.secureDnsCustomUrl !== undefined
     ) {
       applySecureDns();
+    }
+    // Global Privacy Control toggled — attach/detach the page preload on every live browsing session (it
+    // reaches each tab on its next navigation; the request header follows the setting immediately).
+    if (validated.globalPrivacyControl !== undefined) {
+      reconcileGpcPreload();
     }
     if (validated.adblock !== undefined) {
       adblockHost.init();

@@ -538,7 +538,7 @@ export const en = {
   privacySignals: {
     gpcTitle: 'Send a Global Privacy Control signal',
     gpcDesc:
-      'Tells every site you visit that you opt out of the sale or sharing of your data. Unlike Do Not Track, this signal has legal force in several places, such as California and the EU. Sites can still ignore it where no law applies.',
+      'Tells every site you visit that you opt out of the sale or sharing of your data. Unlike Do Not Track, this signal has legal force in several places, such as California and the EU. Sites can still ignore it where no law applies. It is sent with every request; pages that read it from script see it on top-level pages, from the next time a tab loads.',
     dntTitle: 'Send a Do Not Track request',
     dntDesc:
       'Adds the older Do Not Track header. Almost no site honours it, and sending it makes your browser a little easier to tell apart from others, so it is off by default.',

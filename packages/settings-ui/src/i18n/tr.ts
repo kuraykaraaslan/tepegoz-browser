@@ -524,7 +524,7 @@ export const tr: SettingsStrings = {
   privacySignals: {
     gpcTitle: 'Küresel Gizlilik Denetimi sinyali gönder',
     gpcDesc:
-      'Ziyaret ettiğiniz her siteye verilerinizin satılmasını veya paylaşılmasını reddettiğinizi bildirir. Do Not Track’ten farklı olarak bu sinyalin Kaliforniya ve AB gibi yerlerde yasal geçerliliği vardır. Yasanın geçerli olmadığı yerlerde siteler yine de yok sayabilir.',
+      'Ziyaret ettiğiniz her siteye verilerinizin satılmasını veya paylaşılmasını reddettiğinizi bildirir. Do Not Track’ten farklı olarak bu sinyalin Kaliforniya ve AB gibi yerlerde yasal geçerliliği vardır. Yasanın geçerli olmadığı yerlerde siteler yine de yok sayabilir. Her istekle gönderilir; betikten okuyan sayfalar bunu üst düzey sayfalarda, sekmenin bir sonraki yüklenişinden itibaren görür.',
     dntTitle: 'Do Not Track (İzleme) isteği gönder',
     dntDesc:
       'Eski Do Not Track başlığını ekler. Neredeyse hiçbir site buna uymaz ve göndermek tarayıcınızı diğerlerinden biraz daha kolay ayırt edilir hâle getirir; bu yüzden varsayılan olarak kapalıdır.',

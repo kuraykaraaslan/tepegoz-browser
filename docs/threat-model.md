@@ -126,6 +126,17 @@ after a user picks a file is untested here, and should not be assumed either way
 `FileOperationsHost` and the Settings "file operations" switch are scoped to the **agent's** file tools
 and were never claimed to cover this path.
 
+### The one preload a browsed page gets
+
+Browsed tabs have no preload that reaches the app: no `window.tepegoz`, no `require`, no `process`
+(`e2e/internal-pages-unreachable.spec.ts`, `e2e/gpc-property.spec.ts`). The single exception is
+`preload/page-gpc.js` ([ADR-0051](adr/0051-page-preload-for-global-privacy-control.md)), attached to the
+browsing sessions while Global Privacy Control is on. It is 247 bytes, imports only `webFrame`, takes no
+input and returns nothing: no `ipcRenderer`, no `contextBridge`, so there is no channel from an untrusted
+page to main and nothing for a page to call. Whether it runs is decided by main attaching or detaching the
+file, never by the page. Any further browsed-page preload must be justified against this paragraph and the
+two specs above — the first one added is not the last one anyone should have to audit.
+
 ### A DOM-resident approval is a forgeable approval
 
 ClaudeBleed (Anthropic's Claude for Chrome, May 2026) combined two defects into one escalation: **any**

@@ -63,7 +63,9 @@ export const MAX_TITLE_LENGTH = 2048;
 
 /**
  * The hardened `webPreferences` every BROWSED tab view is born with: contextIsolation + sandbox,
- * nodeIntegration off, webSecurity on, no preload (the page never reaches the bridge). One factory so
+ * nodeIntegration off, webSecurity on, and no preload that reaches the bridge (the page never does). The
+ * ONE preload a browsed frame gets is the session-level, input-less `preload/page-gpc.js` (ADR-0051),
+ * attached by `network/gpc-preload.electron.ts`, not by these `webPreferences`. One factory so
  * the three view-creation sites (fresh tab, revive-from-discard, cross-window rehost) cannot drift.
  *
  * `plugins: true` turns on Chromium's built-in PDF viewer, so a `application/pdf` response renders

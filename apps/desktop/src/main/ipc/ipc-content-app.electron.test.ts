@@ -203,6 +203,8 @@ const surfaceTheme = vi.hoisted(() => ({
 vi.mock('../lib/surface-theme', () => surfaceTheme);
 const strictGuard = vi.hoisted(() => ({ applyStrictGuard: vi.fn() }));
 vi.mock('./strict-guard', () => strictGuard);
+const gpcPreload = vi.hoisted(() => ({ reconcileGpcPreload: vi.fn() }));
+vi.mock('../network/gpc-preload.electron', () => gpcPreload);
 const launchAtLogin = vi.hoisted(() => ({ setLaunchAtLogin: vi.fn() }));
 vi.mock('../launch-at-login', () => launchAtLogin);
 const defaultBrowser = vi.hoisted(() => ({
@@ -288,6 +290,12 @@ describe('prefsSet / prefsReset', () => {
     expect(siteZoom.reapplyZoomEverywhere).not.toHaveBeenCalled();
     expect(adblockHost.init).not.toHaveBeenCalled();
     expect(launchAtLogin.setLaunchAtLogin).not.toHaveBeenCalled();
+    expect(gpcPreload.reconcileGpcPreload).not.toHaveBeenCalled();
+  });
+
+  it('prefsSet re-syncs the Global Privacy Control page preload only when that setting is in the patch', () => {
+    call(CH.prefsSet, { globalPrivacyControl: false });
+    expect(gpcPreload.reconcileGpcPreload).toHaveBeenCalledTimes(1);
   });
 
   it('prefsSet fans each changed key out to exactly its downstream service', () => {
@@ -357,6 +365,7 @@ describe('settingsExport / settingsImport', () => {
     expect(extCaps.reconcile).toHaveBeenCalled();
     expect(backgroundConnections.reconcile).toHaveBeenCalled();
     expect(adblockHost.init).toHaveBeenCalled();
+    expect(gpcPreload.reconcileGpcPreload).toHaveBeenCalled();
     expect(surfaceTheme.applyNativeThemeSource).toHaveBeenCalled();
     expect(publicSettings.broadcastPublicSettings).toHaveBeenCalled();
     expect(res).toEqual({ applied: 2, skipped: ['bogusKey'] });
