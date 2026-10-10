@@ -3,6 +3,7 @@ import { createServer, type Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { join, resolve } from 'node:path';
 import { test, expect, _electron as electron, type ElectronApplication } from '@playwright/test';
+import { chromePage } from './chrome-page';
 
 /**
  * Per-site zoom (Phase 2c), end to end: zoom is remembered PER ORIGIN, survives a restart, does not leak
@@ -47,7 +48,7 @@ test('zoom is remembered per origin across a restart, and reset leaves no record
 
   try {
     let app = await launch();
-    let page = await app.firstWindow();
+    let page = await chromePage(app);
     let box = page.getByRole('combobox').first();
     await expect(box).toBeVisible();
 
@@ -94,7 +95,7 @@ test('zoom is remembered per origin across a restart, and reset leaves no record
 
     // Restart: A comes back at 125%, B still 100%.
     app = await launch();
-    page = await app.firstWindow();
+    page = await chromePage(app);
     box = page.getByRole('combobox').first();
     await expect(box).toBeVisible();
     await open(a.origin, /ZoomSiteA/);

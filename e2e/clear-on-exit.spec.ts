@@ -3,6 +3,7 @@ import { createServer, type Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { join, resolve } from 'node:path';
 import { test, expect, _electron as electron } from '@playwright/test';
+import { chromePage } from './chrome-page';
 
 /**
  * "Clear cookies and site data when the browser closes" (`clearOnExit`), measured the way a user would
@@ -60,7 +61,7 @@ async function cookieAfterRestart(
 
   try {
     let app = await launch();
-    let page = await app.firstWindow();
+    let page = await chromePage(app);
     let box = page.getByRole('combobox').first();
     await expect(box).toBeVisible();
     await box.fill(`${base}/set`);
@@ -74,7 +75,7 @@ async function cookieAfterRestart(
     await app.close(); // a clean quit — the clear runs here
 
     app = await launch();
-    page = await app.firstWindow();
+    page = await chromePage(app);
     box = page.getByRole('combobox').first();
     await expect(box).toBeVisible();
     await box.fill(`${base}/echo?after`);
@@ -150,7 +151,7 @@ test('sites on the keep list keep their cookies through the exit clear; every ot
 
   try {
     let app = await launch();
-    let page = await app.firstWindow();
+    let page = await chromePage(app);
     let box = page.getByRole('combobox').first();
     await expect(box).toBeVisible();
     for (const host of ['kept.test', 'dropped.test']) {
@@ -168,7 +169,7 @@ test('sites on the keep list keep their cookies through the exit clear; every ot
     await app.close(); // clean quit: the clear runs here
 
     app = await launch();
-    page = await app.firstWindow();
+    page = await chromePage(app);
     box = page.getByRole('combobox').first();
     await expect(box).toBeVisible();
     for (const host of ['kept.test', 'dropped.test']) {

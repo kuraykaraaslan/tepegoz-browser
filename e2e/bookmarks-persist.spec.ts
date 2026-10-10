@@ -1,6 +1,7 @@
 import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { test, expect, _electron as electron, type ElectronApplication } from '@playwright/test';
+import { chromePage } from './chrome-page';
 
 /**
  * Bookmarks, across a restart (Phase 2c): what is saved is still there next launch; only an allow-listed
@@ -42,7 +43,7 @@ test('bookmarks persist, refuse executable schemes, and export without live mark
   const launch = (): Promise<ElectronApplication> =>
     electron.launch({ args: [`--user-data-dir=${profileDir}`, appDir], env: guiEnv() });
   const chrome = async (app: ElectronApplication) => {
-    const page = await app.firstWindow();
+    const page = await chromePage(app);
     await expect(page.getByRole('combobox').first()).toBeVisible();
     return page;
   };
