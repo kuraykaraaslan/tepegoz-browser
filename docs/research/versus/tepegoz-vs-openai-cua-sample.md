@@ -12,7 +12,7 @@
 > `kanban-plan.ts`, `workspace-lab-server.ts`, `scenarios/booking.ts`, `packages/replay-schema/src/index.ts`,
 > `packages/browser-runtime/src/index.ts`, `packages/scenario-kit/src/scenarios.ts`,
 > `apps/runner/src/server.ts`, `apps/demo-web/app/ui/operator-console/*`, `labs/*`, tüm test dosyaları)
-> ve bu reponun AI yüzeyinin (`docs/concepts/ai-agent/`, `packages/orchestrator|model-gateway|
+> ve bu reponun AI yüzeyinin (`docs/phases/02-ai-agent/`, `packages/orchestrator|model-gateway|
 capability-plane|security-policy|agent-runtime|browser-tools|tool-executor|web-tools|local-inference|
 model-catalog|mcp-client|recipe-compiler|macro-engine|notary|credential-vault|human-input|agent-eval`,
 > `extensions/ext-agent`, `docs/adr/0005|0006|0007|0008|0013|0018|0025|0026|0029|0030|0039`) aynı oturumda
@@ -21,7 +21,7 @@ model-catalog|mcp-client|recipe-compiler|macro-engine|notary|credential-vault|hu
 > **Tarih.** 2026-09-01.
 >
 > **Dil notu.** Bu belge, sahibe sunulduğu haliyle Türkçe tutulmuştur
-> (`docs/concepts/tracks/README.md`'deki "orijinal dilinde tutulur" kaydıyla aynı gerekçe). Proje eserleri
+> (`phases/tracks/README.md`'deki "orijinal dilinde tutulur" kaydıyla aynı gerekçe). Proje eserleri
 > İngilizce-öncedir; bu, yazıldığı haliyle korunan bir kayıttır.
 >
 > **Kategori uyarısı.** Bunlar **farklı kategoriler**. OpenAI CUA Sample App bir **ürün değil, satıcı

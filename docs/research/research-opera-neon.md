@@ -99,7 +99,7 @@ ajans._ Kritik iki öneri "görev dayanıklılığı ve devamlılık mekanizmas�
 ### Tepegöz'e taşınanlar
 
 - **Uyku/kesinti sonrası koşunun kopmaması** → Faz 1b'nin dayanıklı checkpoint/resume hattı; yüzeyi
-  [S8](../concepts/ai-agent/phases/08-assistant-ux.md) PR7'nin "resume from a step" satırı.
+  [S8](../phases/02-ai-agent/08-assistant-ux.md) PR7'nin "resume from a step" satırı.
 - **Şeffaf izinler + eylem günlüğü + hassas adım onayı** → burada zaten kernel kuralı; S8 PR7'nin
   permission-debug view satırı bunun görünür yarısı.
 - **Keşfedilebilirlik** (küçük AI düğmesi, kısayol yokluğu) → S8 PR7 discoverability pass.

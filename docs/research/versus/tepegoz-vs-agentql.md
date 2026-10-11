@@ -14,7 +14,7 @@
 > log_into_sites, save_and_load_authenticated_session, stealth_mode, humanlike-antibot,
 > use_existing_browser, use_remote_browser, xpath, submit_form, close_cookie_dialog, close_popup,
 > compare_product_prices, infinite_scroll, wait_for_entire_page_load, collect_paginated_news_headlines,
-> perform_sentiment_analysis, news-aggregator, maps_scraper). Tepegöz tarafı: `docs/concepts/ai-agent/`,
+> perform_sentiment_analysis, news-aggregator, maps_scraper). Tepegöz tarafı: `docs/phases/02-ai-agent/`,
 > `packages/{orchestrator,model-gateway,capability-plane,security-policy,agent-runtime,browser-tools,
 tool-executor,web-tools,local-inference,mcp-client,recipe-compiler,macro-engine,notary,
 credential-vault,human-input}`, `apps/desktop/src/main/macro/macro-selector-healer.electron.ts`,
@@ -33,11 +33,11 @@ credential-vault,human-input}`, `apps/desktop/src/main/macro/macro-selector-heal
 > **Tarih.** 2026-09-01.
 >
 > **Dil notu.** Bu belge, sahibe sunulduğu haliyle Türkçe tutulmuştur
-> (`docs/concepts/tracks/README.md`'deki "orijinal dilinde tutulur" kaydıyla aynı gerekçe). Proje eserleri
+> (`phases/tracks/README.md`'deki "orijinal dilinde tutulur" kaydıyla aynı gerekçe). Proje eserleri
 > İngilizce-öncedir; bu, yazıldığı haliyle korunan bir kayıttır.
 >
-> **İlgili:** `docs/concepts/tracks/agentql-agent-parity.md` **henüz yok**; yapısal örnek olarak
-> [`docs/concepts/tracks/webbrain-agent-parity.md`](../parities/webbrain-agent-parity.md).
+> **İlgili:** `phases/tracks/agentql-agent-parity.md` **henüz yok**; yapısal örnek olarak
+> [`phases/tracks/webbrain-agent-parity.md`](../parities/webbrain-agent-parity.md).
 >
 > **Kategori uyarısı.** AgentQL bir **tarayıcı ajanı değil**. Bir **eleman-bulma / veri-çıkarma
 > katmanı**: Playwright'ın üstüne oturan bir sorgu dili + barındırılan bir çözümleyici servis. Karar

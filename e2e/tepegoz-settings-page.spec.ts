@@ -4,7 +4,7 @@ import { test, expect, _electron as electron, type ElectronApplication } from '@
 import { pollEvaluate } from './poll-evaluate';
 
 /**
- * `tepegoz://settings` as a REAL page (docs/concepts/tracks/protocol-tepegoz-pages.md, Faz 2). The acceptance
+ * `tepegoz://settings` as a REAL page (phases/tracks/protocol-tepegoz-pages.md, Faz 2). The acceptance
  * criterion the plan names explicitly: a right-click on the settings page fires the SAME native
  * `context-menu` event a browsed web page gets — proof that it is a real `WebContentsView`, not the
  * chrome-rendered React overlay it used to be (which never got a `context-menu` event at all).

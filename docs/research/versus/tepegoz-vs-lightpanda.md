@@ -11,7 +11,7 @@
 save.zig}`, `src/script/{skill.zig,command.zig}`, `src/browser/tools.zig` (`driver_guidance` +
 > `Tool` enum + tool tanımları), `src/mcp/{tools.zig,HttpServer.zig}`, `src/SemanticTree.zig`,
 > `src/Config.zig`, `src/server/cdp/domains/` ağacı, `src/telemetry/`, `src/network/adblock/`) ve bu
-> reponun AI yüzeyinin (`docs/concepts/ai-agent/`, `packages/orchestrator|model-gateway|capability-plane|
+> reponun AI yüzeyinin (`docs/phases/02-ai-agent/`, `packages/orchestrator|model-gateway|capability-plane|
 security-policy|agent-runtime|browser-tools|web-tools|tool-executor|local-inference|model-catalog|
 mcp-client|recipe-compiler|macro-engine|notary|credential-vault|human-input`, `extensions/ext-agent`,
 > `docs/adr/*`) aynı oturumda okunmasından çıkarıldı.
@@ -19,11 +19,11 @@ mcp-client|recipe-compiler|macro-engine|notary|credential-vault|human-input`, `e
 > **Tarih.** 2026-09-01.
 >
 > **Dil notu.** Bu belge, sahibe sunulduğu haliyle Türkçe tutulmuştur
-> (`docs/concepts/tracks/README.md`'deki "orijinal dilinde tutulur" kaydıyla aynı gerekçe). Proje eserleri
+> (`phases/tracks/README.md`'deki "orijinal dilinde tutulur" kaydıyla aynı gerekçe). Proje eserleri
 > İngilizce-öncedir; bu, yazıldığı haliyle korunan bir kayıttır.
 >
-> **İlgili:** `docs/concepts/tracks/lightpanda-agent-parity.md` **henüz yok**;
-> [`docs/concepts/tracks/webbrain-agent-parity.md`](../parities/webbrain-agent-parity.md) örtüşen
+> **İlgili:** `phases/tracks/lightpanda-agent-parity.md` **henüz yok**;
+> [`phases/tracks/webbrain-agent-parity.md`](../parities/webbrain-agent-parity.md) örtüşen
 > parça için yapı olarak en yakın öneri track'i.
 >
 > **Kategori uyarısı.** Bunlar **farklı kategoriler**. Lightpanda birincil olarak bir **tarayıcı
@@ -48,7 +48,7 @@ mcp-client|recipe-compiler|macro-engine|notary|credential-vault|human-input`, `e
 | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Ne          | Zig ile **sıfırdan yazılmış headless tarayıcı motoru** (V8 + html5ever + libcurl; Chromium değil, grafik render motoru yok) + CDP sunucusu; üstünde hafif bir `agent` alt-komutu                        | Tam **Electron/Chromium tarayıcı**; ajan ("Do modu" / Agent Console) alt sistemlerden biri                                                          |
 | Birincil iş | Bir otomasyon **altyapısı** olmak: yüzlerce/binlerce eşzamanlı headless oturumu ucuza koşturmak; CDP/Puppeteer ucundan sürülmek                                                                         | Bir son-kullanıcının web'de görev yürüttüğü, oturum-açık sitelere güvenle dokunabildiği bir tarayıcı olmak                                          |
-| Olgunluk    | Motor: **Beta, yayımlanmış** (nightly binary, Homebrew/AUR/Docker, WPT uyum programı, benchmark reposu) ama "hata/çökme görebilirsiniz", CORS yok, birçok Web API eksik. Ajan modu: daha yeni, ölçümsüz | **1.0 öncesi**; `docs/concepts/ai-agent` S0–S12 fazlarının **hepsi 🟠 measurement-owed**, hiçbiri ✅ değil; sahip notu: _"hâlâ istediğim gibi çalışmıyor"_ |
+| Olgunluk    | Motor: **Beta, yayımlanmış** (nightly binary, Homebrew/AUR/Docker, WPT uyum programı, benchmark reposu) ama "hata/çökme görebilirsiniz", CORS yok, birçok Web API eksik. Ajan modu: daha yeni, ölçümsüz | **1.0 öncesi**; `docs/phases/02-ai-agent` S0–S12 fazlarının **hepsi 🟠 measurement-owed**, hiçbiri ✅ değil; sahip notu: _"hâlâ istediğim gibi çalışmıyor"_ |
 | Kod         | Zig, `make`/`zig build`; Rust FFI (html5ever, render); tek repo, framework yok; LLM tarafı `zenai` (kendi kütüphaneleri)                                                                                | Strict TS, pnpm + turbo monorepo, ~70 `@tepegoz/*` paket, ADR güdümlü, zod `safeParse` her sınırda                                                  |
 | Felsefe     | "JavaScript'i gerçek performansla çalıştırmak için Chromium'u fork'lamak yerine sıfırdan yaz"; ölçek-önce, kaynak-verimliliği-önce; ajan pragmatik bir kolaylık katmanı                                 | "Security-by-design, local-first"; model-öncesi deterministik çekirdek + kriptografik hesap verebilirlik + determinism-first                        |
 

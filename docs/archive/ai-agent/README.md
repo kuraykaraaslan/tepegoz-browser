@@ -3,26 +3,26 @@
 This directory preserves the first generation of the AI agent competence track exactly as it last
 stood (2026-07-24), including every dated status note and measurement — the audit trail is the
 anti-vanity evidence and is never rewritten. The track was superseded by the **v2 roadmap**, which is
-in turn superseded by the **v3 program** in [`../../concepts/ai-agent/README.md`](../../concepts/ai-agent/README.md); the
-[residual-scope map](../../concepts/ai-agent/README.md#old-v2--new-s-residual-scope-map) there says where every remaining
-item went, and [`../../concepts/ai-agent/reference/history.md`](../../concepts/ai-agent/reference/history.md) carries the canonical short form of the
+in turn superseded by the **v3 program** in [`../../phases/02-ai-agent/README.md`](../../phases/02-ai-agent/README.md); the
+[residual-scope map](../../phases/02-ai-agent/README.md#old-v2--new-s-residual-scope-map) there says where every remaining
+item went, and [`../../reference/ai-agent/history.md`](../../reference/ai-agent/history.md) carries the canonical short form of the
 `browser-use`/`nanobrowser` build-vs-buy decision.
 
 ## Provenance (restored by S0 PR1, 2026-08-16)
 
-These 10 files were **deleted** from `docs/concepts/ai/archive/` by commit `e900567`
+These 10 files were **deleted** from `phases/ai/archive/` by commit `e900567`
 ("chore: consolidate in-flight parallel-session work onto the branch"), leaving ~15 dangling
-`archive/` links across the track. [S0](../../concepts/ai-agent/phases/00-truth-and-repair.md) PR1 restored them **verbatim**
+`archive/` links across the track. [S0](../../phases/02-ai-agent/00-truth-and-repair.md) PR1 restored them **verbatim**
 from the last commit that carried them:
 
 ```sh
 git checkout 49396c5 -- phases/ai/archive/
 ```
 
-They now live under `docs/concepts/ai-agent-super/archive/` because this folder owns the program's history.
+They now live under `phases/ai-agent-super/archive/` because this folder owns the program's history.
 The **only** edits applied on restore were mechanical link repointing: sibling phase links gained one
 `../` level for the new parent folder, README-v1's cross-cutting-gate pointer now resolves to
-`docs/concepts/README.md`, and the `packages/` / `apps/` links — **already broken before the move**, from when
+`docs/phases/README.md`, and the `packages/` / `apps/` links — **already broken before the move**, from when
 these documents were first demoted into an `archive/` subfolder — were repaired to the repo root. No
 status note, measurement, or claim was touched. Recover the untouched originals at any time with
 `git show 49396c5:phases/ai/archive/<file>`.
@@ -42,5 +42,5 @@ status note, measurement, or claim was touched. Recover the untouched originals 
 | [`08-beyond-the-port.md`](08-beyond-the-port.md)           | Network recorder + the screenshot-honesty fix                                                      |
 
 > **These documents are history, not a plan.** Their unchecked boxes are v1 intent, superseded by the
-> v3 phase index in [`../../concepts/ai-agent/README.md`](../../concepts/ai-agent/README.md). Read them for the measurement record and the
+> v3 phase index in [`../../phases/02-ai-agent/README.md`](../../phases/02-ai-agent/README.md). Read them for the measurement record and the
 > port lineage — never as open work.

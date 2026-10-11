@@ -3,7 +3,7 @@ import { UploadsPage } from '@tepegoz/uploads-ui';
 import { useSurfaceLocale } from '../app-surface-locale';
 
 /** Desktop host for `tepegoz://uploads` loaded as a real page (Faz 3 of
- *  docs/concepts/tracks/protocol-tepegoz-pages.md) — mirrors `SettingsPageSurface.tsx`'s pattern. */
+ *  phases/tracks/protocol-tepegoz-pages.md) — mirrors `SettingsPageSurface.tsx`'s pattern. */
 export function UploadsPageSurface() {
   const locale = useSurfaceLocale();
 

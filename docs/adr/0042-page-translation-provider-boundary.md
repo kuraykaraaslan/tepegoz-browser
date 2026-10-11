@@ -3,7 +3,7 @@
 - **Status:** Accepted and shipped — hybrid boundary, local + cloud engine, per-origin consent flow, the sensitive-site cloud lockout, and the agent-run untranslated-source guarantee (every DOM read path + auto-translate suppressed while a run is active) are all in place and unit-tested (see Consequences for the one residual constraint)
 - **Date:** 2026-09-01
 - **Refines:** [ADR-0005](0005-provider-agnostic-ai.md) (provider-agnostic AI, BYO-key local-first) · [ADR-0008](0008-perception-cdp.md) (DOM/a11y-first perception) · **complements** [ADR-0021](0021-agent-controllable-extensions.md) (agent-controllable extensions via in-process capability providers) · [ADR-0004](0004-event-sourced-journal.md) ("shown = recorded")
-- **Phase:** [Phase 2c — Classic Browser Essentials & Downloads](../concepts/product/phases/02c-classic-browser-essentials.md), L10 (page translation)
+- **Phase:** [Phase 2c — Classic Browser Essentials & Downloads](../phases/01-product/02c-classic-browser-essentials.md), L10 (page translation)
 
 ## Context
 

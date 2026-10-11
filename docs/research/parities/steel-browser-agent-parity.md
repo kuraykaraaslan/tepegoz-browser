@@ -18,7 +18,7 @@ direct verification pass this session over `.junk/steel-browser`: `docs/ARCHITEC
 document's central claim directly from source: **Steel's API has no agent loop, no LLM call, no prompt
 construction and no permission/approval concept anywhere in `api/src`** (the only "agent" hits are an
 unrelated code comment and `userAgent`; the only "prompt" hits are Chrome CLI flags). Cross-checked
-against this repo's AI surface (`docs/concepts/ai-agent/`, `packages/orchestrator|model-gateway|
+against this repo's AI surface (`docs/phases/02-ai-agent/`, `packages/orchestrator|model-gateway|
 capability-plane|security-policy|agent-runtime|browser-tools|tool-executor|reader|human-input`,
 `extensions/ext-agent`, `docs/adr/*`).
 
@@ -230,8 +230,8 @@ agent run), that would be a short addendum to ADR-0006 at that point — not res
 
 ## Routing — what this track does not own
 
-Per the existing convention ([`../README.md`](../../concepts/README.md#deferred--adoption-gated-backlog-from-the-beyond-phases-synthesis) /
-[`ai-agent/README.md`](../../concepts/ai-agent/README.md#routing--what-stays-out)), reference these,
+Per the existing convention ([`../README.md`](../../phases/README.md#deferred--adoption-gated-backlog-from-the-beyond-phases-synthesis) /
+[`ai-agent/README.md`](../../phases/02-ai-agent/README.md#routing--what-stays-out)), reference these,
 never duplicate them:
 
 | Stays with                                           | Material                                                                                                                                                                                              |

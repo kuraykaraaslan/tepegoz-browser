@@ -37,11 +37,11 @@ to read, port, or even meaningfully compare against.
 Both workstreams below are written like an `ai-agent`/product-phase section (Goal → Approach →
 new/changed packages → ADR owed → DoD-shaped bullets) so either can be lifted into a real phase file with
 minimal rewriting. **Nothing here is committed roadmap.** One workstream is genuinely new and small; the
-other sharpens a scheduler line [Phase 1b](../../concepts/product/phases/01b-agentic-deepening.md) already states
+other sharpens a scheduler line [Phase 1b](../../phases/01-product/01b-agentic-deepening.md) already states
 ("topological order → independent branches to parallel workers; join sync; adaptive throttling (default
 5)") but does not yet have mechanics for — and Phase 1b is itself frozen out of v1, so that workstream is
 explicitly reference material for whenever it resumes, not new work opened now. Per the "Already planned
-— do NOT re-propose" rule in [`../README.md`](../../concepts/README.md#deferred--adoption-gated-backlog-from-the-beyond-phases-synthesis),
+— do NOT re-propose" rule in [`../README.md`](../../phases/README.md#deferred--adoption-gated-backlog-from-the-beyond-phases-synthesis),
 Browserless's MCP **server** is Phase 1b's already-named "MCP SERVER surface," not a new ask.
 
 ## Ground rules — parity, not imitation
@@ -97,7 +97,7 @@ source exists to read.
 > explicitly at 5 (`MAX_REDIRECTS_WHEN_BLOCKING_PRIVATE_HOSTS`, 2026-09-17) instead of trusting
 > axios/follow-redirects' own default. A caller-supplied allowlist parameter (as opposed to simply not
 > enabling the guard on the local-model client) remains open. Full record:
-> `docs/concepts/product/phases/02-adapters-safe-browsing.md` L10.
+> `docs/phases/01-product/02-adapters-safe-browsing.md` L10.
 >
 > Original proposal kept below for context.
 
@@ -223,8 +223,8 @@ fold into that ADR when it's actually written.
 
 ## Routing — what this track does not own
 
-Per the existing convention ([`../README.md`](../../concepts/README.md#routing--what-stays-out) /
-[`ai-agent/README.md`](../../concepts/ai-agent/README.md#routing--what-stays-out)), reference these,
+Per the existing convention ([`../README.md`](../../phases/README.md#routing--what-stays-out) /
+[`ai-agent/README.md`](../../phases/02-ai-agent/README.md#routing--what-stays-out)), reference these,
 never duplicate them:
 
 | Stays with                                           | Material                                                                                                                                                                                                                                                |

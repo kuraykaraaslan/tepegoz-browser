@@ -3,7 +3,7 @@
 - **Status:** Accepted (IR shape + assertion evaluator only — see Consequences)
 - **Date:** 2026-08-20
 - **Complements:** [ADR-0006](0006-policy-kernel-hitl.md) (deterministic policy kernel)
-- **Phase:** [Phase 6 — Deterministic Replayable Automation](../concepts/product/phases/06-deterministic-automation.md), L1/L4/L5 (RecipeCompiler) and the "self-correcting golden assertions" success oracle
+- **Phase:** [Phase 6 — Deterministic Replayable Automation](../phases/01-product/06-deterministic-automation.md), L1/L4/L5 (RecipeCompiler) and the "self-correcting golden assertions" success oracle
 
 ## Numbering note
 

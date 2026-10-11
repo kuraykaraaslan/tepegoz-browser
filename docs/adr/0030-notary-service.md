@@ -3,7 +3,7 @@
 - **Status:** Accepted
 - **Date:** 2026-08-19
 - **Refines:** [ADR-0004](0004-event-sourced-journal.md) (event-sourced Journal — "shown = recorded")
-- **Phase:** [Phase 7 — Verifiable Accountability & Proof-of-Run](../concepts/product/phases/07-verifiable-accountability.md), L1/L7/L8 (NotaryService foundation)
+- **Phase:** [Phase 7 — Verifiable Accountability & Proof-of-Run](../phases/01-product/07-verifiable-accountability.md), L1/L7/L8 (NotaryService foundation)
 
 ## Numbering note
 

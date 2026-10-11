@@ -5,7 +5,7 @@
 - **Refines:** [ADR-0006](0006-policy-kernel-hitl.md) (deterministic policy kernel + HITL) ·
   **complements** [ADR-0003](0003-sqlite-persistence.md) (SQLite persistence) and
   [ADR-0014](0014-user-data-layout-db-connector.md) (user-data layout)
-- **Phase:** [S9 — Memory & Skills](../concepts/ai-agent/phases/09-memory-skills.md) PR1–PR5
+- **Phase:** [S9 — Memory & Skills](../phases/02-ai-agent/09-memory-skills.md) PR1–PR5
 
 ## Context
 

@@ -6,7 +6,7 @@
 > **Durum:** kapalı/ticari · tarayıcı uzantısı · MV3 geçişiyle fiilen çöktü.
 > **Tarih.** Derleme 2026-08-21 · bu formata çevirisi 2026-09-02. **Dil notu.** Türkçe.
 > **Sonuç:** bu belgenin bulguları **kod olarak sevk edildi** — `extensions/ext-macros` +
-> [`@tepegoz/macro-engine`](../../packages/macro-engine) + [Faz M](../concepts/product/phases/14-macros.md).
+> [`@tepegoz/macro-engine`](../../packages/macro-engine) + [Faz M](../phases/01-product/14-macros.md).
 > Belge, o tasarımın neden böyle olduğunun yazılı gerekçesi.
 
 ---

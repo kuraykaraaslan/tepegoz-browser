@@ -69,13 +69,13 @@ context yönetimi, prompt mimarisi, checkpoint) derinleş; kategoriye özgü ola
 2) TEPEGÖZ TARAFI — hazır bilgi (şüpheye düşersen paketlerden / ADR'den doğrula)
 ═══════════════════════════════════════════════════════════════════════════════
 Tam Electron tarayıcı, strict TS, ~70 `@tepegoz/*` paket monorepo, ADR güdümlü, 1.0
-öncesi. AI roadmap `docs/concepts/ai-agent/` (S0–S12, HEPSİ 🟠 measurement-owed, hiçbiri
+öncesi. AI roadmap `docs/phases/02-ai-agent/` (S0–S12, HEPSİ 🟠 measurement-owed, hiçbiri
 ✅; sahip notu "hâlâ istediğim gibi çalışmıyor"). Ajan "gerçekten bağlanmış iskelet,
 ince ölçülmüş". Vision/credential-broker/memory ATIL sevk; aynı anda TEK run; site
 adaptörü YOK; 8 sağlayıcı (bazıları stub); çevrimdışı RAG YOK.
 
 **Vision'ın neden atıl olduğunu DOĞRU yaz — ve burada roadmap ile kod ÇELİŞİYOR.**
-`docs/concepts/ai-agent/` (S10, README S10 satırı, eval-results.md) ve birkaç
+`docs/phases/02-ai-agent/` (S10, README S10 satırı, eval-results.md) ve birkaç
 `docs/research/parities/*-agent-parity.md` dosyası, yeteneğin `TEPEGOZ_VISION` bayrağı arkasında
 (default off) atıl sevk edildiğini YAZIYORDU — hepsi 2026-09-02'de düzeltildi.
 **Kodda böyle bir bayrak YOK** — `TEPEGOZ_VISION` `packages/` ve `apps/` altında hiç

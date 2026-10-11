@@ -117,7 +117,7 @@ exam.
 
 ## Architecture, and where to read first
 
-- [`docs/concepts/README.md`](docs/concepts/README.md) — the roadmap index and the cross-cutting gates. **Start here.**
+- [`docs/phases/README.md`](docs/phases/README.md) — the roadmap index and the cross-cutting gates. **Start here.**
 - [`docs/concepts/architecture/README.md`](docs/concepts/architecture/README.md) — the L0–L10 layer model, an index pointing at the
   document that owns each piece.
 - [`docs/adr/`](docs/adr/) — the decision record. A change that contradicts an accepted ADR needs a new

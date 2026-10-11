@@ -16,7 +16,7 @@ schema-registry}.ts`, `packages/integrations/core/src/{facade/{tools,contract},h
 > - `packages/integrations/README.md`, `packages/integrations/claude-agent-sdk/src/session.ts`,
 >   `packages/docs/v4/**` (`basics/{act,observe,extract,webmcp}`, `configuration/models`,
 >   `best-practices/{caching,cost-optimization}`, `migrations/{v3,browser-use}`, `first-steps/introduction`),
->   `packages/sdk-ts/examples/*`, `rules/`) ve bu reponun AI yüzeyinin (`docs/concepts/ai-agent/` S0–S12,
+>   `packages/sdk-ts/examples/*`, `rules/`) ve bu reponun AI yüzeyinin (`docs/phases/02-ai-agent/` S0–S12,
 >   `packages/orchestrator|model-gateway|capability-plane|security-policy|agent-runtime|browser-tools|
 web-tools|tool-executor|local-inference|model-catalog|mcp-client|recipe-compiler|macro-engine|notary|
 credential-vault|human-input|agent-eval`, `extensions/ext-agent`, `docs/adr/*`) aynı oturumda
@@ -24,12 +24,12 @@ credential-vault|human-input|agent-eval`, `extensions/ext-agent`, `docs/adr/*`) 
 >
 > **Tarih.** 2026-09-01.
 >
-> **Dil notu.** Bu belge, sahibe sunulduğu haliyle Türkçe tutulmuştur (`docs/concepts/tracks/README.md`'deki
+> **Dil notu.** Bu belge, sahibe sunulduğu haliyle Türkçe tutulmuştur (`phases/tracks/README.md`'deki
 > "orijinal dilinde tutulur" kaydıyla ve [`tepegoz-vs-webbrain.md`](tepegoz-vs-webbrain.md) belgesiyle aynı
 > gerekçe). Proje eserleri İngilizce-öncedir; bu, yazıldığı haliyle korunan bir kayıttır.
 >
-> **İlgili:** [`docs/concepts/tracks/rival-agent-parity-track.md`](../../../prompts/rival-agent-parity-track.md)
-> ve örüntü olarak [`docs/concepts/tracks/webbrain-agent-parity.md`](../parities/webbrain-agent-parity.md).
+> **İlgili:** [`phases/tracks/rival-agent-parity-track.md`](../../../prompts/rival-agent-parity-track.md)
+> ve örüntü olarak [`phases/tracks/webbrain-agent-parity.md`](../parities/webbrain-agent-parity.md).
 > Stagehand'e özgü bir parity track'i henüz yazılmadı (bu belge onun girdisi).
 >
 > **Kategori uyarısı.** Bu **kütüphane vs. ürün** kıyaslamasıdır. Stagehand bir _SDK_: `act` / `observe` /
@@ -50,7 +50,7 @@ credential-vault|human-input|agent-eval`, `extensions/ext-agent`, `docs/adr/*`) 
 |             | Stagehand                                                                                                                                                                                                   | Tepegöz                                                                                                                                             |
 | ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Ne          | TS + Python + Go **tarayıcı-ajan SDK'sı** (v4.0.2); mevcut kodun içine `import` edilir, bir Chrome eklentisi olarak (`stagehand-extension`, MV3 service worker, CDP ile bağlanır) tarayıcının yanında koşar | Tam **Electron tarayıcı**; ajan (Agent Console / "Do modu") alt sistemlerden biri                                                                   |
-| Olgunluk    | **Yayında** — npm/PyPI/Go, Browserbase üretiminde, gerçek kullanıcılar, katkıcılar, Discord, `evals` liderlik tablosu; 128 KB CHANGELOG                                                                     | **1.0 öncesi**; `docs/concepts/ai-agent` S0–S12 fazlarının **hepsi 🟠 measurement-owed**, hiçbiri ✅ değil; sahip notu: _"hâlâ istediğim gibi çalışmıyor"_ |
+| Olgunluk    | **Yayında** — npm/PyPI/Go, Browserbase üretiminde, gerçek kullanıcılar, katkıcılar, Discord, `evals` liderlik tablosu; 128 KB CHANGELOG                                                                     | **1.0 öncesi**; `docs/phases/02-ai-agent` S0–S12 fazlarının **hepsi 🟠 measurement-owed**, hiçbiri ✅ değil; sahip notu: _"hâlâ istediğim gibi çalışmıyor"_ |
 | Kod         | Strict TS/Python/Go, pnpm + turbo monorepo, protokol-şema (JSON-RPC + zod) disiplini, ast-grep parity kuralları; çekirdek mantık `packages/extension`'da, SDK ince bir RPC istemcisi                        | Strict TS, pnpm + turbo monorepo, ~70 `@tepegoz/*` paket, ADR güdümlü, zod `safeParse` her güven sınırında                                          |
 | Felsefe     | "Ajanlar için tarayıcı SDK'sı" — güvenilirlik, hız, determinizm, gözlemlenebilirlik; **ajanı sen inşa et**, biz sürücüyü veririz; token verimli hibrit erişilebilirlik ağacı önceliği                       | "Security-by-design, local-first"; model-öncesi deterministik çekirdek + kriptografik hesap verebilirlik + determinism-first                        |
 | Birincil iş | Geliştiriciye üretim-sınıfı, çok-dilli bir tarayıcı sürücüsü + üç model-destekli ilkel vermek; kontrol akışı çağıranın                                                                                      | Web'de çok-adımlı görev yürütmek: gezinme, form doldurma, çıkarım; güvenli oturum-açık site otomasyonu, uçtan uca ürün                              |

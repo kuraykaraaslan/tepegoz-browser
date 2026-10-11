@@ -6,7 +6,7 @@ import {
 
 /**
  * Main-process wiring for the shared background-connection supervisor (the "shared prerequisite"
- * `docs/concepts/extensions/README.md` owed — was bespoke `ChatMessenger.init/stop/reconcile/
+ * `docs/phases/03-extensions/README.md` owed — was bespoke `ChatMessenger.init/stop/reconcile/
  * notifyEgressChange` calls sprinkled through the desktop bootstrap; a second consumer like
  * `ext-mail` would have duplicated all four call sites instead of reusing them). Mirrors
  * `capability-supervisor.electron.ts`: an Electron-free `BackgroundConnectionSupervisor` from

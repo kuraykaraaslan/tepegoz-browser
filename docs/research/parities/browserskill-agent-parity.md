@@ -10,7 +10,7 @@ comparison.
 
 **Source:** a same-session deep read of `.junk/browserskill` (**BrowserSkill**, Tencent, MIT-licensed;
 `bsk` Rust CLI `v0.1.11` + a local daemon + an MV3 Chromium/Edge extension, live on the Chrome Web Store
-and Edge Add-ons) against this repo's AI surface (`docs/concepts/ai-agent/`, `packages/orchestrator|
+and Edge Add-ons) against this repo's AI surface (`docs/phases/02-ai-agent/`, `packages/orchestrator|
 model-gateway|capability-plane|security-policy|agent-runtime|browser-tools|web-tools|tool-executor|
 local-inference|model-catalog|mcp-client|recipe-compiler|macro-engine|notary|credential-vault|
 human-input|tasks`, `extensions/ext-agent`). The prose comparison this track distills is
@@ -69,7 +69,7 @@ rewriting. **Nothing here is committed roadmap.** Where a capability already has
 existing phase, an ADR, or a sibling track (`webbrain-agent-parity.md`, `aipex-agent-parity.md`), this
 track says so explicitly and does **not** re-describe it — it only adds the detail the BrowserSkill
 reading surfaced that the existing text doesn't have yet. Per the "Already planned — do NOT re-propose"
-rule in [`../README.md`](../../concepts/README.md#deferred--adoption-gated-backlog-from-the-beyond-phases-synthesis),
+rule in [`../README.md`](../../phases/README.md#deferred--adoption-gated-backlog-from-the-beyond-phases-synthesis),
 the **MCP server** direction itself is **Phase 1b**, already sharpened once by `aipex-agent-parity.md`
 P1 — this track's P1 is a _second_ sharpening pass, not a competing proposal.
 
@@ -445,8 +445,8 @@ security/policy changes — this is test infrastructure.
 
 ## Routing — what this track does not own
 
-Per the existing convention ([`../README.md`](../../concepts/README.md#routing--what-stays-out) /
-[`ai-agent/README.md`](../../concepts/ai-agent/README.md#routing--what-stays-out)), reference these,
+Per the existing convention ([`../README.md`](../../phases/README.md#routing--what-stays-out) /
+[`ai-agent/README.md`](../../phases/02-ai-agent/README.md#routing--what-stays-out)), reference these,
 never duplicate them:
 
 | Stays with                               | Material                                                                                                                                                                                         |

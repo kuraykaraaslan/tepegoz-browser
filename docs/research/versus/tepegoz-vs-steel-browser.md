@@ -12,7 +12,7 @@
 > `api/src/services/file.service.ts`, `api/src/plugins/**`, `api/src/utils/{proxy,requests,scrape}/**`,
 > `api/src/scripts/index.ts` (fingerprint), `api/extensions/recorder/**` (rrweb kaydı),
 > `api/src/utils/scrape/__tests__/**` (markdown regresyon + Tier-1 invariant harness),
-> `api/src/env.ts`) ve bu reponun AI yüzeyinin (`docs/concepts/ai-agent/`,
+> `api/src/env.ts`) ve bu reponun AI yüzeyinin (`docs/phases/02-ai-agent/`,
 > `packages/orchestrator|model-gateway|capability-plane|security-policy|agent-runtime|browser-tools|
 web-tools|tool-executor|local-inference|model-catalog|mcp-client|recipe-compiler|macro-engine|notary|
 credential-vault|human-input`, `extensions/ext-agent`, `docs/adr/*`) aynı oturumda okunmasından
@@ -21,11 +21,11 @@ credential-vault|human-input`, `extensions/ext-agent`, `docs/adr/*`) aynı oturu
 > **Tarih.** 2026-09-01.
 >
 > **Dil notu.** Bu belge, sahibe sunulduğu haliyle Türkçe tutulmuştur
-> (`docs/concepts/tracks/README.md`'deki "orijinal dilinde tutulur" kaydıyla aynı gerekçe). Proje
+> (`phases/tracks/README.md`'deki "orijinal dilinde tutulur" kaydıyla aynı gerekçe). Proje
 > eserleri İngilizce-öncedir; bu, yazıldığı haliyle korunan bir kayıttır.
 >
 > **İlgili.** Kardeş belge: [`docs/others/tepegoz-vs-webbrain.md`](tepegoz-vs-webbrain.md).
-> Bir "Steel'in yaptığını Tepegöz de yapsın" track'i (`docs/concepts/tracks/steel-browser-agent-parity.md`)
+> Bir "Steel'in yaptığını Tepegöz de yapsın" track'i (`phases/tracks/steel-browser-agent-parity.md`)
 > henüz yok; `prompts/rival-agent-parity-track.md` bu belgeyi girdi olarak alıp üretebilir.
 >
 > **Kategori uyarısı.** Bunlar **farklı ürün kategorileri ve bu belgedeki en asimetrik kıyas**.
@@ -50,7 +50,7 @@ credential-vault|human-input`, `extensions/ext-agent`, `docs/adr/*`) aynı oturu
 |             | Steel                                                                                                                                                                                                | Tepegöz                                                                                                                                             |
 | ----------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Ne          | Fastify **API sunucusu** + React UI + REPL; Chrome'u Puppeteer/CDP ile saran, oturum/proxy/parmak-izi yöneten **tarayıcı altyapısı**. Docker/Railway/Render ile self-host, ayrıca hosted Steel Cloud | Tam **Electron tarayıcı**; ajan ("Do modu" / Agent Console) alt sistemlerden biri                                                                   |
-| Olgunluk    | **Yayında** — `v0.5.4-beta`, GHCR Docker imajı, Steel Cloud canlı, `steel-sdk` (Node + Python), cookbook, Discord; kendi ifadesiyle "public beta and evolving every day"                             | **1.0 öncesi**; `docs/concepts/ai-agent` S0–S12 fazlarının **hepsi 🟠 measurement-owed**, hiçbiri ✅ değil, sahip notu: _"hâlâ istediğim gibi çalışmıyor"_ |
+| Olgunluk    | **Yayında** — `v0.5.4-beta`, GHCR Docker imajı, Steel Cloud canlı, `steel-sdk` (Node + Python), cookbook, Discord; kendi ifadesiyle "public beta and evolving every day"                             | **1.0 öncesi**; `docs/phases/02-ai-agent` S0–S12 fazlarının **hepsi 🟠 measurement-owed**, hiçbiri ✅ değil, sahip notu: _"hâlâ istediğim gibi çalışmıyor"_ |
 | Kod         | TypeScript, npm workspaces (`api`/`ui`/`repl`), Fastify + Puppeteer-core + zod; eklenti-tabanlı CDP plugin mimarisi; Node ≥ 22                                                                       | Strict TS, pnpm + turbo monorepo, ~70 `@tepegoz/*` paket, ADR güdümlü, zod `safeParse` her sınırda                                                  |
 | Felsefe     | "Otomasyon altyapısını sıfırdan kurma — sen AI uygulamana odaklan, karmaşıklığı Steel halletsin"; altyapı-önce, entegrasyon-önce, açık kaynak + hosted ikili model                                   | "Security-by-design, local-first"; model-öncesi deterministik çekirdek + kriptografik hesap verebilirlik + determinism-first                        |
 | Birincil iş | Bir ajanın/uygulamanın süreceği **canlı tarayıcı oturumları** sunmak: CDP uç noktası, oturum durumu (çerez/localStorage), proxy, parmak izi, dosya, scrape/screenshot/pdf, canlı izleyici            | Web'de görev yürütmek: gezinme, form doldurma, çıkarım, çok-adımlı akış; güvenli oturum-açık site otomasyonu — **ajanın kendisi**                   |

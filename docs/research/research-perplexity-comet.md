@@ -130,7 +130,7 @@ bilgisini sayfaya yazarak kullanıcıyı enjekte edilmiş talimata güvenmeye al
 
 ### Tepegöz'e taşınanlar
 
-- **Zaman paradoksu → dürüst karşılaştırma metriği.** [S7](../concepts/ai-agent/phases/07-speed.md) PR6'ya
+- **Zaman paradoksu → dürüst karşılaştırma metriği.** [S7](../phases/02-ai-agent/07-speed.md) PR6'ya
   **manuel taban çizgisi sütunu** olarak girdi: aynı senaryoda insanın duvar-saati. Taban çizgisi olmayan
   bir hız sayısı, kullanıcının sorduğu tek soruyu yanıtlayamaz.
 - **Boşta maliyet sıfır** (batarya/CPU) → S7 PR6, ölçülür: boştaki pencerede CPU% ve uyanma/dakika.

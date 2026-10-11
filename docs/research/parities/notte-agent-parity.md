@@ -15,7 +15,7 @@ workflow.py, agent_fallback.py}`, `packages/notte-browser/src/notte_browser/{cap
 tools/base.py}`, `packages/notte-core/src/notte_core/actions/actions.py`, `packages/notte-core/src/
 notte_core/config.toml`, `packages/notte-llm/src/notte_llm/engine.py`, `packages/notte-integrations/src/
 notte_integrations/sessions/*`, `docs/src/mcp-server.mdx` — against this repo's AI surface
-(`docs/concepts/ai-agent/`, `packages/orchestrator|model-gateway|capability-plane|security-policy|
+(`docs/phases/02-ai-agent/`, `packages/orchestrator|model-gateway|capability-plane|security-policy|
 agent-runtime|browser-tools|web-tools|macro-engine|recipe-compiler|credential-vault|human-input|
 mcp-client|persistence|shared-types`, `extensions/ext-agent`, `docs/adr/*`). Every claim below that
 touches a live code path was re-verified against the actual file in this repo or in `.junk/notte`, not
@@ -313,8 +313,8 @@ and a bare failure. Notte names this well even though its own OSS implementation
 
 ## Routing — what this track does not own
 
-Per the existing convention ([`../README.md`](../../concepts/README.md#deferred--adoption-gated-backlog-from-the-beyond-phases-synthesis)
-/ [`ai-agent/README.md`](../../concepts/ai-agent/README.md#routing--what-stays-out)), reference these,
+Per the existing convention ([`../README.md`](../../phases/README.md#deferred--adoption-gated-backlog-from-the-beyond-phases-synthesis)
+/ [`ai-agent/README.md`](../../phases/02-ai-agent/README.md#routing--what-stays-out)), reference these,
 never duplicate them:
 
 | Stays with                                 | Material                                                                                                                                                                                                                                                                                                                                                              |

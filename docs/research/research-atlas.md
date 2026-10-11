@@ -8,7 +8,7 @@
 > **Tarih.** Derleme 2026-08-21 · bu formata çevirisi 2026-09-02. **Dil notu.** Türkçe.
 > **Kardeş:** kapanışın **pazar sinyali** olarak okunması
 > [`research-other-ai-browsers.md`](research-other-ai-browsers.md) §1'de ve
-> [`docs/concepts/README.md`](../concepts/README.md)'nin v1 ship line'ında. Bu belge onun _öncesini_ —
+> [`docs/phases/README.md`](../phases/README.md)'nin v1 ship line'ında. Bu belge onun _öncesini_ —
 > ürün yaşarken neyin şikâyet edildiğini — taşıyor.
 
 ---
@@ -45,27 +45,27 @@ iletişim boşluğu** (kullanıcılar "ürün durmuş gibi" hissediyor).
 
 - **Hata bir gerekçe taşımalı, omuz silkme değil.** Atlas'ın en çok tekrarlanan şikâyeti jenerik hata
   metni — _"Something seems to have gone wrong"_. Karşılığı
-  [S8](../concepts/ai-agent/phases/08-assistant-ux.md) PR7'nin ilk satırı: hangi adım, ne gözlendi, tek
+  [S8](../phases/02-ai-agent/08-assistant-ux.md) PR7'nin ilk satırı: hangi adım, ne gözlendi, tek
   bir sonraki eylem. **Ve adımdan devam** (yeniden başlatma değil).
 - **İngilizce dışı klavye/IME kalite matrisi P0.** Atlas'ta Türkçe düzende `Cmd+C/V/F`'nin durması,
-  burada zaten bir kapı — [phase-1a](../concepts/product/phases/01a-walking-skeleton-mvp/README.md)'nin i18n
+  burada zaten bir kapı — [phase-1a](../phases/01-product/01a-walking-skeleton-mvp/README.md)'nin i18n
   satırı `IME_MATRIX` verisinin var olduğunu ama Playwright koşucusunun olmadığını açıkça kaydediyor.
   Bu belge o boşluğun neden pahalı olduğunun kanıtı.
 - **Bellek/kaynak muhasebesi.** "71 GB" bir uç değer ama yön doğru; karşılığı
-  [S7](../concepts/ai-agent/phases/07-speed.md) PR6'nın koşu-başına RSS/CPU muhasebesi ve "boşta maliyet
+  [S7](../phases/02-ai-agent/07-speed.md) PR6'nın koşu-başına RSS/CPU muhasebesi ve "boşta maliyet
   sıfır" satırı.
 - **Belleğin varsayılanı kapalı olmalı.** Atlas'ın gizlilik tedirginliğinin tek kaynağı Browser
   memories'in varsayılan açık gelmesi. Burada karşılığı Faz 1b'nin **Memory Audit Panel**'i ve onun
   "default OFF opt-in" kuralı — bu belge o varsayılanın neden pazarlık konusu olmadığını gösteriyor.
 - **Uyumluluk programı.** Şifre yöneticisi, popup, passkey ve giriş akışları en görünür kırılma noktası.
-  [S11](../concepts/ai-agent/phases/11-benchmark-h2h.md) PR6'nın rakip-hata katmanına girdi.
-- **Erişilebilirlik erteleme olmaz** → [phase-10b](../concepts/product/phases/10b-accessibility-voice-reach.md).
+  [S11](../phases/02-ai-agent/11-benchmark-h2h.md) PR6'nın rakip-hata katmanına girdi.
+- **Erişilebilirlik erteleme olmaz** → [phase-10b](../phases/01-product/10b-accessibility-voice-reach.md).
 
 **Alınmayacak:**
 
 - **macOS-öncelikli dağıtım** — bu proje Windows-öncelikli.
 - **AI-first kabuğun klasik tarayıcıyı ezmesi.** Atlas'ın UI/UX şikâyet kümesinin özeti bu; buradaki
-  karşı-karar [phase-2c](../concepts/product/phases/02c-classic-browser-essentials.md)'nin tamamı —
+  karşı-karar [phase-2c](../phases/01-product/02c-classic-browser-essentials.md)'nin tamamı —
   klasik tarayıcı önce, ajan onun üstünde.
 
 ## Kaynaklar

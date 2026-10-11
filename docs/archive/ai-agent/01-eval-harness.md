@@ -3,7 +3,7 @@
 **Status:** 🟡 In progress (PR1 backbone + PR2 live-tier/judge/nightly-CI code landed; **e2e `pnpm eval` now
 runs green on-harness** — scripted tier PASS against the real app after fixing two launch blockers, commit
 `e9f7fee`; the live-tier competence numbers are the remaining owed measurement) · **Depends on:** Phase 1a
-· **Track:** [`docs/concepts/ai`](README.md)
+· **Track:** [`phases/ai`](README.md)
 
 > **PR1 backbone:** `@tepegoz/agent-eval` (data-driven zod registry loader, local fixture server,
 > ground-truth scorer, honest metrics report), the `runAgent` provider-injection seam, the
@@ -86,7 +86,7 @@ The 2026-07 suggestion audit found the backbone real and wired, but the **measur
 run per scenario, point estimates only, no wall-clock, and two metrics defined-but-dead in the live path.
 These make a "pass" less trustworthy than the anti-vanity contract demands. Each is a checkbox here; none
 changes agent behaviour (still measurement-only). The **first live run**
-([`2026-07-eval-results.md`](../../concepts/ai-agent/audits/2026-07-eval-results.md)) already showed why these matter — N=1 sampling noise
+([`2026-07-ai-agent-eval-results.md`](../../audits/2026-07-ai-agent-eval-results.md)) already showed why these matter — N=1 sampling noise
 flipped several scenarios PASS↔FAIL (its finding #3, corroborating `s02`).
 
 - [x] **`s02` — repeated trials (≥3× per scenario) — LANDED** (`ac53932`). `TEPEGOZ_EVAL_REPEAT=N` (clamped

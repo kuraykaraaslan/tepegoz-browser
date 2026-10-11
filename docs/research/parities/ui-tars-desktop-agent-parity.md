@@ -10,7 +10,7 @@ comparison.
 **Source:** a same-session deep read of `.junk/ui-tars-desktop` (ByteDance's Apache-2.0 **UI-TARS
 Desktop** — a shipping GUI/computer-use agent driven by the UI-TARS vision-language model, plus **Agent
 TARS**, a general multimodal agent living in the same monorepo) against this repo's AI surface
-(`docs/concepts/ai-agent/`, `packages/orchestrator|model-gateway|capability-plane|security-policy|
+(`docs/phases/02-ai-agent/`, `packages/orchestrator|model-gateway|capability-plane|security-policy|
 agent-runtime|browser-tools|web-tools|tool-executor|local-inference|model-catalog|mcp-client|
 recipe-compiler|macro-engine|notary|credential-vault|human-input`, `extensions/ext-agent`). The prose
 comparison this track distills is
@@ -31,7 +31,7 @@ Phase 7 below:** `@tepegoz/notary` is written and unit-tested, but **`apps/deskt
 The only occurrence of the string "notary" anywhere under `apps/desktop/src` is a doc-comment in
 `browser-host.electron.ts`; there is no `@tepegoz/notary` import, and `apps/desktop/package.json` does
 not depend on the package. No run today produces a real Replay Receipt. Say "written but not wired," not
-"Tepegöz has Notary" — `docs/concepts/README.md`'s own Phase 7 row already says this correctly ("landed... not
+"Tepegöz has Notary" — `docs/phases/README.md`'s own Phase 7 row already says this correctly ("landed... not
 wired into a live run"); this track's P3 below inherits that exact constraint.
 
 ## Why this track exists
@@ -58,7 +58,7 @@ packages → ADR → DoD-shaped bullets) so it can be lifted into a real phase f
 ADR, or a sibling track ([`webbrain-agent-parity.md`](webbrain-agent-parity.md) /
 [`aipex-agent-parity.md`](aipex-agent-parity.md)), this file cites it and does **not** re-describe it.
 Per the "Already planned — do NOT re-propose" rule in
-[`../README.md`](../../concepts/README.md#deferred--adoption-gated-backlog-from-the-beyond-phases-synthesis) and the
+[`../README.md`](../../phases/README.md#deferred--adoption-gated-backlog-from-the-beyond-phases-synthesis) and the
 sibling tracks already covering it in depth, provider-catalog breadth is `webbrain` P1 / `aipex` P3, and
 the MCP **server** direction is Phase 1b / `aipex` P1 — several rows below just point there.
 
@@ -141,7 +141,7 @@ and this track proposes one. **Ground rules #N** means deliberately not matched.
 | 15  | "Export as HTML" / Share — a standalone, human-readable run report anyone can open without the app                                                                                                     | Notary (ADR-0030): hash-chain + Ed25519-signed checkpoint + Replay Receipt + `tepegoz-verify` CLI — **written and tested, not imported by `apps/desktop`, no run produces one today** | A human-readable, shareable export view once Notary is actually wired to a live run          | **P3 (sharpen Phase 7 — explicitly GATED behind Notary reaching wired-in, per anti-debt)**                  |
 | 16  | SoM overlay / click-position marker / "water flow" visual effect during actions                                                                                                                        | `@tepegoz/human-input` (Catmull-Rom curves, Gaussian jitter — anti-bot motion, not user-facing feedback)                                                                              | A user-visible "the agent is acting here" affordance                                         | **Backlog** (S8 delight; converges with `aipex-agent-parity.md`'s "fake-mouse" backlog item)                |
 | 17  | `@ui-tars/sdk` — a cross-platform SDK for third parties to build their _own_ GUI-agent operators (mobile/ADB/browserbase)                                                                              | n/a — Tepegöz ships a product, not an agent-building SDK                                                                                                                              | — (different product genre)                                                                  | **Not applicable** — no action                                                                              |
-| 18  | `omni-tars` — a composable single agent combining code + GUI + MCP tool families                                                                                                                       | Single orchestrator, no multi-agent composition                                                                                                                                       | Multi-agent / composable agent                                                               | **`docs/concepts/README.md` deferred backlog — "multi-agent crews"** (already named, second-order enrichment)      |
+| 18  | `omni-tars` — a composable single agent combining code + GUI + MCP tool families                                                                                                                       | Single orchestrator, no multi-agent composition                                                                                                                                       | Multi-agent / composable agent                                                               | **`docs/phases/README.md` deferred backlog — "multi-agent crews"** (already named, second-order enrichment)      |
 
 ---
 
@@ -239,7 +239,7 @@ Tepegöz's answer to "prove what happened" is architecturally stronger — Notar
 Ed25519-signed checkpoints + portable Replay Receipt + independent `tepegoz-verify` CLI — but **that
 answer does not exist in a running app today.** `@tepegoz/notary` is fully written and unit-tested
 (`canonical-json.ts`, `checkpoint.ts`, `hash-chain.ts`, `receipt-schema.ts`, `replay-receipt.ts`, `cli.ts`
-— all with co-located tests) and `docs/concepts/README.md`'s own Phase 7 row already says it plainly: "landed...
+— all with co-located tests) and `docs/phases/README.md`'s own Phase 7 row already says it plainly: "landed...
 not wired into a live run." Verified again for this track: the only mention of "notary" anywhere under
 `apps/desktop/src` is a doc-comment, not an import, and `apps/desktop/package.json` carries no
 `@tepegoz/notary` dependency. **No run today produces a Replay Receipt of any kind**, human-readable or
@@ -295,15 +295,15 @@ Phase 7 DoD detail. It does **not** relax or substitute for Phase 7's actual rem
 - **`@ui-tars/sdk`-style third-party operator SDK** — a different product genre (a toolkit for building
   new GUI agents, not a capability of Tepegöz's own agent). No daily-driver pull for this product; not
   pursued.
-- **`omni-tars` composable multi-agent** — already named in `docs/concepts/README.md`'s deferred backlog
+- **`omni-tars` composable multi-agent** — already named in `docs/phases/README.md`'s deferred backlog
   ("multi-agent crews," a second-order enrichment riding a parent phase). No new entry needed here.
 
 ---
 
 ## Routing — what this track does not own
 
-Per the existing convention ([`../README.md`](../../concepts/README.md#routing--what-stays-out) /
-[`ai-agent/README.md`](../../concepts/ai-agent/README.md#routing--what-stays-out)), reference these,
+Per the existing convention ([`../README.md`](../../phases/README.md#routing--what-stays-out) /
+[`ai-agent/README.md`](../../phases/02-ai-agent/README.md#routing--what-stays-out)), reference these,
 never duplicate them:
 
 | Stays with                                           | Material                                                                                                                                                             |
@@ -316,7 +316,7 @@ never duplicate them:
 | **Phase 7 (`07-verifiable-accountability.md`)** | The Notary hash-chain/signature/receipt mechanism itself — P3 only adds a rendered view once wiring lands, and does not substitute for that wiring                   |
 | **ADR-0026 / ADR-0029**                              | The `execute_js` / code-execution / DevTools boundary — Ground rules #5 keeps it closed                                                                              |
 | **`ai-agent/README.md` "Never" list**                | screenshot-every-step vision, vendor agent SDKs / `browser-use`-`nanobrowser` lineage — Ground rules #1 / #6                                                         |
-| **`docs/concepts/README.md` deferred backlog**              | multi-agent crews (the `omni-tars` analog)                                                                                                                           |
+| **`docs/phases/README.md` deferred backlog**              | multi-agent crews (the `omni-tars` analog)                                                                                                                           |
 
 ## ADRs owed (numbers assigned when a session actually opens one of these)
 

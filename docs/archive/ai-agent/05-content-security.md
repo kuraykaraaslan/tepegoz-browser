@@ -1,6 +1,6 @@
 # Phase AI-5 — Untrusted-Content Wrapping + Sanitizer
 
-**Status:** 🟡 In progress (PR1 + PR2 landed: inbound content guard — NFKC + injection redaction + forged-tag strip + threat taxonomy at the perception boundary; trusted-task fencing + security preamble; **strict-mode inbound PII redaction** (email/card/SSN/credential) + `GuardConfig`. **Remaining:** wire strict-mode to a user setting + on-harness adversarial measurement.) · **Depends on:** [AI-2](02-perception-buildtree.md) · **Track:** [`docs/concepts/ai`](README.md)
+**Status:** 🟡 In progress (PR1 + PR2 landed: inbound content guard — NFKC + injection redaction + forged-tag strip + threat taxonomy at the perception boundary; trusted-task fencing + security preamble; **strict-mode inbound PII redaction** (email/card/SSN/credential) + `GuardConfig`. **Remaining:** wire strict-mode to a user setting + on-harness adversarial measurement.) · **Depends on:** [AI-2](02-perception-buildtree.md) · **Track:** [`phases/ai`](README.md)
 **Goal:** Treat everything the page contributes to the model context (element text, page text, cached
 findings, attributes) as **untrusted data, never instructions** — with an explicit trust boundary and a
 content sanitizer. Prompt injection via page content is a top risk for any browsing agent; for a commercial
@@ -48,7 +48,7 @@ strip known injection patterns before it reaches the model, matching nanobrowser
 - Detection is **heuristic/regex** (fast, deterministic), explicitly a v1 — not a model-based classifier.
   Keep it advisory + layered; the authoritative security decisions stay in the Policy Kernel / Egress
   Firewall / HITL.
-- Coordinate with [Phase 2](../../concepts/product/phases/02-adapters-safe-browsing.md) (AgentThreatShield / Content Sanitizer)
+- Coordinate with [Phase 2](../../phases/01-product/02-adapters-safe-browsing.md) (AgentThreatShield / Content Sanitizer)
   so this inbound guard and that safe-browsing work share one taxonomy rather than duplicating.
 
 ## Audited gaps (external review, 2026-07)
@@ -75,5 +75,5 @@ web arg → HITL), all default-on and wired. Two follow-ups here; the risk-tieri
   **zero** tools; `biometric` is unenforced metadata), a **prepare-vs-send** two-phase split, a
   reversibility-default, and **resume-after-handoff** with payment-ambiguity/irreversible-action triggers
   (`s20`/`s30`) — deepen the _authority_ plane, not inbound content security. They belong to
-  [Phase 9 — Safe Autonomy & Delegation](../../concepts/product/phases/09-safe-autonomy-delegation.md). The core approval gate +
+  [Phase 9 — Safe Autonomy & Delegation](../../phases/01-product/09-safe-autonomy-delegation.md). The core approval gate +
   CAPTCHA/2FA handoff are already built, wired, and default-on; these are the deltas.

@@ -40,14 +40,14 @@ gizlilik tarayıcısı olmak sizi senkronizasyon hatasından ya da 1.8 GB RAM'de
 
 - **Sync doğruluk çıtası — "silmeler dirilmemeli."** Brave'in en tekrarlanan şikâyeti bu ve
   CRDT tabanlı bir sync'te tombstone'ların yanlış ele alınmasının klasik sonucu. Zaten
-  [phase-3](../concepts/product/phases/03-backend-cloud-extensions.md) `#### Sync correctness bar`
+  [phase-3](../phases/01-product/03-backend-cloud-extensions.md) `#### Sync correctness bar`
   bölümünde bir çıta olarak duruyor — bu belge o satırın kaynağı.
 - **Filtre motorunun bellek maliyetini ölçülür tut.** Brave'in performans şikâyetlerinin
   merkezinde adblock filtre listeleri var. Zaten
-  [phase-2](../concepts/product/phases/02-adapters-safe-browsing.md) `#### Filter-engine cost`
+  [phase-2](../phases/01-product/02-adapters-safe-browsing.md) `#### Filter-engine cost`
   bölümünde. Raporun somut önerisi: **filtre listelerini dile/bölgeye göre daralt** — Türkçe
   odaklı bir üründe doğrudan uygulanabilir.
-- **4K/yüksek-DPI arayüz ölçekleme.** [phase-10b](../concepts/product/phases/10b-accessibility-voice-reach.md)
+- **4K/yüksek-DPI arayüz ölçekleme.** [phase-10b](../phases/01-product/10b-accessibility-voice-reach.md)
   L9'da mevcut.
 - **⚠️ Parmak izi stratejisi — Brave'i _karşı örnek_ olarak al.** Brave her yeniden başlatmada
   parmak izini **rastgeleleştiriyor** (farbling). W3C'nin kendi rehberi ve Firefox'un pratiği
@@ -65,10 +65,10 @@ gizlilik tarayıcısı olmak sizi senkronizasyon hatasından ya da 1.8 GB RAM'de
   gelir modeli Faz 3'ün yönetilen aboneliği.
 - **Kendi arama motoru.** Rapor sonuç kalitesinin "ortalama" bulunduğunu kaydediyor; motor
   işletmek bu ürünün işi değil.
-- **Dikey sekmeler.** [phase-2b](../concepts/product/phases/02b-daily-driver-ux.md) bunu açıkça
+- **Dikey sekmeler.** [phase-2b](../phases/01-product/02b-daily-driver-ux.md) bunu açıkça
   kapsam dışı bırakmış.
 - **Speedreader** — karşılığı zaten sevk edildi (`@tepegoz/reader` + Reading View,
-  [phase-2c](../concepts/product/phases/02c-classic-browser-essentials.md)).
+  [phase-2c](../phases/01-product/02c-classic-browser-essentials.md)).
 
 ## Kaynaklar
 

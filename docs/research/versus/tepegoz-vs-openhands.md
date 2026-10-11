@@ -15,7 +15,7 @@
 launch-child-conversation-client-tool,skills-service}.ts`, `src/api/option-service/`,
 > `src/constants/{acp-providers,canvas-ui}.ts`, `src/components/features/{settings/llm-profiles,
 settings/mcp-settings,browser,chat}/`, `src/stores/{browser-store,goal-store}.ts`,
-> `tools/canvas_ui_tool.py`, `electron/`) ve bu reponun AI yüzeyinin (`docs/concepts/ai-agent/`,
+> `tools/canvas_ui_tool.py`, `electron/`) ve bu reponun AI yüzeyinin (`docs/phases/02-ai-agent/`,
 > `packages/orchestrator|model-gateway|capability-plane|security-policy|agent-runtime|browser-tools|
 web-tools|tool-executor|local-inference|model-catalog|mcp-client|recipe-compiler|macro-engine|notary|
 credential-vault|human-input|agent-eval`, `extensions/ext-agent`, `docs/adr/*`) aynı oturumda
@@ -23,7 +23,7 @@ credential-vault|human-input|agent-eval`, `extensions/ext-agent`, `docs/adr/*`) 
 >
 > **Tarih.** 2026-09-01.
 >
-> **Dil notu.** Bu belge, sahibe sunulduğu haliyle Türkçe tutulmuştur (`docs/concepts/tracks/README.md`'deki
+> **Dil notu.** Bu belge, sahibe sunulduğu haliyle Türkçe tutulmuştur (`phases/tracks/README.md`'deki
 > "orijinal dilinde tutulur" kaydıyla aynı gerekçe). Proje eserleri İngilizce-öncedir; bu, yazıldığı
 > haliyle korunan bir kayıttır.
 >
@@ -50,7 +50,7 @@ credential-vault|human-input|agent-eval`, `extensions/ext-agent`, `docs/adr/*`) 
 |             | OpenHands Agent Canvas                                                                                                                                                                                                          | Tepegöz                                                                                                                                             |
 | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Ne          | React/TypeScript **frontend + yerel yığın başlatıcı** (`npm i -g @openhands/agent-canvas`), opsiyonel Electron paketi; bir veya çok Agent Server'a bağlanan **kontrol merkezi**                                                 | Tam **Electron tarayıcı**; ajan (Agent Console / "Do modu") alt sistemlerden biri                                                                   |
-| Olgunluk    | **Yayında** — npm'de `v1.16.0`, GitHub Actions CI, Docker imajı, self-hosting kılavuzu, "beta" rozeti, Slack topluluğu; ama "incubator/beta" olarak işaretli                                                                    | **1.0 öncesi**; `docs/concepts/ai-agent` S0–S12 fazlarının **hepsi 🟠 measurement-owed**, hiçbiri ✅ değil, sahip notu: _"hâlâ istediğim gibi çalışmıyor"_ |
+| Olgunluk    | **Yayında** — npm'de `v1.16.0`, GitHub Actions CI, Docker imajı, self-hosting kılavuzu, "beta" rozeti, Slack topluluğu; ama "incubator/beta" olarak işaretli                                                                    | **1.0 öncesi**; `docs/phases/02-ai-agent` S0–S12 fazlarının **hepsi 🟠 measurement-owed**, hiçbiri ✅ değil, sahip notu: _"hâlâ istediğim gibi çalışmıyor"_ |
 | Kod         | TypeScript, React Router 7 SPA, `npm` + Vite, `zustand` + React Query; ~tek paket (frontend) + `electron/` alt-paketi; ajan mantığı **başka repolarda** (`software-agent-sdk`, `typescript-client`, `automation`, `extensions`) | Strict TS, pnpm + turbo monorepo, ~70 `@tepegoz/*` paket, ADR güdümlü, zod `safeParse` her güven sınırında                                          |
 | Felsefe     | "Kendi-barındırılan, her-zaman-açık mühendislik ekibi"; ajan-agnostik, arka-uç-agnostik, entegrasyon-önce; yerelde çalışan ajanın _"onaya takılma, güvenlik/geri-alınamazlık engellemedikçe yürüt"_ eğilimi                     | "Security-by-design, local-first"; model-öncesi deterministik çekirdek + kriptografik hesap verebilirlik + determinism-first                        |
 | Birincil iş | Kodlama ajanlarını **barındırmak / çoğullamak / otomatikleştirmek**: konuşma başlat, GitHub issue'sunu göreve böl, rapor üretip Slack'e yayınla, ajanı laptop/VM/bulut arasında taşı                                            | Web'de görev yürütmek: gezinme, form doldurma, çıkarım, çok-adımlı akış; güvenli oturum-açık site otomasyonu                                        |

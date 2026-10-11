@@ -26,7 +26,7 @@
 
 - **HPKP ölü.** Sertifika sabitleme artık önerilmiyor (kilitlenme riski); yerine **Certificate
   Transparency** + sağlam iptal kontrolü + kontrollü trust store. ⚠️ Bu bir **hassas nokta**:
-  [S6](../concepts/ai-agent/phases/06-safety-control-plane.md) PR8, Fellou'nun IDOR dersini Faz 3'e
+  [S6](../phases/02-ai-agent/06-safety-control-plane.md) PR8, Fellou'nun IDOR dersini Faz 3'e
   "transport pinning" olarak iletiyor. O bağlamda pinning **hâlâ geçerli**, çünkü orası uygulama→kendi
   sunucumuz bağlantısı (native/enterprise sınıfı), web platformu HPKP'si değil. Ayrım yazılı olmazsa
   biri gider HPKP başlığı ekler.
@@ -41,7 +41,7 @@
 - **Global HTTPS-Only modu ve HSTS** — bugün yalnızca tünel-kapsamlı; kullanıcıya açık bir ayar olması
   [`tracks/browser-settings-feature-gap.md`](tracks/browser-settings-feature-gap.md) §7'de zaten
   yakalanmış.
-- **Şifreli DNS seçimi ve politikası** → [phase-5](../concepts/product/phases/05-vpn-network-privacy.md) L10.
+- **Şifreli DNS seçimi ve politikası** → [phase-5](../phases/01-product/05-vpn-network-privacy.md) L10.
 - **CT + iptal kontrolü, HPKP değil** — ve Faz 3'ün pinning satırının **hangi anlamda** pinning olduğunu
   yazmak.
 - **Derleme-zamanı sertleştirme duruşunu yazıya dökmek** — `packages/native-rs` gerçek koda dönüştüğünde

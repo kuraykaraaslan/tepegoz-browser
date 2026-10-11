@@ -8,7 +8,7 @@
 > `docs/providers-and-models.md`, `docs/prompt-injection-defense.md`, `docs/security-model.md`,
 > `docs/offline-rag.md`, `docs/apocalypse-mode.md`, `docs/skills.md`, `docs/slash-commands.md`,
 > `docs/THREAT-MODEL.md`, `docs/claude-chrome-comparison.md`, `src/chrome/…` ağaç yapısı) ve bu reponun
-> AI yüzeyinin (`docs/concepts/ai-agent/`, `packages/orchestrator|model-gateway|capability-plane|
+> AI yüzeyinin (`docs/phases/02-ai-agent/`, `packages/orchestrator|model-gateway|capability-plane|
 security-policy|agent-runtime|browser-tools|web-tools|tool-executor|local-inference|model-catalog|
 mcp-client|recipe-compiler|macro-engine|notary|credential-vault|human-input`, `extensions/ext-agent`,
 > `docs/adr/*`) aynı oturumda okunmasından çıkarıldı.
@@ -16,10 +16,10 @@ mcp-client|recipe-compiler|macro-engine|notary|credential-vault|human-input`, `e
 > **Tarih.** 2026-09-01.
 >
 > **Dil notu.** Bu belge, sahibe sunulduğu haliyle Türkçe tutulmuştur
-> (`docs/concepts/tracks/README.md`'deki "orijinal dilinde tutulur" kaydıyla aynı gerekçe). Proje eserleri
+> (`phases/tracks/README.md`'deki "orijinal dilinde tutulur" kaydıyla aynı gerekçe). Proje eserleri
 > İngilizce-öncedir; bu, yazıldığı haliyle korunan bir kayıttır.
 >
-> **İlgili:** [`docs/concepts/tracks/webbrain-agent-parity.md`](../parities/webbrain-agent-parity.md) —
+> **İlgili:** [`phases/tracks/webbrain-agent-parity.md`](../parities/webbrain-agent-parity.md) —
 > bu karşılaştırmanın "WebBrain'in yaptığı her şeyi Tepegöz de yapabilsin" tarafını fazlara/ADR'lere
 > yönlendiren öneri track'i.
 

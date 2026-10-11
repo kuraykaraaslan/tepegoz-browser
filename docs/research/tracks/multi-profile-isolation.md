@@ -212,7 +212,7 @@ browser / renderer / gpu / utility processes) holding distinct themes (dark vs l
 ## Why it is not just merged
 
 - ~350 commits behind `main`; merge-base predates the phases consolidation
-  (`docs/concepts/phase-3-backend-cloud-extensions.md`, which the branch edits, no longer exists), the Phase 5
+  (`phases/phase-3-backend-cloud-extensions.md`, which the branch edits, no longer exists), the Phase 5
   network / tunnel-partition layer, and the `protocol.handle` internal-pages rework — all three touch the
   exact files this branch touches.
 - ADR number collision (`0025` is taken on `main`).

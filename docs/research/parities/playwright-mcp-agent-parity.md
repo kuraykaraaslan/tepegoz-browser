@@ -14,7 +14,7 @@ Apache-2.0 — `README.md`'s full 24-tool default reference plus the storage/net
 vision/pdf/config opt-in families, `config.d.ts`, `index.d.ts`, `server.json`, `package.json`, `cli.js`,
 `SECURITY.md`, `CLAUDE.md`, `tests/capabilities.spec.ts`'s frozen default-tool-list snapshot) against
 [`docs/others/tepegoz-vs-playwright-mcp.md`](../versus/tepegoz-vs-playwright-mcp.md) (the
-existing Turkish comparison this track distills) and this repo's AI surface (`docs/concepts/ai-agent/`,
+existing Turkish comparison this track distills) and this repo's AI surface (`docs/phases/02-ai-agent/`,
 `packages/orchestrator|model-gateway|capability-plane|security-policy|agent-runtime|browser-tools|
 web-tools|mcp-client|recipe-compiler|notary|shared-types`, `extensions/ext-agent`, `docs/adr/*`). Every
 claim about Playwright MCP below was checked against the source files directly in this session, not
@@ -50,9 +50,9 @@ the existing kernel/PEP/i18n/coverage discipline, never ported as JS.
 Each workstream below is written like an `ai-agent` phase section (Goal → Approach → new/changed
 packages → ADRs owed → DoD-shaped bullets) so it can be lifted into a real phase file with minimal
 rewriting. **Nothing here is committed roadmap.** Two of the six workstreams (P1, P6) mostly **sharpen**
-detail onto docs/concepts/tracks that already own the material — [`aipex-agent-parity.md`](aipex-agent-parity.md)
-P1 already fully specced a governed MCP server, and [S4](../../concepts/ai-agent/phases/04-verified-outcomes.md)/
-[Phase 6](../../concepts/product/phases/06-deterministic-automation.md) already own verified-completion and deterministic
+detail onto phases/tracks that already own the material — [`aipex-agent-parity.md`](aipex-agent-parity.md)
+P1 already fully specced a governed MCP server, and [S4](../../phases/02-ai-agent/04-verified-outcomes.md)/
+[Phase 6](../../phases/01-product/06-deterministic-automation.md) already own verified-completion and deterministic
 replay — this track adds only the detail Playwright MCP's source surfaced that those don't have yet, and
 says so explicitly rather than re-describing them.
 
@@ -82,7 +82,7 @@ them here once so no future session re-proposes them by accident:
    `browser_route_list` (storage-adjacent opt-in family) let the calling side rewrite what the page
    receives from the network before the page ever sees it. Handing that lever to the agent's own
    tool-call surface would let a compromised planning step — or an injected instruction — manufacture the
-   exact kind of evidence [S4](../../concepts/ai-agent/phases/04-verified-outcomes.md)'s `CompletionEvidence` and
+   exact kind of evidence [S4](../../phases/02-ai-agent/04-verified-outcomes.md)'s `CompletionEvidence` and
    trap fixtures exist to catch (a page that lies about its own state, e.g. "Saved!" over a 5xx). A tool
    that can make any page say anything is not compatible with a program whose fourth north-star condition
    is "the agent does not believe a lie the page tells it." This is also a category tell: response mocking
@@ -465,8 +465,8 @@ in the table before I move on."
 
 ## Routing — what this track does not own
 
-Per the existing convention ([`../README.md`](../../concepts/README.md#deferred--adoption-gated-backlog-from-the-beyond-phases-synthesis) /
-[`ai-agent/README.md`](../../concepts/ai-agent/README.md#routing--what-stays-out)), reference these, never
+Per the existing convention ([`../README.md`](../../phases/README.md#deferred--adoption-gated-backlog-from-the-beyond-phases-synthesis) /
+[`ai-agent/README.md`](../../phases/02-ai-agent/README.md#routing--what-stays-out)), reference these, never
 duplicate them:
 
 | Stays with                                 | Material                                                                                                                                                            |

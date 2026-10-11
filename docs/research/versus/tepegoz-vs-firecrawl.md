@@ -14,19 +14,19 @@
 > `lib/scrape-interact/browser-agent.ts`, `lib/deep-research/deep-research-service.ts`,
 > `lib/{cost-tracking,mcp-delegated-credential}.ts`, `services/mcp/action-logs.ts`,
 > `lib/threat-protection/*`, `skills/`, `firecrawl-workflows/`, `firecrawl-cli/`, `examples/`) ve bu
-> reponun AI yüzeyinin (`docs/concepts/ai-agent/`, `packages/orchestrator|model-gateway|capability-plane|
+> reponun AI yüzeyinin (`docs/phases/02-ai-agent/`, `packages/orchestrator|model-gateway|capability-plane|
 security-policy|agent-runtime|browser-tools|web-tools|tool-executor|local-inference|model-catalog|
 mcp-client|recipe-compiler|macro-engine|notary|credential-vault|human-input|reader|tasks`,
 > `extensions/ext-agent`, `docs/adr/*`) aynı oturumda okunmasından çıkarıldı.
 >
 > **Tarih.** 2026-09-01.
 >
-> **Dil notu.** Bu belge, sahibe sunulduğu haliyle Türkçe tutulmuştur (`docs/concepts/tracks/README.md`'deki
+> **Dil notu.** Bu belge, sahibe sunulduğu haliyle Türkçe tutulmuştur (`phases/tracks/README.md`'deki
 > "orijinal dilinde tutulur" kaydıyla aynı gerekçe). Proje eserleri İngilizce-öncedir; bu, yazıldığı
 > haliyle korunan bir kayıttır.
 >
-> **İlgili:** henüz bir `docs/concepts/tracks/firecrawl-agent-parity.md` yok; yapı-yönlendirmesi için
-> [`docs/concepts/tracks/webbrain-agent-parity.md`](../parities/webbrain-agent-parity.md) örnek alınabilir,
+> **İlgili:** henüz bir `phases/tracks/firecrawl-agent-parity.md` yok; yapı-yönlendirmesi için
+> [`phases/tracks/webbrain-agent-parity.md`](../parities/webbrain-agent-parity.md) örnek alınabilir,
 > ama Firecrawl farklı bir kategori olduğu için parity track'i sınırlı anlam taşır (aşağıya bkz.).
 >
 > **Kategori uyarısı.** Bunlar **farklı ürün kategorileri**. Firecrawl bir _tarayıcı ajanı değil_: bir
@@ -48,7 +48,7 @@ mcp-client|recipe-compiler|macro-engine|notary|credential-vault|human-input|read
 |             | Firecrawl                                                                                                                                                                                                                              | Tepegöz                                                                                                                                             |
 | ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Ne          | Web-veri **API'si + servisi** — `/scrape`, `/crawl`, `/map`, `/search`, `/batch-scrape`, `/extract` (LLM yapılandırılmış çıkarım), `/agent` (Spark modelleri), `/scrape/:id/interact` (kazı + sayfada eylem); barındırılan + self-host | Tam **Electron tarayıcı**; ajan (Agent Console / "Do modu") alt sistemlerden biri                                                                   |
-| Olgunluk    | **Yayında** — hosted `api.firecrawl.dev`, ücretli planlar/kredi sistemi, 10+ dilde SDK (Python/Node/Go/Java/Elixir/Rust/Ruby/.NET/PHP), playground, changelog, Discord, gerçek kullanıcılar                                            | **1.0 öncesi**; `docs/concepts/ai-agent` S0–S12 fazlarının **hepsi 🟠 measurement-owed**, hiçbiri ✅ değil, sahip notu: _"hâlâ istediğim gibi çalışmıyor"_ |
+| Olgunluk    | **Yayında** — hosted `api.firecrawl.dev`, ücretli planlar/kredi sistemi, 10+ dilde SDK (Python/Node/Go/Java/Elixir/Rust/Ruby/.NET/PHP), playground, changelog, Discord, gerçek kullanıcılar                                            | **1.0 öncesi**; `docs/phases/02-ai-agent` S0–S12 fazlarının **hepsi 🟠 measurement-owed**, hiçbiri ✅ değil, sahip notu: _"hâlâ istediğim gibi çalışmıyor"_ |
 | Kod         | TypeScript, pnpm monorepo; `apps/api` Express + worker'lar, NuQ Postgres / RabbitMQ / Redis kuyrukları, Playwright + "fire-engine" tarayıcı katmanı, Go html-to-markdown servisi; AGPL-3.0 (SDK'lar MIT)                               | Strict TS, pnpm + turbo monorepo, ~70 `@tepegoz/*` paket, ADR güdümlü, zod `safeParse` her sınırda                                                  |
 | Felsefe     | "Web'i ölçekte ajan-hazır veriye çevir; sıfır konfigürasyon, endüstri-lideri güvenilirlik"; altyapı-önce, pratik                                                                                                                       | "Security-by-design, local-first"; model-öncesi deterministik çekirdek + kriptografik hesap verebilirlik + determinism-first                        |
 | Birincil iş | Sayfaları/siteleri temiz Markdown veya şema-güdümlü JSON'a çevirmek; URL keşfi, toplu kazı, web araması; **başka bir ajanın tüketeceği veriyi üretmek**                                                                                | Web'de görev yürütmek: gezinme, form doldurma, çıkarım, çok-adımlı akış; güvenli oturum-açık site otomasyonu                                        |

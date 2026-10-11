@@ -12,7 +12,7 @@ track exists" for why almost none of Firecrawl's surface area translates into a 
 **Source:** [`docs/others/tepegoz-vs-firecrawl.md`](../versus/tepegoz-vs-firecrawl.md) (Turkish,
 2026-09-01) against a same-session deep read of `.junk/firecrawl` (Firecrawl — a shipping,
 **AGPL-3.0-licensed** web-data API + hosted service; `apps/api` Express + worker queues, 10+-language
-SDKs, `api.firecrawl.dev`) and this repo's AI surface (`docs/concepts/ai-agent/`, `packages/orchestrator|
+SDKs, `api.firecrawl.dev`) and this repo's AI surface (`docs/phases/02-ai-agent/`, `packages/orchestrator|
 model-gateway|capability-plane|security-policy|agent-runtime|browser-tools|web-tools|tool-executor|
 reader|notary`, `extensions/ext-agent`). This file is the durable English track artifact. Key claims were
 re-verified against source in this session: `apps/api/src/controllers/v2/map.ts` +
@@ -51,7 +51,7 @@ Each workstream below is written like an `ai-agent` phase section (Goal → Appr
 packages → ADR → DoD-shaped bullets) so it can be lifted into a real phase file with minimal rewriting.
 **Nothing here is committed roadmap.** Where a capability already has a named home in an existing phase,
 ADR, or a sibling track, this file cites it and does **not** re-describe it. Per the "Already planned —
-do NOT re-propose" rule in [`../README.md`](../../concepts/README.md#deferred--adoption-gated-backlog-from-the-beyond-phases-synthesis),
+do NOT re-propose" rule in [`../README.md`](../../phases/README.md#deferred--adoption-gated-backlog-from-the-beyond-phases-synthesis),
 the **MCP server** surface is **Phase 1b**, and agent-callable PDF text extraction is already
 [`webbrain-agent-parity.md`](webbrain-agent-parity.md) **P3-a** — both are cited below, neither is
 reworked.
@@ -214,8 +214,8 @@ this site publish."
 
 ## Routing — what this track does not own
 
-Per the existing convention ([`../README.md`](../../concepts/README.md#routing--what-stays-out) /
-[`ai-agent/README.md`](../../concepts/ai-agent/README.md#routing--what-stays-out)), reference these,
+Per the existing convention ([`../README.md`](../../phases/README.md#routing--what-stays-out) /
+[`ai-agent/README.md`](../../phases/02-ai-agent/README.md#routing--what-stays-out)), reference these,
 never duplicate them:
 
 | Stays with                          | Material                                                                                                                                                                                                                                                                                                              |

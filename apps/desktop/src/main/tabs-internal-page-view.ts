@@ -21,7 +21,7 @@ import { contextMenuObservers, internalBaseUrl } from './tabs-shared';
 
 /**
  * Real `WebContentsView`s for internal (`tepegoz://…`) tabs — Faz 2 of
- * `docs/concepts/tracks/protocol-tepegoz-pages.md`.
+ * `phases/tracks/protocol-tepegoz-pages.md`.
  *
  * Deliberately kept in a SEPARATE map from `WindowTabsBase.views` (never inserted there): the whole
  * point of the "no view entry ⟺ internal" invariant (`tabs-window-closing.ts`) is that agent

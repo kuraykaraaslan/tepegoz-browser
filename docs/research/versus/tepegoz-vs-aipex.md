@@ -17,7 +17,7 @@
 > `lib/browser-agent-config.ts`, `manifest.json`; `mcp-bridge/README.md` + `src/bridge.ts` +
 > `src/daemon.ts` + `src/tool-schemas.ts`; `skill/SKILL.md` + `skill/references/tools-reference.md`;
 > `migration/TOOL_SURFACE_AUDIT.md`, `MIGRATION_STRATEGY.md`, `LOGIC_INCONSISTENCIES_BY_PACKAGE.md`) ve
-> bu reponun AI yüzeyinin (`docs/concepts/ai-agent/`, `packages/orchestrator|model-gateway|
+> bu reponun AI yüzeyinin (`docs/phases/02-ai-agent/`, `packages/orchestrator|model-gateway|
 capability-plane|security-policy|agent-runtime|browser-tools|web-tools|tool-executor|local-inference|
 model-catalog|mcp-client|recipe-compiler|macro-engine|notary|credential-vault|human-input`,
 > `extensions/ext-agent`, `docs/adr/*`) aynı oturumda okunmasından çıkarıldı.
@@ -28,7 +28,7 @@ model-catalog|mcp-client|recipe-compiler|macro-engine|notary|credential-vault|hu
 > gerekçe: proje eserleri İngilizce-öncedir, bu yazıldığı haliyle korunan bir kayıttır).
 >
 > **İlgili:** AIPex için ayrı bir parity track'i yok; bu belge
-> [`docs/concepts/tracks/webbrain-agent-parity.md`](../parities/webbrain-agent-parity.md)'nin yanında
+> [`phases/tracks/webbrain-agent-parity.md`](../parities/webbrain-agent-parity.md)'nin yanında
 > ikinci bir dış-referans okumasıdır. AIPex'in getirdiği asıl yeni soru — "dış ajanlar (Claude Code,
 > Cursor) Tepegöz tarayıcısını MCP üzerinden sürebilmeli mi" — Phase 1b'nin yapılmamış MCP-server
 > maddesine bağlanır.

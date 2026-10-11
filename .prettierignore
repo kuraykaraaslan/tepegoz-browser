@@ -11,7 +11,7 @@ pnpm-lock.yaml
 # Agent/editor local state — not source, not reviewed, and 500+ files of it.
 .claude/
 
-# Eval fixtures are FROZEN artifacts, not source. `docs/concepts/ai-agent/reference/fixture-freeze.md` hashes the
+# Eval fixtures are FROZEN artifacts, not source. `docs/reference/ai-agent/fixture-freeze.md` hashes the
 # registries and treats a changed hash as "a disclosure event"; reformatting the pages would also reflow
 # whitespace, and `innerText` is exactly what the scenarios assert on. Formatting them would silently
 # rewrite the exam.
@@ -27,4 +27,4 @@ apps/desktop/resources/extensions.catalog.json
 # EVERY pass (8 -> 12 -> 16 -> 20 -> ...), which was measured, not guessed. Reformatting it is a
 # formatter bug, not drift in the document, and the alternative — flattening the checklist so the
 # tables sit at the top level — would rewrite an authored phase document to suit a printer.
-docs/concepts/product/phases/02c-classic-browser-essentials.md
+docs/phases/01-product/02c-classic-browser-essentials.md

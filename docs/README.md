@@ -4,8 +4,10 @@ This repository follows the shared documentation layout. Create a folder only wh
 
 | Folder | What is here |
 |---|---|
+| [phases/](phases/) | Repository-wide plans, ordered by `NN-subject` (status table and legend in the index). |
 | [adr/](adr/) | Architecture and design decisions, one file each (`NNNN-slug.md`). |
 | [concepts/](concepts/) | Long-lived descriptions of an area (what and why), each with its own `phases/`. |
+| [audits/](audits/) | Dated snapshots of the state of the code or the system; never edited afterwards. |
 | [guides/](guides/) | How to do a task: build, deploy, operate, troubleshoot. |
 | [reference/](reference/) | Specs and catalogs that are looked up: protocols, APIs, tables, matrices. |
 | [research/](research/) | Competitor, market and source-tour material. |

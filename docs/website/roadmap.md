@@ -8,7 +8,7 @@ status: ready
 
 # Roadmap
 
-**[BUILD NOTE]** This page must be regenerated from `docs/concepts/README.md` whenever that changes, or it
+**[BUILD NOTE]** This page must be regenerated from `docs/phases/README.md` whenever that changes, or it
 will become the thing it exists to prevent. Ideally build it from the file rather than transcribing it
 by hand.
 
@@ -118,7 +118,7 @@ only responsible way to make that promise is to be explicit about which parts ar
 are merely built, and which are still a sentence in a plan.
 
 **[CLAIM]** All of it is maintained in the repository, per phase, with the evidence or the absence of
-it: [phase index](../concepts/README.md) · [AI competence programme](../concepts/ai-agent/README.md)
+it: [phase index](../phases/README.md) · [AI competence programme](../phases/02-ai-agent/README.md)
 · [known issues](../known-issues.md)
 
 ---

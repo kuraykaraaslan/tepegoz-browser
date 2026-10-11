@@ -12,7 +12,7 @@ comparison.
 [`docs/others/tepegoz-vs-kilocode.md`](../versus/tepegoz-vs-kilocode.md) (Turkish, 2026-09-01)
 against `.junk/kilocode` (`v7.5.6` — Kilo Code, a shipping, MIT-licensed AI **coding** agent: VS Code +
 JetBrains extensions + `@kilocode/cli`, all clients of one core that is a fork of upstream **OpenCode**)
-and this repo's AI surface (`docs/concepts/ai-agent/`, `packages/orchestrator|model-gateway|
+and this repo's AI surface (`docs/phases/02-ai-agent/`, `packages/orchestrator|model-gateway|
 capability-plane|security-policy|agent-runtime|browser-tools|web-tools|tool-executor|local-inference|
 model-catalog|mcp-client|recipe-compiler|macro-engine|notary|credential-vault|human-input`,
 `extensions/ext-agent`). Key claims were re-verified against source, restricted to the axes this track

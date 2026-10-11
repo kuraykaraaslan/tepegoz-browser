@@ -53,7 +53,7 @@ olarak zaten güvenilir bir kanal (kullanıcı girdisi), ve `plan-grant-scope`'u
 grant'ı genişletmiş olur — bu, WebBrain'in "edited plans with stale hidden metadata
 cannot authorize a send" uyarısının aynısı, oradan doğrulanmış bir tuzak).
 
-Bu, `docs/concepts/tracks/webbrain-agent-parity.md`'ye bir satır olarak değil, S8 (assistant-ux)
+Bu, `phases/tracks/webbrain-agent-parity.md`'ye bir satır olarak değil, S8 (assistant-ux)
 altında küçük bir iyileştirme olarak gider.
 
 ## Alınacaklar / Alınmayacaklar
@@ -100,10 +100,10 @@ eksiklikleri, taşıma katmanı sertleştirmesi yok.
 
 ### Tepegöz'e taşınanlar
 
-- **Girdi izolasyonu + katı HITL + zero-trust API** → [S6](../concepts/ai-agent/phases/06-safety-control-plane.md)
+- **Girdi izolasyonu + katı HITL + zero-trust API** → [S6](../phases/02-ai-agent/06-safety-control-plane.md)
   PR8; IDOR dersi Faz 3'e iletildi (her istek sahipliği **sunucu tarafında yeniden türetir**, parametreden
   değil).
-- **"Aracın kendi hatası için ödeme"** → [S8](../concepts/ai-agent/phases/08-assistant-ux.md) PR7'nin
+- **"Aracın kendi hatası için ödeme"** → [S8](../phases/02-ai-agent/08-assistant-ux.md) PR7'nin
   maliyet-öngörüsü + tool-kaynaklı başarısızlıkta ledger'a yazmama satırı. Fellou'nun Sparks şikâyeti ve
   Neon'un fiyat tepkisi **aynı şey**.
 - **Canlı ajan konsolu / ara durum görünürlüğü** → S8 PR2 (canlı adım akışı) burada zaten var.

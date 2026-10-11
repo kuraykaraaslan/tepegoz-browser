@@ -55,7 +55,7 @@ app.setName('Tepegöz');
 // (and notifications are attributed to Tepegöz) rather than the default Electron identity.
 if (process.platform === 'win32') app.setAppUserModelId('com.tepegoz.browser');
 
-// `tepegoz://` internal-page scheme (Faz 0, docs/concepts/tracks/protocol-tepegoz-pages.md) — MUST run before
+// `tepegoz://` internal-page scheme (Faz 0, phases/tracks/protocol-tepegoz-pages.md) — MUST run before
 // app.whenReady() resolves; Electron only reads privileged-scheme registration once, at startup.
 registerInternalPagesScheme();
 
@@ -154,7 +154,7 @@ if (!app.requestSingleInstanceLock()) {
       }
 
       installSecurity();
-      // `protocol.handle` must be called after whenReady — see docs/concepts/tracks/protocol-tepegoz-pages.md.
+      // `protocol.handle` must be called after whenReady — see phases/tracks/protocol-tepegoz-pages.md.
       registerInternalPagesProtocol();
       initStores();
       // "Clear when the browser closes", settled before anything reads the profile: if the previous

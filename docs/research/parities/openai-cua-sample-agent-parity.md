@@ -21,7 +21,7 @@ source rather than trusting the write-up alone: `.junk/openai-cua-sample`'s `REA
 `packages/scenario-kit/src/scenarios.ts`, and `packages/runner-core/src/{errors,responses-loop}.ts` on the
 rival side; `packages/agent-eval/src/{scenario-registry,scorer}.ts`,
 `packages/shared-types/src/eval-scenario.ts`, `docs/adr/0030-notary-service.md`, and
-`docs/concepts/ai-agent/phases/10-vision-escalation.md` on this repo's side (confirming, among other things,
+`docs/phases/02-ai-agent/10-vision-escalation.md` on this repo's side (confirming, among other things,
 that no `package.json` other than `packages/notary`'s own declares `@tepegoz/notary` as a dependency, and
 that `captureVision` in `packages/orchestrator/src/{reactor-types,reactor}.ts` is an optional callback with
 no production caller).
@@ -91,7 +91,7 @@ here once, so no future session re-proposes them by accident:
    loop as the success condition." S4's `CompletionEvidence` + deterministic downgrade exists precisely so
    this can't happen by construction — an agent cannot talk a contradicted claim into `done`, and there is
    no toggle that lets it. Fabricated-success ≈ 0 is one of the program's four north-star conditions
-   ([`ai-agent/README.md`](../../concepts/ai-agent/README.md)); a togglable verifier would be a regression
+   ([`ai-agent/README.md`](../../phases/02-ai-agent/README.md)); a togglable verifier would be a regression
    against it, not a feature to match.
 
 None of these are "the sample did it wrong" in isolation — it's an unauthenticated demo pointed at three
@@ -117,7 +117,7 @@ A **Ground rules** reference means the capability is deliberately not being matc
 | 6   | `pending_safety_checks`: model-declared, post-hoc, unimplemented safety acknowledgement                                                                                                                                      | Deterministic Policy Kernel, pre-model, pre-dispatch (ADR-0006)                                                                                                                                                                                                         | N/A — deliberately not matched                                                                                                                                                                                                            | **Ground rules #3 — ADR-0006**                                                                                              |
 | 7   | `verificationEnabled` defaults off; model's own completion claim is the fallback success condition                                                                                                                           | `CompletionEvidence` + deterministic downgrade (S4), no toggle exists                                                                                                                                                                                                   | N/A — deliberately not matched                                                                                                                                                                                                            | **Ground rules #4 — S4**                                                                                                    |
 | 8   | Six configurable knobs (model, turn budget, mode, headless/headful, verification, `CUA_RESPONSES_MODE`), single vendor, `effort` hard-coded                                                                                  | 5 effort levels + `ModelRouter` capability→tier + 8 cloud providers + `local`, mandatory `maxTokens`/`timeoutMs` per call                                                                                                                                               | None — Tepegöz already ahead                                                                                                                                                                                                              | **Already covered** (cite ADR-0005)                                                                                         |
-| 9   | `RunnerCoreError{code, hint, statusCode}`, console maps codes to actionable titles, stays legible when the runner is offline                                                                                                 | code-claude Faz 5 retry/recovery taxonomy (policy denial / stale selector / page change / nav timeout / auth handoff / transient / malformed model output) — already folded into Phase 1a/1b                                                                            | None — already the same shape                                                                                                                                                                                                             | **Already covered** (cite [`../README.md`](../../concepts/README.md#completed-hardening-track-folded-into-phases-1a--1b--2c)) |
+| 9   | `RunnerCoreError{code, hint, statusCode}`, console maps codes to actionable titles, stays legible when the runner is offline                                                                                                 | code-claude Faz 5 retry/recovery taxonomy (policy denial / stale selector / page change / nav timeout / auth handoff / transient / malformed model output) — already folded into Phase 1a/1b                                                                            | None — already the same shape                                                                                                                                                                                                             | **Already covered** (cite [`../README.md`](../../phases/README.md#completed-hardening-track-folded-into-phases-1a--1b--2c)) |
 
 ---
 
@@ -170,7 +170,7 @@ proved something."
 - [ ] The exported file and its UI are labeled unsigned/debug-grade; no copy anywhere calls it a "proof" or
       "receipt"
 - [ ] Explicitly gated behind Phase 7's own status: this is captured detail for whenever a session resumes
-      Phase 7 (currently **frozen out of v1** per `docs/concepts/README.md`'s ship line) — not a call to open
+      Phase 7 (currently **frozen out of v1** per `docs/phases/README.md`'s ship line) — not a call to open
       Phase 7 now, per the anti-debt rule
 - [ ] i18n: any new export label/warning text ships EN+TR in `ext-agent`'s own `src/i18n/{en,tr,index}.ts`
 
@@ -238,8 +238,8 @@ shipped with the app (`@tepegoz/agent-eval` is `private`), governed by the eval 
 
 ## Routing — what this track does not own
 
-Per the existing convention ([`../README.md`](../../concepts/README.md#routing--what-stays-out) /
-[`ai-agent/README.md`](../../concepts/ai-agent/README.md#routing--what-stays-out)), reference these, never
+Per the existing convention ([`../README.md`](../../phases/README.md#routing--what-stays-out) /
+[`ai-agent/README.md`](../../phases/02-ai-agent/README.md#routing--what-stays-out)), reference these, never
 duplicate them:
 
 | Stays with                                       | Material                                                                                                                                                                                                                     |

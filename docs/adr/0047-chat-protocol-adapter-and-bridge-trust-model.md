@@ -1,7 +1,7 @@
 # ADR-0047: Chat protocol-adapter & bridge trust model — native adapters in-process, closed-network bridges out-of-process, every event re-validated, every agent tool behind the one PEP
 
 - **Status:** Proposed (design; `@tepegoz/ext-chat` phase X-chat.1 — see
-  [`docs/concepts/extensions/phases/01-ext-chat.md`](../concepts/extensions/phases/01-ext-chat.md))
+  [`docs/phases/03-extensions/01-ext-chat.md`](../phases/03-extensions/01-ext-chat.md))
 - **Date:** 2026-09-09
 - **Refines:** [ADR-0021](0021-agent-controllable-extensions.md) (in-process capability providers) ·
   [ADR-0018](0018-mcp-client.md) (out-of-process subprocess adapters) ·
@@ -91,7 +91,7 @@ A bridge child process gets:
 - **No host RPC** beyond the `ChatAdapter` methods.
 - **A wall-clock + memory budget**, and **crash isolation** — a bridge crash surfaces as _that
   account_ going `error`; nothing else is affected, no other account is reachable.
-- **A signed package** ([Phase 3](../concepts/product/phases/03-backend-cloud-extensions.md)
+- **A signed package** ([Phase 3](../phases/01-product/03-backend-cloud-extensions.md)
   supply-chain gate). Bridges are never bundled with the app.
 
 ### 5. Agent capabilities behind the one PEP, with chat-specific guards

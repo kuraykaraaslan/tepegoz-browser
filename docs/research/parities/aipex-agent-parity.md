@@ -13,7 +13,7 @@ task or an `ai-agent` PR without re-deriving the comparison.
 browser-automation extension whose store build is `manifest.json` version 2.2.39; the reviewed branch
 compiles **34 tools** in its default bundle, has no `use-cases` package, and its own `migration/`
 folder honestly counts the gaps against the ~70–82-tool store product) against this repo's AI surface
-(`docs/concepts/ai-agent/`, `packages/orchestrator|model-gateway|capability-plane|security-policy|
+(`docs/phases/02-ai-agent/`, `packages/orchestrator|model-gateway|capability-plane|security-policy|
 agent-runtime|browser-tools|web-tools|tool-executor|local-inference|model-catalog|mcp-client|
 recipe-compiler|macro-engine|notary|credential-vault|human-input`, `extensions/ext-agent`). The prose
 comparison this track distills is [`docs/others/tepegoz-vs-aipex.md`](../versus/tepegoz-vs-aipex.md)
@@ -48,7 +48,7 @@ rewriting. **Nothing here is committed roadmap.** Where a capability already has
 existing phase, an ADR, or the sibling [`webbrain-agent-parity.md`](webbrain-agent-parity.md) track,
 this track says so explicitly and does **not** re-describe it — it only adds the detail the AIPex
 reading surfaced that the existing text doesn't have yet. Per the "Already planned — do NOT
-re-propose" rule in [`../README.md`](../../concepts/README.md#deferred--adoption-gated-backlog-from-the-beyond-phases-synthesis),
+re-propose" rule in [`../README.md`](../../phases/README.md#deferred--adoption-gated-backlog-from-the-beyond-phases-synthesis),
 **MCP server** (Bearer + rate-limit + Policy re-pass), vision fallback, local-SLM and cross-model
 Context Package are **Phase 1b**; the managed zero-setup cloud default is **Phase 3** — several rows
 below are "sharpen Phase 1b / Phase 3 with this detail," not "add a phase." AIPex and Tepegöz
@@ -87,7 +87,7 @@ session re-proposes them by accident:
    tool. Coordinate action in Tepegöz stays coupled to **S10 vision escalation** (set-of-marks,
    escalation-only, inert today because it was never wired — Reactor's optional `captureVision`
    callback has no production caller; there is no `TEPEGOZ_VISION` flag, see the 2026-09-02 correction
-   in [`10-vision-escalation.md`](../../concepts/ai-agent/phases/10-vision-escalation.md)) and must
+   in [`10-vision-escalation.md`](../../phases/02-ai-agent/10-vision-escalation.md)) and must
    resolve the _actual target frame's host_ before
    the Policy Kernel grants (fail closed). It is not a standing tool in the default surface, and
    `ai-agent`'s "Never" list already forbids screenshots-every-step.
@@ -417,8 +417,8 @@ new library, no ADR.
 
 ## Routing — what this track does not own
 
-Per the existing convention ([`../README.md`](../../concepts/README.md#routing--what-stays-out) /
-[`ai-agent/README.md`](../../concepts/ai-agent/README.md#routing--what-stays-out)), reference these,
+Per the existing convention ([`../README.md`](../../phases/README.md#routing--what-stays-out) /
+[`ai-agent/README.md`](../../phases/02-ai-agent/README.md#routing--what-stays-out)), reference these,
 never duplicate them:
 
 | Stays with                               | Material                                                                                                                                                                        |

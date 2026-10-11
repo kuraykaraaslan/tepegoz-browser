@@ -9,7 +9,7 @@ Tepegöz behaviour and a suggested phase home, so a future session can promote a
 
 **Source:** a same-session deep read of `.junk/webbrain` (WebBrain v33.6.0 — a shipping, GPL-3.0
 Chrome/Firefox/Edge AI-browser-agent extension, ~62 core tools, 108 provider cards, 58+ site adapters,
-a full offline-RAG stack) against this repo's AI surface (`docs/concepts/ai-agent/`, `packages/
+a full offline-RAG stack) against this repo's AI surface (`docs/phases/02-ai-agent/`, `packages/
 orchestrator|model-gateway|capability-plane|security-policy|agent-runtime|browser-tools|web-tools|…`,
 `extensions/ext-agent`). The prose comparison this track distills lives only in that chat session, not
 in the repo — this file is the durable artifact.
@@ -34,7 +34,7 @@ packages → ADRs owed → DoD-shaped bullets) so it can be lifted into a real p
 rewriting. **Nothing here is committed roadmap.** Where a capability already has a named home in an
 existing phase or ADR, this track says so explicitly and does **not** re-describe it — it only adds the
 detail the WebBrain comparison surfaced that the existing phase text doesn't have yet. Per the "Already
-planned — do NOT re-propose" rule in [`../README.md`](../../concepts/README.md#deferred--adoption-gated-backlog-from-the-beyond-phases-synthesis),
+planned — do NOT re-propose" rule in [`../README.md`](../../phases/README.md#deferred--adoption-gated-backlog-from-the-beyond-phases-synthesis),
 local-SLM / HybridRetriever / cost-saver toggle / vision fallback / MCP server are **Phase 1b**, not
 new asks — several rows below are "sharpen Phase 1b's DoD with this detail," not "add a phase."
 
@@ -259,7 +259,7 @@ direct, verified resource — WebBrain does this as a skill-first, browser-fallb
 a new download path.
 
 > **Direct-link MVP shipped** (2026-09-07) as `download_analyze_media` (`resolve` is not an approved
-> `ToolNameSchema` verb; `analyze` is) — see `docs/concepts/product/phases/02c-classic-browser-essentials.md`'s
+> `ToolNameSchema` verb; `analyze` is) — see `docs/phases/01-product/02c-classic-browser-essentials.md`'s
 > "Media resolver tool" box for the evidence. Scoped to a URL whose response IS the media bytes
 > (HEAD-probed, MIME-classified, no save). Extracting media from an INDIRECT source — a YouTube watch
 > page, `resolve_public_media`'s harder half — is still open.
@@ -574,8 +574,8 @@ subsystem.
 
 ## Routing — what this track does not own
 
-Per the existing convention ([`../README.md`](../../concepts/README.md#routing--what-stays-out) /
-[`ai-agent/README.md`](../../concepts/ai-agent/README.md#routing--what-stays-out)), reference these,
+Per the existing convention ([`../README.md`](../../phases/README.md#routing--what-stays-out) /
+[`ai-agent/README.md`](../../phases/02-ai-agent/README.md#routing--what-stays-out)), reference these,
 never duplicate them:
 
 | Stays with        | Material                                                                                                                                                                                                        |

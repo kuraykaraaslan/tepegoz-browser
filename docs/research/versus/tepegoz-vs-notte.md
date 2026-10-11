@@ -14,7 +14,7 @@
 > `docs/src/concepts/{bua,vaults,scraping}.mdx`, `docs/src/mcp-server.mdx`, `.env.example`,
 > `.gitmodules`. Not: `notte-cli`, `notte-skills`, `claude-managed-agents`, `browserarena`,
 > `templates` alt-modülleri bu checkout'ta boştu — değerlendirilemedi. Tepegöz tarafı aynı
-> oturumda `docs/concepts/ai-agent/`, `packages/orchestrator|model-gateway|capability-plane|
+> oturumda `docs/phases/02-ai-agent/`, `packages/orchestrator|model-gateway|capability-plane|
 security-policy|agent-runtime|browser-tools|web-tools|tool-executor|local-inference|
 model-catalog|mcp-client|recipe-compiler|macro-engine|notary|credential-vault|human-input`,
 > `extensions/ext-agent`, `docs/adr/*` okunarak çıkarıldı.
@@ -22,10 +22,10 @@ model-catalog|mcp-client|recipe-compiler|macro-engine|notary|credential-vault|hu
 > **Tarih.** 2026-09-01.
 >
 > **Dil notu.** Bu belge, sahibe sunulduğu haliyle Türkçe tutulmuştur
-> (`docs/concepts/tracks/README.md`'deki "orijinal dilinde tutulur" kaydıyla aynı gerekçe). Proje
+> (`phases/tracks/README.md`'deki "orijinal dilinde tutulur" kaydıyla aynı gerekçe). Proje
 > eserleri İngilizce-öncedir; bu, yazıldığı haliyle korunan bir kayıttır.
 >
-> **İlgili:** [`docs/concepts/tracks/webbrain-agent-parity.md`](../parities/webbrain-agent-parity.md)
+> **İlgili:** [`phases/tracks/webbrain-agent-parity.md`](../parities/webbrain-agent-parity.md)
 > — rakip-ajan parity track'lerinin şablonu. Notte'ye özgü bir parity track'i henüz yok;
 > bu belge onun girdisidir.
 >

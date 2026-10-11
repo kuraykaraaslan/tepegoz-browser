@@ -22,7 +22,7 @@ TypeScript sozlesmeleri, ADR'ler ve mevcut kod gercekligi uzerinden verildi.
   dogrulamasindan gececek.
 - Bu plandan devam eden her uygulama diliminde **iki yer birlikte guncellenecek**:
   1. Bu dosyadaki ilgili checkbox/durum satiri.
-  2. Asil faz dosyalari: `docs/concepts/README.md` ve is hangi faza denk geliyorsa o faz dosyasi
+  2. Asil faz dosyalari: `docs/phases/README.md` ve is hangi faza denk geliyorsa o faz dosyasi
      (`phase-1a`, `phase-1b`, `phase-6` vb.).
      Plan ve fazlar ayrismayacak; commit atmadan once tamamlanan isler iki tarafta da isaretlenecek.
 

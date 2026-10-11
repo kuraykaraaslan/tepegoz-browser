@@ -137,13 +137,13 @@ görüntülerinin yarattığı gizlilik riski: oturum-açık ekranın kaydı.
 ### Tepegöz'e taşınanlar
 
 - **Sağlık paneli** (sağlayıcı anahtarı, model erişilebilirliği, MCP sunucuları, yerel model) →
-  [S8](../concepts/ai-agent/phases/08-assistant-ux.md) PR7. Doğrudan "kurulu ama çalışmıyor" kümesinden.
+  [S8](../phases/02-ai-agent/08-assistant-ux.md) PR7. Doğrudan "kurulu ama çalışmıyor" kümesinden.
 - **İzin hata-ayıklama görünümü** → S8 PR7. Kaba onay modelinin cevabı onayı _kaldırmak_ değil,
   **gerekçesini göstermek** ve kapsamlı/hatırlanan grant vermek — burada `plan-grant-scope` ve
   remembered grants zaten bu.
-- **Bağlam tahliyesi (screenshot eviction)** → [S7](../concepts/ai-agent/phases/07-speed.md) PR6; kural
+- **Bağlam tahliyesi (screenshot eviction)** → [S7](../phases/02-ai-agent/07-speed.md) PR6; kural
   genel, ekran görüntüsü akut vakası. **S10 görü sevk edilmeden önce** yazılması gereken şey.
-- **Görsel kazımadan yapılandırılmış otomasyona (WebMCP)** → [S2](../concepts/ai-agent/phases/02-perception-v2.md)
+- **Görsel kazımadan yapılandırılmış otomasyona (WebMCP)** → [S2](../phases/02-ai-agent/02-perception-v2.md)
   PR6'nın spike'ı doğrudan bu öneriden; cevabı bilinçli olarak "araştır, benimseme".
 - **Odak çalmama / arka planda park** → burada zaten sevk edildi (parked-off-screen).
 - **Çoklu profil hedefleme** → [multi-profile-isolation](tracks/multi-profile-isolation.md) track'i.

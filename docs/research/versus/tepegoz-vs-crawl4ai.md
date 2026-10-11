@@ -14,7 +14,7 @@
 > `chunking_strategy.py`, `table_extraction.py`, `script/` (c4a DSL + `lark` derleyici), `config.py` /
 > `types.py` (`LLMConfig`), `utils.py` (`perform_completion_with_backoff` → litellm), `hub.py` +
 > `crawlers/` (amazon_product, google_search), `deploy/docker/` (`server.py`, `mcp_bridge.py`,
-> `egress_broker.py`, `auth.py`), `SECURITY.md`) ve bu reponun AI yüzeyinin (`docs/concepts/ai-agent/`,
+> `egress_broker.py`, `auth.py`), `SECURITY.md`) ve bu reponun AI yüzeyinin (`docs/phases/02-ai-agent/`,
 > `packages/orchestrator|model-gateway|capability-plane|security-policy|agent-runtime|browser-tools|
 web-tools|tool-executor|local-inference|model-catalog|mcp-client|recipe-compiler|macro-engine|notary|
 credential-vault|human-input|agent-eval`, `extensions/ext-agent`, `docs/adr/*`) aynı oturumda
@@ -22,13 +22,13 @@ credential-vault|human-input|agent-eval`, `extensions/ext-agent`, `docs/adr/*`) 
 >
 > **Tarih.** 2026-09-01.
 >
-> **Dil notu.** Bu belge, sahibe sunulduğu haliyle Türkçe tutulmuştur (`docs/concepts/tracks/README.md`'deki
+> **Dil notu.** Bu belge, sahibe sunulduğu haliyle Türkçe tutulmuştur (`phases/tracks/README.md`'deki
 > "orijinal dilinde tutulur" kaydıyla aynı gerekçe). Proje eserleri İngilizce-öncedir; bu, yazıldığı
 > haliyle korunan bir kayıttır.
 >
 > **İlgili.** Yapısal referans: [`docs/others/tepegoz-vs-webbrain.md`](tepegoz-vs-webbrain.md) ve
 > [`docs/others/tepegoz-vs-kilocode.md`](tepegoz-vs-kilocode.md) (o da farklı-kategori kıyası).
-> `docs/concepts/tracks/crawl4ai-agent-parity.md` **yok** ve bu belgeye göre yazılması da erken olur: Crawl4AI'nin
+> `phases/tracks/crawl4ai-agent-parity.md` **yok** ve bu belgeye göre yazılması da erken olur: Crawl4AI'nin
 > yüzeyinin büyük kısmı bir tarayıcı ajanının parity hedefi değil.
 >
 > **Kategori uyarısı.** Bunlar **farklı ürün kategorileri**. Crawl4AI bir _kütüphane / çatı_: bir URL'yi
@@ -51,7 +51,7 @@ credential-vault|human-input|agent-eval`, `extensions/ext-agent`, `docs/adr/*`) 
 |             | Crawl4AI                                                                                                                                                                                                                       | Tepegöz                                                                                                                                             |
 | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Ne          | Python **kütüphanesi** (`AsyncWebCrawler`) + Docker API sunucusu + `crwl` CLI; web → temiz Markdown / yapılı JSON                                                                                                              | Tam **Electron tarayıcı**; ajan (Agent Console / "Do modu") alt sistemlerden biri                                                                   |
-| Olgunluk    | **Yaygın kullanımda** — ~50k yıldız, PyPI'da beta (0.9.x), büyük topluluk, Discord, sponsor programı, düzenli blog sürümleri; API yüzeyi "battle-tested"                                                                       | **1.0 öncesi**; `docs/concepts/ai-agent` S0–S12 fazlarının **hepsi 🟠 measurement-owed**, hiçbiri ✅ değil, sahip notu: _"hâlâ istediğim gibi çalışmıyor"_ |
+| Olgunluk    | **Yaygın kullanımda** — ~50k yıldız, PyPI'da beta (0.9.x), büyük topluluk, Discord, sponsor programı, düzenli blog sürümleri; API yüzeyi "battle-tested"                                                                       | **1.0 öncesi**; `docs/phases/02-ai-agent` S0–S12 fazlarının **hepsi 🟠 measurement-owed**, hiçbiri ✅ değil, sahip notu: _"hâlâ istediğim gibi çalışmıyor"_ |
 | Kod         | Python 3.10+, `setuptools`, tek paket + `deploy/docker/` FastAPI sunucusu; Playwright/patchright/`playwright-stealth` + `aiohttp` HTTP yolu; opsiyonel `torch`/`transformers`/`sentence-transformers`                          | Strict TS, pnpm + turbo monorepo, ~70 `@tepegoz/*` paket, ADR güdümlü, zod `safeParse` her sınırda                                                  |
 | Felsefe     | "Veriye herkes erişebilmeli; pahalı modele bel bağlamadan, sezgisel (heuristic) zekâyla çıkar"; açık kaynak, geliştirici-önce, hız-önce. `MISSION.md` daha büyük bir "veri kapitalizasyonu / veri pazarı" vizyonu tarif ediyor | "Security-by-design, local-first"; model-öncesi deterministik çekirdek + kriptografik hesap verebilirlik + determinism-first                        |
 | Birincil iş | Bir sayfayı/siteyi çekip **LLM'e hazır içeriğe** dönüştürmek: Markdown üretimi, şema çıkarımı, derin-crawl, URL keşfi, "yeterli bilgi" durdurma                                                                                | Web'de görev yürütmek: gezinme, form doldurma, çıkarım, çok-adımlı akış; güvenli oturum-açık site otomasyonu                                        |

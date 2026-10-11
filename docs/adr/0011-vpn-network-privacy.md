@@ -8,7 +8,7 @@
 - **Date:** 2026-08-19 (amended 2026-08-20)
 - **Refines:** the existing per-partition session model (Phase 2's `NetworkFilterEngine` stance: no
   system-proxy MITM) · **complements** [ADR-0020](0020-tab-boundary-model.md) (Tab Boundary Model)
-- **Phase:** [Phase 5 — VPN & Network Privacy](../concepts/product/phases/05-vpn-network-privacy.md), L0
+- **Phase:** [Phase 5 — VPN & Network Privacy](../phases/01-product/05-vpn-network-privacy.md), L0
 
 ## Context
 

@@ -11,7 +11,7 @@ task or an `ai-agent` PR without re-deriving the comparison.
 **Source:** a same-session deep read of `.junk/browser-use` (`browser-use` **v0.13.8** — a shipping,
 MIT-licensed **Python library** that drives a Chromium instance via CDP; no GUI, plus a separate,
 closed, paid **Browser Use Cloud** product) against this repo's AI surface
-(`docs/concepts/ai-agent/phases/{README,history,constitution}.md` + S0–S12, `packages/orchestrator|
+(`docs/phases/02-ai-agent/{README,history,constitution}.md` + S0–S12, `packages/orchestrator|
 model-gateway|capability-plane|security-policy|agent-runtime|browser-tools|web-tools|tool-executor|
 local-inference|model-catalog|mcp-client|recipe-compiler|macro-engine|notary|credential-vault|
 human-input`, `extensions/ext-agent`, `docs/adr/*`). The prose comparison this track distills is
@@ -30,11 +30,11 @@ browser_use` provider subpackages, `browser/watchdogs/security_watchdog.py`,
 checked against `packages/model-gateway/src/providers/openai-compat.provider.ts`,
 `packages/shared-types/src/providers.ts`, `packages/security-policy/src/egress-firewall.ts`,
 `packages/mcp-client/src/{connection,danger}.ts`, `docs/adr/{0026,0029,0039}-*.md`,
-`docs/adr/0022-file-operations-sandbox.md`, `docs/concepts/ai-agent/reference/history.md`, and
-`docs/concepts/ai-agent/phases/09-memory-skills.md`.
+`docs/adr/0022-file-operations-sandbox.md`, `docs/reference/ai-agent/history.md`, and
+`docs/phases/02-ai-agent/09-memory-skills.md`.
 
 **Not an arm's-length rival.** Unlike WebBrain and AIPex, `browser-use` is Tepegöz's own agent's
-**named technique-ancestor**. `docs/concepts/ai-agent/reference/history.md`'s "build vs. buy" record already
+**named technique-ancestor**. `docs/reference/ai-agent/history.md`'s "build vs. buy" record already
 evaluated it by name and rejected it **as a runtime dependency** ("Python (~99%) + Playwright: embedding
 it means a separate Chromium and a Python sidecar... a packaging, security, and architecture liability")
 while directing the program to **port its techniques** through `nanobrowser` (a TypeScript/CDP port of
@@ -76,7 +76,7 @@ packages → ADR → DoD-shaped bullets) so it can be lifted into a real phase f
 **Nothing here is committed roadmap.** Where a capability already has a named home in an existing phase,
 ADR, or a sibling track, this file says so explicitly and does **not** re-describe it — per the
 "Already planned — do NOT re-propose" rule in
-[`../README.md`](../../concepts/README.md#deferred--adoption-gated-backlog-from-the-beyond-phases-synthesis), MCP
+[`../README.md`](../../phases/README.md#deferred--adoption-gated-backlog-from-the-beyond-phases-synthesis), MCP
 server / vision fallback / local-SLM / cost-saver toggle are **Phase 1b**; the managed zero-setup cloud
 default is **Phase 3**. This track leans on its two siblings more than it re-derives: `webbrain-agent-
 parity.md` **P1** (provider catalog + local HTTP-server engines) and **P3-a/b** (PDF/frame/shadow-DOM
@@ -112,7 +112,7 @@ of_ browser-use specifically. Naming them here once, so no future session re-pro
    browser-use's own finding — with a narrower, measured design, not a blanket refusal. Do not reopen
    this by adding `evaluate` or an exec-model MCP tool.
 2. **No adoption as a runtime dependency — Python sidecar, second Chromium, or vendor-hosted execution
-   process of any kind.** [`history.md`](../../concepts/ai-agent/reference/history.md)'s build-vs-buy verdict
+   process of any kind.** [`history.md`](../../reference/ai-agent/history.md)'s build-vs-buy verdict
    stands: _"embedding it means a separate Chromium and a Python sidecar... a packaging, security, and
    architecture liability."_ `ai-agent/README.md`'s "Never" list names `browser-use`/`nanobrowser`
    directly: _"port techniques, never adopt."_ This session's reading surfaced two more instances of the
@@ -402,8 +402,8 @@ read.
 
 ## Routing — what this track does not own
 
-Per the existing convention ([`../README.md`](../../concepts/README.md#routing--what-stays-out) /
-[`ai-agent/README.md`](../../concepts/ai-agent/README.md#routing--what-stays-out)), reference these,
+Per the existing convention ([`../README.md`](../../phases/README.md#routing--what-stays-out) /
+[`ai-agent/README.md`](../../phases/02-ai-agent/README.md#routing--what-stays-out)), reference these,
 never duplicate them:
 
 | Stays with                                 | Material                                                                                                                                                                                                                                                                                                                                        |

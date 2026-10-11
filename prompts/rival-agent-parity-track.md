@@ -46,9 +46,9 @@ dosyası İngilizce yazılır (tracks/ klasör konvansiyonu + referans şablonla
 a) `docs/research/versus/tepegoz-vs-{RAKİP}.md` — TAMAMINI. Bu dosyanın "kim daha iyi + neden"
    tablosundaki "{RAKİP_ADI}" lehine çıkan satırlar = ham aday listen.
 b) `docs/research/parities/webbrain-agent-parity.md` — TAMAMINI. Üreteceğin dosyanın kalıbı bu.
-c) `docs/concepts/README.md` — klasör haritası, v1 ship line, cross-cutting compliance
+c) `docs/phases/README.md` — klasör haritası, v1 ship line, cross-cutting compliance
    gate'leri, "Already planned — do NOT re-propose" listesi, Phase Status Report kuralı.
-d) `docs/concepts/ai-agent/README.md` — S0–S12 faz indeksi + durumları, "Never" listesi,
+d) `docs/phases/02-ai-agent/README.md` — S0–S12 faz indeksi + durumları, "Never" listesi,
    "Routing — what stays out" tablosu, anti-debt kuralı.
 e) `.junk/{RAKİP}/` — rakibin deposu. README('lar), mimari/ajan dokümanları, kaynak
    ağacı, ve KİLİT kaynak dosyaları (ajan döngüsü, araç/aksiyon seti, sağlayıcı
@@ -62,7 +62,7 @@ f) Şüpheye düştüğün her Tepegöz iddiasını ilgili `@tepegoz/*` paketind
 2) TEPEGÖZ AI YÜZEYİ — hazır bilgi (şüphede kaynaktan doğrula)
 ═══════════════════════════════════════════════════════════════════════════════
 Tam Electron tarayıcı, strict TS, ~70 `@tepegoz/*` paket monorepo, ADR güdümlü, 1.0
-öncesi. AI roadmap `docs/concepts/ai-agent/` (S0–S12, HEPSİ 🟠 measurement-owed, hiçbiri
+öncesi. AI roadmap `docs/phases/02-ai-agent/` (S0–S12, HEPSİ 🟠 measurement-owed, hiçbiri
 ✅; sahip notu "hâlâ istediğim gibi çalışmıyor"). Ajan "gerçekten bağlanmış iskelet,
 ince ölçülmüş". Vision/credential-broker/memory ATIL sevk; aynı anda tek run; site
 adaptörü yok; 8 sağlayıcı (bazıları stub); çevrimdışı RAG yok.

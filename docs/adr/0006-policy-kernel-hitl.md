@@ -34,7 +34,7 @@ tool-call arguments are treated as untrusted input and zod-validated.
 
 ## Amendment 2026-08-16 — the autonomy level is main-enforced (a fixed defect)
 
-Recorded by [S6-PR1](../concepts/ai-agent/phases/06-safety-control-plane.md). **This documents a
+Recorded by [S6-PR1](../phases/02-ai-agent/06-safety-control-plane.md). **This documents a
 defect that was fixed, not a decision that was taken** — the behaviour below was never intended by this
 ADR, and the record exists so it cannot be mistaken for a design choice or reintroduced.
 
@@ -70,7 +70,7 @@ pre-model" property is preserved intact.
 
 ## Amendment 2026-08-16 — six derived risk tiers + a sensitive-site category map
 
-Recorded by [S6-PR2](../concepts/ai-agent/phases/06-safety-control-plane.md). This ADR's original
+Recorded by [S6-PR2](../phases/02-ai-agent/06-safety-control-plane.md). This ADR's original
 classification (`read` / `state_changing` / `destructive` / `financial`) is a **declared** class: the
 tool author supplies it at registration, and it cannot see arguments. That is too coarse for consent.
 Typing into a search box and typing into a password field are the same declared class, so a flat

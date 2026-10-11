@@ -2,7 +2,7 @@ import { type XmlElement, child, childText, children, encodeXmlText, text } from
 
 /**
  * XEP-0363 HTTP File Upload — pure request builder + slot-response parser. Building block for
- * `XmppAdapter.uploadMedia`, not yet wired to it (see `docs/concepts/extensions/phases/01-ext-chat.md` X-chat.1 —
+ * `XmppAdapter.uploadMedia`, not yet wired to it (see `docs/phases/03-extensions/01-ext-chat.md` X-chat.1 —
  * `ChatAccountRunner.sendMessage`'s `mediaPath` → `mediaRef` handoff is a separate, larger piece of
  * work this module does not attempt).
  *

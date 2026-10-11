@@ -13,18 +13,18 @@
 > paket kabuğunu, üretilen tam araç referansını ve testleri içeriyor — araç aileleri, yetenek (capability)
 > modeli, "vision" opt-in'i ve tarayıcı yaşam döngüsü bunlardan birebir çıkarıldı.
 >
-> Tepegöz tarafı: `docs/concepts/ai-agent/`, `packages/orchestrator|model-gateway|capability-plane|
+> Tepegöz tarafı: `docs/phases/02-ai-agent/`, `packages/orchestrator|model-gateway|capability-plane|
 security-policy|agent-runtime|browser-tools|web-tools|tool-executor|local-inference|model-catalog|
 mcp-client|recipe-compiler|macro-engine|notary|credential-vault|human-input`, `extensions/ext-agent`,
 > `docs/adr/*` aynı oturumda okundu.
 >
 > **Tarih.** 2026-09-01.
 >
-> **Dil notu.** Bu belge, sahibe sunulduğu haliyle Türkçe tutulmuştur (`docs/concepts/tracks/README.md`'deki
+> **Dil notu.** Bu belge, sahibe sunulduğu haliyle Türkçe tutulmuştur (`phases/tracks/README.md`'deki
 > "orijinal dilinde tutulur" kaydıyla aynı gerekçe). Proje eserleri İngilizce-öncedir; bu, yazıldığı haliyle
 > korunan bir kayıttır.
 >
-> **İlgili:** [`docs/concepts/tracks/webbrain-agent-parity.md`](../parities/webbrain-agent-parity.md) —
+> **İlgili:** [`phases/tracks/webbrain-agent-parity.md`](../parities/webbrain-agent-parity.md) —
 > rakip-parite track'lerinin şablonu. Playwright MCP için ayrı bir `playwright-mcp-agent-parity.md` track'i
 > henüz yok; bu belge, `prompts/rival-agent-parity-track.md`'nin üreteceği track'in girdisidir.
 >
@@ -48,7 +48,7 @@ mcp-client|recipe-compiler|macro-engine|notary|credential-vault|human-input`, `e
 |             | Playwright MCP                                                                                                                                                                                   | Tepegöz                                                                                                                                             |
 | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Ne          | Playwright üzerine bir **MCP sunucusu** (`stdio` + HTTP/SSE); herhangi bir MCP istemcisine tarayıcı araçları verir                                                                               | Tam **Electron tarayıcı**; ajan ("Do modu" / Agent Console) alt sistemlerden biri                                                                   |
-| Olgunluk    | **Yayında** — Microsoft, `v0.0.80`, npm'de, geniş istemci desteği; çekirdek Playwright monorepo'sunda, üç tarayıcı motorunda test ediliyor                                                       | **1.0 öncesi**; `docs/concepts/ai-agent` S0–S12 fazlarının **hepsi 🟠 measurement-owed**, hiçbiri ✅ değil; sahip notu: _"hâlâ istediğim gibi çalışmıyor"_ |
+| Olgunluk    | **Yayında** — Microsoft, `v0.0.80`, npm'de, geniş istemci desteği; çekirdek Playwright monorepo'sunda, üç tarayıcı motorunda test ediliyor                                                       | **1.0 öncesi**; `docs/phases/02-ai-agent` S0–S12 fazlarının **hepsi 🟠 measurement-owed**, hiçbiri ✅ değil; sahip notu: _"hâlâ istediğim gibi çalışmıyor"_ |
 | Kod         | TypeScript; ince paket kabuğu + Playwright monorepo'sundaki çekirdek; "yeni bağımlılık için çok yüksek eşik" kültürü                                                                             | Strict TS, pnpm + turbo monorepo, ~70 `@tepegoz/*` paket, ADR güdümlü, zod `safeParse` her güven sınırında                                          |
 | Felsefe     | "LLM'ler yapılandırılmış erişilebilirlik anlık görüntüsüyle sayfayla etkileşsin; ekran görüntüsü/vision modeli gerekmesin. **Bu bir güvenlik sınırı değildir** — gerçek yetkilendirme istemcide" | "Security-by-design, local-first"; model-öncesi deterministik çekirdek + kriptografik hesap verebilirlik + determinism-first                        |
 | Birincil iş | Bir modele/istemciye ham, deterministik tarayıcı araçları sunmak (test yazımı, keşif otomasyonu, kendini-iyileştiren testler, uzun-koşu otonom akışlar için istemci tarafında)                   | Web'de çok-adımlı görev yürütmek: gezinme, form doldurma, çıkarım; **denetlenmiş** oturum-açık site otomasyonu                                      |
@@ -289,7 +289,7 @@ Docker imajı (headless chromium).
 
 Tepegöz: tam Electron tarayıcı, out-of-process CDP, kendi sekme/pencere modeli, tek `createWindow()`
 fabrikası, typed `contextBridge`, renderer-untrusted. Çok-profil izolasyonu ayrı bir track
-(`docs/concepts/tracks/multi-profile-isolation.md`, henüz sevk edilmemiş).
+(`phases/tracks/multi-profile-isolation.md`, henüz sevk edilmemiş).
 
 **Kim daha iyi:** **Playwright MCP** dağıtım esnekliğinde (isolated/extension/cdp/docker, stdio + HTTP, üç
 motor). **Tepegöz** kontrol derinliği ve renderer izolasyonunda (native tarayıcı olmanın avantajı).

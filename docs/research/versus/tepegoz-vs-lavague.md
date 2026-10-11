@@ -13,7 +13,7 @@
 > `lavague-integrations/{contexts,drivers,retrievers}/*`,
 > `lavague-integrations/drivers/lavague-drivers-selenium/.../base.py`, `lavague-server/…`,
 > `extension_chrome/README.md`, `lavague-qa/…`, `examples/`) ve bu reponun AI yüzeyinin
-> (`docs/concepts/ai-agent/`, `packages/orchestrator|model-gateway|capability-plane|security-policy|
+> (`docs/phases/02-ai-agent/`, `packages/orchestrator|model-gateway|capability-plane|security-policy|
 agent-runtime|browser-tools|web-tools|tool-executor|local-inference|model-catalog|mcp-client|
 recipe-compiler|macro-engine|notary|credential-vault|human-input`, `extensions/ext-agent`,
 > `docs/adr/*`) aynı oturumda okunmasından çıkarıldı.
@@ -21,10 +21,10 @@ recipe-compiler|macro-engine|notary|credential-vault|human-input`, `extensions/e
 > **Tarih.** 2026-09-01.
 >
 > **Dil notu.** Bu belge, sahibe sunulduğu haliyle Türkçe tutulmuştur
-> (`docs/concepts/tracks/README.md`'deki "orijinal dilinde tutulur" kaydıyla aynı gerekçe). Proje eserleri
+> (`phases/tracks/README.md`'deki "orijinal dilinde tutulur" kaydıyla aynı gerekçe). Proje eserleri
 > İngilizce-öncedir; bu, yazıldığı haliyle korunan bir kayıttır.
 >
-> **İlgili:** `docs/concepts/tracks/webbrain-agent-parity.md` (aynı ailedeki bir rakip için yazılmış parity
+> **İlgili:** `phases/tracks/webbrain-agent-parity.md` (aynı ailedeki bir rakip için yazılmış parity
 > track'i). LaVague'a özgü bir parity track'i henüz yok.
 >
 > **Kategori uyarısı.** LaVague bir **ürün değil, bir kütüphane/SDK'dır**: geliştiricinin kendi
@@ -54,7 +54,7 @@ Yani: **atıl görünen, geliştiricilere yönelik bir kütüphane-ajan** vs. **
 güvenlik-önce bir native-tarayıcı ajanı**. LaVague'ın mimarisi (multimodal World Model natural-language
 alt-yönerge üretir, ikinci bir model bunları sayfadaki seçiciye "bağlar", screenshot + DOM birlikte
 kullanılır) **`browser-use` / `nanobrowser` ailesiyle akrabadır** — Tepegöz'ün v1 AI roadmap'i bu
-aileyi açıkça _"tekniği çal, asla adapte etme"_ diye listeliyor (`docs/concepts/ai-agent/reference/history.md`).
+aileyi açıkça _"tekniği çal, asla adapte etme"_ diye listeliyor (`docs/reference/ai-agent/history.md`).
 Bugünkü "işi yapıyor mu" ile "doğru inşa edilmiş mi" farklı eksenler; üstelik LaVague tarafında
 "bugün" sorusu "kütüphane hâlâ bakılıyor mu" sorusuyla da gölgeleniyor.
 

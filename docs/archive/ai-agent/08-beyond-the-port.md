@@ -1,6 +1,6 @@
 # Phase AI-8 — Beyond the Port: Net-New Capability Axes
 
-**Status:** ⬜ Not started · **Depends on:** [AI-1](01-eval-harness.md), [AI-2](02-perception-buildtree.md) · **Track:** [`docs/concepts/ai`](README.md)
+**Status:** ⬜ Not started · **Depends on:** [AI-1](01-eval-harness.md), [AI-2](02-perception-buildtree.md) · **Track:** [`phases/ai`](README.md)
 **Goal:** Track the **genuinely new** competence axes the 2026-07 external audit surfaced that the
 `browser-use`/`nanobrowser` port ([AI-2](02-perception-buildtree.md)–[AI-5](05-content-security.md))
 never scoped. Each is its own sub-axis with an honest current status; each ships only when it earns a
@@ -157,8 +157,8 @@ is per-dialogue, and macros are user-authored replays — neither is agent-learn
 
 - **Route, don't duplicate:** the audit's _safe-autonomy_ asks (semantic purchase/payment/message-send risk
   tiering, prepare/send split, reversibility-default, resume-after-handoff — `s20`/`s30`) belong to the main
-  roadmap's [Phase 9 — Safe Autonomy & Delegation](../../concepts/product/phases/09-safe-autonomy-delegation.md), not this track;
-  **site-specific DOM adapters** (`s21`) belong to [Phase 2 — Adapters & Safe Browsing](../../concepts/product/phases/02-adapters-safe-browsing.md).
+  roadmap's [Phase 9 — Safe Autonomy & Delegation](../../phases/01-product/09-safe-autonomy-delegation.md), not this track;
+  **site-specific DOM adapters** (`s21`) belong to [Phase 2 — Adapters & Safe Browsing](../../phases/01-product/02-adapters-safe-browsing.md).
   This phase is agent **perception/observation/memory** competence only.
 - Each sub-axis is independently shippable; do the cheapest-signal one first (8B network-verify and the 8A
   vanity-flag fix are the smallest) and let AI-1 numbers decide the order of the rest.

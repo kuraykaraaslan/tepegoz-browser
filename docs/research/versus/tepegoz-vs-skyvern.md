@@ -16,7 +16,7 @@
 > `skyvern/forge/sdk/copilot/mcp_adapter.py`, `skyvern/forge/sdk/cache/extraction_cache.py`,
 > `skyvern/core/script_generations/*`, `skyvern/schemas/workflows.py` (BlockType), `skills/skyvern/*`,
 > `bitwarden-cli-server/`, `evaluation/datasets/`) ve bu reponun AI yüzeyinin
-> (`docs/concepts/ai-agent/`, `packages/orchestrator|model-gateway|capability-plane|security-policy|
+> (`docs/phases/02-ai-agent/`, `packages/orchestrator|model-gateway|capability-plane|security-policy|
 agent-runtime|browser-tools|web-tools|tool-executor|local-inference|model-catalog|mcp-client|
 recipe-compiler|macro-engine|notary|credential-vault|human-input|tasks`, `extensions/ext-agent`,
 > `docs/adr/*`) aynı oturumda okunmasından çıkarıldı.
@@ -24,11 +24,11 @@ recipe-compiler|macro-engine|notary|credential-vault|human-input|tasks`, `extens
 > **Tarih.** 2026-09-01.
 >
 > **Dil notu.** Bu belge, sahibe sunulduğu haliyle Türkçe tutulmuştur
-> (`docs/concepts/tracks/README.md`'deki "orijinal dilinde tutulur" kaydıyla aynı gerekçe). Proje eserleri
+> (`phases/tracks/README.md`'deki "orijinal dilinde tutulur" kaydıyla aynı gerekçe). Proje eserleri
 > İngilizce-öncedir; bu, yazıldığı haliyle korunan bir kayıttır.
 >
-> **İlgili:** Henüz `docs/concepts/tracks/skyvern-agent-parity.md` yok — bu belge o track'in girdisidir
-> (kıyas: [`docs/concepts/tracks/webbrain-agent-parity.md`](../parities/webbrain-agent-parity.md)).
+> **İlgili:** Henüz `phases/tracks/skyvern-agent-parity.md` yok — bu belge o track'in girdisidir
+> (kıyas: [`phases/tracks/webbrain-agent-parity.md`](../parities/webbrain-agent-parity.md)).
 >
 > **Kategori notu.** Skyvern de bir tarayıcı-otomasyon ajanıdır — WebBrain/nanobrowser/AIPex gibi
 > ajan eksenlerinde head-to-head kıyaslanır. Fark ürün **biçiminde**: Skyvern bir tarayıcı ya da

@@ -30,7 +30,7 @@ kurulum, destek) buranın konusu değil.
 
 ## Alınacaklar / Alınmayacaklar
 
-**Alınacak** — hepsi [phase-2c](../concepts/product/phases/02c-classic-browser-essentials.md)'nin
+**Alınacak** — hepsi [phase-2c](../phases/01-product/02c-classic-browser-essentials.md)'nin
 `### L10 — Download acceleration (rival evidence: IDM)` bölümüne indi:
 
 - **Segmentli indirme motoru** — dosyayı parçalara böl, paralel çek, birleştir.

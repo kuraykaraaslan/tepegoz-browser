@@ -18,7 +18,7 @@ read: [`docs/research-computer-use-agents.md`](../research-computer-use-agents.m
 section, which independently reached the same two concrete takeaways this track formalizes. Verified
 against source for this track specifically: `packages/browser-tools/src/browser-tools.ts` (the
 `browser_analyze_page` tool, S5), `packages/tool-executor/src/extraction-caps.ts` (`acceptScript`/
-`capResult`), `docs/concepts/ai-agent/phases/05-code-execution.md`,
+`capResult`), `docs/phases/02-ai-agent/05-code-execution.md`,
 `apps/desktop/src/main/macro/macro-selector-healer.electron.ts`, `docs/adr/0030-notary-service.md`, and
 a repo-wide grep confirming `apps/desktop` does not import `@tepegoz/notary` and `phase-s10-vision-
 escalation.md`'s 2026-09-02 correction that `captureVision` has no production caller.
@@ -46,7 +46,7 @@ out for documented reasons.
 The one workstream below is written like an `ai-agent` phase section (Goal → Approach →
 new/changed packages → ADR → DoD-shaped bullets) so it can be lifted into S5's own phase file with
 minimal rewriting. **Nothing here is committed roadmap.** Per the "Already planned — do NOT re-propose"
-rule in [`../README.md`](../../concepts/README.md#deferred--adoption-gated-backlog-from-the-beyond-phases-synthesis)
+rule in [`../README.md`](../../phases/README.md#deferred--adoption-gated-backlog-from-the-beyond-phases-synthesis)
 and per [`webbrain-agent-parity.md`](webbrain-agent-parity.md)'s own inventory, several AgentQL
 capabilities that look novel in isolation already have a named home — a generic OpenAI-compatible
 provider catalog is `webbrain-agent-parity.md` P1, an MCP surface in the opposite direction is Phase 1b,
@@ -120,7 +120,7 @@ treated as confirmed capability gaps.
 | 10  | `stealth_mode`/`humanlike-antibot` example code (random UA/timezone/mouse/scroll)                                                                                  | `@tepegoz/human-input` — Catmull-Rom mouse curves + Gaussian jitter, a real library, not example code                                                                                                                                                                      | None — Tepegöz already ahead                                                                                              | No gap                                                                                                              |
 | 11  | MCP **server** (README claim, code not in this checkout) — external agents call AgentQL as a tool                                                                  | MCP **client** only (ADR-0018); tools flow through the one PEP                                                                                                                                                                                                             | Opposite direction, already named                                                                                         | **Phase 1b** (already planned — MCP server surface)                                                                 |
 | 12  | Generic OpenAI-compatible LLM access — N/A (AgentQL exposes no model choice; a `perform_sentiment_analysis` example wires its own separate `gpt-3.5-turbo` client) | 8 hand-written adapters, no generic OpenAI-compatible card                                                                                                                                                                                                                 | Not actually an AgentQL capability to match — noted only because a _different_ rival (WebBrain) already surfaced this gap | **`webbrain-agent-parity.md` P1** — not duplicated here                                                             |
-| 13  | No run-level accountability — script's own logs only                                                                                                               | Event-sourced Journal ships. `@tepegoz/notary` (hash-chained checkpoints, Ed25519 signatures, portable Replay Receipt, standalone `tepegoz-verify` CLI) is **written and unit-tested, but `apps/desktop` does not import it** — no run produces a receipt today (ADR-0030) | Neither side has a working cryptographic receipt today; Tepegöz's is a designed-but-unwired capability, not a shipped one | **Phase 7** (already planned, `🟡 in progress` per `docs/concepts/README.md`) — not re-proposed                            |
+| 13  | No run-level accountability — script's own logs only                                                                                                               | Event-sourced Journal ships. `@tepegoz/notary` (hash-chained checkpoints, Ed25519 signatures, portable Replay Receipt, standalone `tepegoz-verify` CLI) is **written and unit-tested, but `apps/desktop` does not import it** — no run produces a receipt today (ADR-0030) | Neither side has a working cryptographic receipt today; Tepegöz's is a designed-but-unwired capability, not a shipped one | **Phase 7** (already planned, `🟡 in progress` per `docs/phases/README.md`) — not re-proposed                            |
 | 14  | REST API (no SDK), Chrome debugger extension, playground                                                                                                           | None — Tepegöz is an application, not a developer tool surface                                                                                                                                                                                                             | Category mismatch                                                                                                         | **Ground rules #5** — out of scope                                                                                  |
 | 15  | English-only queries and examples; no localization surface                                                                                                         | Per-package EN+TR parity (ADR-0016); ≥10 Turkish-web H2H tasks required by the north-star                                                                                                                                                                                  | None — Tepegöz already ahead                                                                                              | No gap                                                                                                              |
 | 16  | Zero published evals/benchmarks in this checkout; CI is lint/format/secret/CVE scanning only                                                                       | `@tepegoz/agent-eval` — ground-truth scoring, Wilson CIs, frozen fixtures, `bridgeClaim` publish-gate at N≥25 human labels                                                                                                                                                 | None — Tepegöz already ahead in eval discipline (though every S-phase is still 🟠 measurement-owed)                       | No gap                                                                                                              |
@@ -172,7 +172,7 @@ execution of its own).
 a line item in `05-code-execution.md` when picked up, not a new decision.
 
 **Anti-debt note:** S5 is 🟠 measurement-owed (PR0–PR1 landed; the adversarial sweep and RISK GATE
-exercise are ⏸ funded, per `docs/concepts/ai-agent/README.md`'s phase index). Per the anti-debt rule, this
+exercise are ⏸ funded, per `docs/phases/02-ai-agent/README.md`'s phase index). Per the anti-debt rule, this
 workstream is **explicitly gated behind S5 reaching ✅** — adding a scaffold on top of an unmeasured
 sandbox before its own adversarial battery has run would stack an unverified capability on an unverified
 one.
@@ -208,8 +208,8 @@ one.
 
 ## Routing — what this track does not own
 
-Per the existing convention ([`../README.md`](../../concepts/README.md#routing--what-stays-out) /
-[`ai-agent/README.md`](../../concepts/ai-agent/README.md#routing--what-stays-out)), reference these,
+Per the existing convention ([`../README.md`](../../phases/README.md#routing--what-stays-out) /
+[`ai-agent/README.md`](../../phases/02-ai-agent/README.md#routing--what-stays-out)), reference these,
 never duplicate them:
 
 | Stays with                        | Material                                                                                                                                                                                  |

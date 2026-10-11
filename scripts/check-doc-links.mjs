@@ -1,6 +1,6 @@
 // Fails the build if any relative markdown link under `docs/concepts/**` points at a file that does not
 // exist. This is the executable form of the S0 exit criterion "zero broken links across docs/concepts/"
-// (docs/concepts/ai-agent/phases/00-truth-and-repair.md).
+// (docs/phases/02-ai-agent/00-truth-and-repair.md).
 //
 // Why this exists as a script rather than a one-off grep: S0 closed its link gate with a
 // hand-counted "all 839 relative links resolve". That number is not reproducible — the tree measures
@@ -14,7 +14,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 const roots = process.argv.slice(2);
-const ROOTS = roots.length > 0 ? roots : ['docs/concepts'];
+const ROOTS = roots.length > 0 ? roots : ['docs/phases'];
 
 // Skip external, in-page, absolute-POSIX and Windows/UNC targets — only repo-relative paths are ours
 // to verify. An absolute or UNC path in a document is a deliberate out-of-repo pointer, not a link we

@@ -1,6 +1,6 @@
 # Phase AI-3 — Agent Loop: Planner-as-Validator + Progress Memory
 
-**Status:** 🟡 In progress (PR1 + PR2 landed: progress-brain fields + transient page-state; **planner-as-validator** completion authority (actor's `finish` is only a claim) + periodic done-check + fail-closed reject cap. **PR3 landed (code):** stale-ref / re-click-loop guard via a host-computed **structural page-signature** (`sig`, shadow/iframe-piercing) consumed by `browser_update_page`, plus a loop-detector **recovery nudge** with idempotent reads exempted — shipped with a mechanism deviation from the original plan, see the Stale-DOM guard task. **PR3 remaining:** on-harness measurement.) · **Depends on:** [AI-1](01-eval-harness.md) · **Track:** [`docs/concepts/ai`](README.md)
+**Status:** 🟡 In progress (PR1 + PR2 landed: progress-brain fields + transient page-state; **planner-as-validator** completion authority (actor's `finish` is only a claim) + periodic done-check + fail-closed reject cap. **PR3 landed (code):** stale-ref / re-click-loop guard via a host-computed **structural page-signature** (`sig`, shadow/iframe-piercing) consumed by `browser_update_page`, plus a loop-detector **recovery nudge** with idempotent reads exempted — shipped with a mechanism deviation from the original plan, see the Stale-DOM guard task. **PR3 remaining:** on-harness measurement.) · **Depends on:** [AI-1](01-eval-harness.md) · **Track:** [`phases/ai`](README.md)
 **Goal:** Upgrade the run loop so the agent **doesn't give up prematurely** and doesn't loop: a periodic
 **Planner acts as the completion validator** (the actor cannot self-declare success), the actor carries an
 explicit **progress memory**, and page state is **pushed every step then kept transient** so context never
@@ -57,7 +57,7 @@ fix for the exact failure we saw, and it is code, not a prompt sentence.
 
 ## Scope notes
 
-- This deepens, but does not conflict with, [Phase 1b](../../concepts/product/phases/01b-agentic-deepening.md)'s durable-resume /
+- This deepens, but does not conflict with, [Phase 1b](../../phases/01-product/01b-agentic-deepening.md)'s durable-resume /
   parallel-DAG work — those are orthogonal (durability, parallelism), this is single-run loop authority.
 - Multi-action batching (an actor emitting an action _sequence_ per call) is **optional** and deferred; land
   the validator + memory + transient-state first, measure, then decide if batching is worth the complexity.

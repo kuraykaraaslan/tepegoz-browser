@@ -7,5 +7,5 @@ contact_links:
     url: https://github.com/kuraykaraaslan/tepegoz-browser/blob/main/CONTRIBUTING.md
     about: Setup, the gates CI enforces, and which contributions are most useful right now.
   - name: Roadmap and current status
-    url: https://github.com/kuraykaraaslan/tepegoz-browser/blob/main/docs/concepts/README.md
+    url: https://github.com/kuraykaraaslan/tepegoz-browser/blob/main/docs/phases/README.md
     about: What is built, what is landed but unmeasured, and what is only planned.

@@ -10,14 +10,14 @@
 provider,permission,mcp,snapshot,skill}`, `packages/opencode/src/kilocode/**`, `packages/kilo-gateway`,
 > `packages/kilo-memory`, `packages/kilo-indexing`, `packages/kilo-sandbox`, `packages/codemode`,
 > `packages/kilo-vscode/src/{services/marketplace,services/browser-automation,agent-manager}`, `specs/`,
-> `plans/`) ve bu reponun AI yüzeyinin (`docs/concepts/ai-agent/`, `packages/orchestrator|model-gateway|
+> `plans/`) ve bu reponun AI yüzeyinin (`docs/phases/02-ai-agent/`, `packages/orchestrator|model-gateway|
 capability-plane|security-policy|agent-runtime|browser-tools|web-tools|tool-executor|local-inference|
 model-catalog|mcp-client|recipe-compiler|macro-engine|notary|credential-vault|human-input|agent-eval`,
 > `extensions/ext-agent`, `docs/adr/*`) aynı oturumda okunmasından çıkarıldı.
 >
 > **Tarih.** 2026-09-01.
 >
-> **Dil notu.** Bu belge, sahibe sunulduğu haliyle Türkçe tutulmuştur (`docs/concepts/tracks/README.md`'deki
+> **Dil notu.** Bu belge, sahibe sunulduğu haliyle Türkçe tutulmuştur (`phases/tracks/README.md`'deki
 > "orijinal dilinde tutulur" kaydıyla aynı gerekçe). Proje eserleri İngilizce-öncedir; bu, yazıldığı
 > haliyle korunan bir kayıttır.
 >
@@ -38,7 +38,7 @@ model-catalog|mcp-client|recipe-compiler|macro-engine|notary|credential-vault|hu
 |             | Kilo Code                                                                                                                                                                              | Tepegöz                                                                                                                                             |
 | ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Ne          | VS Code + JetBrains **eklentisi** + `@kilocode/cli` (TUI + `kilo run` + `kilo serve`); hepsi tek çekirdeğin (OpenCode fork'u) istemcisi                                                | Tam **Electron tarayıcı**; ajan (Agent Console / "Do modu") alt sistemlerden biri                                                                   |
-| Olgunluk    | **Yayında** — VS Code Marketplace + npm + JetBrains Marketplace + AUR/Homebrew, `v7.5.6`, çeviriler 21 dil, Discord/Reddit topluluğu, bulut ürünleri canlı                             | **1.0 öncesi**; `docs/concepts/ai-agent` S0–S12 fazlarının **hepsi 🟠 measurement-owed**, hiçbiri ✅ değil, sahip notu: _"hâlâ istediğim gibi çalışmıyor"_ |
+| Olgunluk    | **Yayında** — VS Code Marketplace + npm + JetBrains Marketplace + AUR/Homebrew, `v7.5.6`, çeviriler 21 dil, Discord/Reddit topluluğu, bulut ürünleri canlı                             | **1.0 öncesi**; `docs/phases/02-ai-agent` S0–S12 fazlarının **hepsi 🟠 measurement-owed**, hiçbiri ✅ değil, sahip notu: _"hâlâ istediğim gibi çalışmıyor"_ |
 | Kod         | TypeScript, Bun + Turborepo monorepo, ~40 paket, Effect ağırlıklı; upstream OpenCode ile fork-merge disiplini (`kilocode_change` işaretçileri)                                         | Strict TS, pnpm + turbo monorepo, ~70 `@tepegoz/*` paket, ADR güdümlü, zod `safeParse` her sınırda                                                  |
 | Felsefe     | "Her yerde çalışan açık kaynak kodlama ajanı, açık fiyatlandırma"; pratik, otomasyon-önce (`Prefer automation: execute without confirmation unless blocked by safety/irreversibility`) | "Security-by-design, local-first"; model-öncesi deterministik çekirdek + kriptografik hesap verebilirlik + determinism-first                        |
 | Birincil iş | Kod üretmek/düzenlemek, refactor, hata ayıklama, test yazdırıp koşturmak, PR review; editör + terminal + kod tabanı ekseninde                                                          | Web'de görev yürütmek: gezinme, form doldurma, çıkarım, çok-adımlı akış; güvenli oturum-açık site otomasyonu                                        |

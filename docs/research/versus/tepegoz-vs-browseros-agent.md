@@ -20,7 +20,7 @@ chat-mode}.ts`, `apps/server/src/tools/{registry,tool-registry,framework,snapsho
 > `packages/{agent-sdk/README,agent-sdk/src/methods/verify,shared/src/schemas/llm,
 shared/src/constants/limits}.ts`, `apps/agent/components/ai-elements/{checkpoint,confirmation}.tsx`,
 > `apps/agent/entrypoints/` ağaç yapısı, `apps/cli/` ağaç yapısı) ve bu reponun AI yüzeyinin
-> (`docs/concepts/ai-agent/` S0–S12, `packages/orchestrator|model-gateway|capability-plane|
+> (`docs/phases/02-ai-agent/` S0–S12, `packages/orchestrator|model-gateway|capability-plane|
 security-policy|agent-runtime|browser-tools|web-tools|tool-executor|local-inference|model-catalog|
 mcp-client|recipe-compiler|macro-engine|notary|credential-vault|human-input`, `extensions/ext-agent`,
 > `docs/adr/*`) aynı oturumda okunmasından çıkarıldı.
@@ -31,7 +31,7 @@ mcp-client|recipe-compiler|macro-engine|notary|credential-vault|human-input`, `e
 > gerekçe: proje eserleri İngilizce-öncedir, bu yazıldığı haliyle korunan bir kayıttır).
 >
 > **İlgili:** BrowserOS Agent için ayrı bir parity track'i yok; bu belge
-> [`docs/concepts/tracks/webbrain-agent-parity.md`](../parities/webbrain-agent-parity.md) ve
+> [`phases/tracks/webbrain-agent-parity.md`](../parities/webbrain-agent-parity.md) ve
 > [`tepegoz-vs-aipex.md`](tepegoz-vs-aipex.md) belgesinin yanında üçüncü bir dış-referans okumasıdır.
 > BrowserOS Agent'ın getirdiği asıl yeni soru — "dış ajanlar (Claude Code, Gemini CLI, Cursor)
 > Tepegöz tarayıcısını MCP üzerinden sürebilmeli mi" — Phase 1b'nin yapılmamış **MCP-server**

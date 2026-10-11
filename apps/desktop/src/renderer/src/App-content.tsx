@@ -38,7 +38,7 @@ export interface AppContentProps {
  * 250-line cap).
  *
  * Settings/extensions/history/downloads/uploads/bookmarks (`tepegoz://…`) are no longer rendered here —
- * Faz 2/3 of `docs/concepts/tracks/protocol-tepegoz-pages.md` gave each a REAL `WebContentsView`
+ * Faz 2/3 of `phases/tracks/protocol-tepegoz-pages.md` gave each a REAL `WebContentsView`
  * (`tabs-internal-page-view.ts`), laid over this same content area by main exactly like a web tab's
  * view. Their content is each page's own `*PageSurface.tsx`, loaded standalone. `tepegoz://tasks` has no
  * current UI (dead route) and was never rendered here either way.

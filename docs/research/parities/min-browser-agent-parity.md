@@ -18,13 +18,13 @@ translateService.js`, `ext/readability-master/`, `ext/abp-filter-parser-modified
 comparison, in Turkish, kept as written per that folder's own language note) and this repo's actual
 code: `apps/desktop/src/main/tabs-window-groups.ts`, `tabs-window-closing.ts`, `tabs-shared.ts`,
 `agent-tab-group.electron.ts`, `packages/tab-engine`, `packages/reader`, `docs/adr/0020-tab-boundary-
-model.md`, `docs/reference/engineering-rules.md`, `docs/website/privacy.md`, `docs/concepts/product/phases/phase-8-local-
-intelligence-sovereignty.md`, `docs/concepts/tracks/browser-settings-feature-gap.md`. Two claims in the
+model.md`, `docs/reference/engineering-rules.md`, `docs/website/privacy.md`, `docs/phases/01-product/phase-8-local-
+intelligence-sovereignty.md`, `phases/tracks/browser-settings-feature-gap.md`. Two claims in the
 existing comparison doc were re-verified against source rather than trusted: `@tepegoz/notary` is
 written and tested but **no file under `apps/desktop` imports it** (`grep -r "@tepegoz/notary"
 apps/desktop` returns nothing) — it produces no receipt today; and S10 vision's `captureVision` hook
 has **no production caller** — only `packages/orchestrator/src/reactor.ts`/`reactor-types.ts` and a
-test file reference it, confirming `docs/concepts/ai-agent/README.md`'s own "ships inert, NOT WIRED"
+test file reference it, confirming `docs/phases/02-ai-agent/README.md`'s own "ships inert, NOT WIRED"
 line for S10. Neither is discussed further below because neither is relevant to a Min comparison — they
 are noted here only so this document does not repeat an overclaim the source doesn't support.
 
@@ -185,7 +185,7 @@ or number.
 
 ## Routing — what this track does not own
 
-Per the existing convention ([`../README.md`](../../concepts/README.md#deferred--adoption-gated-backlog-from-the-beyond-phases-synthesis)),
+Per the existing convention ([`../README.md`](../../phases/README.md#deferred--adoption-gated-backlog-from-the-beyond-phases-synthesis)),
 reference these, never duplicate them:
 
 | Stays with                                                 | Material                                                                                                                                                                                                                                                              |

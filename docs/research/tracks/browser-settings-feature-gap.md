@@ -249,7 +249,7 @@ unbuilt tail). The File System Access row is already tracked open in phase-2c.
 
 | Item                                   | Why                                                                                    |
 | -------------------------------------- | -------------------------------------------------------------------------------------- |
-| Vertical tabs                          | Recorded out of scope in [phase-2b](../../concepts/product/phases/02b-daily-driver-ux.md). |
+| Vertical tabs                          | Recorded out of scope in [phase-2b](../../phases/01-product/02b-daily-driver-ux.md). |
 | System proxy settings shortcut         | Tepegöz refuses the OS proxy by design (§18).                                          |
 | DRM / Widevine / EME toggle            | Parked in Phase E, demand-gated — not a settings gap.                                  |
 | "Enhanced spellcheck" (text to Google) | Violates local-first (§12).                                                            |

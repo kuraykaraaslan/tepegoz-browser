@@ -9,7 +9,7 @@ import type { ChatCapabilityHost } from './types';
 import { chatManifest } from './manifest';
 
 /**
- * The Chat extension's **agent-callable capabilities** (`docs/concepts/extensions/phases/01-ext-chat.md`, ADR-0021):
+ * The Chat extension's **agent-callable capabilities** (`docs/phases/03-extensions/01-ext-chat.md`, ADR-0021):
  * list / read / search / act on conversations through the single ToolGateway PEP, exactly like
  * builtin tools. Ids are `{domain}_{verb}_{noun}` on the approved verb set (so "join a room" is
  * modelled as *creating a membership*, not a bespoke `room_join`).

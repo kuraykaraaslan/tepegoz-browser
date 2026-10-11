@@ -33,7 +33,7 @@ Bu, Tepegöz'ün tez seçimine doğrudan bir meydan okuma ve dürüstçe kaydedi
   kilidi. WebBrain'in kendi `THREAT-MODEL.md`'si (G1/G2/G4) bir eklentinin bu boşlukları
   kapatamadığını itiraf ediyor. Yani Atlas'ın kapanışı Tepegöz'ün tezini çürütmüyor ama
   **dağıtım riskini** çok net gösteriyor: kimse tarayıcı değiştirmek istemiyor.
-- **Aksiyon:** bu, `docs/concepts/README.md`'nin v1 ship line kararlarında ve
+- **Aksiyon:** bu, `docs/phases/README.md`'nin v1 ship line kararlarında ve
   `ai-agent/README.md`'nin kuzey-yıldızı gerekçesinde referans verilmeye değer bir
   pazar verisi. "Neden tarayıcı" sorusunun cevabı güvenlik/hesap-verebilirlik olmalı,
   "AI daha iyi otursun diye" değil.
@@ -93,7 +93,7 @@ görünür.
 URL çubuğu olmayan, yerine prompt composer koyan Google deneyi. **Tepegöz'ün tezinin tam
 zıddı**: `apps/desktop/src/i18n/en.ts` yorumu adres çubuğunu bilerek deterministik tutuyor
 ve AI'ya yalnızca `@agent` prefix'inden geçiyor. Disco (bir uçta) ↔ Dia (ortada) ↔ Tepegöz
-(diğer uçta) ekseni, `docs/concepts/tracks/omnibox-competitive-parity.md`'nin korumaya değer
+(diğer uçta) ekseni, `phases/tracks/omnibox-competitive-parity.md`'nin korumaya değer
 farkını gösteriyor.
 
 ## 6. Samsung Internet (Perplexity destekli), Chrome+Gemini, Edge+Copilot, Brave+Leo, Opera One+Aria

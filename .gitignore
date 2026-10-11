@@ -33,8 +33,8 @@ coverage/
 test-results/
 playwright-report/
 # Eval output is REGENERABLE, never a source of truth — a committed report goes stale the moment the
-# scoring logic changes, and then it lies. The durable record is docs/concepts/ai-agent/reference/eval-results.md.
-# Regenerate: docs/concepts/ai-agent/guides/eval-loop-runbook.md
+# scoring logic changes, and then it lies. The durable record is docs/reference/ai-agent/eval-results.md.
+# Regenerate: docs/guides/ai-agent-eval-loop-runbook.md
 agent-eval-report.json
 agent-eval-runs/
 *.log

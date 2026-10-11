@@ -17,7 +17,7 @@
 >   `background/services/{analytics,speechToText}.ts`, `background/index.ts`,
 >   `packages/storage/lib/settings/{llmProviders,generalSettings,firewall,types}.ts`,
 >   `chrome-extension/manifest.js`, `pages/side-panel/src/SidePanel.tsx`) ve bu reponun AI yüzeyinin
->   (`docs/concepts/ai-agent/phases/{README,history}.md` + S0–S12 fazları, `packages/orchestrator|model-gateway|
+>   (`docs/phases/02-ai-agent/{README,history}.md` + S0–S12 fazları, `packages/orchestrator|model-gateway|
 capability-plane|security-policy|agent-runtime|browser-tools|web-tools|tool-executor|local-inference|
 model-catalog|mcp-client|recipe-compiler|macro-engine|notary|credential-vault|human-input`,
 >   `extensions/ext-agent`, `docs/adr/*`) aynı oturumda okunmasından çıkarıldı.
@@ -25,15 +25,15 @@ model-catalog|mcp-client|recipe-compiler|macro-engine|notary|credential-vault|hu
 > **Tarih.** 2026-09-01.
 >
 > **Dil notu.** Bu belge, sahibe sunulduğu haliyle Türkçe tutulmuştur
-> (`docs/concepts/tracks/README.md`'deki "orijinal dilinde tutulur" kaydıyla ve
+> (`phases/tracks/README.md`'deki "orijinal dilinde tutulur" kaydıyla ve
 > [`tepegoz-vs-webbrain.md`](tepegoz-vs-webbrain.md) belgesiyle aynı gerekçe). Proje eserleri
 > İngilizce-öncedir; bu, yazıldığı haliyle korunan bir kayıttır.
 >
 > **İlgili.** Nanobrowser'a özel bir parity track'i **yok** — çünkü nanobrowser zaten
-> [`docs/concepts/ai-agent/reference/history.md`](../../concepts/ai-agent/reference/history.md)'deki "build-vs-buy" kaydı
+> [`docs/reference/ai-agent/history.md`](../../reference/ai-agent/history.md)'deki "build-vs-buy" kaydı
 > ve v1 arşivi (`docs/archive/ai-agent/`) üzerinden porta edilmiş durumda. "WebBrain'in yaptığı
 > her şeyi Tepegöz de yapsın" tarafı için bkz.
-> [`docs/concepts/tracks/webbrain-agent-parity.md`](../parities/webbrain-agent-parity.md).
+> [`phases/tracks/webbrain-agent-parity.md`](../parities/webbrain-agent-parity.md).
 
 ---
 

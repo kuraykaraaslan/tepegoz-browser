@@ -105,7 +105,7 @@ turned into adversarial scenarios that the browser must fail — because a defen
 fails without it is an assumption, not a control.
 
 **[CLAIM]** The incident-derived work items are tracked in the open, in
-[the safety phase](../concepts/ai-agent/phases/06-safety-control-plane.md). The full threat model
+[the safety phase](../phases/02-ai-agent/06-safety-control-plane.md). The full threat model
 is published at [threat model](../reference/threat-model.md), and known problems at
 [known issues](../known-issues.md).
 

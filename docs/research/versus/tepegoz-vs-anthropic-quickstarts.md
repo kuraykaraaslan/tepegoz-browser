@@ -10,18 +10,18 @@
 > `computer_use/{loop,image,trajectory}.py` + `tools/{base,browser,computer,batch,shell}.py`;
 > `agents/{agent.py,utils/connections.py}`; `autonomous-coding/security.py`;
 > `managed-agents/{README.md,chat-sdk/skill.md,copilot-kit-ag-ui/server/src/setup.ts}`) ve bu reponun
-> AI yüzeyinin (`docs/concepts/ai-agent/`, `packages/orchestrator|model-gateway|capability-plane|
+> AI yüzeyinin (`docs/phases/02-ai-agent/`, `packages/orchestrator|model-gateway|capability-plane|
 security-policy|agent-runtime|browser-tools|tool-executor|mcp-client|notary|agent-eval`,
 > `extensions/ext-agent`, `docs/adr/{0005,0006,0008,0013,0018,0026,0029,0030,0039}`) aynı oturumda
 > okunmasından çıkarıldı.
 >
 > **Tarih.** 2026-09-01.
 >
-> **Dil notu.** Bu belge, sahibe sunulduğu haliyle Türkçe tutulmuştur (`docs/concepts/tracks/README.md`'deki
+> **Dil notu.** Bu belge, sahibe sunulduğu haliyle Türkçe tutulmuştur (`phases/tracks/README.md`'deki
 > "orijinal dilinde tutulur" kaydıyla aynı gerekçe). Proje eserleri İngilizce-öncedir; bu, yazıldığı
 > haliyle korunan bir kayıttır.
 >
-> **İlgili:** [`docs/concepts/tracks/webbrain-agent-parity.md`](../parities/webbrain-agent-parity.md).
+> **İlgili:** [`phases/tracks/webbrain-agent-parity.md`](../parities/webbrain-agent-parity.md).
 > Bu rakip için ayrı bir parity track'i yok ve olmamalı da — aşağıdaki kategori uyarısına bakın.
 >
 > **Kategori uyarısı.** Bu bir **ürün değil**. Anthropic Quickstarts, model satıcısının "bu API'yi böyle

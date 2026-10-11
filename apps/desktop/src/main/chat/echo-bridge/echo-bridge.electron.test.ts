@@ -20,7 +20,7 @@ import {
  * `chat-service.electron.test.ts` (real Electron/IO) sits beside `chat-service.test.ts` (pure fakes).
  *
  * Scoped honestly to what the current code actually guarantees (see `process-supervisor.ts` /
- * `subprocess-adapter.ts` docstrings and `docs/concepts/extensions/phases/01-ext-chat.md`'s X-chat.8 status): a real
+ * `subprocess-adapter.ts` docstrings and `docs/phases/03-extensions/01-ext-chat.md`'s X-chat.8 status): a real
  * spawn/RPC/lifecycle round trip and real crash isolation between two independently-spawned accounts.
  * It does NOT test filesystem or egress confinement — nothing in this codebase enforces either on an
  * arbitrary child process yet (that's flagged, unbuilt work, not silently assumed).

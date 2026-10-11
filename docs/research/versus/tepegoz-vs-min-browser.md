@@ -13,7 +13,7 @@
 > `preload/translate.js` —, `pages/translateService/translateService.js`,
 > `ext/readability-master/`, `ext/abp-filter-parser-modified/`, `ext/franc/`,
 > `ext/textColor/textColor.js`, `localization/languages/tr.json`) ve bu reponun AI yüzeyinin
-> (`docs/concepts/ai-agent/`, `packages/orchestrator|model-gateway|capability-plane|security-policy|
+> (`docs/phases/02-ai-agent/`, `packages/orchestrator|model-gateway|capability-plane|security-policy|
 agent-runtime|browser-tools|web-tools|tool-executor|local-inference|model-catalog|mcp-client|
 recipe-compiler|macro-engine|notary|credential-vault|human-input|tasks`, `extensions/ext-agent`,
 > `docs/adr/*`) aynı oturumda okunmasından çıkarıldı. Min tarafında `agent`, `llm`, `openai`,
@@ -25,10 +25,10 @@ recipe-compiler|macro-engine|notary|credential-vault|human-input|tasks`, `extens
 > **Tarih.** 2026-09-01.
 >
 > **Dil notu.** Bu belge, sahibe sunulduğu haliyle Türkçe tutulmuştur
-> (`docs/concepts/tracks/README.md`'deki "orijinal dilinde tutulur" kaydıyla aynı gerekçe). Proje
+> (`phases/tracks/README.md`'deki "orijinal dilinde tutulur" kaydıyla aynı gerekçe). Proje
 > eserleri İngilizce-öncedir; bu, yazıldığı haliyle korunan bir kayıttır.
 >
-> **İlgili:** `docs/concepts/tracks/webbrain-agent-parity.md` (yapı referansı). Min için bir
+> **İlgili:** `phases/tracks/webbrain-agent-parity.md` (yapı referansı). Min için bir
 > `min-agent-parity` track'i **yok** ve olması da beklenmiyor — aşağıdaki kategori uyarısına bakın.
 >
 > **Kategori uyarısı.** Min **geleneksel bir minimal masaüstü tarayıcısıdır** — tam-metin

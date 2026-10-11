@@ -105,6 +105,6 @@ and note that this is the only way to remove it, since nothing here is stored in
 ## Not stored anywhere
 
 There is no server. No account, no sync, no telemetry endpoint receiving your browsing. Cloud sync is a
-[Phase 3](../concepts/product/phases/03-backend-cloud-extensions.md) design, which is why the tables that
+[Phase 3](../phases/01-product/03-backend-cloud-extensions.md) design, which is why the tables that
 hold user data already carry sync metadata (`updated_at`, `version`, `tombstone`, a device id) — so
 turning it on later is a feature, not a migration.

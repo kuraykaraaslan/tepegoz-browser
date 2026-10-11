@@ -3,7 +3,7 @@
 - **Status:** Accepted (the narrowing decision function only — see Consequences)
 - **Date:** 2026-08-20
 - **Refines:** [ADR-0031](0031-recipe-compiler-trust-model.md) (RecipeCompiler trust model)
-- **Phase:** [Phase 6 — Deterministic Replayable Automation](../concepts/product/phases/06-deterministic-automation.md), L2/L8 (AutomationScheduler)
+- **Phase:** [Phase 6 — Deterministic Replayable Automation](../phases/01-product/06-deterministic-automation.md), L2/L8 (AutomationScheduler)
 
 ## Numbering note
 

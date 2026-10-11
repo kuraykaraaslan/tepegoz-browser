@@ -132,7 +132,7 @@ kuralını bozmaz ama prompt'a ne girdiğini modele bırakır. Alınacak parça 
 tarafı**: transkriptte **hangi skill'in aktif olduğunu gösteren pill'ler**. Tepegöz'de
 zaten skill seçimi görünür değil; pill, "bu cevap şu talimat paketiyle üretildi"yi
 görünür kılar — kanıt rozetleriyle aynı dürüstlük mantığı. Otomatik/always-on yönlendirme
-`docs/concepts/tracks/webbrain-agent-parity.md` P5'in konusu, buraya değil.
+`phases/tracks/webbrain-agent-parity.md` P5'in konusu, buraya değil.
 
 ### B3. Çalışma-içi araç onayı transkriptin içinde
 
@@ -199,7 +199,7 @@ kapsamında; hiçbiri `apps/desktop`'u büyütmez. Her yeni kullanıcı-görül�
 Doğrudan panel konusu değil ama kayda değer: LibreChat "Custom Endpoints — **proxy'siz**
 herhangi bir OpenAI-uyumlu API" modeliyle Ollama/groq/Cohere/Mistral/MLX/koboldcpp/
 together/OpenRouter/Perplexity/Deepseek/Qwen'i tek bir yapılandırma dosyasından
-(`librechat.yaml`) destekliyor. Bu, `docs/concepts/tracks/webbrain-agent-parity.md` **P1**'in
+(`librechat.yaml`) destekliyor. Bu, `phases/tracks/webbrain-agent-parity.md` **P1**'in
 (sağlayıcı kataloğu = kod değil veri) bir başka canlı örneği — WebBrain'in 108 kartıyla
 aynı fikir, farklı ambalaj. P1 yazılırken `librechat.yaml`'ın şeması ikinci bir referans
 olarak okunabilir.

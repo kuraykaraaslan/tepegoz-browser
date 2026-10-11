@@ -9,7 +9,7 @@
   dictionary, not a new leaf) · **accounts to** [ADR-0009](0009-boundary-mapping.md) (the new IPC handler
   never throws for an odd URL) · **relates to** the Permissions Center (Phase 2c) — the bubble edits the
   _same_ `sitePermissions` preference, it is not a second store
-- **Phase:** [Phase 2c — Classic Browser Essentials](../concepts/product/phases/02c-classic-browser-essentials.md), L0/L1
+- **Phase:** [Phase 2c — Classic Browser Essentials](../phases/01-product/02c-classic-browser-essentials.md), L0/L1
 
 ## Context
 

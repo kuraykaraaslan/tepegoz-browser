@@ -1,9 +1,9 @@
 # Architecture — index
 
 **This file is a thin index, not a source of truth.** It exists because
-[`CLAUDE.md`](../../../CLAUDE.md) and [`docs/concepts/README.md`](../README.md) both point here, and a dangling
+[`CLAUDE.md`](../../../CLAUDE.md) and [`docs/phases/README.md`](../../phases/README.md) both point here, and a dangling
 pointer in the binding working agreement is exactly the drift
-[S0](../ai-agent/phases/00-truth-and-repair.md) exists to close. Every section below links to
+[S0](../../phases/02-ai-agent/00-truth-and-repair.md) exists to close. Every section below links to
 the document that actually owns the material — **read the owner, never duplicate it here**. A change to
 the architecture is made in the owning document; this page only gains a link.
 
@@ -19,15 +19,15 @@ direct cross-layer imports are forbidden and **enforced in CI** by
 | ----------------------------: | ---------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
 |           **L0 — Core Shell** | Secure Electron windowing, fuses, sandboxing, typed IPC                      | [`apps/desktop`](../../../apps/desktop) · [ADR-0001](../../adr/0001-electron-react-typescript.md)                                                 |
 |          **L1 — Persistence** | SQLite (WAL) + append-only Event Journal + content-addressed blob store      | [`packages/persistence`](../../../packages/persistence)                                                                                     |
-|  **L2 — Durability & Memory** | Checkpoint/resume, handoff, per-task tiered memory                           | [Phase 1b](../product/phases/01b-agentic-deepening.md)                                                                           |
+|  **L2 — Durability & Memory** | Checkpoint/resume, handoff, per-task tiered memory                           | [Phase 1b](../../phases/01-product/01b-agentic-deepening.md)                                                                           |
 |         **L3 — Orchestrator** | Intent → DAG planner, parallel scheduler, loop detection                     | [`packages/orchestrator`](../../../packages/orchestrator) · [ADR-0013](../../adr/0013-agent-orchestration-hitl.md)                                |
 |   **L4 — Perception & Tools** | Out-of-process CDP driver, DOM + accessibility perception, content sanitizer | [`packages/tool-executor`](../../../packages/tool-executor) · [ADR-0008](../../adr/0008-perception-cdp.md)                                        |
 |     **L5 — Capability Plane** | Tool gateway (single PEP), skills runtime, MCP client + server               | [ADR-0007](../../adr/0007-capability-plane-mcp.md)                                                                                          |
-| **L6 — Integration Adapters** | Official-API-first connectors with browser fallback                          | [Phase 2](../product/phases/02-adapters-safe-browsing.md)                                                                        |
+| **L6 — Integration Adapters** | Official-API-first connectors with browser fallback                          | [Phase 2](../../phases/01-product/02-adapters-safe-browsing.md)                                                                        |
 |        **L7 — Model Gateway** | Provider-agnostic AI routing, transports, Token Ledger                       | **[`ai-transparency.md`](../../reference/ai-transparency.md)** · [ADR-0005](../../adr/0005-provider-agnostic-ai.md)                                         |
 |      **L8 — Security Kernel** | Policy Kernel, Capability Broker, Egress Firewall, HITL, prompt/rules engine | [`threat-model.md`](../../reference/threat-model.md) · [ADR-0006](../../adr/0006-policy-kernel-hitl.md) · [ADR-0024](../../adr/0024-action-interception-plane.md) |
 |           **L9 — Browser UI** | Command Palette, Live Agent Console, browser shell, settings                 | [`package-map.md`](../../reference/package-map.md)                                                                                                    |
-|       **L10 — Safe Browsing** | Adblock, Safe Browsing, AgentThreatShield, popup/permission guard            | [Phase 2](../product/phases/02-adapters-safe-browsing.md)                                                                        |
+|       **L10 — Safe Browsing** | Adblock, Safe Browsing, AgentThreatShield, popup/permission guard            | [Phase 2](../../phases/01-product/02-adapters-safe-browsing.md)                                                                        |
 
 > An ADR is cited only where one exists; the index of record is [`adr/README.md`](../../adr/README.md)'s own
 > ordered table — this page does not restate a "current head" number, because the one it stated before
@@ -41,9 +41,9 @@ direct cross-layer imports are forbidden and **enforced in CI** by
 | How does the **L7 model plane** work (routing, transports, token ledger, providers)? | [`ai-transparency.md`](../../reference/ai-transparency.md)                                                                                                                                                     |
 | What is the **threat model** and the security posture?                               | [`threat-model.md`](../../reference/threat-model.md) + [`sec/`](../../research/README.md)                                                                                                                            |
 | **Why** was a given design decision made?                                            | [`adr/`](../../adr/) — decisions are recorded, never re-litigated in prose                                                                                                                           |
-| What is being **built next**, in what order, with what exit criteria?                | [`../README.md`](../README.md)                                                                                                                                                   |
-| What is the state of the **AI agent's competence** and how is it measured?           | [`../ai-agent/README.md`](../ai-agent/README.md) — the sole authoritative AI roadmap, with its results ledger and statistical constitution                                       |
-| How do I **run the eval harness**?                                                   | [`../ai-agent/guides/eval-loop-runbook.md`](../ai-agent/guides/eval-loop-runbook.md)                                                                                                           |
+| What is being **built next**, in what order, with what exit criteria?                | [`../../phases/README.md`](../../phases/README.md)                                                                                                                                                   |
+| What is the state of the **AI agent's competence** and how is it measured?           | [`../../phases/02-ai-agent/README.md`](../../phases/02-ai-agent/README.md) — the sole authoritative AI roadmap, with its results ledger and statistical constitution                                       |
+| How do I **run the eval harness**?                                                   | [`../../guides/ai-agent-eval-loop-runbook.md`](../../guides/ai-agent-eval-loop-runbook.md)                                                                                                           |
 | What are the **working agreement** rules (git, TS, zod, i18n, secrets)?              | [`../../../CLAUDE.md`](../../../CLAUDE.md)                                                                                                                                                                 |
 
 ## Cross-cutting foundations
@@ -57,7 +57,7 @@ only through a typed `contextBridge`.
 
 ## A note on the "approved plan"
 
-[`../README.md`](../README.md) refers to an out-of-repo source plan that was to be moved
+[`../../phases/README.md`](../../phases/README.md) refers to an out-of-repo source plan that was to be moved
 in as `docs/concepts/architecture/README.md` + `docs/ROADMAP.md`. That never happened, and it no longer should: the
 architecture is now **realized in code and ADRs**, and the roadmap is **realized in
 [`../`](../)**. Those are the sources of truth. This index replaces the missing pointer;

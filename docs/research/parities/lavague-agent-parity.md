@@ -11,7 +11,7 @@ comparison.
 **Source:** a same-session deep read of [`docs/others/tepegoz-vs-lavague.md`](../versus/tepegoz-vs-lavague.md)
 (Turkish, 2026-09-01) plus a direct re-read of `.junk/lavague` (`lavague` 1.1.19 / `lavague-core`
 0.2.x, Apache-2.0, `Development Status :: 3 - Alpha`) against this repo's AI surface
-(`docs/concepts/ai-agent/`, `packages/orchestrator|model-gateway|capability-plane|security-policy|
+(`docs/phases/02-ai-agent/`, `packages/orchestrator|model-gateway|capability-plane|security-policy|
 agent-runtime|browser-tools|web-tools|tool-executor|local-inference|model-catalog|mcp-client|
 recipe-compiler|macro-engine|notary|credential-vault|human-input`, `extensions/ext-agent`). Claims from
 the comparison doc were independently re-verified against source rather than trusted as written:
@@ -201,8 +201,8 @@ script export is one-way, output-only, and never re-ingested by anything inside 
 
 ## Routing — what this track does not own
 
-Per the existing convention ([`../README.md`](../../concepts/README.md#routing--what-stays-out) /
-[`ai-agent/README.md`](../../concepts/ai-agent/README.md#routing--what-stays-out)), reference these,
+Per the existing convention ([`../README.md`](../../phases/README.md#routing--what-stays-out) /
+[`ai-agent/README.md`](../../phases/02-ai-agent/README.md#routing--what-stays-out)), reference these,
 never duplicate them:
 
 | Stays with                                    | Material                                                                                                                                                                |

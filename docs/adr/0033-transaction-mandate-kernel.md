@@ -9,7 +9,7 @@
 
 - **Refines:** [ADR-0006](0006-policy-kernel-hitl.md) (deterministic policy kernel — the `financial`
   danger class this mandate can only ever narrow further, never replace)
-- **Phase:** [Phase 9 — Safe Autonomy & Governed Delegation](../concepts/product/phases/09-safe-autonomy-delegation.md), L8/L2/L6
+- **Phase:** [Phase 9 — Safe Autonomy & Governed Delegation](../phases/01-product/09-safe-autonomy-delegation.md), L8/L2/L6
 
 ## Numbering note
 

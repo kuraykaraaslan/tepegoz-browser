@@ -9,7 +9,7 @@
 > Everything below is enforced by CI, by a linter, or by an accepted ADR — not by review taste. The
 > practical checklist form lives in [`../../CONTRIBUTING.md`](../../CONTRIBUTING.md) and
 > [the PR template](../../.github/pull_request_template.md); cross-cutting phase gates live in
-> [`../concepts/README.md`](../concepts/README.md).
+> [`../phases/README.md`](../phases/README.md).
 
 ## 1. Trust boundaries and validation
 

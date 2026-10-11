@@ -4,8 +4,8 @@
 > analizi, ve hangi kontrolün neyi kapattığı. Alan araştırması.
 >
 > **Tarih.** Derleme 2026-08-21 · bu formata çevirisi 2026-09-02. **Dil notu.** Türkçe.
-> **Sahibi fazlar:** [phase-5](../concepts/product/phases/05-vpn-network-privacy.md) (ağ katmanı) ·
-> [phase-2](../concepts/product/phases/02-adapters-safe-browsing.md) (site katmanı).
+> **Sahibi fazlar:** [phase-5](../phases/01-product/05-vpn-network-privacy.md) (ağ katmanı) ·
+> [phase-2](../phases/01-product/02-adapters-safe-browsing.md) (site katmanı).
 
 ---
 

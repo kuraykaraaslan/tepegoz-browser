@@ -11,7 +11,7 @@ task or an `ai-agent` PR without re-deriving the comparison.
 
 **Source:** a same-session deep read of `.junk/nanobrowser` (a shipping, Apache-2.0 Chrome/Edge MV3
 side-panel multi-agent (Planner+Navigator) web-automation extension, v0.1.13) against this repo's AI
-surface (`docs/concepts/ai-agent/`, `packages/orchestrator|model-gateway|capability-plane|
+surface (`docs/phases/02-ai-agent/`, `packages/orchestrator|model-gateway|capability-plane|
 security-policy|agent-runtime|browser-tools|web-tools|tool-executor|local-inference|model-catalog|
 mcp-client|recipe-compiler|macro-engine|notary|credential-vault|human-input`, `extensions/ext-agent`).
 The prose comparison this track distills is
@@ -25,13 +25,13 @@ speechToText}.ts`, `chrome-extension/src/background/index.ts` (`port.onDisconnec
 repo's `packages/navigation/src/navigation-url.ts` (`isWebUrl`/`toNavigationUrl`), `packages/
 model-gateway/src/{gateway,model-router,models}.ts`, `packages/security-policy/src/egress-firewall.ts`,
 `packages/orchestrator/src/reactor-decision.ts`, `extensions/ext-agent/src/{types,panel-modals}.tsx`,
-`packages/shared-types/src/{providers,agent-working-state}.ts`, and `docs/concepts/ai-agent/reference/history.md`.
+`packages/shared-types/src/{providers,agent-working-state}.ts`, and `docs/reference/ai-agent/history.md`.
 
 ## Why this track exists
 
 Nanobrowser is not an ordinary rival for this repo — it is Tepegöz's own agent's **ancestor**. The
 comparison this track distills opens by saying so plainly: Tepegöz's v1 AI roadmap (AI-1…AI-8) was
-formally named _"the browser-use/nanobrowser port,"_ [`history.md`](../../concepts/ai-agent/reference/history.md)
+formally named _"the browser-use/nanobrowser port,"_ [`history.md`](../../reference/ai-agent/history.md)
 records a **file-level port-reference table** (perception, loop, actions, content-security), and the
 `ai-agent` "Never" list names nanobrowser by name as the example of _"port techniques, never
 adopt."_ `tepegoz-vs-nanobrowser.md`'s own header goes further and says a dedicated parity track for
@@ -69,7 +69,7 @@ an ADR, or a sibling track ([`webbrain-agent-parity.md`](webbrain-agent-parity.m
 [`aipex-agent-parity.md`](aipex-agent-parity.md)), this track says so explicitly and does **not**
 re-describe it — most of the table below is exactly that: citations, not new asks. Per the "Already
 planned — do NOT re-propose" rule in
-[`../README.md`](../../concepts/README.md#deferred--adoption-gated-backlog-from-the-beyond-phases-synthesis),
+[`../README.md`](../../phases/README.md#deferred--adoption-gated-backlog-from-the-beyond-phases-synthesis),
 provider-catalog breadth and the local HTTP-server engine variant are **`webbrain` P1**; the MCP server
 direction is **Phase 1b**; site-guidance adapters are **`webbrain` P4**; voice input is **Phase 10b**
 (already named in both sibling tracks' backlogs) — this track adds no new claim on any of those, it
@@ -86,7 +86,7 @@ nanobrowser a second time doesn't reach for the shortcut:
    `createChatModel()` is built directly on LangChain.js's `BaseChatModel`, which is precisely what gives
    it its ~11 named provider types "for free." `ai-agent`'s own "Never" list forbids this by name:
    _"Python sidecar / second Chromium / vendor agent SDKs (`browser-use`/`nanobrowser` = port techniques,
-   never adopt")_ — and [`history.md`](../../concepts/ai-agent/reference/history.md)'s build-vs-buy decision is the same
+   never adopt")_ — and [`history.md`](../../reference/ai-agent/history.md)'s build-vs-buy decision is the same
    ruling for this exact repo. Tepegöz's `CanonRequest`/`CanonResponse` single schema + mandatory
    `maxTokens`/`timeoutMs` + `TokenLedger` are the reason a call is capped, timed and cost-tracked no
    matter which of the 8 adapters serves it — a wrapped `BaseChatModel` would not carry any of that
@@ -300,8 +300,8 @@ new decision; no security or policy surface changes.
 
 ## Routing — what this track does not own
 
-Per the existing convention ([`../README.md`](../../concepts/README.md#routing--what-stays-out) /
-[`ai-agent/README.md`](../../concepts/ai-agent/README.md#routing--what-stays-out)), reference these,
+Per the existing convention ([`../README.md`](../../phases/README.md#routing--what-stays-out) /
+[`ai-agent/README.md`](../../phases/02-ai-agent/README.md#routing--what-stays-out)), reference these,
 never duplicate them:
 
 | Stays with                                                        | Material                                                                                                                                                                                           |

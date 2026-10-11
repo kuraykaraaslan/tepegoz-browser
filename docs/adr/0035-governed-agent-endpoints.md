@@ -8,7 +8,7 @@
 > imply, or substitute for a grant, so the rule below holds with the grant as an added precondition.
 
 - **Refines:** [ADR-0006](0006-policy-kernel-hitl.md) (sensitive-site lockout, reused verbatim here)
-- **Phase:** [Phase 9 — Safe Autonomy & Governed Delegation](../concepts/product/phases/09-safe-autonomy-delegation.md), L5/L8/L9 (Governed Agent Endpoints)
+- **Phase:** [Phase 9 — Safe Autonomy & Governed Delegation](../phases/01-product/09-safe-autonomy-delegation.md), L5/L8/L9 (Governed Agent Endpoints)
 
 ## Numbering note
 

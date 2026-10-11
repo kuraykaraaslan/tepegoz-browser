@@ -29,12 +29,12 @@ on a claim about it. What is still missing beyond that: **no independent securit
 performed and the automation has **not** been independently benchmarked. **No development phase is
 closed yet**; the
 roadmap tracks status by what has been _measured_, not by what has been written, and by that bar every
-phase still reads amber. See [`docs/concepts/README.md`](docs/concepts/README.md) for the per-phase truth.
+phase still reads amber. See [`docs/phases/README.md`](docs/phases/README.md) for the per-phase truth.
 
 One claim this project deliberately does **not** make: that its agent is good at browsing. All thirteen
 phases of the AI competence program have landed their code, and **every one of them is still
 "measurement-owed"** — the benchmark spend to prove or refute them has not been paid
-([`docs/concepts/ai-agent/README.md`](docs/concepts/ai-agent/README.md)). Treat the automation as
+([`docs/phases/02-ai-agent/README.md`](docs/phases/02-ai-agent/README.md)). Treat the automation as
 promising and unproven, and read [`docs/known-issues.md`](docs/known-issues.md) before trusting it with
 anything that matters.
 
@@ -207,7 +207,7 @@ before any cloud dependency does. Status below is copied from the roadmap's own 
 | **6, 7, 9, 11, 12**       | Recipes · notary · mandates · Kamu pack · developer platform | ⏸ Frozen out of v1 — decision layers landed, none wired to a live call |
 | **1b, 2, 3, 4, 8, 10, E** | Durability · adapters · cloud tier · maturation · delight    | ⏸ Frozen out of v1 — not started                                       |
 
-Task-level detail: [`docs/concepts/`](docs/concepts/) and its [index](docs/concepts/README.md).
+Task-level detail: [`docs/concepts/`](docs/concepts/) and its [index](docs/phases/README.md).
 
 ## Design commitments
 

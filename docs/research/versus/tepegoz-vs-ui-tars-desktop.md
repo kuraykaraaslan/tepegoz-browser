@@ -12,7 +12,7 @@ sdk/src/constants,action-parser/src/actionParser,operators/browser-operator/src/
 shared/src/constants}`, `multimodal/{tarko/agent/src/agent/**, tarko/model-provider/src/**,
 tarko/llm-client/src/models, agent-tars/core/src/{agent-tars,prompt,environments/local/**}}`,
 > `packages/agent-infra/{browser-use,mcp-http-server,mcp-servers}`) ve bu reponun AI yüzeyinin
-> (`docs/concepts/ai-agent/`, `packages/orchestrator|model-gateway|capability-plane|security-policy|
+> (`docs/phases/02-ai-agent/`, `packages/orchestrator|model-gateway|capability-plane|security-policy|
 agent-runtime|browser-tools|web-tools|tool-executor|local-inference|model-catalog|mcp-client|
 recipe-compiler|macro-engine|notary|credential-vault|human-input|agent-eval`, `extensions/ext-agent`,
 > `docs/adr/*`) aynı oturumda okunmasından çıkarıldı.
@@ -20,12 +20,12 @@ recipe-compiler|macro-engine|notary|credential-vault|human-input|agent-eval`, `e
 > **Tarih.** 2026-09-01.
 >
 > **Dil notu.** Bu belge, sahibe sunulduğu haliyle Türkçe tutulmuştur
-> (`docs/concepts/tracks/README.md`'deki "orijinal dilinde tutulur" kaydıyla aynı gerekçe). Proje eserleri
+> (`phases/tracks/README.md`'deki "orijinal dilinde tutulur" kaydıyla aynı gerekçe). Proje eserleri
 > İngilizce-öncedir; bu, yazıldığı haliyle korunan bir kayıttır.
 >
 > **İlgili.** UI-TARS Desktop'a özel bir parity track'i **henüz yok**; üretilirse `prompts/rival-agent-parity-track.md`
 > bu belgeyi girdi alır. Yapı ve dil için referans: [`docs/others/tepegoz-vs-webbrain.md`](tepegoz-vs-webbrain.md)
-> ve [`docs/concepts/tracks/webbrain-agent-parity.md`](../parities/webbrain-agent-parity.md).
+> ve [`phases/tracks/webbrain-agent-parity.md`](../parities/webbrain-agent-parity.md).
 >
 > **Kategori uyarısı.** Bu depo iki ayrı ürün taşıyor ve ikisi de Tepegöz'le tam olarak aynı kategoride
 > değil. **UI-TARS Desktop** bir _GUI / bilgisayar-kullanımı ajanı_: ekran görüntüsü alır, bir
@@ -47,7 +47,7 @@ recipe-compiler|macro-engine|notary|credential-vault|human-input|agent-eval`, `e
 |             | UI-TARS Desktop (+ Agent TARS)                                                                                                                                            | Tepegöz                                                                                                                                             |
 | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Ne          | UI-TARS Desktop: Electron **masaüstü uygulaması**, UI-TARS VLM ile bilgisayarı/tarayıcıyı sürer. Agent TARS: `@agent-tars/cli` + Web UI, terminal/kod/tarayıcı/MCP ajanı  | Tam **Electron tarayıcı**; ajan ("Do modu" / Agent Console) alt sistemlerden biri                                                                   |
-| Olgunluk    | **Yayında** — GitHub Releases, Homebrew cask, ByteDance destekli, arXiv makalesi (2501.12326), HF'de yayımlı model ağırlıkları. Agent TARS CLI `v0.3.0` (2025-11), "Beta" | **1.0 öncesi**; `docs/concepts/ai-agent` S0–S12 fazlarının **hepsi 🟠 measurement-owed**, hiçbiri ✅ değil, sahip notu: _"hâlâ istediğim gibi çalışmıyor"_ |
+| Olgunluk    | **Yayında** — GitHub Releases, Homebrew cask, ByteDance destekli, arXiv makalesi (2501.12326), HF'de yayımlı model ağırlıkları. Agent TARS CLI `v0.3.0` (2025-11), "Beta" | **1.0 öncesi**; `docs/phases/02-ai-agent` S0–S12 fazlarının **hepsi 🟠 measurement-owed**, hiçbiri ✅ değil, sahip notu: _"hâlâ istediğim gibi çalışmıyor"_ |
 | Kod         | TypeScript, pnpm + turbo, iki iç-içe monorepo (`apps/` + `multimodal/`), "Tarko" ajan çatısı; `@ui-tars/sdk` çapraz-platform SDK                                          | Strict TS, pnpm + turbo monorepo, ~70 `@tepegoz/*` paket, ADR güdümlü, zod `safeParse` her sınırda                                                  |
 | Felsefe     | "Native GUI ajanı" — modelin kendisi (UI-TARS) üründür; SDK/operatör ince, model kalın. Pratik, otomasyonu **onaysız** yürütür                                            | "Security-by-design, local-first"; model-öncesi deterministik çekirdek + kriptografik hesap verebilirlik + determinism-first                        |
 | Birincil iş | Ekran görüntüsünden koordinat tahmin edip **herhangi bir GUI'yi** sürmek (bilgisayar veya tarayıcı); Agent TARS'ta ayrıca kod/terminal/araştırma                          | Web'de görev yürütmek: gezinme, form doldurma, çıkarım, çok-adımlı akış; güvenli oturum-açık site otomasyonu                                        |

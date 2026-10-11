@@ -48,7 +48,7 @@ kendi paketinde) ama **kullanıcı yüzeyinde dağınık**.
 1. **"Bunu bir göreve çevir" affordance'ını ajan panelinde geri getir.** `ext-agent`'ın
    i18n sözlüğünde `scheduleTask.*` anahtarları (`presetContinuous`, `presetInterval`,
    `presetPageChange`, `autonomyNotify`, `autonomySameOrigin`) **hâlâ duruyor** ama
-   `docs/concepts/README.md` fold kaydına göre affordance kaldırılmış. `@tepegoz/tasks` zaten
+   `docs/phases/README.md` fold kaydına göre affordance kaldırılmış. `@tepegoz/tasks` zaten
    interval + page-change tetikleyicilerini destekliyor. Yani bu **yeni bir yetenek değil,
    yeniden bağlanacak bir yüzey**. HARPA'nın en çok kullanılan özelliği (fiyat/rakip
    izleme) tam olarak buradan çıkar.

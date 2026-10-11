@@ -5,7 +5,7 @@
 > bir bulut ürünü) arasında, iş-iş kimin neyi daha iyi yaptığını tabloya döken derinlemesine bir
 > karşılaştırma. Browser Use burada özel bir durum: Tepegöz'ün ajan roadmap'inin **birinci sürümü
 > (AI-1…AI-8) resmen "the browser-use/nanobrowser port" adını taşıyordu** ve
-> [`docs/concepts/ai-agent/reference/history.md`](../../concepts/ai-agent/reference/history.md)'deki "build-vs-buy"
+> [`docs/reference/ai-agent/history.md`](../../reference/ai-agent/history.md)'deki "build-vs-buy"
 > kaydı `browser-use`'u adıyla değerlendirip **runtime bağımlılığı olarak reddediyor** ("tekniği çal,
 > asla adapte etme"). Yani bu uzak bir rakip değil, Tepegöz ajanının doğrudan referans-atası.
 >
@@ -20,7 +20,7 @@
 > `browser_use/skills/{service}.py` + `skills/browser-use/SKILL.md`,
 > `browser_use/filesystem/file_system.py`, `browser_use/tokens/service.py`, `browser_use/actor/`,
 > `browser_use/integrations/gmail/`) ve bu reponun AI yüzeyinin
-> (`docs/concepts/ai-agent/phases/{README,history,constitution}.md` + S0–S12 fazları,
+> (`docs/phases/02-ai-agent/{README,history,constitution}.md` + S0–S12 fazları,
 > `packages/orchestrator|model-gateway|capability-plane|security-policy|agent-runtime|browser-tools|
 web-tools|tool-executor|local-inference|model-catalog|mcp-client|recipe-compiler|macro-engine|notary|
 credential-vault|human-input`, `extensions/ext-agent`, `docs/adr/*`) aynı oturumda okunmasından
@@ -29,15 +29,15 @@ credential-vault|human-input`, `extensions/ext-agent`, `docs/adr/*`) aynı oturu
 > **Tarih.** 2026-09-01.
 >
 > **Dil notu.** Bu belge, sahibe sunulduğu haliyle Türkçe tutulmuştur
-> (`docs/concepts/tracks/README.md`'deki "orijinal dilinde tutulur" kaydıyla ve
+> (`phases/tracks/README.md`'deki "orijinal dilinde tutulur" kaydıyla ve
 > [`tepegoz-vs-webbrain.md`](tepegoz-vs-webbrain.md) / [`tepegoz-vs-nanobrowser.md`](tepegoz-vs-nanobrowser.md)
 > belgeleriyle aynı gerekçe). Proje eserleri İngilizce-öncedir; bu, yazıldığı haliyle korunan bir
 > kayıttır.
 >
 > **İlgili.** Browser Use'a özel bir parity track'i **henüz yok**; "rakibin yaptığı her şeyi Tepegöz de
-> yapsın" tarafı için bkz. [`docs/concepts/tracks/webbrain-agent-parity.md`](../parities/webbrain-agent-parity.md)
+> yapsın" tarafı için bkz. [`phases/tracks/webbrain-agent-parity.md`](../parities/webbrain-agent-parity.md)
 > ve [`prompts/rival-agent-parity-track.md`](../../../prompts/rival-agent-parity-track.md). "Build-vs-buy"
-> gerekçesi zaten [`docs/concepts/ai-agent/reference/history.md`](../../concepts/ai-agent/reference/history.md)'de kayıtlı.
+> gerekçesi zaten [`docs/reference/ai-agent/history.md`](../../reference/ai-agent/history.md)'de kayıtlı.
 
 ---
 
@@ -344,7 +344,7 @@ kuzey-yıldızı iddiası **reddedilebilir** (`bridgeClaim` 25 insan etiketinin 
 başarı sayısı var mı" sorusunda **Browser Use** (benchmark + leaderboard sayıları mevcut).
 
 > Not: Tepegöz'ün roadmap'i `browser-use`/`nanobrowser` ailesini _"tekniği çal, asla adapte etme"_ diye
-> listeliyor ve [`history.md`](../../concepts/ai-agent/reference/history.md) `browser-use`'u adıyla
+> listeliyor ve [`history.md`](../../reference/ai-agent/history.md) `browser-use`'u adıyla
 > değerlendirip **Python + ayrı Chromium + Python sidecar** olduğu için runtime bağımlılığı olarak
 > reddediyor; `nanobrowser` (browser-use'un TS/CDP portu) ise "porta hazır referans" seçiliyor.
 > `apps/desktop/src/main/agent/build-dom-tree-script.ts` başlığı _"ported from the browser-use /

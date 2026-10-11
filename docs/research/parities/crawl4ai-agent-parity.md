@@ -56,7 +56,7 @@ inside one live, policy-gated session. Batch/parallel crawling, deep-crawl strat
 The one workstream below is written like an `ai-agent` phase section (Goal → Approach →
 new/changed packages → ADR → DoD-shaped bullets) so it can be lifted into S2's own phase file with
 minimal rewriting. **Nothing here is committed roadmap.** Per the "Already planned — do NOT re-propose"
-rule in [`../README.md`](../../concepts/README.md#deferred--adoption-gated-backlog-from-the-beyond-phases-synthesis)
+rule in [`../README.md`](../../phases/README.md#deferred--adoption-gated-backlog-from-the-beyond-phases-synthesis)
 and the sibling tracks' own routing sections, several axes the source comparison scores in Crawl4AI's
 favor (provider breadth, PDF extraction, MCP-server direction, offline/local embeddings) already have a
 named home in this repo or in a sibling track — those are cited in Routing below, not re-derived here.
@@ -179,8 +179,8 @@ model-free-first).
 
 ## Routing — what this track does not own
 
-Per the existing convention ([`../README.md`](../../concepts/README.md#deferred--adoption-gated-backlog-from-the-beyond-phases-synthesis) /
-[`ai-agent/README.md`](../../concepts/ai-agent/README.md#routing--what-stays-out)), reference these,
+Per the existing convention ([`../README.md`](../../phases/README.md#deferred--adoption-gated-backlog-from-the-beyond-phases-synthesis) /
+[`ai-agent/README.md`](../../phases/02-ai-agent/README.md#routing--what-stays-out)), reference these,
 never duplicate them:
 
 | Stays with                                      | Material                                                                                                                                                                   |

@@ -13,7 +13,7 @@ starburst}`, `tools/browser/interface/browser.py`, `tools/browser/default/*` +
 > `tools/human/interface/human_input_callback.py`, `types/{guardrail,features,act_errors,workflow,
 hooks}.py`, `impl/run_info_compiler.py`, `impl/trajectory/types.py`, `browser_auth/*`,
 > `cli/README.md`, `cli/browser/README.md`, `cli/browser/services/*`, `samples/*`, `scripts/`) ve bu
-> reponun AI yüzeyinin (`docs/concepts/ai-agent/`, `packages/orchestrator|model-gateway|capability-plane|
+> reponun AI yüzeyinin (`docs/phases/02-ai-agent/`, `packages/orchestrator|model-gateway|capability-plane|
 security-policy|agent-runtime|browser-tools|web-tools|tool-executor|local-inference|model-catalog|
 mcp-client|recipe-compiler|macro-engine|notary|credential-vault|human-input|tasks`,
 > `extensions/ext-agent`, `docs/adr/*`) aynı oturumda okunmasından çıkarıldı.
@@ -21,11 +21,11 @@ mcp-client|recipe-compiler|macro-engine|notary|credential-vault|human-input|task
 > **Tarih.** 2026-09-01.
 >
 > **Dil notu.** Bu belge, sahibe sunulduğu haliyle Türkçe tutulmuştur
-> (`docs/concepts/tracks/README.md`'deki "orijinal dilinde tutulur" kaydıyla aynı gerekçe). Proje eserleri
+> (`phases/tracks/README.md`'deki "orijinal dilinde tutulur" kaydıyla aynı gerekçe). Proje eserleri
 > İngilizce-öncedir; bu, yazıldığı haliyle korunan bir kayıttır.
 >
 > **İlgili:** [`docs/others/tepegoz-vs-webbrain.md`](tepegoz-vs-webbrain.md) — aynı şablonun daha önce
-> uygulandığı karşılaştırma; varsa `docs/concepts/tracks/nova-act-agent-parity.md`.
+> uygulandığı karşılaştırma; varsa `phases/tracks/nova-act-agent-parity.md`.
 >
 > **Kategori uyarısı — açık SDK / kapalı hizmet ayrımı.** Nova Act _bir tarayıcı ajanıdır_, yani
 > Tepegöz'ün ajanıyla doğrudan aynı işi yapar; bu yüzden kıyas büyük ölçüde head-to-head'dir. **Ama**

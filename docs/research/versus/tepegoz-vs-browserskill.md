@@ -10,7 +10,7 @@
 > `crates/bsk-protocol/schema/**`, `apps/extension/src/tools/{dispatcher,evaluate,human-loop,tabs,
 borrow-confirmation}.ts`, `apps/extension/src/session-manager/**`, `packages/vom/**`,
 > `packages/dsh-plugin-browserskill/{src/tools.ts,README.md,skill/SKILL.md}`, `packages/i18n/src/locales/**`,
-> `evals/browser/README.md`) ve bu reponun AI yüzeyinin (`docs/concepts/ai-agent/`,
+> `evals/browser/README.md`) ve bu reponun AI yüzeyinin (`docs/phases/02-ai-agent/`,
 > `packages/orchestrator|model-gateway|capability-plane|security-policy|agent-runtime|browser-tools|
 web-tools|tool-executor|local-inference|model-catalog|mcp-client|recipe-compiler|macro-engine|notary|
 credential-vault|human-input|agent-eval`, `extensions/ext-agent`, `docs/adr/*`) aynı oturumda
@@ -18,13 +18,13 @@ credential-vault|human-input|agent-eval`, `extensions/ext-agent`, `docs/adr/*`) 
 >
 > **Tarih.** 2026-09-01.
 >
-> **Dil notu.** Bu belge, sahibe sunulduğu haliyle Türkçe tutulmuştur (`docs/concepts/tracks/README.md`'deki
+> **Dil notu.** Bu belge, sahibe sunulduğu haliyle Türkçe tutulmuştur (`phases/tracks/README.md`'deki
 > "orijinal dilinde tutulur" kaydıyla aynı gerekçe). Proje eserleri İngilizce-öncedir; bu, yazıldığı
 > haliyle korunan bir kayıttır.
 >
 > **İlgili:** [`prompts/rival-agent-parity-track.md`](../../../prompts/rival-agent-parity-track.md) — bu
 > karşılaştırmayı fazlara/ADR'lere yönlendiren parity track'i üreten prompt; kardeş örnek
-> [`docs/concepts/tracks/webbrain-agent-parity.md`](../parities/webbrain-agent-parity.md). BrowserSkill
+> [`phases/tracks/webbrain-agent-parity.md`](../parities/webbrain-agent-parity.md). BrowserSkill
 > için ayrı bir parity track'i **henüz yok**.
 >
 > **Kategori uyarısı.** Bunlar **farklı ürün kategorileri**. BrowserSkill bir _tarayıcı ajanı değil_:
@@ -49,7 +49,7 @@ credential-vault|human-input|agent-eval`, `extensions/ext-agent`, `docs/adr/*`) 
 |             | BrowserSkill                                                                                                                                                                               | Tepegöz                                                                                                                                             |
 | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Ne          | `bsk` Rust CLI + yerel daemon (loopback WS) + MV3 Chromium/Edge **eklentisi**; harness ile bir **SKILL.md** ve shell çağrısı üzerinden konuşur; DeepSeek Harness için ayrıca native plugin | Tam **Electron tarayıcı**; ajan (Agent Console / "Do modu") alt sistemlerden biri                                                                   |
-| Olgunluk    | **Yayında** — Chrome Web Store + Edge Add-ons, `install.sh`/`install.ps1`, oto-güncelleme; ama erken (`v0.1.11`, 4-harfli session id "v0.1'de", Firefox "planlı")                          | **1.0 öncesi**; `docs/concepts/ai-agent` S0–S12 fazlarının **hepsi 🟠 measurement-owed**, hiçbiri ✅ değil, sahip notu: _"hâlâ istediğim gibi çalışmıyor"_ |
+| Olgunluk    | **Yayında** — Chrome Web Store + Edge Add-ons, `install.sh`/`install.ps1`, oto-güncelleme; ama erken (`v0.1.11`, 4-harfli session id "v0.1'de", Firefox "planlı")                          | **1.0 öncesi**; `docs/phases/02-ai-agent` S0–S12 fazlarının **hepsi 🟠 measurement-owed**, hiçbiri ✅ değil, sahip notu: _"hâlâ istediğim gibi çalışmıyor"_ |
 | Kod         | Rust workspace (2 crate: `bsk-cli`, `bsk-protocol`) + pnpm workspace (WXT/MV3 eklenti, `@browser-skill/vom`, `ui`, `i18n`, dsh-plugin); şema Rust'ta, TS ayna                              | Strict TS, pnpm + turbo monorepo, ~70 `@tepegoz/*` paket, ADR güdümlü, zod `safeParse` her sınırda                                                  |
 | Felsefe     | "AI ajanlarının işini bölmeden senin tarayıcını kullanması"; görünür otomasyon (ayrı **Agent Window**), açık sandbox sınırları, harness-bağımsızlık, kilit-yok                             | "Security-by-design, local-first"; model-öncesi deterministik çekirdek + kriptografik hesap verebilirlik + determinism-first                        |
 | Birincil iş | _Dışarıdaki bir ajanı_ kullanıcının oturum-açık tarayıcısına bağlamak: gezinme/okuma/tıklama/form araçları + insan devri + kayıt; **karar ve model çağıran harness'ta**                    | Web'de görev yürütmek: gezinme, form doldurma, çıkarım, çok-adımlı akış; güvenli oturum-açık site otomasyonu — model dahil **uçtan uca kendisinde** |

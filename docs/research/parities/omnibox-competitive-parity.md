@@ -10,7 +10,7 @@
   killed is recorded in [§ Explicitly out of scope](#explicitly-out-of-scope) so it is not re-proposed.
 - **Owner decisions owed** (none of these are mine to take):
   1. Does this become a numbered phase, fold into
-     [Phase 2c](../../concepts/product/phases/02c-classic-browser-essentials.md), or stay a track?
+     [Phase 2c](../../phases/01-product/02c-classic-browser-essentials.md), or stay a track?
   2. **Zero-suggest default** — painting history the instant the box is focused is a new
      shoulder-surfing surface. Proposed default **OFF**.
   3. **Search-result-URL → search-row conversion** — changes what Enter does (re-runs the query on the
@@ -41,7 +41,7 @@ encoding (`?q=Sinem+Yayla&ia=web` vs `?q=Sinem%20Yayla`).
 
 ### Correction to the Phase 1a record
 
-[`README.md`](../../concepts/product/phases/01a-walking-skeleton-mvp/README.md) line 67 marks the
+[`README.md`](../../phases/01-product/01a-walking-skeleton-mvp/README.md) line 67 marks the
 deterministic omnibox `[x]` and claims "suggestion source zod-validated" and "full keyboard nav
 (↑/↓/Enter/Esc) + ARIA combobox/listbox". Measured against the code today, that is overstated on three
 counts:

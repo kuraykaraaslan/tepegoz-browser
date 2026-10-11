@@ -35,7 +35,7 @@ güvenlik kontrolleri olan, AI-native, ekip odaklı bir tarayıcı.
    çalıştırmaz). LibreChat'in Skills'i = `SKILL.md` talimat paketi. WebBrain'in skill'i =
    markdown + HTTP araç manifesti. **Dört ürün, aynı isim, dört farklı yetki seviyesi** —
    en dardan (Tepegöz: sadece prompt) en genişe (WebBrain: HTTP tool çağırabilir).
-   Bu yelpaze `docs/concepts/tracks/webbrain-agent-parity.md` P5'in tam konusu; Dia'nın konumu
+   Bu yelpaze `phases/tracks/webbrain-agent-parity.md` P5'in tam konusu; Dia'nın konumu
    Tepegöz'e en yakın olan.
 
 2. **Omnibox kararı zıt, ve Tepegöz'ünki savunulabilir.** Dia LLM'i omnibox'a koyuyor;
@@ -44,7 +44,7 @@ güvenlik kontrolleri olan, AI-native, ekip odaklı bir tarayıcı.
    the user typed on purpose"_ + _"Hands this text to the agent — leaves the deterministic
    address bar"_. Google Disco'nun "URL çubuğu yok, prompt composer var" uçuna karşı
    Tepegöz'ün duruşu net; Dia ikisinin arasında. Bu, ürün tezinin bilinçli bir farkı —
-   `docs/concepts/tracks/omnibox-competitive-parity.md` bu ayrımı korumalı.
+   `phases/tracks/omnibox-competitive-parity.md` bu ayrımı korumalı.
 
 ## Alınacaklar / Alınmayacaklar
 

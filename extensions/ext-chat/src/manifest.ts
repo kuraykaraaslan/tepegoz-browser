@@ -1,7 +1,7 @@
 import { defineExtension } from '@tepegoz/extension-sdk';
 
 /**
- * The multi-protocol messenger extension manifest (`docs/concepts/extensions/phases/01-ext-chat.md`). Validated
+ * The multi-protocol messenger extension manifest (`docs/phases/03-extensions/01-ext-chat.md`). Validated
  * against the SDK schema at module load. It surfaces as a resizable sidebar ("Chat" — conversation
  * list + active conversation beside the page) and an internal page (`tepegoz://com.tepegoz.chat` —
  * the full messenger: roster, rooms, multi-account).

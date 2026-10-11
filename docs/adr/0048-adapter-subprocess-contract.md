@@ -1,11 +1,11 @@
 # ADR-0048: Adapter-as-subprocess contract — one reusable out-of-process shape for third-party protocol adapters and bridges
 
 - **Status:** Proposed (design only — no implementation; unblocks X-chat.8/X-chat.9, see
-  [`docs/concepts/extensions/phases/01-ext-chat.md`](../concepts/extensions/phases/01-ext-chat.md), and any future `ext-mail`
+  [`docs/phases/03-extensions/01-ext-chat.md`](../phases/03-extensions/01-ext-chat.md), and any future `ext-mail`
   third-party provider)
 - **Date:** 2026-09-12
 - **Refines:** [ADR-0018](0018-mcp-client.md) (subprocess isolation + stdio transport — the starting
-  point named in [`docs/concepts/extensions/README.md`](../concepts/extensions/README.md#shared-prerequisite-work-blocks-both-docs))
+  point named in [`docs/phases/03-extensions/README.md`](../phases/03-extensions/README.md#shared-prerequisite-work-blocks-both-docs))
   · [ADR-0021](0021-agent-controllable-extensions.md) (the injected-host capability-provider pattern
   this seam plugs into)
 - **Generalizes:** [ADR-0047](0047-chat-protocol-adapter-and-bridge-trust-model.md) §4 "Bridge
@@ -16,7 +16,7 @@
 - **Relates to:** [ADR-0011](0011-vpn-network-privacy.md) (egress binding / kill switch) ·
   [ADR-0039](0039-user-granted-sensitive-capabilities.md) (per-use grants) ·
   [ADR-0045](0045-multi-profile-isolation.md) (per-profile isolation) · the **`background-connection`
-  supervisor** shared prerequisite in `docs/concepts/extensions/README.md` (related, deliberately **not**
+  supervisor** shared prerequisite in `docs/phases/03-extensions/README.md` (related, deliberately **not**
   folded into this ADR — see Non-goals)
 - **Extended by:** [ADR-0049](0049-bridge-subprocess-os-sandboxing.md) (2026-09-13) — names the actual
   no-elevation enforcement mechanism for §2's filesystem/egress guarantees, which this ADR states as
@@ -24,7 +24,7 @@
 
 ## Context
 
-Two extension roadmaps in `docs/concepts/extensions/` each need to run code we do not control, against a
+Two extension roadmaps in `docs/phases/03-extensions/` each need to run code we do not control, against a
 network we do not run, on the user's behalf:
 
 - `ext-chat`'s X-chat.9 bridges (Telegram, Slack, Discord, and — caveated — WhatsApp) are not
@@ -43,7 +43,7 @@ ADR-0047 §4 already wrote down a concrete, correct answer for chat specifically
 
 Left as chat-only prose, a second consumer (a future mail bridge, or a third extension years from now)
 either re-derives the same reasoning from scratch or copies ADR-0047's wording without inheriting its
-reasoning — exactly the drift `docs/concepts/extensions/README.md`'s "shared contract" section exists to
+reasoning — exactly the drift `docs/phases/03-extensions/README.md`'s "shared contract" section exists to
 prevent for the in-process half of this same problem. This ADR is that document for the
 **out-of-process** half: it takes ADR-0047 §4's answer, strips the `ChatAdapter`-specific nouns, and
 states the reusable shape so `ext-mail` (or anyone) can build against a contract instead of a chat
@@ -94,7 +94,7 @@ forwarding alone):
 
 Plus the two guarantees ADR-0018 already established and this ADR does not relitigate: **exact-pinned
 dependencies** (no floating subprocess dependency versions) and **a signed package**
-([Phase 3](../concepts/product/phases/03-backend-cloud-extensions.md) supply-chain gate) — bridges are
+([Phase 3](../phases/01-product/03-backend-cloud-extensions.md) supply-chain gate) — bridges are
 never bundled with the app itself, matching ADR-0047 §8's WhatsApp caveat pattern generalized to every
 bridge, not just that one.
 
@@ -125,7 +125,7 @@ shared, not duplicated per extension the way ADR-0047 §4's prose currently is.
 - **No bridge is implemented here.** This is a design document; `@tepegoz/ext-chat` X-chat.8 (the
   actual bridge framework) and X-chat.9 (the first bridges) remain separate, later work — this ADR
   exists specifically so that work has a contract to build against, not to shortcut it.
-- **The `background-connection` supervisor** (`docs/concepts/extensions/README.md`'s other shared
+- **The `background-connection` supervisor** (`docs/phases/03-extensions/README.md`'s other shared
   prerequisite — keeping an account connected with every surface closed) is a **related but distinct**
   problem: it is about extension _lifecycle_ relative to renderer surfaces, applies equally to
   in-process and subprocess adapters, and already has bespoke chat-only wiring
@@ -143,7 +143,7 @@ shared, not duplicated per extension the way ADR-0047 §4's prose currently is.
   chat-specific wording.
 - ADR-0047 stays the correct, concrete chat instance of this contract; nothing in it needs to change —
   this ADR sits alongside it, generalizing rather than superseding.
-- The `docs/concepts/extensions/README.md` "Adapter-as-subprocess contract" shared-prerequisite bullet points
+- The `docs/phases/03-extensions/README.md` "Adapter-as-subprocess contract" shared-prerequisite bullet points
   here as its resolution; the bullet itself should be checked off once this file lands, with the
   actual subprocess package/framework remaining tracked as X-chat.8's own deliverable.
 - **Residual risk**, generalized from ADR-0047 §4/Consequences: a compromised or malicious bridge

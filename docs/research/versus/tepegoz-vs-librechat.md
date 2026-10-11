@@ -12,21 +12,21 @@ artifacts,memory,protection,admin,acl,auth,crypto,langfuse,stream,skills}`, `pac
 src/{schemas.ts,config.ts,permissions.ts,providers.ts,actions.ts}`, `packages/data-schemas/src/
 {crypto,methods/tx.ts,methods/spendTokens.ts,schema/*}`, `api/server/{controllers/agents,services,
 middleware,strategies}`, `api/app/clients/tools/manifest.json`, `client/src/locales/*`, `e2e/`) ve bu
-> reponun AI yüzeyinin (`docs/concepts/ai-agent/`, `packages/orchestrator|model-gateway|capability-plane|
+> reponun AI yüzeyinin (`docs/phases/02-ai-agent/`, `packages/orchestrator|model-gateway|capability-plane|
 security-policy|agent-runtime|browser-tools|web-tools|tool-executor|local-inference|model-catalog|
 mcp-client|recipe-compiler|macro-engine|notary|credential-vault|human-input|tasks|agent-eval|
 persistence|i18n`, `extensions/ext-agent`, `docs/adr/*`) aynı oturumda okunmasından çıkarıldı.
 >
 > **Tarih.** 2026-09-01.
 >
-> **Dil notu.** Bu belge, sahibe sunulduğu haliyle Türkçe tutulmuştur (`docs/concepts/tracks/README.md`'deki
+> **Dil notu.** Bu belge, sahibe sunulduğu haliyle Türkçe tutulmuştur (`phases/tracks/README.md`'deki
 > "orijinal dilinde tutulur" kaydıyla aynı gerekçe). Proje eserleri İngilizce-öncedir; bu, yazıldığı
 > haliyle korunan bir kayıttır.
 >
 > **İlgili:** [`docs/others/librechat-agent-ui-learnings.md`](librechat-agent-ui-learnings.md) — aynı
 > depodan **yalnızca ajan sohbet arayüzü** açısından çıkarılmış, `ext-agent` panelini iyileştirmeye
 > yönelik ayrı bir belge; bu karşılaştırma onu tekrar etmez, tamamlar. Ayrıca
-> [`docs/concepts/tracks/webbrain-agent-parity.md`](../parities/webbrain-agent-parity.md) — sağlayıcı
+> [`phases/tracks/webbrain-agent-parity.md`](../parities/webbrain-agent-parity.md) — sağlayıcı
 > kataloğu (P1) gibi bazı bulguların zaten iz sürdüğü track.
 >
 > **Kategori uyarısı.** Bunlar **farklı ürün kategorileri**. LibreChat bir _tarayıcı ajanı değil_:
@@ -49,7 +49,7 @@ persistence|i18n`, `extensions/ext-agent`, `docs/adr/*`) aynı oturumda okunmas�
 |             | LibreChat                                                                                                                                                                                                   | Tepegöz                                                                                                                                             |
 | ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Ne          | Kendi sunucunda barındırılan **çok-kullanıcılı AI sohbet platformu** + no-code ajan çerçevesi; web uygulaması                                                                                               | Tam **Electron tarayıcı**; ajan (Agent Console / "Do modu") alt sistemlerden biri                                                                   |
-| Olgunluk    | **Yayında** — `v0.8.8-rc1`, MIT, Docker/Helm/Railway/Zeabur/Sealos dağıtımları, ~4.300 TS/JS dosya, 41 dil, Discord + YouTube + ayrı dokümantasyon sitesi, canlı katkıcı topluluğu                          | **1.0 öncesi**; `docs/concepts/ai-agent` S0–S12 fazlarının **hepsi 🟠 measurement-owed**, hiçbiri ✅ değil, sahip notu: _"hâlâ istediğim gibi çalışmıyor"_ |
+| Olgunluk    | **Yayında** — `v0.8.8-rc1`, MIT, Docker/Helm/Railway/Zeabur/Sealos dağıtımları, ~4.300 TS/JS dosya, 41 dil, Discord + YouTube + ayrı dokümantasyon sitesi, canlı katkıcı topluluğu                          | **1.0 öncesi**; `docs/phases/02-ai-agent` S0–S12 fazlarının **hepsi 🟠 measurement-owed**, hiçbiri ✅ değil, sahip notu: _"hâlâ istediğim gibi çalışmıyor"_ |
 | Kod         | TS + eski JS `api/` katmanı, npm workspaces + Turborepo, 4 paket (`api`, `client`, `data-provider`, `data-schemas`); ajan döngüsü **harici npm paketi** `@librechat/agents ^3.7.11` (LangGraph sarmalayıcı) | Strict TS, pnpm + turbo monorepo, ~71 `@tepegoz/*` paket, ADR güdümlü, zod `safeParse` her güven sınırında; **ajan döngüsü kendi kodu**             |
 | Felsefe     | "Tüm sağlayıcıları tek, gizlilik-odaklı arayüzde birleştir; AI altyapını kendin kontrol et"; yapılandırma-önce (`librechat.yaml` + admin paneli), operatör-güdümlü                                          | "Security-by-design, local-first"; model-öncesi deterministik çekirdek + kriptografik hesap verebilirlik + determinism-first                        |
 | Birincil iş | İnsanların (ekiplerin) model/ajanlarla **sohbet etmesi**: dosya yükle, kod çalıştır, RAG sorgula, araç çağır, konuşmayı paylaş; kurumsal kimlik + kota + denetim                                            | Web'de **görev yürütmek**: gezinme, form doldurma, çıkarım, çok-adımlı akış; güvenli oturum-açık site otomasyonu                                    |

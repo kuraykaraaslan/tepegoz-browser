@@ -37,7 +37,7 @@ eksikliği başlı başına bir sinyal.
   yazılmalı; ve ajan-sürüşlü bir sekmenin insan-sürüşlü bir sekmeyle **aynı gizlilik duruşunu iddia
   edip edemeyeceği** kararı verilmeli. Bu proje o ambiguity'yi bırakma hakkına sahip değil.
 - **Görünürlük kapılı gerçekçilik.** Ekran dışı bir koşuda insan-pacing'i düşürmek maliyeti azaltıyor
-  ama koşuyu marjinal olarak daha makine-benzeri yapıyor — [S7](../concepts/ai-agent/phases/07-speed.md)
+  ama koşuyu marjinal olarak daha makine-benzeri yapıyor — [S7](../phases/02-ai-agent/07-speed.md)
   PR3 bu ödünleşimi ölçtü ve açıkça kaydetti.
 
 **Alınmayacak:**

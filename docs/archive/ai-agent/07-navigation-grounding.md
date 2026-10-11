@@ -1,6 +1,6 @@
 # Phase AI-7 — Navigation Grounding (evidence-gated URLs, visible-nav-first, no escape-hatch)
 
-**Status:** 🟡 In progress — **code landed + unit-tested; on-harness live measurement owed.** · **Depends on:** [AI-2](02-perception-buildtree.md), [AI-3](03-agent-loop.md), [AI-4](04-action-vocabulary.md) · **Track:** [`docs/concepts/ai`](README.md)
+**Status:** 🟡 In progress — **code landed + unit-tested; on-harness live measurement owed.** · **Depends on:** [AI-2](02-perception-buildtree.md), [AI-3](03-agent-loop.md), [AI-4](04-action-vocabulary.md) · **Track:** [`phases/ai`](README.md)
 
 > **Landed 2026-07-23 (PR1, code + unit tests; provider-agnostic).** The pure capability + the wiring + the
 > measurement are in; the honest **live-model on-harness numbers are still owed** (per the anti-vanity
@@ -72,7 +72,7 @@ completion validator, and neither fires on a _search_, because a search is a leg
 a `finish`. So both escapes must pass through **one** gate: _is the visible on-page route exhausted?_
 
 This is **empirically confirmed, not hypothetical**: the first live-model run
-([`2026-07-eval-results.md`](../../concepts/ai-agent/audits/2026-07-eval-results.md), finding #4) names the escape hatch _the biggest
+([`2026-07-ai-agent-eval-results.md`](../../audits/2026-07-ai-agent-eval-results.md), finding #4) names the escape hatch _the biggest
 remaining competence anti-pattern_ — on hard multi-step tasks the agent navigated to a guessed `target.com`
 or web-searched "how to dismiss a cookie banner" instead of using the on-page widget, across
 `blog_behind_menu`, `shadow_dom_nav`, `div_button_products`, and the new `cookie-consent`/`login-form`/

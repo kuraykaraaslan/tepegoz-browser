@@ -149,7 +149,7 @@ export const ContentVisibleSchema = z.boolean();
  *  query is rejected here rather than handed to Chromium, which throws on it.
  *
  *  `wholeWord` does NOT reach `webContents.findInPage` — Electron dropped the `wordStart` option it
- *  would have mapped to (see `docs/concepts/product/phases/02c-classic-browser-essentials.md`, "Match whole
+ *  would have mapped to (see `docs/phases/01-product/02c-classic-browser-essentials.md`, "Match whole
  *  word"). When true, main runs a separate DOM-level matcher instead of the native path; the flag rides
  *  on the same request/result shape as `matchCase` rather than a parallel schema so the renderer keeps
  *  one code path for both modes. */
