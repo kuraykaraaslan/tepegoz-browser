@@ -59,7 +59,7 @@ bulgu.
    round-trip ediyor (`ipc-agent-*`, pending-promise map, run-scoped confirm handler),
    renderer yalnızca gösterip cevaplıyor, ve **renderer güvenilmez** (ADR-0013). Ayrıca
    "confirm handler yoksa = deny" fail-safe'i var. Bu belge, o tasarım kararının bedelini
-   ödemeyen bir ürünün ne yaşadığının kanıtı olarak `docs/threat-model.md`'ye referans
+   ödemeyen bir ürünün ne yaşadığının kanıtı olarak `docs/reference/threat-model.md`'ye referans
    verilebilir.
 2. **Origin allowlist'i kalıpla yazma.** `*.claude.ai` kalıbı ShadowPrompt'un kökü.
    Tepegöz'ün IPC'si **exact-host allow-list** kullanıyor (ADR-0013'ün IPC disiplin
@@ -137,15 +137,15 @@ görüntülerinin yarattığı gizlilik riski: oturum-açık ekranın kaydı.
 ### Tepegöz'e taşınanlar
 
 - **Sağlık paneli** (sağlayıcı anahtarı, model erişilebilirliği, MCP sunucuları, yerel model) →
-  [S8](../../phases/ai-agent/phase-s8-assistant-ux.md) PR7. Doğrudan "kurulu ama çalışmıyor" kümesinden.
+  [S8](../concepts/ai-agent/phases/08-assistant-ux.md) PR7. Doğrudan "kurulu ama çalışmıyor" kümesinden.
 - **İzin hata-ayıklama görünümü** → S8 PR7. Kaba onay modelinin cevabı onayı _kaldırmak_ değil,
   **gerekçesini göstermek** ve kapsamlı/hatırlanan grant vermek — burada `plan-grant-scope` ve
   remembered grants zaten bu.
-- **Bağlam tahliyesi (screenshot eviction)** → [S7](../../phases/ai-agent/phase-s7-speed.md) PR6; kural
+- **Bağlam tahliyesi (screenshot eviction)** → [S7](../concepts/ai-agent/phases/07-speed.md) PR6; kural
   genel, ekran görüntüsü akut vakası. **S10 görü sevk edilmeden önce** yazılması gereken şey.
-- **Görsel kazımadan yapılandırılmış otomasyona (WebMCP)** → [S2](../../phases/ai-agent/phase-s2-perception-v2.md)
+- **Görsel kazımadan yapılandırılmış otomasyona (WebMCP)** → [S2](../concepts/ai-agent/phases/02-perception-v2.md)
   PR6'nın spike'ı doğrudan bu öneriden; cevabı bilinçli olarak "araştır, benimseme".
 - **Odak çalmama / arka planda park** → burada zaten sevk edildi (parked-off-screen).
-- **Çoklu profil hedefleme** → [multi-profile-isolation](../tracks/multi-profile-isolation.md) track'i.
+- **Çoklu profil hedefleme** → [multi-profile-isolation](tracks/multi-profile-isolation.md) track'i.
 - **Türkçe eksikliği** her iki çalışmada da destek-maliyeti ve benimseme sorunu olarak listeleniyor;
   burada bir kapı (ADR-0016 en+tr parity).

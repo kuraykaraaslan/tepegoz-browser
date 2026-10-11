@@ -7,7 +7,7 @@ tools. Electron-free: every concrete browser operation is injected via the `Brow
 which the app implements in `main/agent/browser-host.ts` over `TabManager`. Perception (building the
 DOM/accessibility-tree snapshot the model sees, tiered DOM-first with vision as a fallback per
 ADR-0008) is pure and lives alongside the tool registrations. Extracted from `apps/desktop` per
-`docs/package-map.md`.
+`docs/reference/package-map.md`.
 
 > **Domain split (ADR-0021/0024 update).** These are browser-domain tools, registered as always-on
 > `source: 'builtin'` capabilities (the `@tepegoz/file-operations` pattern) — no longer scoped to the

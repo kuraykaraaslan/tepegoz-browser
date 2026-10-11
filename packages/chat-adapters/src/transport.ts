@@ -1,7 +1,7 @@
 /**
  * The injected transport port. `@tepegoz/chat-adapters` is Electron- and Node-free; the desktop
  * `ChatService` supplies a concrete `ChatTransport` whose streams are bound to the active profile's
- * network egress ([Phase 5](../../../phases/product/phase-5-vpn-network-privacy.md)) — a bridge or a
+ * network egress ([Phase 5](../../../docs/concepts/product/phases/05-vpn-network-privacy.md)) — a bridge or a
  * native adapter can never open a socket that dodges the kill-switch.
  */
 

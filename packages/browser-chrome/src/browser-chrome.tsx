@@ -166,7 +166,7 @@ export interface BrowserChromeProps {
  * tab strip + caption controls) and the navigation bar (`@tepegoz/nav-toolbar` = back/forward/reload +
  * omnibox + actions slot + menu). Composes the extracted chrome packages; every bridge action is
  * injected, so it has no dependency on the Electron bridge. Extracted from `apps/desktop` per
- * docs/package-map.md.
+ * docs/reference/package-map.md.
  */
 export function BrowserChrome({
   t,

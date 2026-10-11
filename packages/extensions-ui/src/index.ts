@@ -1,6 +1,6 @@
 /**
  * `@tepegoz/extensions-ui` — the extensions manager shell (searchable card grid + enable/disable
- * toggles). Items and copy are host-supplied. Extracted from `apps/desktop` per docs/package-map.md.
+ * toggles). Items and copy are host-supplied. Extracted from `apps/desktop` per docs/reference/package-map.md.
  */
 export {
   ExtensionsGrid,

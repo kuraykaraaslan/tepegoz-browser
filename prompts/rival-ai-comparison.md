@@ -2,11 +2,11 @@
 
 Run this **once per rival** (fresh session or a subagent). It reads the rival's checkout
 under `.junk/<rival>/` + Tepegöz's AI surface, and produces a
-`docs/versus/tepegoz-vs-<rival>.md` deep comparison — same structure as the already-written
-`docs/versus/tepegoz-vs-webbrain.md`.
+`docs/research/versus/tepegoz-vs-<rival>.md` deep comparison — same structure as the already-written
+`docs/research/versus/tepegoz-vs-webbrain.md`.
 
 **Run this BEFORE** [`rival-agent-parity-track.md`](rival-agent-parity-track.md) — that
-prompt consumes the `docs/versus/tepegoz-vs-<rival>.md` this one produces.
+prompt consumes the `docs/research/versus/tepegoz-vs-<rival>.md` this one produces.
 
 ## Placeholders — fill before running
 
@@ -19,7 +19,7 @@ prompt consumes the `docs/versus/tepegoz-vs-<rival>.md` this one produces.
 ## Preconditions
 
 - `.junk/{RAKİP}/` is checked out (`git clone --depth 1 <repo-url> .junk/{RAKİP}`).
-- `docs/versus/tepegoz-vs-webbrain.md` exists as the structural reference.
+- `docs/research/versus/tepegoz-vs-webbrain.md` exists as the structural reference.
 - For `webbrain` the output already exists — use that slug only to sanity-check the template.
 
 ---
@@ -31,9 +31,9 @@ GÖREV: `.junk/{RAKİP}` deposu ({RAKİP_ADI}) ile bu reponun (tepegoz-browser)
 AI/ajan fonksiyonlarını DERİNLEMESİNE karşılaştıran bir belge yaz. İş iş kimin neyi
 daha iyi yaptığını tabloya dök.
 
-ÇIKTI: TEK bir dosya  ->  `docs/versus/tepegoz-vs-{RAKİP}.md`
+ÇIKTI: TEK bir dosya  ->  `docs/research/versus/tepegoz-vs-{RAKİP}.md`
 Repoda BAŞKA HİÇBİR ŞEYE dokunma. Branch açma, commit etme.
-Referans şablon: `docs/versus/tepegoz-vs-webbrain.md` — yapısını ve DİLİNİ (Türkçe)
+Referans şablon: `docs/research/versus/tepegoz-vs-webbrain.md` — yapısını ve DİLİNİ (Türkçe)
 birebir taklit et. Marketing dili yok; iki tarafı da abartma. Tepegöz'ün ajanının
 HENÜZ kanıtlanmamış olduğunu dürüstçe yansıt.
 
@@ -69,14 +69,14 @@ context yönetimi, prompt mimarisi, checkpoint) derinleş; kategoriye özgü ola
 2) TEPEGÖZ TARAFI — hazır bilgi (şüpheye düşersen paketlerden / ADR'den doğrula)
 ═══════════════════════════════════════════════════════════════════════════════
 Tam Electron tarayıcı, strict TS, ~70 `@tepegoz/*` paket monorepo, ADR güdümlü, 1.0
-öncesi. AI roadmap `phases/ai-agent/` (S0–S12, HEPSİ 🟠 measurement-owed, hiçbiri
+öncesi. AI roadmap `docs/concepts/ai-agent/` (S0–S12, HEPSİ 🟠 measurement-owed, hiçbiri
 ✅; sahip notu "hâlâ istediğim gibi çalışmıyor"). Ajan "gerçekten bağlanmış iskelet,
 ince ölçülmüş". Vision/credential-broker/memory ATIL sevk; aynı anda TEK run; site
 adaptörü YOK; 8 sağlayıcı (bazıları stub); çevrimdışı RAG YOK.
 
 **Vision'ın neden atıl olduğunu DOĞRU yaz — ve burada roadmap ile kod ÇELİŞİYOR.**
-`phases/ai-agent/` (S10, README S10 satırı, eval-results.md) ve birkaç
-`docs/parities/*-agent-parity.md` dosyası, yeteneğin `TEPEGOZ_VISION` bayrağı arkasında
+`docs/concepts/ai-agent/` (S10, README S10 satırı, eval-results.md) ve birkaç
+`docs/research/parities/*-agent-parity.md` dosyası, yeteneğin `TEPEGOZ_VISION` bayrağı arkasında
 (default off) atıl sevk edildiğini YAZIYORDU — hepsi 2026-09-02'de düzeltildi.
 **Kodda böyle bir bayrak YOK** — `TEPEGOZ_VISION` `packages/` ve `apps/` altında hiç
 geçmiyor (kaynakta 27 `TEPEGOZ_*` ortam değişkeni var, bu onlardan biri değil).
@@ -177,13 +177,13 @@ parity, determinism-first, honest measurement / anti-debt. "Never" listesi: her-
 screenshot vision YOK, python sidecar / ikinci chromium / satıcı ajan SDK'ları YOK,
 **browser-use/nanobrowser'ı benimseme YOK ("tekniği çal, asla adapte etme")**,
 renderer-güvenilir güvenlik YOK, ağırlıkları repoya koyma YOK. Not: Tepegöz'ün v1 AI
-roadmap'i (AI-1…AI-8) resmen "the browser-use/nanobrowser port" idi — `phases/
+roadmap'i (AI-1…AI-8) resmen "the browser-use/nanobrowser port" idi — `docs/concepts/
 ai-agent/history.md` birebir dosya-eşleme tablosu verir. Rakip bu aileyle
 akrabaysa bunu belirt.
 
 ═══════════════════════════════════════════════════════════════════════════════
-3) ÜRETİLECEK DOSYA — `docs/versus/tepegoz-vs-{RAKİP}.md` (Türkçe)
-   `docs/versus/tepegoz-vs-webbrain.md` yapısını birebir izle:
+3) ÜRETİLECEK DOSYA — `docs/research/versus/tepegoz-vs-{RAKİP}.md` (Türkçe)
+   `docs/research/versus/tepegoz-vs-webbrain.md` yapısını birebir izle:
 ═══════════════════════════════════════════════════════════════════════════════
 1. `# Tepegöz vs {RAKİP_ADI} — AI/ajan fonksiyonları karşılaştırması`
 2. Üstte alıntı bloğu (`>` ile):
@@ -191,9 +191,9 @@ akrabaysa bunu belirt.
    - **Yöntem.** — okuduğun somut dosyalar (rakip + Tepegöz tarafı).
    - **Tarih.** {TARİH}.
    - **Dil notu.** — sahibe sunulduğu haliyle Türkçe tutuluyor
-     (`docs/parities/README.md`'deki "orijinal dilinde tutulur" gerekçesiyle aynı).
-   - **İlgili.** — varsa `docs/parities/{RAKİP}-agent-parity.md` ve
-     `docs/parities/webbrain-agent-parity.md`.
+     (`docs/research/parities/README.md`'deki "orijinal dilinde tutulur" gerekçesiyle aynı).
+   - **İlgili.** — varsa `docs/research/parities/{RAKİP}-agent-parity.md` ve
+     `docs/research/parities/webbrain-agent-parity.md`.
    - (Farklı kategoriyse) **Kategori uyarısı.** — ne tür bir ürün, örtüşen eksende kıyas.
 3. `## Önce çerçeve: bu asimetrik bir karşılaştırma` — küçük tablo:
    satırlar `Ne` / `Olgunluk` / `Kod` / `Felsefe` (+ farklı kategoriyse `Birincil iş`),

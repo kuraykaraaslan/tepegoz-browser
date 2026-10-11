@@ -8,7 +8,7 @@ import { ExtensionsPage } from './ExtensionsPage';
 
 /**
  * Desktop host for `tepegoz://extensions` loaded as a real page (Faz 3 of
- * phases/tracks/protocol-tepegoz-pages.md) — mirrors `SettingsPageSurface.tsx`'s pattern.
+ * docs/concepts/tracks/protocol-tepegoz-pages.md) — mirrors `SettingsPageSurface.tsx`'s pattern.
  *
  * One behavior gap versus the old chrome-embedded overlay: disabling an extension there ALSO closed
  * that extension's open sidebar panel/popup in the SAME document (`App.tsx#onToggleExtension`). This is

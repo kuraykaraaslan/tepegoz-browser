@@ -99,7 +99,7 @@ export function scheduleDeferredInit(safeMode: boolean): void {
     if (!safeMode) McpService.start();
     // The messenger extension (`com.tepegoz.chat`): connect its enabled accounts in the background.
     // Registered as a `BackgroundConnectionService` provider (the shared prerequisite
-    // `phases/extensions/README.md` owed) rather than calling `ChatMessenger` directly — a future
+    // `docs/concepts/extensions/README.md` owed) rather than calling `ChatMessenger` directly — a future
     // `ext-mail` provider gets the same init/stop/reconcile/notifyEgressChange fan-out for free
     // instead of duplicating these four call sites. `init()` builds the service unconditionally;
     // `start()` inside it is what checks the extension preference, so a later enable-toggle

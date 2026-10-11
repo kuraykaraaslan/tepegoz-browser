@@ -2,7 +2,7 @@ import type { Preferences } from '@tepegoz/desktop-ipc';
 
 /**
  * Per-key metadata for the **Developer settings** surface ([ADR-0041](../../../docs/adr/0041-developer-settings-surface.md),
- * track `docs/tracks/developer-settings-surface.md` — Tier A).
+ * track `docs/research/tracks/developer-settings-surface.md` — Tier A).
  *
  * The raw editor lists every top-level `Preferences` key flat, with no sense of which knobs are safe to
  * touch, which need a relaunch, and which are internal bookkeeping that a human should never hand-edit.

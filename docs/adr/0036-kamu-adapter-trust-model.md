@@ -3,7 +3,7 @@
 - **Status:** Accepted (the classification decision only — see Consequences)
 - **Date:** 2026-08-20
 - **Refines:** [ADR-0006](0006-policy-kernel-hitl.md) (sensitive-site lockout — deliberately NOT modified)
-- **Phase:** [Phase 11 — Regional Trust Pack](../../phases/product/phase-11-regional-trust-kamu.md), L6/L8/L3 (Kamu Safe Adapter Pack)
+- **Phase:** [Phase 11 — Regional Trust Pack](../concepts/product/phases/11-regional-trust-kamu.md), L6/L8/L3 (Kamu Safe Adapter Pack)
 
 ## Numbering note
 

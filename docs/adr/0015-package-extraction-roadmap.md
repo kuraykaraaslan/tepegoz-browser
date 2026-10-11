@@ -17,7 +17,7 @@ can proceed one PR at a time across sessions without re-litigating scope.
 
 - **One desktop app is retained.** `apps/desktop` stays the single application; reusable parts move into
   `packages/*` and the app **consumes** them. We do **not** split into multiple apps.
-- **The seams to extract are catalogued in [`docs/package-map.md`](../package-map.md)** (a living
+- **The seams to extract are catalogued in [`docs/reference/package-map.md`](../reference/package-map.md)** (a living
   tick-list): UI chrome (omnibox, tab-strip, window-controls, nav-toolbar, browser-chrome, settings-ui,
   history-ui, extensions-ui) and main-process subsystems (navigation, credential-vault, preferences,
   json-store, desktop-ipc, browser-tools, tab-engine). That doc also records what **stays in the app**

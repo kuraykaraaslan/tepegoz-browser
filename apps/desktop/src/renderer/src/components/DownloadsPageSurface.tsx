@@ -3,7 +3,7 @@ import { DownloadsPage } from '@tepegoz/downloads-ui';
 import { useSurfaceLocale } from '../app-surface-locale';
 
 /** Desktop host for `tepegoz://downloads` loaded as a real page (Faz 3 of
- *  phases/tracks/protocol-tepegoz-pages.md) — mirrors `SettingsPageSurface.tsx`'s pattern. */
+ *  docs/concepts/tracks/protocol-tepegoz-pages.md) — mirrors `SettingsPageSurface.tsx`'s pattern. */
 export function DownloadsPageSurface() {
   const locale = useSurfaceLocale();
 

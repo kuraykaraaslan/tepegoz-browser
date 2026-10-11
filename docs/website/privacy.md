@@ -73,7 +73,7 @@ run history, preferences, and the encrypted vault.
 - **Nothing in the profile is synced anywhere**, because there is nowhere to sync it to.
 
 **[CLAIM]** The exact locations, what you can export, and what a backup would miss are documented at
-[data and backup](../data-and-backup.md) — including the gaps.
+[data and backup](../reference/data-and-backup.md) — including the gaps.
 
 ---
 

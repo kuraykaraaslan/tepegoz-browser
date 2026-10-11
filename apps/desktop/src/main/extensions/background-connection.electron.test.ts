@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 /**
  * `BackgroundConnectionService` — main-process wiring for the shared `BackgroundConnectionSupervisor`
- * (the "background-connection supervisor" shared prerequisite `phases/extensions/README.md` owed).
+ * (the "background-connection supervisor" shared prerequisite `docs/concepts/extensions/README.md` owed).
  * The supervisor's own fan-out / isolation behavior is unit-tested in `@tepegoz/extension-host`
  * directly; this pins only the wiring: `provide` reaches the real supervisor, `Logger.info` is the
  * log sink, and each of the four lifecycle methods delegates.

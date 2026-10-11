@@ -4,7 +4,7 @@
 - **Date:** 2026-08-19
 - **Refines:** [ADR-0006](0006-policy-kernel-hitl.md) (sensitive-site lockout) ·
   **complements** [ADR-0007](0007-capability-plane-mcp.md) (single tool plane)
-- **Phase:** [2b — Daily-Driver Browser UX](../../phases/product/phase-2b-daily-driver-ux.md)
+- **Phase:** [2b — Daily-Driver Browser UX](../concepts/product/phases/02b-daily-driver-ux.md)
 
 ## Context
 

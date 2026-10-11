@@ -12,7 +12,7 @@
   isolation it deferred to "a separate, later ADR") · [ADR-0012](0012-browser-tab-model.md) ("profiles
   are a later phase") · **relates to** the Phase 5 network layer's `persist:tepegoz-web--conn-<id>`
   tunnel-partition convention, which now composes on the profile-scoped base
-- **Track:** [`docs/tracks/multi-profile-isolation.md`](../tracks/multi-profile-isolation.md)
+- **Track:** [`docs/research/tracks/multi-profile-isolation.md`](../research/tracks/multi-profile-isolation.md)
 
 ## Context
 

@@ -4,7 +4,7 @@
  * factory, and pure perception (sanitize/wrap) helpers. The tools register directly into the single
  * `CapabilityRegistry` behind the ToolGateway PEP as always-on `source: 'builtin'` tools. Tab tools live
  * in `@tepegoz/tab-engine`; journal tools in `@tepegoz/journal-tools`. Extracted from `apps/desktop` per
- * docs/package-map.md.
+ * docs/reference/package-map.md.
  */
 export { type BrowserHost, type InterceptedDialog } from './host';
 export { registerBrowserTools } from './browser-tools';

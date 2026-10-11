@@ -5,7 +5,7 @@ The Electron-free **agentic run engine**: user prompt → `ModelRouter` → `Pla
 the browser tool host, the journal reader, the active-tab URL (for Policy Kernel site context), and
 localized handoff copy — is injected via `AgentRunDeps`, so `apps/desktop/src/main/agent/agent-service.ts`
 is now a thin adapter over `runAgent`. The provider is registered from the safeStorage vault key at run
-time; the raw key never leaves the main process. Extracted from `apps/desktop` per `docs/package-map.md`.
+time; the raw key never leaves the main process. Extracted from `apps/desktop` per `docs/reference/package-map.md`.
 
 ## Exports
 

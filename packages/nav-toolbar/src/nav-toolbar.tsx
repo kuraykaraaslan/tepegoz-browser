@@ -101,7 +101,7 @@ export interface NavToolbarProps {
  * `@tepegoz/nav-toolbar` — the browser navigation bar: back / forward / reload, the address bar
  * (`@tepegoz/omnibox`), a host-provided actions slot, and the menu button. All actions are injected,
  * so the package has no dependency on the Electron bridge. Extracted from `apps/desktop` per
- * docs/package-map.md.
+ * docs/reference/package-map.md.
  */
 export function NavToolbar({
   canGoBack,

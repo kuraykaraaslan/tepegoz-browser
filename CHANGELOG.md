@@ -11,7 +11,7 @@ All notable changes to this project are documented here. Format follows
   for the ported `buildDomTree` perception technique, the vendored kui-player bundle, and the Baloo 2
   typeface), `SECURITY.md` (private reporting, scope, safe harbor), `CONTRIBUTING.md`,
   `CODE_OF_CONDUCT.md` (Contributor Covenant 2.1), GitHub issue templates, and
-  `docs/engineering-rules.md` — the in-repo, public statement of the rules code comments cite as
+  `docs/reference/engineering-rules.md` — the in-repo, public statement of the rules code comments cite as
   `internal-ai-rules`.
 - Phase 0 foundation: pnpm + Turborepo monorepo, strict TypeScript, ESLint (flat, type-checked),
   Prettier, dependency-cruiser.

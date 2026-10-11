@@ -1,6 +1,6 @@
 /**
  * Process-wide profile scope for Chromium session-partition names (ADR-0045,
- * `docs/tracks/multi-profile-isolation.md`).
+ * `docs/research/tracks/multi-profile-isolation.md`).
  *
  * Under process-per-profile each profile runs as its own Electron instance over its own `userData`
  * directory, so a partition is ALREADY isolated per profile by the directory it lives in. Baking the

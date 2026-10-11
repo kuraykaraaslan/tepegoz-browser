@@ -14,7 +14,7 @@ Phase 0's DoD asks for this to be **designed**, with the runtime activated befor
 release. That split is not procrastination — two of the five pieces cannot be honestly built yet:
 
 - **Update-signature verification** needs a signing identity, and the ship line
-  ([`phases/README.md`](../../phases/README.md)) permanently defers Windows code-signing to the production
+  ([`docs/concepts/README.md`](../concepts/README.md)) permanently defers Windows code-signing to the production
   gate. Code that claims to verify a signature but has never verified a real one is worse than absent
   code: it reads as a control in review while being untested.
 - **Staged rollout / rollback** needs a published feed with more than one version in it.

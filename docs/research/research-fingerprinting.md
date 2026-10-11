@@ -4,7 +4,7 @@
 > tablosu (efor × kullanıcı etkisi × etkinlik). Ürün araştırması değil, alan araştırması.
 >
 > **Tarih.** Derleme 2026-08-21 · bu formata çevirisi 2026-09-02. **Dil notu.** Türkçe.
-> **Sahibi faz:** [phase-2](../../phases/product/phase-2-adapters-safe-browsing.md) →
+> **Sahibi faz:** [phase-2](../concepts/product/phases/02-adapters-safe-browsing.md) →
 > `#### Fingerprinting protection — component detail and the measurement gate`. Faz 5, IP'yi gizleyen
 > tünelin bu katman olmadan **anlamını yitirdiği** yerde buna bağlanıyor.
 

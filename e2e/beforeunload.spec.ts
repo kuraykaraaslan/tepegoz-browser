@@ -9,7 +9,7 @@ import { pollEvaluate } from './poll-evaluate';
  * The page's own "unsaved changes" prompt, measured in the launched app.
  *
  * This file exists because the defect it locks was the **absence of a call**, the class
- * `docs/threat-model.md` names: with no `will-prevent-unload` listener Electron does not fall back to
+ * `docs/reference/threat-model.md` names: with no `will-prevent-unload` listener Electron does not fall back to
  * Chromium's "Leave site?" dialog — it cancels the navigation outright and says nothing. A linter, a
  * type checker and a unit test all read the code that IS there, so only a running app can tell you the
  * listener is missing. The spike that found it read `listenersBefore: 0`, `fired: 1`, `ERR_ABORTED`,

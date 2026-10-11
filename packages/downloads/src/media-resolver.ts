@@ -10,7 +10,7 @@
  * MVP scope: direct-link media only (a URL whose response IS the media bytes). Extracting media from
  * an indirect source (e.g. a YouTube watch page) is the harder half of WebBrain's
  * `resolve_public_media`/`download_social_media` pair and stays a documented follow-up
- * (`docs/parities/webbrain-agent-parity.md` P3-c) rather than blocking this box.
+ * (`docs/research/parities/webbrain-agent-parity.md` P3-c) rather than blocking this box.
  */
 
 const DIRECT_MEDIA_MIME_PREFIXES = ['image/', 'video/', 'audio/'];

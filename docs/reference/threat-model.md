@@ -1,0 +1,262 @@
+# Threat Model Lite — Tepegöz
+
+> Required by the security baseline in [`engineering-rules.md`](engineering-rules.md) (BLOCKING for
+> Medium+ risk). Reporting a vulnerability: [`../../SECURITY.md`](../../SECURITY.md).
+> **Overall risk: HIGH/CRITICAL** — Tepegöz handles user credentials, browsing/personal data, and
+> acts autonomously on the user's behalf across third-party AI / MCP / integrations.
+
+## Assets
+
+- User credentials & sessions (cookies, OAuth tokens, BYO API keys)
+- Browsing data, page content, screenshots, form input (personal/sensitive)
+- The Event Journal (audit trail), per-task memory, blob store
+- The user's machine (filesystem, OS) and any authenticated services the agent can reach
+
+## Actors
+
+- User (trusted) · The agent/LLM (semi-trusted — output is untrusted) · Visited web pages & their
+  content (untrusted) · Third-party MCP servers / skills / adapters (untrusted) · Network attackers
+
+## Entry points
+
+- Agent tool calls (LLM-produced arguments = untrusted, prompt-injection surface)
+- Visited page content / DOM returned to the agent
+- Inbound MCP server requests (when Tepegöz exposes its tools)
+- OAuth callbacks / integration responses · IPC from renderer · auto-update feed · local files
+
+## Trust boundaries
+
+`renderer (untrusted UI)` ⇄ `preload (typed bridge)` ⇄ `main (privileged)` · `isolated webview
+(browsed pages)` · `MCP server subprocess (stdio, restricted env — outbound)` · `AI provider` ·
+`integration adapters` · `MCP server (inbound)` · `cloud backend (Phase 3)` · `VPN/Tor tunnel
+(local SOCKS endpoint + its operator, Phase 5)`
+
+## Top threats → mitigations
+
+| Threat                                   | Mitigation (where)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| ---------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Prompt injection from page/email content | Taint tracking + tainted→state-changing forces HITL; Content Sanitizer; data/instruction separation (ADR-0006)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| Excessive agency (delete/send/pay)       | Policy Kernel danger-class + HITL are real and live. Two clauses corrected 2026-09-16: **"Windows Hello" is unimplemented** — a `BiometricVerifier` seam exists and an installed verifier is binding, but nothing installs one; the approval modal already says so in en+tr, and the journal records a click-approved high-risk action as exactly that, not as biometric-verified. **"Spend bounded by mandate" overstates ADR-0039**, which changed the intended design but landed no code — sensitive categories (banking/government/crypto/password-manager/health) are currently an unconditional DENY on any state-changing call, a stronger (not a mandate-scoped) posture than the row implied, but a different one                                                                                                                                                                                                                                      |
+| Credential/key theft                     | Keys only in main via `safeStorage`; OAuth tokens never exposed to the agent; never bundled/logged (redaction)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| Data exfiltration                        | Egress Firewall (Base64/high-entropy/cross-origin PII); CSP; deny-by-default navigation                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| Malicious 3rd-party MCP/skill            | **MCP:** the server runs as a separate `stdio` child process with a restricted environment (the SDK's safe default subset + the server's own declared `env`, never the full `process.env` — [`transport.electron.ts`](../../apps/desktop/src/main/mcp/transport.electron.ts)); its tools carry no elevated trust — same `dangerClass` classification and the same single ToolGateway PEP as a builtin tool, so a malicious MCP tool call is caught exactly like a malicious page-derived one. `http_sse` (a network-reachable transport) is refused until Phase 1b — `stdio` only today. **Skill:** not a process at all — a stored prompt template consulted pre-model, and S9's own invariant is that a skill can never start a run on its own. **Not yet true, named as owed rather than claimed:** a marketplace signature + scope-review gate (Phase 12's `SupplyChainGate` is a decision layer today, with no install flow or real verification wired to it) |
+| Renderer compromise                      | contextIsolation+sandbox+nodeIntegration:false+webSecurity:true; Electron fuses; typed IPC + sender allow-list                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| Forged/replayed HITL approval            | HITL state lives in **main** (a correlation map + pending promise), never as DOM state a script could mutate; unguessable `randomUUID` ids + single-shot settling; a missing confirm handler fails CLOSED to deny (see below)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| Tampered update                          | **Not yet live** (checked 2026-09-16, matches [phase-0](../concepts/product/phases/00-foundation.md)'s own honest status): the `electron-updater` runtime with update-signature verification + staged rollout/rollback is still an open DoD line, and Windows code-signing is deferred to the production gate — releases ship UNSIGNED today, so there is no signed channel for an update to be verified against yet. HTTPS transport for the update feed is the only piece of this row that is a property of the packaging tool rather than a decision still owed                                                                                                                                                                                                                                                                                                                                                                                                  |
+| Inbound MCP abuse                        | **Not yet a live threat: Tepegöz does not expose an inbound MCP server today** (checked 2026-09-16 — everything under `apps/desktop/src/main/mcp/` is the outbound CLIENT half; no code creates a server, and there is no Bearer auth/rate-limit anywhere in this codebase's MCP surface). The design intent (Bearer auth + rate-limit + schema validation + the same ToolGateway PEP every tool already goes through) is recorded in [ADR-0007](../adr/0007-capability-plane-mcp.md) as a decision to build, not a shipped mitigation — matches this doc's own "Entry points" list, which already phrases this conditionally ("when Tepegöz exposes its tools")                                                                                                                                                                                                                                                                                                   |
+| Local DB exposure                        | userData ACLs; field encryption for sensitive data; synthetic test fixtures only                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| Silent identity disclosure to a site     | Client-certificate chooser: `select-client-certificate` is answered with `preventDefault()` and nothing is sent without an explicit user choice (`main/auth/client-certificate-broker.ts`)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| Platform default the app never claimed   | Ownership asserted against the RUNNING app, not the source: `e2e/application-menu.spec.ts` (see below)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| Safe Browsing leaks the URL you visit    | The URL never leaves: `checkUrl` is transport-free by construction; only 4-byte hash prefixes (k-anonymous — thousands of URLs per bucket) reach Google, over a bare client with no cookies/session/identifying headers. On by default with one Settings switch that makes the whole feature inert. Fail-open for navigation. (ADR-0043)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+
+### Platform defaults — a threat class, not an oversight
+
+The last two rows are the same threat wearing different clothes, and it is worth naming because this
+repository has now been bitten by it twice. **Electron supplies a behaviour when the app installs no
+handler, and the absence of a call is invisible to every gate we have** — a linter, a type checker and
+a unit test all read the code that IS there.
+
+- **`Menu.setApplicationMenu` was never called**, so Electron's default menu was live and bound
+  `Ctrl+Shift+I` to its own `toggleDevTools` role — around the sensitive-site DevTools gate, whose own
+  documentation promised "nothing that reaches the chrome can open it on a bank". Its zoom roles
+  likewise bypassed the per-origin zoom ladder, and `close` closed the window where a browser closes a
+  tab.
+- **`select-client-certificate` was never handled**, so Electron sent the first client certificate in
+  the OS store to any site that asked — a private-key-backed assertion of the user's identity, on first
+  contact, unprompted.
+
+Both were found by asking the launched application what it was doing, and both are now locked that
+way, because that is the only place the question has an answer. When adding a surface Electron has an
+opinion about — permissions, device access, certificates, menus, window opening, protocol handling —
+the check is not "did we write a handler" but "what happens if we did not".
+
+#### The sweep, and what it measured
+
+Asking that question of the remaining web-platform surfaces found **no further hole** — recorded here
+because "no hole" is worth something only if it is a measurement rather than a belief. Each row below
+was observed in the launched app, from a real page on a `http://127.0.0.1` origin (a secure context, so
+every API was genuinely eligible to be asked for), and each is now locked by
+[`e2e/platform-defaults.spec.ts`](../../e2e/platform-defaults.spec.ts).
+
+| Surface                                    | Observed                         | Why it holds                                                                                                                                                                                        |
+| ------------------------------------------ | -------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `getUserMedia` (camera + mic)              | `NotAllowedError`                | Deny-by-default permission handler                                                                                                                                                                  |
+| `getDisplayMedia` (screen)                 | `NotAllowedError`                | Deny-by-default permission handler                                                                                                                                                                  |
+| `geolocation`                              | `PERMISSION_DENIED`              | Deny-by-default permission handler                                                                                                                                                                  |
+| `idle-detection`                           | `denied`                         | Deny-by-default permission handler                                                                                                                                                                  |
+| `Notification.permission`                  | `denied`                         | Brokered per-site; the default state is denied                                                                                                                                                      |
+| WebUSB / Bluetooth / Serial                | `NotFoundError`                  | No device-selection handler is installed, so no device is ever chosen                                                                                                                               |
+| WebHID                                     | resolves with an **empty array** | Same, but note the shape: `requestDevice` RESOLVES rather than rejecting when nothing is selected. "Resolved" is not a grant, and a test that only checked for resolution would have read it as one |
+| `require` / `process` / `module` in a page | `undefined`                      | contextIsolation + `nodeIntegration:false` — the renderer-is-untrusted claim, checked rather than asserted                                                                                          |
+
+The app's own half is locked separately by `apps/desktop/src/main/security.test.ts`, which enumerates
+Electron's entire permission union and asserts everything outside the three brokered capabilities
+(notifications and the two clipboard permissions) is refused. Written that way on purpose: a permission
+ADDED by a future Electron is denied by the test's own construction, and a capability quietly added to
+`permissionCapability` fails it. That handler had **no test at all** before this sweep.
+
+**A third instance of the class, found after that sweep (2026-08-24): `beforeunload`.** The sweep asked
+what a page can _reach_; this one is what a page can _withhold_. With no `will-prevent-unload` listener
+Electron does **not** fall back to Chromium's "Leave site?" dialog the way a browser does — it cancels
+the navigation outright, with no dialog, no error and no way for the user to override it. Measured at
+`listenersBefore: 0`, event `fired: 1`, `ERR_ABORTED`, URL unchanged. So any page could pin a user to
+itself indefinitely by registering a `beforeunload` handler, and the user's only visible symptom was a
+browser that appeared to have frozen. The mirror half was worse in the other direction:
+`webContents.close()` does not fire `beforeunload` **at all** unless passed `waitForBeforeUnload`, so
+Ctrl+W discarded unsaved work with the page's own warning unrun. Both are closed by
+[`main/navigation/unload-broker.ts`](../../apps/desktop/src/main/navigation/unload-broker.ts) and locked by
+[`e2e/beforeunload.spec.ts`](../../e2e/beforeunload.spec.ts). Two properties are load-bearing rather than
+cosmetic: **"stay" is both the default and the cancel**, so no stray Enter or Escape discards the user's
+typing; and **a page cannot re-prompt its way to a captive tab** — once the user answers "leave", the
+same page is not asked again for a short grace window, so a redirect chain or a re-entrant handler
+cannot keep asking until the user gives up.
+
+The pattern across all three finds is the same and is worth naming once more: **a claim in our own docs
+about a platform default is not evidence.** `phase-s3` stated that a tab the agent never touched "keeps
+Chromium's normal 'leave site?' prompt untouched"; the scoping half was right, the default it assumed
+did not exist, and nothing in the repo could have contradicted it short of launching the app.
+
+**One open question, stated rather than resolved.** The File System Access API
+(`showOpenFilePicker` / `showDirectoryPicker`) is present in browsed pages, and calling it does not
+reject — Chromium opens the native file picker _before_ requesting the `fileSystem` permission. The
+half that is ours is covered: `fileSystem` is in Electron's permission union and our handler refuses it,
+which `security.test.ts` asserts. The half that is not could **not be measured in this harness** — it
+needs a file chosen out of an OS dialog, which no automated run can do. So what a page ends up holding
+after a user picks a file is untested here, and should not be assumed either way. Note also that
+`FileOperationsHost` and the Settings "file operations" switch are scoped to the **agent's** file tools
+and were never claimed to cover this path.
+
+### The one preload a browsed page gets
+
+Browsed tabs have no preload that reaches the app: no `window.tepegoz`, no `require`, no `process`
+(`e2e/internal-pages-unreachable.spec.ts`, `e2e/gpc-property.spec.ts`). The single exception is
+`preload/page-gpc.js` ([ADR-0051](../adr/0051-page-preload-for-global-privacy-control.md)), attached to the
+browsing sessions while Global Privacy Control is on. It is 247 bytes, imports only `webFrame`, takes no
+input and returns nothing: no `ipcRenderer`, no `contextBridge`, so there is no channel from an untrusted
+page to main and nothing for a page to call. Whether it runs is decided by main attaching or detaching the
+file, never by the page. Any further browsed-page preload must be justified against this paragraph and the
+two specs above — the first one added is not the last one anyone should have to audit.
+
+### A DOM-resident approval is a forgeable approval
+
+ClaudeBleed (Anthropic's Claude for Chrome, May 2026) combined two defects into one escalation: **any**
+Chrome extension could issue commands to the agent, and the confirmation UI it defeated kept its
+decision as **DOM state** — the attack replayed the confirmation message and mutated the rendered
+elements to distort what the human believed they were approving. A prompt the page (or an extension) can
+read and rewrite is not a control; it is a suggestion the attacker gets to edit.
+
+**This project is structurally right here, and the reason is written down rather than asserted:**
+
+- **HITL state never lives in the renderer.** A tool approval is a `{ runId, resolve }` entry held in a
+  `Map` in the **main** process ([`hitl-registry.ts`](../../apps/desktop/src/main/agent/hitl-registry.ts)),
+  keyed by an id `ipc-agent-run.ts` mints with `randomUUID()`. The renderer receives a request to
+  _display_, and sends back a click; it never holds the thing being decided. A compromised or
+  extension-injected script mutating the DOM changes what a human SEES, not what main is waiting to
+  resolve — there is no rendered element whose state main trusts.
+- **The id is unguessable, and settling is single-shot** (same file, same docblock — quoted because it
+  is the exact counter-example, not an intent): a sequential counter "would let a renderer spray
+  responses for ids main had not created yet and win the race the moment one was registered"; single-shot
+  settling means "the entry is deleted before its promise resolves, so a replayed or duplicated response
+  finds nothing and is rejected." `settleApproval`/`settlePlan` return `false` and log rather than throw
+  on a stale or forged id — audited, not silently ignored, but never taken as consent.
+  [`ipc-agent-controls.ts`](../../apps/desktop/src/main/ipc/ipc-agent-controls.ts) is the one IPC channel
+  (`agentApprovalResponse`) that can call `settleApproval` at all, and it only reaches main through the
+  same exact-host `assertTrustedSender` gate every `invoke` channel does (see the origin-allow-list entry
+  above) — an extension has no code path that reaches this correlation map to begin with, forged id or
+  not, because MV3/third-party extensions are not loadable in this project yet
+  ([Phase 3](../concepts/product/phases/03-backend-cloud-extensions.md) scope).
+- **A missing confirm handler fails CLOSED, not open.** `ToolGateway.invoke` denies (`FORBIDDEN`) when no
+  handler is installed for an `ask` decision, rather than defaulting to allow — proven by
+  `tool-gateway.test.ts`'s "gates a state-changing tool on HITL confirmation" case, whose own first
+  assertion is exactly this ("No confirm handler → fail safe to denied"). An approval surface that
+  silently disappears (a crashed panel, an unwired hook) degrades to refusing the action, never to
+  approving it by omission.
+
+Net: even a fully compromised renderer — one that can paint anything, including a fake "approved"
+banner — cannot make a `state_changing`/`destructive`/`financial` call actually run, because the thing
+that decides is a promise in main correlated by an id the renderer never controls and cannot predict.
+
+## Network-privacy tunnels (Phase 5)
+
+> User-facing companion: [`network-privacy-guide.md`](network-privacy-guide.md) — what routing a tab
+> through a tunnel does and does not do, in plain language.
+
+A tunnel-bound tab adds a trust boundary the rest of this document does not cover: `browsed page` ⇄
+`this browser` ⇄ **`local SOCKS endpoint`** ⇄ `tunnel operator (Tor exit, VPN provider, SSH host)` ⇄
+`destination`. The operator is a party the user chose and this browser cannot vouch for.
+
+The dominant risk here is not "the tunnel fails" — it is **the tunnel failing without saying so**, or
+some path in the browser bypassing it. Both look exactly like everything working.
+
+| Threat                                                                                            | Mitigation (where)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| ------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Tunnel drops mid-session → traffic silently continues on the clear path                           | Proxy rules carry **no `DIRECT` fallback** (`assertFailClosed`), so a dead endpoint yields `ERR_PROXY_CONNECTION_FAILED`; `killSwitchVerdicts` reports it per tab; health poll flips status within seconds. Measured: `e2e/spike-tunnel-failclosed.spec.ts`                                                                                                                                                                                                                                                                                                |
+| A partition exists but was never bound → Chromium treats "no proxy" as DIRECT                     | Every `--conn-` partition is **blackholed at creation** (`BLACKHOLE_PROXY_CONFIG`) and only replaced once `resolveProxy` confirms the real tunnel took effect                                                                                                                                                                                                                                                                                                                                                                                              |
+| DNS resolved locally → the ISP sees every site name despite the tunnel                            | SOCKS**5** only (SOCKS4 rejected — it has no hostname form), so the proxy resolves; `X-DNS-Prefetch-Control: off` stamped on tunnel partitions to suppress Chromium's pre-resolution, which does not go through the proxy. Measured (remote DNS): the SOCKS server receives `DOMAINNAME`                                                                                                                                                                                                                                                                   |
+| WebRTC hands out the real address past a TCP proxy                                                | `disable_non_proxied_udp` per tunneled `WebContents`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| Chrome UI fetches something on the page's behalf (favicons) over the clear path                   | Favicons fetched in main **on the page's own session** and inlined as `data:`; `TabFaviconSchema` rejects a remote favicon at the IPC boundary. Measured: `e2e/spike-favicon-inline.spec.ts`                                                                                                                                                                                                                                                                                                                                                               |
+| `window.open()` / a page-opened tab escapes to Direct                                             | Popups and page-opened tabs are created on the **opener's session**, never on a named partition                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| Group-inheritance misbinding — a tab silently on the wrong exit after a group move                | Resolution is one pure function (`tab → group → General → Direct`) with `affectedBy*Change` deciding exactly who re-hosts; a tab with its own override is never moved by a scope above it. **Known gap:** pinning a tab clears its group membership, which silently re-resolves it to the General default                                                                                                                                                                                                                                                  |
+| Re-bind transition leaks on the old path                                                          | The old view is destroyed **before** the replacement exists; no moment has two views for one tab on two networks                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| Two connections share one cookie jar (cross-tab bleed)                                            | Partition key derived from a validated connection-id slug; an id that could collide **throws** instead of being sanitized                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| A removed connection leaves its cookies on disk                                                   | `BrowsingSessions.release` wipes storage, cache, auth and host-resolver caches; refuses to touch the Direct partition                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| Tunnel-bound partition runs unfiltered (no adblock/DNR, no download quarantine)                   | Per-session attacher registry; the filtering and quarantine attachers are **critical** — a session they cannot attach to is refused, not served                                                                                                                                                                                                                                                                                                                                                                                                            |
+| The app's own HTTP (agent fetch, model calls) ignores the tunnel                                  | `@tepegoz/http` egress route follows the **General** binding and **refuses** a request it cannot tunnel; never a silent downgrade                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| A WireGuard profile's private key sits readable on disk                                           | Stored encrypted through `safeStorage`; import is **refused** when the OS keychain is unavailable rather than degrading to plaintext. Residual: wireproxy takes a config path, not stdin, so the rendered config exists `0600` from spawn until the listener answers, then is deleted                                                                                                                                                                                                                                                                      |
+| A helper binary is swapped for a hostile one                                                      | Located, never auto-downloaded: override → `userData/bin` → PATH, all under the user's control. No pinned-hash fetch is implemented, so nothing is executed that the user did not place                                                                                                                                                                                                                                                                                                                                                                    |
+| A hostname leaks while the traffic is tunneled (WireGuard)                                        | A `.conf` with no `DNS` line is **refused at import** — wireproxy would otherwise fall back to the host resolver. The resolver is carried into the generated config                                                                                                                                                                                                                                                                                                                                                                                        |
+| A chained route (Tor over VPN) half-fails                                                         | The chain is literal: Tor's outbound _is_ the VPN's SOCKS port, so an upstream drop kills Tor's egress. Both legs are shown on the group shield; either one down cuts the group                                                                                                                                                                                                                                                                                                                                                                            |
+| A chain config loops back on itself                                                               | Refused with a named error by the pool's cycle guard, rather than recursing until the stack gives out                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| Two Tor groups share a circuit                                                                    | One `tor` process per connection, each with its own `DataDirectory` — separate guards and circuits by construction, not by configuration                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| Downgrade-by-blocking-443: an on-path party drops HTTPS so a tunneled tab falls back to cleartext | ADR-0050: `http:` is upgraded on tunnel partitions and a failure is **never** silently downgraded. The interstitial needs an explicit click, names interference as a cause, and the bypass is one host, session-only, nonce-guarded and journaled. Cert errors never offer a bypass. The handler fails **closed** on a tunnel partition                                                                                                                                                                                                                    |
+| Payload inspection is blind inside the tunnel                                                     | Accepted and documented: anomaly scoring for a tunneled tab must lean on metadata/timing/volume. Not silently weakened — recorded as owed work                                                                                                                                                                                                                                                                                                                                                                                                             |
+| An **agent-driven** tab's request rhythm marks it as automation despite the tunnel                | **Not mitigated.** `@tepegoz/human-input` humanizes **input events only** (mouse-motion curves, click hold-time, keystroke flight-time, inter-action idle) and is skipped entirely when the tab is unperceived (S7 PR3). It does not shape HTTP request timing or the reactor's perceive→act cadence, so request-rate / burst-pattern analysis distinguishes automation regardless of the tunnel. The route badge claims a **network path**, never automation-detection resistance. Request-pacing decorrelation is not built — recorded as owed (Phase 5) |
+
+**Exit-node / operator is untrusted.** A Tor exit or a VPN provider sees exactly what a plaintext ISP
+would, and can modify anything not protected by TLS. Nothing in this feature changes that; it moves who
+is in that position, on the user's instruction. The cleartext warning and HTTPS-only enforcement (upgrade, then an
+interstitial with a per-site, session-only bypass) for tunnel-bound tabs are shipped
+([ADR-0050](../adr/0050-https-only-on-tunnel-bound-tabs.md)); verified end to end against a local SOCKS5 tunnel; the real Tor and WireGuard transports are not yet tried.
+
+**The exit region is the user's claim.** A connection's note ("Tor", "Mullvad SE") is free text the user
+typed. The browser cannot verify where a loopback SOCKS port comes out and never presents it as fact.
+
+## Residual risk (accepted, documented)
+
+- Prompt injection cannot be reduced to zero (industry-wide); we minimize blast radius via the Policy
+  Kernel and publish a version-tagged attack-success-rate.
+- An agentic browser inherently sends page/DOM content (which may contain PII) to the model; mitigated
+  by redaction, data minimization, local-SLM preprocessing for sensitive data, and explicit consent —
+  **not** eliminated. No "100% secure" claim is made; ultimate responsibility rests with the user.
+
+- A tunnel moves trust rather than removing it: the exit operator sees what an ISP would. Chromium's
+  DNS **prefetch/preconnect predictor** and DoH are process-wide rather than per-session; the per-request
+  path is proven to resolve remotely, and prefetch is suppressed with `X-DNS-Prefetch-Control: off` on
+  tunnel partitions, but that header covers page-declared prefetch hints, not every predictor path. Not
+  claimed as closed.
+- **An agent-driven tab is more identifiable _as automation_ than a human-driven one, and a tunnel does
+  not change that.** `@tepegoz/human-input` randomizes **input-event** timing only — mouse-motion
+  curves, click hold-time (Gaussian), per-character keystroke flight-time, inter-action idle — and is
+  bypassed outright when the tab is off-screen, parked, or in a hidden window (S7 PR3, so a background
+  agent tab acts at full machine speed). It does **not** shape HTTP request timing, connection
+  establishment, or the reactor's perceive→decide→act cadence, so request-rate and burst-pattern
+  analysis — a standard input to anti-bot and reputation systems — can distinguish automation whether or
+  not the tab is tunnelled and whether or not its input is humanized. The route badge is a claim about
+  the **network path** a tab takes, never about automation-detection resistance, and this project makes
+  no such claim for agent-driven tabs. Request-pacing / decorrelation is not built and is recorded as
+  owed (Phase 5). Source: `docs/research/research-automation-detection.md`.
+- No VPN/Tor transport is bundled. The browser routes through a SOCKS5 endpoint the user already runs;
+  shipping one is gated on Phase 0 code-signing. Anything that endpoint does is outside this model.
+- Safe Browsing (ADR-0043) is a default-on outbound feed to Google: 4-byte hash prefixes on cache-miss
+  navigations plus a periodic prefix-list refresh, carrying a shared release API key and no user
+  identifier. k-anonymity bounds what a prefix reveals; it is not zero. The switch-off state and the
+  no-key state both produce zero attributable traffic. **Corrected 2026-09-16:** incremental
+  (delta) list updates are already built and wired, not "full replace each refresh" —
+  `safe-browsing-prefix-store.ts`'s `applyDelta` applies a checksum-verified delta and falls back to a
+  full refresh only on `'need-full'` (an out-of-range removal index or checksum mismatch), and
+  `createHashListDeltaFetcher` is gated on the exact same missing condition as the rest of this
+  feature. Genuinely not yet wired: the API key itself (release input, which is what keeps both
+  fetchers `null` today) and an explicit app-scope kill-switch check (a tunnelled-and-down general
+  binding already fails the fetch closed at the network layer → `unknown`).
+
+_Revisit before each release and whenever a new trust boundary (e.g., managed proxy, extensions) lands._

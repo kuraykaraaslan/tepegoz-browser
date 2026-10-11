@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 /**
- * `tepegoz://` protocol handler (Faz 0/1/2 of phases/tracks/protocol-tepegoz-pages.md).
+ * `tepegoz://` protocol handler (Faz 0/1/2 of docs/concepts/tracks/protocol-tepegoz-pages.md).
  *
  * Subresource requests to this scheme don't reach the handler at all — an Electron bug reproduced and
  * documented on `registerInternalPagesProtocol`'s doc comment — so the handler inlines every asset the

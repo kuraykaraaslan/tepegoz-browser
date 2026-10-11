@@ -1,6 +1,6 @@
 # `@tepegoz/ui` — KUIreact fork (drift tracking)
 
-Per the binding UI mandate ([`docs/engineering-rules.md`](../../docs/engineering-rules.md)), Tepegöz's
+Per the binding UI mandate ([`docs/reference/engineering-rules.md`](../../docs/reference/engineering-rules.md)), Tepegöz's
 renderer is built on **KUIreact** components. They are **forked/copied** into this package — NOT
 `npm install`ed — so we control the source and track drift here.
 

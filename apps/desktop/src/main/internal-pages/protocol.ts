@@ -6,12 +6,12 @@ import { appPartition } from '../window';
 import { REAL_PAGE_HOSTS } from './real-page-hosts';
 
 /**
- * `tepegoz://` internal-page protocol — Faz 0/1/2 of `phases/tracks/protocol-tepegoz-pages.md`.
+ * `tepegoz://` internal-page protocol — Faz 0/1/2 of `docs/concepts/tracks/protocol-tepegoz-pages.md`.
  *
  * Serves system pages (`tepegoz://settings`, …) as REAL pages without opening a listening socket — the
  * same shape as Chrome's own `chrome://` (a privileged scheme resolved from an in-process resource map,
  * never the network stack). This is the accepted alternative to the Express/loopback-HTTP proposal
- * recorded in `phases/tracks/express-settings.md` (see that file's Ek A).
+ * recorded in `docs/concepts/tracks/express-settings.md` (see that file's Ek A).
  *
  * **Dev only:** this handler serves the on-disk `out/renderer` build, which `electron-vite dev` does NOT
  * rebuild — so in dev these pages instead load straight from the Vite dev server and this handler is

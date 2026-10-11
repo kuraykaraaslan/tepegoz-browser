@@ -3,7 +3,7 @@ import { z } from 'zod';
 /**
  * EU AI Act Annex III risk gate.
  *
- * `docs/ai-transparency.md` §3 states tepegöz's own risk classification as fact: "limited-risk AI
+ * `docs/reference/ai-transparency.md` §3 states tepegöz's own risk classification as fact: "limited-risk AI
  * system … not deployed for any Annex III high-risk use case, performs no biometric categorization,
  * social scoring, or automated legal/eligibility decisions." Until this file, that was a claim about
  * intended use, not a property the code enforced — nothing stopped the agent from autonomously

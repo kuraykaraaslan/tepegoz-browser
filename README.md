@@ -29,12 +29,12 @@ on a claim about it. What is still missing beyond that: **no independent securit
 performed and the automation has **not** been independently benchmarked. **No development phase is
 closed yet**; the
 roadmap tracks status by what has been _measured_, not by what has been written, and by that bar every
-phase still reads amber. See [`phases/README.md`](phases/README.md) for the per-phase truth.
+phase still reads amber. See [`docs/concepts/README.md`](docs/concepts/README.md) for the per-phase truth.
 
 One claim this project deliberately does **not** make: that its agent is good at browsing. All thirteen
 phases of the AI competence program have landed their code, and **every one of them is still
 "measurement-owed"** — the benchmark spend to prove or refute them has not been paid
-([`phases/ai-agent/README.md`](phases/ai-agent/README.md)). Treat the automation as
+([`docs/concepts/ai-agent/README.md`](docs/concepts/ai-agent/README.md)). Treat the automation as
 promising and unproven, and read [`docs/known-issues.md`](docs/known-issues.md) before trusting it with
 anything that matters.
 
@@ -162,7 +162,7 @@ target shape, not a claim that every layer is full.
 
 **Cross-cutting:** event-sourced state, a strict zod boundary on every untrusted input, a uniform
 `AppError` contract, redacted logging, and i18n from day zero. The binding rules are
-[`docs/engineering-rules.md`](docs/engineering-rules.md).
+[`docs/reference/engineering-rules.md`](docs/reference/engineering-rules.md).
 
 ## Tech stack
 
@@ -187,7 +187,7 @@ tepegoz-browser/
 ├─ e2e/             # Playwright `_electron` suites against the BUILT app
 ├─ test-fixtures/   # Frozen page fixtures, including hostile ones (excluded from formatting)
 ├─ docs/            # ADRs, threat model, architecture index, engineering rules, imported research
-└─ phases/          # The executable roadmap, ticked as work lands
+└─ docs/concepts/          # The executable roadmap, ticked as work lands
 ```
 
 ## Roadmap
@@ -207,7 +207,7 @@ before any cloud dependency does. Status below is copied from the roadmap's own 
 | **6, 7, 9, 11, 12**       | Recipes · notary · mandates · Kamu pack · developer platform | ⏸ Frozen out of v1 — decision layers landed, none wired to a live call |
 | **1b, 2, 3, 4, 8, 10, E** | Durability · adapters · cloud tier · maturation · delight    | ⏸ Frozen out of v1 — not started                                       |
 
-Task-level detail: [`phases/`](phases/) and its [index](phases/README.md).
+Task-level detail: [`docs/concepts/`](docs/concepts/) and its [index](docs/concepts/README.md).
 
 ## Design commitments
 
@@ -229,7 +229,7 @@ are the most valuable contribution this project can receive.
 
 **Do not file a vulnerability as a public issue.** Follow [`SECURITY.md`](SECURITY.md) — it covers
 private reporting, scope, response targets, and safe harbor. The trust model is
-[`docs/threat-model.md`](docs/threat-model.md).
+[`docs/reference/threat-model.md`](docs/reference/threat-model.md).
 
 ## Contributing
 

@@ -1,8 +1,8 @@
 # @tepegoz/agent-eval
 
 The **real-result eval harness** — built by v1 AI-1
-([`phases/ai-agent/archive/phase-ai-1-eval-harness.md`](../../phases/ai-agent/archive/phase-ai-1-eval-harness.md)),
-now owned by the v3 program in [`phases/ai-agent/`](../../phases/ai-agent/README.md).
+([`docs/archive/ai-agent/01-eval-harness.md`](../../docs/archive/ai-agent/01-eval-harness.md)),
+now owned by the v3 program in [`docs/concepts/ai-agent/`](../../docs/concepts/ai-agent/README.md).
 Dev-only + `private` — **never shipped in the app**. It is the measurement backbone the AI competence
 track is scored against: a real agent driving real pages with ground-truth scoring, not a green offline
 test.

@@ -83,9 +83,9 @@ Two consequences worth carrying forward:
 
 ### `check-doc-links.mjs` — `pnpm docs:links`
 
-Fails if any relative markdown link under `phases/**` points at a file that does not exist (the
+Fails if any relative markdown link under `docs/concepts/**` points at a file that does not exist (the
 executable form of the S0 exit criterion). Pass roots to widen it: `pnpm docs:links docs .`.
-Code spans are stripped first, because `phases/**` deliberately contains `git show <sha>:phases/…`
+Code spans are stripped first, because `docs/concepts/**` deliberately contains `git show <sha>:phases/…`
 recovery commands naming deleted paths.
 
 - **Needs:** Node only. No GUI, no build, no network.

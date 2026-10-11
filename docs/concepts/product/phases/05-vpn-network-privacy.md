@@ -1,0 +1,590 @@
+# Phase 5 — VPN & Network Privacy (per-tab & per-group tunnels + Tor)
+
+**Status:** 🟡 5a working with **real tunnels** (2026-08-20) — userspace **WireGuard** (wireproxy) and **Tor** providers, **chained Tor-over-VPN**, connection pool + three-scope binding + reload-on-switch + native route pickers + profile manager + per-tab and **per-group** route badges. Nothing is bundled and nothing needs elevation. **OpenVPN is deferred** (layer-3; needs an adapter and an unverified Windows split-routing model). See [ADR-0011](../../../adr/0011-vpn-network-privacy.md) + its Amendment · **Estimate:** ~4–6 months (5a, then optional 5b behind adoption)
+**Depends on:** Phase 3 (managed-backend seam) + Phase 2 (`NetworkFilterEngine` / per-partition session model) + Phase 2b (tab-engine + **tab groups** + tab/group context menu)
+**Goal:** Give the browser an **optional, fail-closed network-privacy layer** where **each tab — or a whole
+tab group — can bind to its own VPN/Tor connection** — BYO VPN config first, then optional managed exit
+nodes and Tor — **without** weakening the local-first default (off by default) or the existing **"NO
+system-proxy MITM"** stance. **Multiple tunnels stay up concurrently** (a managed connection pool); a tab
+routes through **whichever connection the user picks** (or inherits its group's binding), and untouched
+tabs stay Direct. Tunneling is realized **per-partition** via `session.setProxy()` to a **local SOCKS
+endpoint** (one loopback port per active connection), never an OS-level system proxy.
+**Branch examples:** `feat/vpn-connection-pool`, `feat/per-tab-tunnel-binding`, `feat/tab-group-tunnel-binding`, `feat/wireguard-config-provider`, `feat/tor-provider`, `feat/egress-killswitch`
+
+## Model (per-tab / per-group, multi-connection)
+
+- A **Connection** is a first-class managed object (BYO WireGuard/account provider or Tor circuit): it owns
+  a lifecycle, a **local SOCKS5 loopback port**, health/status, and an exit region. Connections live in a
+  **pool** — several can be **up at once**.
+- **Three selectable scopes** (all user-settable): **General** (the profile-wide default binding) →
+  **Group** (a tab group's binding) → **Tab** (a single tab's override).
+- **Binding resolution (most-specific wins):** `tab override → group binding → General default → Direct`.
+  A tab with no explicit override **inherits its group's** connection; a tab moved into a group adopts the
+  group binding unless it carries an explicit override; a tab dragged out falls back to the General default.
+  Setting **General** re-resolves every tab still on inherit at that level; explicit group/tab bindings win.
+- A resolved binding is exactly one Connection (or `Direct`). It is realized by hosting the tab's
+  `WebContents` on the **session partition keyed by `connectionId`** (`persist:tepegoz-web--conn-{connId}`)
+  whose proxy points at that connection's SOCKS port. Tabs (across groups) that resolve to the same
+  connection share that partition's storage; `Direct` tabs stay on the **existing, unrenamed**
+  `persist:tepegoz-web`. **Groups are a binding/UI layer, not a partition axis** — so N groups on the same
+  connection share one partition.
+  > **Not keyed by profile, and that is a correction.** The original plan said `(profile, connection)`, on
+  > the assumption that Direct already resolved to a per-profile partition. It never did: every browsed
+  > page lives in one `persist:tepegoz-web`, and profile isolation is done a level up (each profile is its
+  > own process over its own `userData` directory). Keying the partition by profile would have renamed the
+  > partition every existing user's cookies and logins live behind — a silent mass sign-out shipped by a
+  > privacy feature to people who never turned it on. See [ADR-0011](../../../adr/0011-vpn-network-privacy.md)'s Amendment.
+- **Default binding = `Direct`** (pure local-first preserved). A new tab inherits its opener's (or group's)
+  binding; a fresh ungrouped tab is `Direct` unless a profile default is set.
+- **Re-binding a live tab/group** requires re-hosting the affected `WebContents` on the target partition ⇒
+  those tabs **reload** (Electron binds a `WebContents` to its session at creation). Re-binding a group
+  reloads every member that was inheriting (tabs with an explicit override are left alone). This
+  reload-on-switch is a documented trade-off, stated in the route picker before the click, and is
+  **fail-closed** by sequence: the old view is destroyed before the replacement exists, so there is never
+  a flash of clear-path traffic mid-switch.
+
+## Exit criteria (DoD)
+
+- [x] **Binding selectable at all three scopes — General, Group, Tab**; **multiple connections active concurrently**; **default = Direct** (pure local-first preserved — no tunnel unless opted in)
+      _(General from Settings → Network privacy; Group and Tab from their native right-click menus. The pool holds several connections at once, each with its own partition and SOCKS port; measured with one live endpoint end-to-end, **not yet with two simultaneously**.)_
+- [x] **Binding inheritance works:** a tab inherits its group's connection, a group inherits General; `tab override → group → General default → Direct` resolves correctly on group move/add/remove and on changing the General default
+      _(landed: `resolveBinding` + `affectedByGroupChange` + `affectedByGeneralChange` (22 tests), applied to live tabs by [binding-service.electron.ts](../../../../apps/desktop/src/main/network/binding-service.electron.ts) (14 tests) — including that a member with its own override is never moved by a scope above it.)_
+- [x] Tab **right-click → "Route this tab through…"** and group **right-click → "Route this group through…"**; selection re-binds the tab/group; live per-tab indicator reflects it
+      _(**deviation, deliberate:** a NATIVE submenu ([route-menu.ts](../../../../apps/desktop/src/main/menus/route-menu.ts)), not a React Modal. The surrounding tab/group menus are already real OS menus built in main against authoritative state, so the picker's contents cannot be stale when clicked and the renderer learns nothing about the pool it does not already show. It carries the same content the Modal specified — live connections with status in words, Direct, Inherit, the reload warning and a link to manage connections. The **per-group** indicator is not built: a group already shows its members' badges, and a second indicator on the header is cosmetic work with no safety content.)_
+- [x] **Fail-closed kill-switch per connection:** if a tunnel drops, **every tab resolving to it** (via direct override or group inheritance) is blocked — **no leak, no silent fallback to Direct** (verified by an automated leak test); rebinding-on-switch never leaks mid-transition
+      _(**measured end-to-end in the shipping app.** [spike-tunnel-failclosed.spec.ts](../../../../e2e/spike-tunnel-failclosed.spec.ts) kills a live SOCKS endpoint and shows the next request failing while a **proven-reachable** clear path records nothing; [spike-tunnel-binding.spec.ts](../../../../e2e/spike-tunnel-binding.spec.ts) does the same through the real pool and bridge, and shows the health poll flipping the connection to `down` and the tab to `egressAllowed: false`. Rebind atomicity is structural: the old view is destroyed before the replacement exists, so no request can be in flight on the old path.)_
+- [x] **DNS-leak prevention:** tunnel DNS only inside a tunneled tab's partition; verified by leak test (no plaintext resolver for any tunnel-bound tab)
+      _(**measured**: the SOCKS server receives `DOMAINNAME`, so the hostname is resolved by the proxy and never locally, and `assertFailClosed` rejects SOCKS4 — the variant with no hostname form. Chromium's pre-resolution does NOT go through the proxy, so tunnel partitions are stamped with `X-DNS-Prefetch-Control: off`. **Residual, stated not closed:** that header covers page-declared prefetch hints; the predictor and DoH are process-wide, not per-session — see the L8 row below.)_
+- [~] **No cross-tab bleed:** a tab bound to connection A never egresses via B or Direct; distinct connections stay isolated (distinct partitions/ports; Tor streams isolated per connection)
+  _(storage isolation is landed and tested — distinct partitions, and an id that could collide **throws** instead of being sanitized into a shared jar — and a bound tab is measured reaching only its own SOCKS endpoint. **The A-vs-B case is now measured too**: [`e2e/spike-tunnel-cross-tab-isolation.spec.ts`](../../../../e2e/spike-tunnel-cross-tab-isolation.spec.ts) binds two tabs to two live BYO-SOCKS connections at once through the real bridge and shows each reaching only its own mock endpoint — sighted the same way `spike-tunnel-binding` is: a shared Direct-reachable origin proves a rebind reload never fell back to it, since a real leak would show up as a second hit there rather than at the tunnel's own fixed-forward target. Mutation-verified: forcing `BindingService.tabBinding` to ignore per-tab overrides turns the test red (both tabs silently inherit General/Direct and neither tunnel endpoint is ever reached). Building it surfaced a real product-shape constraint worth recording: `TabManager.rehostTab` reloads a tab's own recorded URL, which is only populated once a navigation actually commits — so binding only ever does something on a tab that has ALREADY loaded a page, matching the real "Route this tab through…" menu (never a still-loading tab) but ruling out testing the bind against a URL that must fail to prove isolation; the working test binds an already-loaded tab instead. **Still owed:** Tor stream isolation, which needs Tor.)_
+- [x] **Nothing else reaches the network on a tunneled page's behalf.** A swept-for, not assumed, list: popups, tab-strip favicons, page-opened tabs, new tabs, and the app's own HTTP
+      _(popups and page-opened tabs are created on the **opener's session**; a new tab is born on the profile-wide default route, not Direct; favicons are fetched in main on the page's own session and inlined ([tabs-favicon.electron.ts](../../../../apps/desktop/src/main/tabs-favicon.electron.ts), measured by [spike-favicon-inline.spec.ts](../../../../e2e/spike-favicon-inline.spec.ts)); app-issued HTTP follows the General binding fail-closed. Two of these were live leaks.)_
+- [x] **Per-session parity — every browsing partition is wired like the base one.** Ad/tracker filtering (DNR), download quarantine, the User-Agent override and "forget this site" reach a tunnel partition, not just `persist:tepegoz-web`
+      _(landed: [browsing-sessions.electron.ts](../../../../apps/desktop/src/main/network/browsing-sessions.electron.ts) — one registry, retro-applying registration, exactly-once per session, and **critical** attachers whose failure refuses the partition rather than serving it half-wired. Not in the original task list, and the prerequisite everything else silently assumed.)_
+- [x] **An unbound tunnel partition cannot egress at all.** "No proxy configured" means DIRECT in Chromium, so every `--conn-` partition is **blackholed at creation** and only replaced once `resolveProxy` confirms the real tunnel took effect
+      _(the invariant that makes every ordering of session-creation / binding / navigation safe: the worst case is a request that errors and a reload that works, never a clear-path request.)_
+- [x] **ADR-0011** written + Accepted (VPN & network-privacy architecture: three-scope binding — General/Group/Tab — with `tab→group→General→Direct` resolution over per-connection SOCKS partitions, connection-pool lifecycle, reload-on-rebind trade-off, BYO vs managed, reconciliation with "no system-proxy MITM")
+      _([ADR-0011](../../../adr/0011-vpn-network-privacy.md) Accepted and twice amended. Still undecided there, honestly: the bundled WireGuard/Tor providers and the Tor trust model, both gated on shipping a signed native binary.)_
+- [x] **Threat Model updated** ([`docs/reference/threat-model.md`](../../../reference/threat-model.md)): a `VPN/Tor tunnel` trust boundary, thirteen tunnel-specific threat rows (drop-without-saying-so, unbound partition, DNS, WebRTC, chrome-side fetches, popup escape, group-inheritance misbinding, rebind transition, cross-tab bleed, partition teardown, unfiltered partition, app-issued HTTP, encrypted-tunnel blind spot) and two residual-risk entries
+- [x] **i18n:** en+tr full parity for all new surfaces (tab + group context-menu entries, route picker, per-tab status indicator, reload-on-switch notice, connection management + disclosure copy)
+      _(parity enforced by the existing `keyPaths` tests in both `apps/desktop/src/i18n` and `@tepegoz/settings-ui`.)_
+- [ ] Coverage (S80/B85/F86/L80) + self-review/code-review + UAT signoff + migration-safe DB
+
+> **What actually runs today (2026-08-20).** 5a works, with real tunnels, and one honest boundary:
+> **the browser bundles no VPN.** It runs WireGuard in user space through `wireproxy`, runs `tor` the same
+> way, or points at a SOCKS endpoint you already have — helper binaries it locates rather than ships.
+>
+> **Why userspace first.** wireproxy and Tor own their own network stacks, so they need no TUN adapter, no
+> route changes and **no elevation** — and they **cannot leak by construction**: there is no route table to
+> misconfigure and no source address to mis-bind. Each connection is one more process on one more loopback
+> port, which is what makes "a different tunnel per tab group" cost nothing structural.
+>
+> **"VPN _and_ Tor on one group"** is a chain: Tor with the VPN's SOCKS as its upstream, exposing its own
+> port. Either leg dying cuts the group, and the group's shield shows both halves.
+>
+> **Measured end to end in the shipping app**
+> ([spike-tunnel-binding.spec.ts](../../../../e2e/spike-tunnel-binding.spec.ts)): a connection added through the
+> real bridge, set as the default route, a tab opened on it, traffic arriving at the SOCKS endpoint while a
+> **proven-reachable** clear path records nothing; the endpoint killed, the health poll flipping it down,
+> the tab reported blocked, and still nothing on the clear path.
+>
+> **Owed, and stated:** agent lockout when a tunnel drops (the verdict is computed, the run gate is not
+> wired); the explicit exit-IP check; rename / reorder / duplicate in the manager; **OpenVPN**, which needs
+> a real adapter, source-bound sockets and a Windows routing assumption that has not been verified —
+> deferred at the owner's request, and kept out of the schema enum so nothing promises it.
+
+> **Where the group binding will be stored (settled, no decision owed).** The Group scope writes into
+> `TabGroupInfo.settings` — the flat, JSON-safe per-group bag [ADR-0020](../../../adr/0020-tab-boundary-model.md)
+> added for exactly this, with `vpn.connectionId` / `tor.enabled` already **reserved** as key names
+> (`packages/desktop-ipc/src/tabs-types.ts`). Nothing else needs designing here: `settings` is a
+> **binding/UI** layer and carries no isolation semantics, which is consistent with this phase's own
+> "groups are a binding/UI layer, not a partition axis" — the partition key stays the connection alone,
+> so N groups on one connection share one partition. Two lifecycle facts the writer must handle:
+> `TabStore.normalize()` **prunes an empty group** (its binding dies with it — fine, since no member
+> remains to route), and **pinning a tab clears its group membership**, which silently re-resolves that
+> tab from the group binding to the General default. That second one is a real mis-binding path and
+> belongs in the Threat Model row already listed below ("group-inheritance misbinding").
+
+## Tasks
+
+### L0 — Core Shell (connection pool + per-tab routing seam)
+
+- [x] **Connection pool** in the **main process only**: several tunnels **up concurrently**, each with its own local SOCKS5 loopback port; up / down / health-poll per connection; renderer never touches tunnel handles (typed `contextBridge` status only)
+      _([connection-pool.electron.ts](../../../../apps/desktop/src/main/network/connection-pool.electron.ts), 14 tests. Two properties worth naming: `connecting` is never reported as usable to the kill-switch, and "up" means the endpoint answered AND Chromium confirmed the proxy took effect — not "the provider said yes". `rotate` is not implemented: it is a Tor-circuit operation and Tor is not here yet._
+- [x] **Per-session subsystem registry** — every browsing session is created through one place and carries the same wiring (webRequest/DNR, download quarantine, User-Agent), with **critical** attachers whose failure refuses the partition instead of serving it unfiltered ([browsing-sessions.electron.ts](../../../../apps/desktop/src/main/network/browsing-sessions.electron.ts), 12 tests). _Not in the original plan; the prerequisite everything below assumed._
+- [x] **Partition-per-connection** (`persist:tepegoz-web--conn-{connId}`) → `session.setProxy({ proxyRules })` pointed at **that connection's** loopback SOCKS port — **explicitly NOT** an OS system proxy (preserves Phase 2 stance); `Direct` tabs stay on the **existing, unrenamed** `persist:tepegoz-web` partition so no user's cookies/logins are orphaned ([tunnel-session.electron.ts](../../../../apps/desktop/src/main/network/tunnel-session.electron.ts), 8 tests + the leak spike). _Takes a SOCKS port from a caller; the pool that produces one is the unticked item above._
+- [x] **Binding API** (main): `setGeneralBinding(connectionId | 'direct')` + `bindGroup(groupId, connectionId | 'direct' | 'inherit')` + `bindTab(tabId, connectionId | 'direct' | 'inherit')` — resolves `tab override → group → General default → Direct`, re-hosts affected `WebContents` on the target partition (reload-on-switch), records the binding, and surfaces resolved bindings to the renderer; re-resolves on group add/move/remove **and on General-default change**; bindings survive tab move/detach within the profile
+      _([binding-service.electron.ts](../../../../apps/desktop/src/main/network/binding-service.electron.ts) + [tabs-window-rehost.ts](../../../../apps/desktop/src/main/tabs-window-rehost.ts), 14 tests. A tab override lives in memory only, on purpose: silently restoring one after a restart — onto a connection that may no longer exist — would re-route a page without being asked._
+- [x] `proxyBypassRules` for loopback so IPC + localhost dev are never tunneled; **deny-by-default** for everything else on any tunnel-bound partition ([egress-proxy.ts](../../../../packages/security-policy/src/egress-proxy.ts), 16 tests). _Deliberately narrower than the line asked for: loopback literals only, **not** Chromium's `<local>` — a dotless-hostname bypass would send `http://intranet/` out the clear path and hand a LAN host the user's real address._
+
+### L6/L7 — NetworkPrivacyProvider adapter (BYO 3rd-party, 5a)
+
+> **Nothing is bundled, so nothing here is gated on code-signing.** The userspace providers run helper
+> binaries the user supplies (`wireproxy`, `tor`) — located, not installed: override → `userData/bin` →
+> PATH, with the drop-in directory shown when one is missing. Shipping a third-party executable inside a
+> signed installer would be a distribution problem _and_ would push a download on everyone who never turns
+> the feature on. Only a future bundling decision would need Phase 0's code-signing item.
+
+- [x] `NetworkPrivacyProvider` interface (`connect`/`disconnect`/`probe`, exposes a local SOCKS port) — one **instance per active connection** ([connection-provider.electron.ts](../../../../apps/desktop/src/main/network/connection-provider.electron.ts)). _Capability-Plane registration is NOT done: a provider here is main-process-internal and reachable by no extension, so routing it through the plane would add an audit path with nothing on either end of it._
+- [x] **`WireGuardProvider` — userspace, via `wireproxy`** ([wireguard-provider.electron.ts](../../../../apps/desktop/src/main/network/wireguard-provider.electron.ts)). No TUN adapter, no route changes, **no elevation**, unlimited concurrency — and it **cannot leak by construction**, because the process owns its own network stack and can only emit through the tunnel. `.conf` import is zod-shaped and parsed by a pure, tested module ([wireguard-config.ts](../../../../apps/desktop/src/main/network/wireguard-config.ts), 16 tests), which **REFUSES a profile with no `DNS` line**: wireproxy would fall back to the host resolver, sending every site name to the ISP in the clear while the traffic went through the tunnel.
+- [x] **Private keys never sit in plaintext at rest** ([vpn-secrets.electron.ts](../../../../apps/desktop/src/main/network/vpn-secrets.electron.ts)) — encrypted through `safeStorage`, and import is **refused outright** when the OS keychain is unavailable rather than degrading. _Honest gap: wireproxy takes a config path, not stdin, so the rendered config exists as a `0600` file from spawn until the listener answers, then is deleted._
+- [x] **`ByoSocksProvider` — the first shippable provider, with no binary to sign.** Points at a SOCKS5 endpoint the user already runs (Tor's 9050, a VPN client's SOCKS port, `ssh -D`, a self-installed WireGuard bridge); loopback-only, liveness-probed. _This is what makes 5a real today instead of blocked on code-signing._
+- [x] `WireGuardConfigProvider`: import/parse `.conf` at the trust boundary; userspace WireGuard ↔ local SOCKS; **multiple instances coexist** (distinct ports) — _delivered as the userspace provider above; no native crate needed, and no binary bundled (helper binaries are **located**, not installed: override → `userData/bin` → PATH, with the drop-in directory shown when one is missing). The plan's pinned-hash auto-download is **not built** — inventing a hash to satisfy a design would be worse than telling the user where to put a file._
+- [ ] Account-based providers (Mullvad/Proton-style): credentials + config **only in main via `safeStorage`**; never bundled/logged (redaction); per-connection isolation (multiple regions live at once)
+- [ ] `ExecutionRouter`-style selection: deterministic provider/region pick when a tab requests a **new** connection; decision + reason → Event Journal
+- [~] **App-issued HTTP follows the General binding.** _`session.setProxy` governs only the stack Chromium
+  owns. Axios runs on Node's, so model-provider calls, the agent's `web_fetch` + sitemap reads and MCP
+  HTTP transports left on the **clear path** regardless of what the user bound._
+  - [x] _**Policy wired 2026-09-07.** `@tepegoz/http`'s `egress-route.ts` was written for exactly this
+        and `setEgressPolicy` had never been called, so the module sat inert with `policy = () => DIRECT`.
+        Its own docblock gave the reason — "nothing produces a port yet, since the connection pool is
+        unbuilt" — which expired when the pool landed and was never revisited. Found by auditing for
+        exports that are tested but have no production caller, the same shape as the WebRTC lock._
+  - [x] _`BindingService.installAppEgressRoute()` installs it at startup, next to the new-tab and
+        group-exit installers. **General scope only**, per that module's recorded decision: tab and group
+        bindings answer "where does THIS page's traffic go", and a main-process request has no tab to
+        inherit from. Read at SEND time, so a later rebind takes effect without re-installing._
+  - [x] _**Fail-closed, deliberately, and it has a visible cost.** A General binding pointing at a
+        connection that is not up resolves to a tunnel route with no usable port → `resolveEgressAgents`
+        throws 503 instead of sending the request direct. 8 tests + mutation-checked (returning `direct`
+        on the not-up branch turns one red)._
+  - [ ] _**Owed: the transport.** `setTunnelAgentFactory` is still uninstalled because no SOCKS agent
+        dependency ships (`socks-proxy-agent` or equivalent — a new dependency, deliberately not added
+        unilaterally). Until it lands, **any tunneled General binding makes app HTTP fail rather than
+        leak**: model calls and MCP return 503 while the user is on Tor/VPN. That is this phase's stated
+        rule ("silently downgrading to the clear path is the leak, and it is worse here than in a tab,
+        because there is no address bar showing the user what happened") — but it is a real behaviour
+        change and the owner may prefer to land the agent first. One line to revert: drop the
+        `installAppEgressRoute()` call._
+
+### Tor integration (5a)
+
+- [x] `TorProvider`: a managed `tor` process exposing a local SOCKS port; same connection-pool + per-tab binding seam as VPN; a Tor connection is just another entry in the pool ([tor-provider.electron.ts](../../../../apps/desktop/src/main/network/tor-provider.electron.ts))
+- [x] **Isolated circuits per connection** — one `tor` process per connection, each with its own `DataDirectory`, so two Tor connections take different paths by construction rather than by configuration. _New-circuit / rotation controls are not surfaced; `.onion` works because it is just a hostname the Tor SOCKS endpoint resolves._
+- [x] **Chained routes — "this group is on the VPN AND on Tor".** A group resolves to exactly one route, so the combination is Tor with the VPN's loopback SOCKS as its `Socks5Proxy`, exposing its own port for the group. The kill-switch composes for free: the upstream dropping kills Tor's outbound and cuts the group, with nothing coordinating the two. The upstream is resolved **lazily at connect time** (a restarted tunnel lands on a new port), and a cycle guard refuses a chain that loops back on itself.
+- [~] **Exit-node = untrusted** assumption documented (ADR-0011 + threat model); force HTTPS-only / warn on cleartext over a Tor exit - [x] _Documented: `threat-model.md` § "Exit-node / operator is untrusted" + the residual-risk list;
+  ADR-0011 §7 and "Still not decided here"; the user-facing `network-privacy-guide.md`._ - [x] _**Warn on cleartext shipped 2026-09-08.** `PageInfo` gained `tunnelExit` (`tor` / `vpn` /
+  `socks` / null), resolved in `ipc-page-info.ts` from the active tab's live binding + pool
+  (`activeTabTunnelExit`, tolerant of a missing tab or a forgotten connection). The Site Info
+  bubble renders a kind-specific error line — "a Tor exit node / your VPN / a proxy can read and
+  change everything on it" — when `tunnelExit !== null && scheme === 'http:'`, en+tr. Tests:
+  page-info schema (`tunnelExit` + its default), `activeTabTunnelExit` mapping, and the bubble
+  (warns on http+tunnel, silent on https or Direct)._ - [x] _**force HTTPS-only** for tunnel-bound tabs landed 2026-10-09 ([ADR-0050](../../../adr/0050-https-only-on-tunnel-bound-tabs.md)):
+  a fail-closed `onBeforeRequest` upgrade on tunnel partitions, a nonce-guarded interstitial with a
+  session-only per-site bypass, a journal row, and the private `httpsOnlyOnTunnel` preference with a
+  Privacy toggle. **Verified live (BYO-SOCKS) 2026-10-09** in `e2e/https-only-tunnel.spec.ts`: an
+  `http://` page on a tunnel-bound tab is upgraded through the SOCKS tunnel, no cleartext request line
+  reaches the far side, and the tab shows the interstitial; with the setting off the same URL reaches the
+  origin in cleartext. That run found `-100` (connection closed) missing from the bypass allowlist — fixed.
+  **Not closed:** the real Tor and WireGuard transports have not been tried, so the parent item stays
+  `[~]` and Phase 5 stays 🟡._
+- [ ] **Bridges + pluggable transports (obfs4 / meek / Snowflake) — absent today, and this is the one Tor
+      gap that matters most for the primary market.** `TorProvider` already manages a `tor` process, so
+      bridge support is a config surface on something that ships, not new machinery: a bridge line is
+      unlisted in the directory, which is exactly what survives a country-level block of Tor's public relay
+      IPs. Without it, "Tor works" is true only where Tor is not blocked. Cost to state honestly in the UI:
+      bridges are slower.
+  - [ ] **Sanitize the pasted bridge line.** A bridge is copied out of a web page or a mail, so it arrives
+        with Unicode spaces, soft hyphens, smart quotes and stray line breaks — and a malformed line breaks
+        the censorship-circumvention chain at the exact moment the user needs it, with an error that reads
+        like "Tor is broken." Normalize whitespace and strip invisible characters on paste, then validate
+        the line's shape before accepting it. Tiny, and it is a documented real-world failure, not a
+        hypothetical.
+    - [x] _Landed 2026-10-09 (code, unit-tested; the IPC/storage boundary is **e2e-verified** in `e2e/tor-bridge-connection.spec.ts`; not yet exercised against a live bridge):_
+          `bridge-line.ts` normalizes (NFKC, invisible characters, smart quotes, dashes, whitespace, a
+          `Bridge ` prefix) and shape-validates (transport, address/port, 40-hex fingerprint, `key=value`
+          args, obfs4 needs `cert=`); `networkAddConnection` stores only the canonical line and refuses a
+          bad paste with `networkInvalidBridge` (en+tr); the Tor row in Settings has a bridge field with
+          the "slower" caveat. `TorProvider` writes `UseBridges`/`ClientTransportPlugin`/`Bridge`.
+    - [ ] _Still owed on the bridge line:_ transports resolve only from a Tor Browser install
+          (`PluggableTransports/` beside `tor`) — nothing is bundled; one bridge per add and no edit of an
+          existing connection; no run against a real obfs4/snowflake bridge, so the parent box stays open.
+  - [ ] **Turkish-language connection help is the highest-leverage localization in this phase.** The Tor
+        complaint corpus shows Turkish users' questions cluster on _finding_ the bridge/settings panel and
+        knowing which option to pick — navigation, not cryptography. This is the one place where being
+        Turkish-first is a functional advantage rather than a courtesy.
+    - [x] _Landed 2026-10-09 (static copy, en+tr): picking Tor in Settings → Network privacy shows a
+          collapsible "Tor will not connect?" with three steps — add and route it, where to get a bridge and
+          where to paste it, and which upstream option to leave alone. Not yet checked with Turkish-speaking
+          users; the wording is the first draft._
+- [x] **A "new identity" affordance.** Per-connection circuit isolation is landed, but nothing let a user
+      say "burn this circuit and start clean" — Tor Browser's New Identity resets both the circuit and the
+      site state. Here the two halves already existed separately (a connection can be rebuilt; per-site data
+      clearing shipped in Phase 2), so the work is one honest action that does **both** and says which tabs
+      it will disturb. _Built 2026-09-08._
+  - [x] _**Both halves or neither, in an order that cannot leak in between.** `ConnectionPool.newIdentity`
+        takes the connection DOWN first — the kill-switch then holds every tab bound to it, fail-closed at
+        the session's own proxy rules — wipes the partition while nothing can egress, and only then brings
+        it back up. Doing one half is the failure worth designing against: fresh circuits with the old
+        cookies is a new address presenting the same logged-in session, and a cleared jar over the same
+        circuit is re-linked at the network layer. A wipe that throws leaves the connection DOWN and
+        reports it, rather than handing back a tunnel still carrying the identity the user asked to
+        destroy._
+  - [x] _**Tor only, and that is a truth constraint rather than a scope cut.** Reconnecting WireGuard or
+        BYO-SOCKS lands on the same exit address, so offering "new identity" there would name something the
+        product cannot deliver. Refused in main (`networkNewIdentityNotTor`, en+tr), not merely hidden in
+        the UI._
+  - [x] _**`BrowsingSessions.wipe` is deliberately not `release`.** `release` forgets the registry entry,
+        which is right for a connection that is going away and wrong here: the tabs on this partition keep
+        running, and forgetting the entry would strand live `WebContents` on a `Session` the registry no
+        longer knows about — still serving them, no longer reachable for a wipe, a rebind or a release.
+        Both refuse the Direct partition; a wipe reaching it would be a silent mass sign-out._
+  - [x] _**Entry guards are KEPT.** Restarting `tor` re-uses its `DataDirectory` on purpose: rotating
+        guards on every new identity is the anonymity regression [ADR-0011](../../../adr/0011-vpn-network-privacy.md)
+        §7 warns about, bought for nothing — guards are not what links two sessions, circuits and cookies
+        are. The dialog says so._
+  - [x] _**"Says which tabs it will disturb" is a real count, profile-wide.** `NetworkConnectionView`
+        gained `boundTabs`, resolved across EVERY window rather than the one the state was sent to — a
+        count that stopped at the current window would understate it exactly when a user has several open
+        on a tunnel. `TabManager.reloadTab` is now routed by ownership like `rehostTab` for the same
+        reason, so the reload does not silently skip the other windows._
+  - [x] _**A tunnel that does not come back is not a failed new identity.** The circuits and the site state
+        are gone either way, so that outcome gets its own sentence instead of an error telling the user to
+        retry something that already happened — and the tabs are NOT reloaded then, because reloading over
+        a down tunnel just paints a kill-switch error over the page they were reading. 14 tests across the
+        pool, the session registry, the IPC handler and the settings row._
+- [x] **Write down what per-connection `DataDirectory` costs in entry guards.** Tor deliberately pins ~3
+      long-lived **guard** nodes per client, because rotating the entry point raises the chance of eventually
+      picking a hostile one. One `tor` process per connection, each with its own `DataDirectory`, means each
+      connection keeps its **own** guard set — and every connection a user deletes and recreates is a guard
+      rotation. That is a real anonymity consequence of a design chosen for isolation; ADR-0011 should state
+      the trade rather than leave it implicit. _Done 2026-09-08: [ADR-0011](../../../adr/0011-vpn-network-privacy.md)
+      §7's "One Tor process per connection" paragraph now spells out the trade — N connections is N guard
+      selections not one, `release()` wiping a partition makes delete-and-recreate a guard rotation the user
+      did not choose, and the honest guidance (keep one Tor connection for guard stability; create several
+      only when path separation is worth more) with a pointer to the connections-overview disclosure._
+- [x] **⚠️ Two shipped/planned behaviours contradict the Tor research and must be disclosed, not quietly
+      kept.** Both are defensible product choices; neither is defensible if the UI implies otherwise.
+      _Both disclosures landed in the connections overview (`settings-network-privacy.tsx`), en+tr, 2026-09-08._
+  - [x] **Chained VPN → Tor is landed above as `[x]`**, while the Tor guidance is that combining them is
+        generally _not_ recommended — the hop before Tor sees that you are a Tor user and the arrangement
+        shifts trust onto the VPN operator. Keep the feature, state the trade in the connections overview.
+        _`network.torChainedCaveat` renders on any connection that is `kind: 'tor'` **and** has an
+        upstream — on that row, next to the `via {name}` chain label — and nowhere else. Test:
+        "warns on a chained VPN → Tor connection, on the row it applies to" (asserts a straight-to-Tor
+        row does not carry it)._
+  - [x] **Per-tab routing means Tor traffic and direct traffic run in the same browser at the same time** —
+        precisely the pattern Tor Browser tells users to avoid, because correlated activity across the two
+        can re-link the anonymous session. This is a **thesis-level** consequence of the per-tab model, not
+        a bug, and the disclosure copy has to say it plainly: a Tor-routed tab is not a Tor Browser session.
+        _`network.torNotTorBrowserTitle` / `…Body` render as an `info` `AlertBanner` at the top of the
+        Connections card **as soon as any connection is `kind: 'tor'`** — the point at which the caveat
+        starts to matter — and is absent otherwise. Two tests pin both directions._
+  - Source: [`../../../research/research-tor-browser.md`](../../../research/research-tor-browser.md)
+    and [`../../../research/research-secure-browser-design.md`](../../../research/research-secure-browser-design.md).
+
+### L8 — Security Kernel (egress + kill-switch)
+
+- [x] Extend the **Egress Firewall**: **fail-closed kill-switch scoped per connection** — a connection dropping ⇒ **all tabs resolving to it** (direct override or group inheritance) have egress blocked (no fallback to the clear path); other connections' tabs unaffected
+      _(mechanism + reporting both landed and **measured end-to-end**: no `DIRECT` fallback in the rules, the pool's health poll flips a dropped connection within seconds, and the affected tab is reported `egressAllowed: false`. Owed: the per-connection scoping demonstrated across two live connections at once.)_
+- [x] **No `DIRECT` fallback, ever** — the one-token property the whole kill-switch rests on, asserted at the only `setProxy` call site rather than trusted to review
+- [x] **WebRTC cannot escape the tunnel** — `disable_non_proxied_udp` per tunneled `WebContents`. _WebRTC opens UDP from the host stack while a SOCKS proxy carries TCP: without this a "tunneled" tab hands out the machine's real addresses in ICE candidates while every HTTP request goes through the tunnel. Was missing from this phase's DoD entirely._
+- [x] **The app's OWN outbound HTTP has a stated route, and it is fail-closed.** `@tepegoz/http` is axios on Node's stack, so `session.setProxy` never touched it: the agent's `web_fetch`, sitemap reads, model-provider calls and MCP HTTP transports left on the clear path whatever any tab was bound to — a decision nobody had made rather than a bug
+      _(**decided:** app-issued HTTP follows the **General** binding only. Tab/Group bindings answer "where does THIS page's traffic go" and a main-process request has no tab to inherit from. [egress-route.ts](../../../../packages/http/src/egress-route.ts) resolves it per request (so a long-lived provider client follows a General change) and **refuses** the request if a tunnel is in force with no transport installed — never a silent downgrade to Direct. Resolves to Direct today because nothing produces a SOCKS port yet; stops being inert when the pool lands.)_
+- [~] **DNS prefetch / preconnect / DoH residual** — tunnel partitions are stamped with `X-DNS-Prefetch-Control: off`, which is the only control Chromium honours at session granularity, and the per-request path is measured to resolve remotely. **Still open:** the header covers page-declared prefetch hints, not every predictor path, and DoH is process-wide. Not claimed as closed
+- [x] **Partition teardown** — removing a connection wipes its partition's storage, cache, auth and host-resolver caches (`BrowsingSessions.release`), and refuses to touch the Direct partition. _Electron still cannot delete the directory itself; the contents are gone, the empty folder remains._
+- [x] **Rebind safety:** the reload-on-switch transition is atomic w.r.t. egress — no request escapes on the old (or Direct) path once a re-bind is requested
+      _(structural, not hopeful: the old view is destroyed BEFORE the replacement exists, so there is never a moment with two views for one tab on two networks. A tab already on the target session is left completely alone rather than reloaded for nothing._
+- [x] **Blackhole on drop** — every `status → down` re-applies the blackhole config to that connection's partition and drops its verification. _A dead SOCKS port fails closed only while it stays dead: loopback ports get recycled, and an unrelated local process that later bound one would inherit a partition pointing straight at it._
+- [x] **DNS-leak detection** + "cleartext-when-tunnel-expected" anomaly (per tab/partition) → **agent-lockout** + HITL on high risk — _`BindingService.mayEgress` already computes the verdict; wiring it into the agent's run gate is owed_
+      — _**The wiring this line asked for, exactly as scoped, is done — the detector it wires is not a
+      new one.** `mayEgress`'s own docstring already names what it is: "not what stops a leak... the
+      REPORTABLE form" of the kill-switch's existing fail-closed verdict (a dropped/unresolvable tunnel
+      connection). That verdict now reaches the agent: `PolicyKernel.evaluate` gained an `egressBlocked`
+      input (`PolicyContext.egressBlocked`), threaded through `ToolGateway.invoke`'s `InvokeContext` and
+      `agent-runtime`'s `ctxFor` (`AgentRunDeps.tabEgressBlocked`, wired in the desktop app to
+      `BindingService.mayEgress`). Same read/deny split as the sensitive-site lockout it sits next to in
+      the kernel — read is confirmed (`tab_egress_blocked_read`), anything state-changing is denied
+      outright (`tab_egress_blocked`), because a connection already failed closed at the network layer
+      has nothing a human approval could unlock. **What is NOT built**: a standalone DNS-query-path
+      probe distinguishing a real leak from an ordinary dropped connection — today's signal is entirely
+      "is the resolved connection up", not "did a query actually go out in the clear". That distinction
+      is real and left honestly open; the box is ticked because the DoD line's own parenthetical scoped
+      the remaining work to the wiring, and the wiring is what shipped. 6 new tests directly on this box
+      (`policy-kernel.test.ts` ×4, `tool-gateway.test.ts` ×2), on top of the existing `kill-switch.test.ts`
+      (8 tests) the verdict itself already rested on._
+- [x] Account for the **encrypted-tunnel blind spot**: anomaly scoring shifts to metadata/timing/volume (payload is opaque inside the tunnel) — documented, not silently weakened
+      — _The box asks for exactly one thing — documented, not silently weakened — and that already landed:
+      [`docs/reference/threat-model.md`](../../../reference/threat-model.md)'s "Payload inspection is blind inside the
+      tunnel" row states the acceptance in the same words ("Accepted and documented... must lean on
+      metadata/timing/volume. Not silently weakened — recorded as owed work"). Left unticked until now
+      even though nothing further was scoped for it._
+
+### L9 — Browser UI
+
+- [x] **Selection at all three scopes**: **General** — Settings → Network privacy; **Group** — group context menu → "Route this group through…"; **Tab** — tab context menu → "Route this tab through…"
+- [x] **Route picker** listing live connections with status **in words** (not colour alone), a **Direct** option, an **"Inherit"** option (Tab → group, Group → General), the reload-on-switch notice, and a link to manage connections; all copy via the per-package dictionaries (en+tr)
+      _(**deviation:** a NATIVE submenu rather than a React Modal — the surrounding menus are already OS menus built in main against authoritative state, so the list cannot be stale when clicked. The "which tabs/groups use each" column and a member-count confirm are not built; the reload notice is stated inline instead.)_
+- [x] **Per-tab tunnel indicator** — a shield on a tunneled tab, marked **inherited vs overridden** and switching to a warning glyph with a "not connected" accessible name the moment the kill-switch is holding that tab's traffic. A **Direct** tab draws nothing, because a badge on every tab makes the one that matters harder to see
+      _(computed in MAIN and pushed; the untrusted renderer only displays it. A security indicator computed in the renderer is one a page-driven bug could talk into lying.)_
+- [x] **Connections overview + disclosure copy** in Settings → Network privacy: the list with live status, add/remove, the default-route picker, and plain statements that the browser does not provide the tunnel and that the exit note is the user's own unverified claim
+- [x] **Per-group indicator** on the group header ([route-badge.tsx](../../../../packages/tab-strip/src/route-badge.tsx), 8 tests): a shield beside the group name — green / amber / red for a VPN leg, purple when Tor is carrying traffic and grey when it is not. A **chained** route splits one shield down the middle, one half per leg, because either leg dying cuts the group. Colour is never the only signal: every state is also named in the accessible name. A Direct group draws nothing.
+- [ ] A legal/perf disclosure pass once a bundled provider exists
+- [ ] **Secure DNS (DoH) and HTTPS-Only as first-class user settings** — today DoH is only recorded as a
+      process-wide leak _residual_ (L8 above) and HTTPS-Only is tunnel-scoped. Chrome/Brave/Firefox all
+      ship a Settings toggle: DoH on/off + provider (or custom resolver), and a global "always use secure
+      connections" with an HTTP interstitial. Scoped and not scheduled — see
+      [`../tracks/browser-settings-feature-gap.md`](../../../research/tracks/browser-settings-feature-gap.md) §7.
+  - [x] _HTTPS-first half landed 2026-10-09 (e2e-verified in `e2e/https-first-everywhere.spec.ts`):_
+        **"Use secure connections for all sites"** (`httpsFirstEverywhere`, off by default) — see the
+        amendment in [ADR-0050](../../../adr/0050-https-only-on-tunnel-bound-tabs.md). Top-level GET only,
+        local network exempt, fails open, same warning page and per-site bypass.
+  - [x] _Secure DNS half landed 2026-10-09 (unit-tested; the resolver call shape and live mode changes are
+        **e2e-verified** in `e2e/secure-dns-setting.spec.ts`; **not** verified against a real DoH server):_
+        Privacy → **Secure DNS** — Off / Automatic (falls back to system DNS) / Secure (never falls back),
+        with Cloudflare, Google, Quad9 or a custom https server (`app.configureHostResolver`, applied at
+        startup and live on change). Process-wide: it covers ordinary and private tabs; a tab bound to Tor, a
+        VPN or a proxy hands the proxy the hostname, so its lookups already happen at the far end. An
+        unusable custom address degrades to the system resolver, never to "secure with no server". **Off by
+        default**; the description says the chosen provider sees your lookups.
+
+### L10 — Safe-Browsing interplay
+
+- [x] Keep per-partition DNR (`@ghostery/adblocker-electron`) working **inside** every tunnel-bound partition; **no regression** to "NO system-proxy MITM"
+      _(the multiplexer attaches per session instead of once per process — its one-shot `initialized` flag meant the first session got the whole filtering plane and every later one got nothing, silently. Registered as a **critical** attacher, so a session it cannot attach to is refused rather than served unfiltered.)_
+- [x] Document filter-vs-tunnel ordering: the per-session webRequest pipeline (DNR/adblock/Shield) runs **before** anything reaches the connection's SOCKS endpoint, on every partition alike — the multiplexer is attached per session, so a tunnel-bound request is filtered by exactly the same handlers, in the same order, as a Direct one
+
+### L10 — Where the tunnel's promise meets fingerprinting (rival evidence: Brave, Tor Browser)
+
+> **Where this came from.** [`../../../research/research-fingerprinting.md`](../../../research/research-fingerprinting.md)
+> and the Shields/farbling comparison in
+> [`../../../research/research-brave.md`](../../../research/research-brave.md).
+>
+> **The engine is not this phase's.** Fingerprinting protection is already owned by
+> [Phase 2 → L10 Safe-Browsing Suite](02-adapters-safe-browsing.md), where the research detail and the
+> required ADR now live. What belongs **here** is the part that is load-bearing for Phase 5's own promise:
+> this phase hides the **IP**, and a user who routes a tab through Tor and is then re-identified by canvas
+> hash — or whose real address leaks out of WebRTC — got the ceremony of privacy without the substance.
+
+- [x] **WebRTC local-IP leak is a kill-switch concern, not a privacy preference.** Block host-candidate
+      exposure (mDNS obfuscation) for any tunnel-bound partition. A leak here reveals the real address of a tab
+      the user was told is tunneled, so it fails this phase's promise regardless of what Phase 2 ships
+  - [x] _**Closed 2026-09-07, and it was open in the worst way: the fix was already written.**
+        `applyTunnelHardening` (`disable_non_proxied_udp`) had shipped in `tunnel-session.electron.ts`
+        with two passing unit tests and **no production caller anywhere** — a grep for it found the
+        definition and the test file, nothing else. So every tunneled tab could hand out the machine's
+        real local and public addresses in ICE candidates while its HTTP traffic went through the
+        tunnel, with the route badge showing green. A test proving a function behaves correctly says
+        nothing about whether anything invokes it, and that gap is invisible to coverage: the function
+        was 100% covered._
+  - [x] _Wired at the two choke points rather than at each `new WebContentsView`, because this module's
+        own rule is that the leaks come from a SECOND path that skipped a check. `wireView` covers all
+        three view-creation paths (fresh tab, revive-from-discard, cross-window rehost) plus the tear-off
+        re-wire; `wirePopupWindow` covers page-opened popups, including nested ones. The popup case is
+        the more dangerous half — a popup inherits its opener's session, so it looks like a continuation
+        of the same tunneled session while leaking._
+  - [x] _Found and fixed a **second** bug while wiring it: `BrowsingSessions.isTunnelPartition` matches
+        only `persist:tepegoz-web--conn-`, so a **private** tunneled tab (`tepegoz-private--conn-{id}`)
+        read as untunneled. That is the highest-stakes combination in the phase. New pure
+        `isTunneledPartition` in `@tepegoz/tab-engine` covers both spellings; `isTunnelPartition` is
+        deliberately left narrow because it gates `release`, which DELETES a partition's storage._
+  - [x] _Direct views are deliberately left alone: `disable_non_proxied_udp` is correct only when there
+        IS a proxy to carry the UDP, and applying it with no tunnel would break ordinary WebRTC (video
+        calls in a normal tab) to defend a leak that is not possible there. A failed lock on a tunneled
+        view PROPAGATES — "the tab does not load" is an acceptable failure state here, "it loads on the
+        clear path" is not._
+  - [x] _22 tests: which sessions harden (browsed tunnel / private tunnel / Direct / unbound private /
+        not-ours / propagating failure), the pure predicate against both key builders, and — the ones
+        that would have caught the original defect — that the wiring **calls** it, hardening before any
+        listener or the unload prompt. Mutation-checked: deleting the `wireView` call turns 2 red._
+- [ ] **One claim, one surface.** Fingerprint posture binds at the same three scopes as a route
+      (General / group / tab) and is shown in the same place as the route badge — "this tab is anonymous" must
+      not be assembled by the user out of two independent settings that can disagree
+- [x] **Say what the tunnel does not do.** The connections overview states plainly that a tunnel hides the
+      network address and **not** the browser profile, and links to the Phase 2 protection.
+      _Landed 2026-09-08 as a permanent framing line at the top of the Connections card
+      (`network.tunnelLimitsBody`, en+tr), with a `CrossLink` to the `privacy` section ("Clear a site’s
+      data") — shown whether or not any connection exists, since that silence is the over-trust risk.
+      Test: "always states what a tunnel does NOT change, and links to per-site data clearing" (asserts
+      `href="#privacy"`)._
+- [x] **The transport carries its own identity.** Changing the exit IP does not change the **TLS
+      fingerprint** (JA3/JA4-class), the HTTP header order, or the request rhythm — all three are
+      standard inputs to anti-bot and reputation systems, and all three survive every tunnel this phase
+      builds. _Decided and recorded: Tepegöz **does not** normalize any of the three in this version
+      (fingerprint-normalization work is frozen out of v1 per the ship line), and the same
+      `network.tunnelLimitsBody` disclosure says so outright — "the TLS handshake, HTTP header order and
+      request timing are the same through every tunnel here … Tepegöz does not normalise those in this
+      version" — so "routed through Tor" cannot imply more than it delivers._
+      Source: [`../../../research/research-cross-profile-tracking.md`](../../../research/research-cross-profile-tracking.md)
+- [ ] **ECH (Encrypted Client Hello) — the biggest remaining plaintext leak this phase does not close.**
+      A tunnel hides the address; TLS still announces **which host** is being visited in the ClientHello's
+      SNI, in cleartext, to anything on the path. ECH encrypts it. Two honest constraints go with it: ECH's
+      config is fetched over DNS, so it only pays off **together with encrypted DNS** — and even then it
+      does not hide the destination IP or traffic shape, so "SNI is closed, the ISP sees nothing" is the
+      overclaim to avoid in the disclosure copy.
+- [ ] **Encrypted DNS is a trust-shift decision, not just a toggle.** DoH/DoT/DoQ encrypt the query and
+      hand it to whichever resolver is configured — so silently centralizing every user onto one provider
+      trades ISP visibility for resolver visibility. Requirements: a stated provider policy, a visible
+      choice, a working opt-out, and a defined interaction with the tunnel (a tunnel-bound tab's DNS must
+      resolve **through** the tunnel, never beside it — that is a leak this phase already owns). Pairs with
+      the user-facing DoH row captured in
+      [`../tracks/browser-settings-feature-gap.md`](../../../research/tracks/browser-settings-feature-gap.md) §7.
+- [ ] **Treat QUIC connection-ID rotation as a privacy setting, not a performance one.** QUIC's connection
+      id and its migration behaviour exist to _reduce_ linkability across network changes, but an
+      implementation that rotates in a distinctive way turns the same mechanism into a fingerprint. Decide
+      the posture deliberately alongside the TLS-fingerprint row above; they are one question, not two.
+      Source: [`../../../research/research-isp-tracking.md`](../../../research/research-isp-tracking.md) and
+      [`../../../research/research-vpn-security.md`](../../../research/research-vpn-security.md).
+- [x] **An agent-driven tab has a rhythm.** Automated request timing is a signal on its own, and it is
+      the one this project generates by existing. Cross-reference the countermeasures already in
+      [`packages/human-input`](../../../../packages/human-input) (randomized inter-action idle, real gestures)
+      and state whether they extend to request pacing or only to input events —
+      [`../../../research/research-automation-detection.md`](../../../research/research-automation-detection.md) is the
+      analysis of how that detection works. _Established 2026-09-08: `HumanInputAdapter` operates purely on
+      CDP `Input.*` events (mouse curves, Gaussian click hold-time, per-character flight-time,
+      inter-action idle) and is **skipped entirely** when the tab is unperceived (S7 PR3). It does not
+      touch HTTP request pacing, connection setup, or the reactor's perceive→act cadence — input events
+      only. Recorded in `docs/reference/threat-model.md` (Phase 5 table row + residual-risk bullet)._
+- [x] **Agent-driven tabs, stated honestly.** Automation timing is itself a signal. Decide and document whether
+      a driven tab may claim the same posture as a human-driven one, or whether the badge must say it is more
+      identifiable — this project does not get to leave that ambiguous. _Decided 2026-09-08: an agent-driven
+      tab **is** more identifiable as automation than a human-driven one, and a tunnel does not change that
+      (input humanization is not request-pacing humanization). The route badge is scoped to the **network
+      path** a tab takes and makes **no** automation-detection-resistance claim — so the badge does not need
+      a separate "more identifiable" marker, but the threat model states the limit plainly rather than
+      letting "routed through Tor" imply more. Request-pacing decorrelation is owed, not built._
+
+### Network-privacy onboarding & health (rival evidence: Freenet)
+
+> **Where this came from.** [`../../../research/research-freenet.md`](../../../research/research-freenet.md).
+> Freenet is the cautionary case, not a competitor: strong anonymity engineering that users abandoned over
+> **setup, packaging, unreadable errors and silent connection death** — roughly 35% of its complaints are
+> install/usability, versus 10% about anonymity itself. Phase 5a currently expects the user to bring a
+> WireGuard config and read status words. That is the same cliff.
+
+- [~] **First-run flow for a tunnel** — import a config, name it, test it, and see a plain-language result;
+  a failed test says which step failed (config parse / handshake / DNS / exit reachability), not "not
+  connected". _Landed 2026-09-22 as a "Test connection" action on the EXISTING add-connection row
+  (`ConnectionTestAction`, [settings-network-test.tsx](../../../../apps/desktop/src/renderer/src/components/settings-network-test.tsx))
+  rather than a separate wizard, so it runs immediately after saving a connection or any time later.
+  Main-process stage classification ([connection-test.electron.ts](../../../../apps/desktop/src/main/network/connection-test.electron.ts),
+  11 tests) over a new `network:test-connection` IPC (zod-validated request, `ConnectionTestResultSchema`
+  in `@tepegoz/shared-types`, `safeParse`d again at the renderer boundary — degrades to "could not be
+  read" rather than trusting a malformed shape). **Two stages are real and independently distinguished:**
+  `configParse` re-runs the EXACT synchronous checks a connection already passed at add time (WireGuard
+  secret decrypt + `parseWireGuardConfig`, a Tor upstream's continued existence) with no network attempt;
+  `handshake` is the connection pool's own `ensureUp` — the same call the manual Connect button makes,
+  not a second way to bring a tunnel up. Every failed stage renders the SAME localized sentence
+  `classifyNetworkError` already produces for the connections overview's `lastError`, never raw
+  provider text as the primary message (kept on `title=`). **DNS and exit reachability are NOT built
+  as independent stages, and stay `[~]` for that reason.** The only reusable signal past a successful
+  handshake is `ensureTunnelSession`'s `resolveProxy` check (already inside `ensureUp`) — proof the
+  session's proxy config took effect, not that the tunnel can resolve a name or reach a real
+  destination. Turning either into a real, distinct check would mean adding new probing logic inside
+  the connection pool's connect path, which this change deliberately does not touch (scoped down per
+  this task's own instruction rather than fabricating a pass). Both fold into one coarse `reachability`
+  result (`unverified` on a successful handshake, `notReached` otherwise), shown as its own honest
+  sentence rather than a third stage. en+tr, `keyPaths`-parity tested; each stage's pass/fail/skip
+  state is named in text next to its icon, never colour alone. 6 test files touched (3 new: the
+  main-process stage classifier, the renderer's `parseConnectionTestResult`, and the component;
+  3 extended: `ipc-network`, the preload bridge, the connections overview), 26 new tests across
+  main, preload, and renderer._
+- [x] **Connection health over time** — keep-alive, reconnect, and per-connection metrics (handshake
+      success rate, reconnect count, last error) surfaced in the connections overview, so a tunnel that dies
+      quietly is visible instead of being discovered through a leak. _Landed 2026-09-08: the pool tracks
+      `connectedSince` (set on every → `up`, cleared on → `down` — so a flap shortens uptime),
+      `lastCheckedAt` (the health-poll heartbeat), and a session `drops` counter (only on a real `up` →
+      `down`), all rendered as a "Dropped {n} time(s) this session …" line on the affected connection row._
+      _Extended 2026-09-09: the pool now also keeps a session handshake tally per connection — `handshakesOk`
+      / `handshakesFailed` (incremented in `ensureUp`'s success / catch), `reconnects` (a success that
+      follows an earlier success this session), `lastHandshakeAt` (retained across drops, unlike
+      `connectedSince`), and `lastErrorAt` (paired with the existing `lastError` string). These ride
+      `PoolConnectionView` → `NetworkConnectionView` and are shown in a new read-only **Connection health**
+      card (`components/settings-network-health.tsx`) under the connection manager: per connection, its live
+      status, "last handshake" as a locale relative time, the reconnect count, the handshake-success rate
+      (`{ok} of {total} ({pct}%)`, or "none attempted yet"), and — only when there has been one — the last
+      error as the same localized `classifyNetworkError` sentence the manager uses (raw stderr stays on
+      `title=`) plus how long ago. Nothing is persisted; the subtitle says the counters reset on restart.
+      The health slice of the `network:get-state` read is `safeParse`d at the renderer boundary
+      (`ConnectionHealthSchema` in `@tepegoz/shared-types`, `parseConnectionHealth`) — a record that fails
+      validation degrades to "health unavailable" for that row. en+tr for every new string. Pool tests
+      cover the tally transitions; `network-health.test.ts` covers the parse + rate; `settings-network-health.test.tsx`
+      covers the rendered rows, the relative-time format, and the show/hide of the error row. **Not in
+      this box:** a rendered numeric latency figure and a first-run "which step failed" test flow — the
+      latency attribution is tracked by the "Slow needs a cause" item below, which owns probe-timing._
+- [x] **Errors in the user's language, with a next step** — every failure state maps to one localized sentence
+      and one action; no raw provider stderr in the UI. _Landed 2026-09-08: pure `classifyNetworkError`
+      (`components/network-error.ts`, 16 tests, 100% cov) maps a connect-time `lastError` to one of eight
+      causes — binary missing / bad config / chain loop / no such upstream / port unusable / no listener /
+      process exited / handshake — each with an en+tr sentence that names the fix
+      (`network.connError.*`), and an `unknown` fallback that never guesses. The connections overview
+      renders that sentence in place of `c.lastError`; the raw string is kept only as `title=` for a bug
+      report. Component tests assert the sentence shows and the raw stderr does not._
+- [~] **Docs that assume nothing** — a short Turkish + English guide covering what the tunnel does and does
+  **not** hide (explicitly: it does not stop fingerprinting — cross-link the section above).
+  _English guide landed 2026-09-08: [`../../../reference/network-privacy-guide.md`](../../../reference/network-privacy-guide.md)
+  — what changes (one address, one tab), what does not (profile, browser fingerprint, agent-tab
+  rhythm), the exit-operator-is-your-new-ISP framing, the Tor specifics (not a Tor Browser session /
+  chained VPN→Tor / guard stability), and the practical notes (nothing bundled, no clear-path
+  fallback, failures name a fix). Cross-links `threat-model.md` and ADR-0011 §7; `threat-model.md`
+  links back. **Turkish half owed** — the repo has no bilingual-docs mechanism and inventing one is
+  out of this box's scope; box kept `[~]`._
+- [~] **"Slow" needs a cause, not a spinner.** When a tunnelled tab is slow the user cannot tell whether it
+  is relay latency, a bridge, the site blocking the exit, or the tunnel itself half-down — and the Tor
+  corpus shows that ambiguity is what turns a slow session into an abandoned product. Attribute it: the
+  connection panel names the likely cause from what is already measured (handshake time, health poll,
+  HTTP status class from the exit).
+  _Landed 2026-09-22: a pure, main-computed classifier
+  ([slow-cause-classifier.ts](../../../../packages/security-policy/src/slow-cause-classifier.ts), 15 tests)
+  resolves one of a closed set — `relay_latency`, `bridge_or_bootstrap`, `exit_blocked_by_site`,
+  `tunnel_degraded`, `insufficient_signal` (`SLOW_CAUSES` in
+  [`shared-types/network-privacy.ts`](../../../../packages/shared-types/src/network-privacy.ts), the only
+  schema source per this repo's rule) — from signals the pool already tallies: live status, the
+  health-poll heartbeat (stale-vs-never distinguished), and this session's drop/reconnect counts. A
+  connection that is simultaneously slow AND unhealthy always reports `tunnel_degraded`, never
+  `relay_latency` — the more actionable explanation wins by construction, not by luck of evaluation
+  order (pinned by a dedicated boundary-case test group). Computed in
+  [`ipc-network.ts`](../../../../apps/desktop/src/main/ipc/ipc-network.ts)'s `connectionViews()` — no new
+  code in the pool itself, so this cannot touch how a tunnel connects, is health-polled, or fails
+  closed — and pushed over the existing `network:get-state` read, `safeParse`d at the renderer
+  boundary (`parseSlowCause`, degrading an unrecognised code to the same text as
+  `insufficient_signal` rather than throwing or showing a raw identifier). Surfaced as one localized
+  (en+tr) sentence, `network.slowCause.*`, in the Connections overview's health card
+  ([settings-network-health.tsx](../../../../apps/desktop/src/renderer/src/components/settings-network-health.tsx)),
+  shown only while a connection is `up` (a `down`/`connecting` connection already says so via its
+  status badge, so the row would just repeat it). **Honest gap, not silently dropped:** the phase
+  doc's third named signal — HTTP status class from the exit — has no producer anywhere in this
+  codebase; tallying per-connection response codes is new `webRequest` measurement plumbing, out of
+  this box's explicit scope ("do not invent new measurement plumbing"). The classifier accepts
+  `recentExitStatusClass` and `exit_blocked_by_site` is real and independently tested, but production
+  always passes `null` for it today — same stated-not-wired shape as this phase's `setTunnelAgentFactory`
+  seam above. Kept `[~]` for exactly that: two of the three named signals are live, the third is a
+  reachable, tested, but unwired branch._
+- [~] **A compatibility disclosure layer, because the exit IP is the problem the user will actually hit.**
+  CAPTCHA loops, account lockouts and Cloudflare walls are the single most visible complaint cluster
+  against Tor — and they arrive here too, since a shared exit address is what triggers them. Say it at
+  the moment it happens ("this site is challenging the exit address, not you"), and connect it to the
+  existing [ADR-0039](../../../adr/0039-user-granted-sensitive-capabilities.md) Human Handoff path
+  rather than letting an agent run grind against a wall it cannot pass. Also worth stating: an
+  **agent** run on a Tor-routed tab will hit these far more often than a human will.
+  _**Agent path landed 2026-09-22:** the existing Human Handoff Controller (`detectHandoff` →
+  Executor `guard` → `'handoff'` StopReason, phase-1a) now appends the exit-IP clause to the
+  **CAPTCHA-shaped** handoff message ONLY when the triggering tab's resolved binding is non-Direct
+  (VPN, Tor, or chained — read via the same `BindingService.resolveFor`/`resolveBinding` the per-tab
+  tunnel badge reads, never re-derived or renderer-trusted). 2FA/OTP and login-wall handoffs, and a
+  CAPTCHA on a Direct tab, are byte-for-byte unchanged. New seam: `AgentRunDeps.tabTunneled` +
+  `.captchaTunnelDisclosure` (`packages/agent-runtime/src/agent-runtime-types.ts`), consumed by
+  `handoffMessageFor` (`packages/agent-runtime/src/agent-runtime-loop.ts`) and wired in
+  `apps/desktop/src/main/agent/agent-service.electron.ts` via a `tabTunneled` reader over
+  `BindingService.resolveFor(tabId).resolved.connectionId !== null`. The clause also states the
+  "an agent hits this more than a human" point inline (no second UI surface). en/tr in
+  `extensions/ext-agent/src/i18n/{en,tr}.ts` (`handoff.captchaTunnelDisclosure`), i18n-parity test
+  green. 8 new `handoffMessageFor` unit tests (captcha×tunneled/direct/no-dep matrix, 2fa/login
+  unaffected, explicit-tabId resolution) in `agent-runtime-loop.test.ts`; `agent-service.electron.test.ts`
+  extended to assert the wiring. Detection logic, the StopReason/journal mechanism, and tunnel
+  routing/kill-switch code are untouched — this is messaging/attribution only, no auto-solve.
+  **Not done:** the human-facing surface for a person's OWN manual CAPTCHA encounter on a tunneled
+  tab (the phase's "user will actually hit" framing). There is no existing browser-chrome CAPTCHA/
+  challenge signal to hook into today (checked: nothing in `apps/desktop/src/renderer` detects a
+  CAPTCHA) — building one would be a second, standalone detection surface, which is out of this box's
+  scope. Left as `[~]` pending that surface or an owner call that the agent path is sufficient for now._
+- [ ] _Independent confirmation:_ the Tor complaint corpus reaches the **same** conclusion Freenet's does —
+      the heaviest user pain is not anonymity theory, it is installing, connecting and staying connected.
+      Two unrelated anonymity products failing the same way is the strongest evidence this section has.
+      Source: [`../../../research/research-tor-browser.md`](../../../research/research-tor-browser.md).
+
+### 5b — Managed own-infra (optional; rides the Phase 3 backend)
+
+- [ ] _Tepegöz-managed exit nodes_ behind the **Phase 3 Zero-Trust gateway** + billing/quota/rate-limit + abuse protection — each managed exit is just another poolable connection a tab can bind to — _clearly tagged 5b; deferred behind adoption data_
+- [ ] **License/legal review** (the original Phase 4 caveat: abuse liability, lawful-use ToS, jurisdiction) recorded in **ADR-0011**
+- [ ] Managed-exit selection plugs into the **same** `NetworkPrivacyProvider` + connection-pool seam (no rewrite of 5a)

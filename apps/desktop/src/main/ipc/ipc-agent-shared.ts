@@ -37,7 +37,7 @@ export const agentRunByGroup = new Map<string, boolean>();
  *
  * Still `BrowserWindow.getAllWindows()`-only, unlike `broadcastConversationsState` below — tab-strip
  * active-run state has no `tepegoz://` page consumer today (the tab strip only renders in chrome), the
- * same reasoning `docs/tracks/protocol-tepegoz-pages.md` §5b gives for the chat/video-player broadcasts
+ * same reasoning `docs/research/tracks/protocol-tepegoz-pages.md` §5b gives for the chat/video-player broadcasts
  * it also left alone. Migrate to `broadcastToAppSurfaces` if a future internal page ever needs this.
  */
 export function setAgentRunForGroup(groupId: string, running: boolean): void {

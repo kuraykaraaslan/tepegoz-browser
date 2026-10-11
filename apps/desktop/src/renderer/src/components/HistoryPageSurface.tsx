@@ -3,7 +3,7 @@ import { HistoryPage } from '@tepegoz/history-ui';
 import { useSurfaceLocale } from '../app-surface-locale';
 
 /** Desktop host for `tepegoz://history` loaded as a real page (Faz 3 of
- *  phases/tracks/protocol-tepegoz-pages.md) — mirrors `SettingsPageSurface.tsx`'s pattern: its own
+ *  docs/concepts/tracks/protocol-tepegoz-pages.md) — mirrors `SettingsPageSurface.tsx`'s pattern: its own
  *  document, wired straight to the preload bridge instead of prop-threaded chrome state. */
 export function HistoryPageSurface() {
   const locale = useSurfaceLocale();

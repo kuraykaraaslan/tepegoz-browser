@@ -18,7 +18,7 @@ import type { NetworkState, Preferences } from '@tepegoz/desktop-ipc';
  * "Open in Settings" navigates the active tab to `tepegoz://settings#<section>`, the same
  * `navigateTab()` deep-link `SiteInfoPopup.tsx` already uses to reach the Privacy section.
  *
- * Candidates considered and deferred (see docs/tracks/developer-settings-surface.md § Tier D): spellcheck
+ * Candidates considered and deferred (see docs/research/tracks/developer-settings-surface.md § Tier D): spellcheck
  * languages, cache size/location, and DNS-over-HTTPS all lack an owning Settings UI today, so there is
  * nowhere honest to deep-link to — mirroring them here would either fabricate a destination or duplicate
  * the write path this tier exists to avoid. They stay out until one exists.

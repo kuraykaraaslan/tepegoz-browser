@@ -4,7 +4,7 @@ import { test, expect, _electron as electron, type ElectronApplication } from '@
 import { pollEvaluate } from './poll-evaluate';
 
 /**
- * Faz 3 of phases/tracks/protocol-tepegoz-pages.md: extensions/history/downloads/uploads/bookmarks
+ * Faz 3 of docs/concepts/tracks/protocol-tepegoz-pages.md: extensions/history/downloads/uploads/bookmarks
  * migrated to real pages the same way settings was (`e2e/tepegoz-settings-page.spec.ts` covers the
  * settings-specific context-menu acceptance criterion); `tepegoz://process` (the Phase 2b Task
  * Manager) is a later real page added the same way. This file's job is narrower and applies to all of

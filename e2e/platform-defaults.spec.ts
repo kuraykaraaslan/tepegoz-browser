@@ -9,7 +9,7 @@ import { pollEvaluate } from './poll-evaluate';
  * What a browsed page can reach — measured by asking a REAL page in the launched app, not by reading
  * the handlers we happen to have written.
  *
- * `docs/threat-model.md` names the class this locks: Electron supplies a behaviour when the app
+ * `docs/reference/threat-model.md` names the class this locks: Electron supplies a behaviour when the app
  * installs no handler, and **the absence of a call is invisible to every gate we have** — a linter, a
  * type checker and a unit test all read the code that IS there. Two holes had already been found that
  * way in this repo (the default application menu binding Ctrl+Shift+I around the DevTools gate, and

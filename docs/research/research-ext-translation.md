@@ -39,8 +39,8 @@ uyuşmadığını görünce çöküyor. Rapor çökme mekanizmalarını ayrı ay
 - **Orijinali görebilme.** Çevrilmiş metnin kaynağına erişim, güvenin ön koşulu.
 - **Arama sonuçlarını ve seçimi bozmama** — çeviri sonrası Ctrl+F ve metin seçimi çalışmaya devam etmeli.
 - **Tercih edilen diller listesi.** Tek bir görüntü dili yerine sıralı dil tercihi; captured in
-  [`../tracks/browser-settings-feature-gap.md`](../tracks/browser-settings-feature-gap.md) §12 ve
-  [phase-8](../../phases/product/phase-8-local-intelligence-sovereignty.md)'in Türkçe-önce katmanının
+  [`tracks/browser-settings-feature-gap.md`](tracks/browser-settings-feature-gap.md) §12 ve
+  [phase-8](../concepts/product/phases/08-local-intelligence-sovereignty.md)'in Türkçe-önce katmanının
   doğal eşi.
 - **Türkçe terim tutarlılığı** — sözlük/terim tabanı, ADR-0042'nin sağlayıcı sınırının üstünde.
 

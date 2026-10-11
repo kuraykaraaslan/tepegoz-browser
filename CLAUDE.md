@@ -5,23 +5,23 @@ Guidance for Claude Code (and humans) working on **tepegoz-browser**.
 ## What this is
 
 An agentic, security-by-design, local-first browser (Electron + TypeScript). Architecture and the
-task-by-task roadmap live in **[`phases/`](phases/)** and **[`docs/adr/`](docs/adr/)**. The full plan
-is `docs/architecture.md` — a thin index of the L0–L10 layer model pointing at the document that owns
-each piece. Read `phases/README.md` first.
+task-by-task roadmap live in **[`docs/concepts/`](docs/concepts/)** and **[`docs/adr/`](docs/adr/)**. The full plan
+is `docs/concepts/architecture/README.md` — a thin index of the L0–L10 layer model pointing at the document that owns
+each piece. Read `docs/concepts/README.md` first.
 
 ## Binding design rules
 
-The binding rules for this repository are **[`docs/engineering-rules.md`](docs/engineering-rules.md)** —
+The binding rules for this repository are **[`docs/reference/engineering-rules.md`](docs/reference/engineering-rules.md)** —
 the public, in-repo statement of what CI, the linters, and the ADRs actually enforce. Code comments that
 cite `internal-ai-rules` (the author's cross-project ruleset, maintained outside this repository at
 `//wsl.localhost/Ubuntu/home/kuray/internal-ai-rules`) point there; the in-repo document is what binds a
 contributor, because a rule nobody outside can read cannot be a rule anyone outside can follow.
-Cross-cutting phase gates are summarized in `phases/README.md`; ADR-0010 records deviations.
+Cross-cutting phase gates are summarized in `docs/concepts/README.md`; ADR-0010 records deviations.
 
 ## Session close-out (standing rule)
 
 **Every working session that touches a phase MUST end with the Phase Status Report** — what closed, and
-how much is left. Format and the rules that keep it honest: [`phases/README.md`](phases/README.md#session-close-out--the-phase-status-report-standing-rule).
+how much is left. Format and the rules that keep it honest: [`docs/concepts/README.md`](docs/concepts/README.md#session-close-out--the-phase-status-report-standing-rule).
 
 The short version: landed code is **not** a closed phase (✅ needs DoD passed _and_ the delta in the
 results ledger); "how many left" counts against ✅, never against "started"; a session that closed
@@ -80,5 +80,5 @@ pnpm e2e                           # Playwright _electron smoke
 ## Layout
 
 `apps/desktop` (L0 Electron) · `packages/{shared-types,libs,i18n,persistence}` · `packages/native-rs`
-(Rust placeholder) · `docs/` (ADRs, threat model) · `phases/` (roadmap — `product/` · `ai-agent/`
+(Rust placeholder) · `docs/` (ADRs, threat model) · `docs/concepts/` (roadmap — `product/` · `ai-agent/`
 · `tracks/`) · `e2e/` (Playwright).

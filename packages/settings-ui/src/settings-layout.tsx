@@ -38,7 +38,7 @@ export interface SettingsLayoutProps {
  * `@tepegoz/settings-ui` — the settings shell: a sidebar of sections + a search box that filters across
  * every section + a scrollable content area. Owns its own dictionary (`useT(settingsDict)`); the page
  * title reuses the shared-core `common.settings`. Section content is host-supplied. Extracted from
- * `apps/desktop` per docs/package-map.md.
+ * `apps/desktop` per docs/reference/package-map.md.
  */
 export function SettingsLayout({
   titleIcon,

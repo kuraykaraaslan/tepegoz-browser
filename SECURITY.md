@@ -5,7 +5,7 @@ real actions on the pages you are logged into. That combination means a vulnerab
 user money, credentials, or data — not just a crash. Security reports are the most valuable
 contribution this project can receive, and they are treated accordingly.
 
-The design this policy defends is written down in [`docs/threat-model.md`](docs/threat-model.md). Read
+The design this policy defends is written down in [`docs/reference/threat-model.md`](docs/reference/threat-model.md). Read
 it before reporting: it states what is already known to be untrusted, what is deliberately fail-closed,
 and what is a documented gap rather than a discovery.
 
@@ -89,7 +89,7 @@ report goes unanswered past the targets above, you are free to disclose; silence
 - **Missing hardening with no demonstrated impact** — a header, flag, or version number in isolation.
   Show what an attacker gets.
 - **Automated scanner output** pasted without a working reproduction.
-- **Anything in the roadmap that does not exist yet.** [`phases/`](phases/) describes intent; the
+- **Anything in the roadmap that does not exist yet.** [`docs/concepts/`](docs/concepts/) describes intent; the
   absence of an unbuilt defense is a gap, not a vulnerability. If you are unsure whether something is
   built, ask — that question is welcome.
 

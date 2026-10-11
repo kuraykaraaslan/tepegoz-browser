@@ -2,7 +2,7 @@
 
 - **Status:** Accepted (the narrowing check only — see Consequences)
 - **Date:** 2026-08-20
-- **Phase:** [Phase 9 — Safe Autonomy & Governed Delegation](../../phases/product/phase-9-safe-autonomy-delegation.md), L8/L5 (Verifiable Policy Bundles)
+- **Phase:** [Phase 9 — Safe Autonomy & Governed Delegation](../concepts/product/phases/09-safe-autonomy-delegation.md), L8/L5 (Verifiable Policy Bundles)
 
 ## Numbering note
 

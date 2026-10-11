@@ -2,7 +2,7 @@
 
 Chrome-style multi-profile registry — the domain model for named identities on one machine
 (consultant / agency use case), plus the shared `profiles.json` store. Part of the multi-profile
-isolation track (`docs/tracks/multi-profile-isolation.md`, ADR-0045).
+isolation track (`docs/research/tracks/multi-profile-isolation.md`, ADR-0045).
 
 Each profile has an **immutable id** following Chrome's own scheme (`default` for the first / migrated
 profile, then `profile-1`, `profile-2`, …) and an independently **editable display name**. The id is

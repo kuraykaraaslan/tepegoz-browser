@@ -1,7 +1,7 @@
 # ADR-0049: Real OS-level sandboxing for a bridge subprocess — filesystem and egress confinement ADR-0047/0048 named but did not build
 
 - **Status:** Proposed (design only — no implementation; unblocks X-chat.8's "Isolation" deliverable
-  and Functional DoD, see [`phases/extensions/ext-chat.md`](../../phases/extensions/ext-chat.md))
+  and Functional DoD, see [`docs/concepts/extensions/phases/01-ext-chat.md`](../concepts/extensions/phases/01-ext-chat.md))
 - **Date:** 2026-09-13
 - **Refines:** [ADR-0047](0047-chat-protocol-adapter-and-bridge-trust-model.md) §4 and
   [ADR-0048](0048-adapter-subprocess-contract.md) §2 — both **assert** "no filesystem access beyond
@@ -135,7 +135,7 @@ caveated, unofficial path — not a default, and not silent.
   X-chat.8's echo-bridge Functional DoD can eventually close against; building it is separate,
   scoped work, not started by this ADR.
 - **No memory-budget enforcement** is added here either — still the flagged, separate gap
-  `phases/extensions/ext-chat.md`'s X-chat.8 status already names (Node has no cheap cross-platform
+  `docs/concepts/extensions/phases/01-ext-chat.md`'s X-chat.8 status already names (Node has no cheap cross-platform
   child RSS read without the same native-code investment this ADR already requires for §1/§2; bundling
   it into the same native-rs work once that lands is a reasonable follow-up, not decided here).
 - **Cooperative proxy-env-var honoring** (`ALL_PROXY`/`HTTPS_PROXY` set for a bridge that happens to
@@ -149,7 +149,7 @@ caveated, unofficial path — not a default, and not silent.
 ## Consequences
 
 - X-chat.8's "Isolation" deliverable and Functional DoD gain a real mechanism to build and test against
-  instead of the honestly-documented gap `phases/extensions/ext-chat.md` currently states.
+  instead of the honestly-documented gap `docs/concepts/extensions/phases/01-ext-chat.md` currently states.
 - `packages/native-rs` moves from a pure placeholder to having its first concrete, justified scope —
   its README's Phase-1b placeholder status should be updated once work against this ADR starts.
 - A bridge author (X-chat.9) writes to the `openSocket`/`fetch` RPC surface for any network access,

@@ -23,7 +23,7 @@ import type { TaskDefinition } from '@tepegoz/tasks';
  *    live tool registry. An imported task always starts in `notify` mode: no allowlist, every write
  *    pauses for approval, same as a task the user just typed in.
  *  - `sourceConversationId` (the agent chat a task was converted from): agent conversations have no
- *    export path of their own (see docs/data-and-backup.md's "What you cannot export yet"), so the id
+ *    export path of their own (see docs/reference/data-and-backup.md's "What you cannot export yet"), so the id
  *    would not resolve on another install. Left off rather than carried over as a dangling reference.
  */
 

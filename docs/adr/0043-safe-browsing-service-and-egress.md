@@ -3,7 +3,7 @@
 - **Status:** Accepted (egress decision ratified; the local hash-prefix core, the `SafeBrowsingProvider` gate, the on-disk prefix store, the SB v5 full-hash + prefix-list clients incl. Rice-Golomb decoding and incremental (delta) list updates, the refresh scheduler, the `SafeBrowsingService`, the `will-navigate` check + interstitial, the `DownloadTrustProvider` and the Settings switch are all shipped and unit-tested — the feature is **inert** pending a Google Safe Browsing API key as a release input; see Consequences)
 - **Date:** 2026-09-01
 - **Completes:** [ADR-0040](0040-download-trust-model.md) § 5 (the `DownloadTrustProvider` seam) · **refines** [ADR-0006](0006-policy-kernel-hitl.md) (deterministic Policy Kernel + HITL) · **accounts to** [ADR-0011](0011-vpn-network-privacy.md) (fail-closed kill switch — Safe Browsing is a named app-level egress)
-- **Phase:** [Phase 1a — Walking-Skeleton MVP](../../phases/product/phase-1a-walking-skeleton-mvp.md) (minimal safe-browsing core) · [Phase 2c — Classic Browser Essentials & Downloads](../../phases/product/phase-2c-classic-browser-essentials.md), L10
+- **Phase:** [Phase 1a — Walking-Skeleton MVP](../concepts/product/phases/01a-walking-skeleton-mvp/README.md) (minimal safe-browsing core) · [Phase 2c — Classic Browser Essentials & Downloads](../concepts/product/phases/02c-classic-browser-essentials.md), L10
 
 ## Context
 
@@ -135,7 +135,7 @@ to a full refresh on an out-of-range index or a checksum mismatch; `SafeBrowsing
 stored token via `createHashListDeltaFetcher` and only does a full replace on first launch, on the
 fallback path, or when more than one list is mirrored). All unit-tested. (3) The exact v5 list
 names, endpoints and wire shapes are marked in-code for verification against current Google
-documentation. (4) ~~The threat-model row~~ — **done** (`docs/threat-model.md`, the
+documentation. (4) ~~The threat-model row~~ — **done** (`docs/reference/threat-model.md`, the
 top-threats table + a residual-risk bullet). (5) An explicit
 app-scope kill-switch gate — today an SB fetch on a tunnelled general binding whose pool is down
 already fails closed at the network layer (no `DIRECT` fallback) → the fetcher throws → `unknown`,

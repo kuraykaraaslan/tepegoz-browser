@@ -143,7 +143,7 @@ export default class PolicyKernel {
       return { decision: 'deny', reason: 'sensitive_site_lockout', biometric: false };
     }
 
-    // 2b) EU AI Act Annex III risk gate: `docs/ai-transparency.md` states tepegöz is not deployed for
+    // 2b) EU AI Act Annex III risk gate: `docs/reference/ai-transparency.md` states tepegöz is not deployed for
     // biometric categorization, social scoring, or automated legal/eligibility decisions. This is what
     // makes that a property of the code rather than a claim about intended use.
     if (ctx.targetUrl !== undefined && isEuAiActHighRisk(ctx.targetUrl)) {

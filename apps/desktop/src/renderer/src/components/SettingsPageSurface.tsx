@@ -13,7 +13,7 @@ import { SettingsPage } from './SettingsPage';
 
 /**
  * Desktop host for `tepegoz://settings` loaded as a REAL page (Faz 1/2 of
- * `phases/tracks/protocol-tepegoz-pages.md`), mirroring `OnboardingApp.tsx`'s pattern: this document is
+ * `docs/concepts/tracks/protocol-tepegoz-pages.md`), mirroring `OnboardingApp.tsx`'s pattern: this document is
  * its own top-level `WebContentsView`, not a branch of `App-content.tsx`'s render tree, so it owns its
  * own bridge fetch, locale and theme — nothing is threaded in as props.
  *

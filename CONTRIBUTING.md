@@ -6,7 +6,7 @@ ever written down in a maintainer's head.
 
 Tepegöz is a **security-sensitive** application: it renders untrusted web content and lets a model act
 on pages the user is logged into. Several conventions below exist for that reason and are enforced by
-CI rather than by review taste. The full set is [`docs/engineering-rules.md`](docs/engineering-rules.md).
+CI rather than by review taste. The full set is [`docs/reference/engineering-rules.md`](docs/reference/engineering-rules.md).
 
 > **Found a security vulnerability?** Do not open an issue or a PR. Follow
 > [`SECURITY.md`](SECURITY.md).
@@ -14,7 +14,7 @@ CI rather than by review taste. The full set is [`docs/engineering-rules.md`](do
 ## Project status, and what help is actually useful
 
 This is a **pre-release, single-maintainer** project. Nothing is stable, several subsystems are landed
-but unmeasured, and the roadmap in [`phases/`](phases/) moves. Consequences worth knowing before you
+but unmeasured, and the roadmap in [`docs/concepts/`](docs/concepts/) moves. Consequences worth knowing before you
 invest time:
 
 - **Small, focused PRs get merged. Large speculative ones usually do not.** If a change is more than a
@@ -117,13 +117,13 @@ exam.
 
 ## Architecture, and where to read first
 
-- [`phases/README.md`](phases/README.md) — the roadmap index and the cross-cutting gates. **Start here.**
-- [`docs/architecture.md`](docs/architecture.md) — the L0–L10 layer model, an index pointing at the
+- [`docs/concepts/README.md`](docs/concepts/README.md) — the roadmap index and the cross-cutting gates. **Start here.**
+- [`docs/concepts/architecture/README.md`](docs/concepts/architecture/README.md) — the L0–L10 layer model, an index pointing at the
   document that owns each piece.
 - [`docs/adr/`](docs/adr/) — the decision record. A change that contradicts an accepted ADR needs a new
   ADR, not a quiet edit.
-- [`docs/package-map.md`](docs/package-map.md) — the realized module map.
-- [`docs/threat-model.md`](docs/threat-model.md) — what is trusted, what is not, and why.
+- [`docs/reference/package-map.md`](docs/reference/package-map.md) — the realized module map.
+- [`docs/reference/threat-model.md`](docs/reference/threat-model.md) — what is trusted, what is not, and why.
 
 **New work targets a package, not `apps/desktop` growth.** The desktop app is a thin Electron shell over
 the `@tepegoz/*` packages.

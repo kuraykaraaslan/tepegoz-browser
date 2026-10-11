@@ -33,7 +33,7 @@ export interface WindowControlsProps {
 /**
  * `@tepegoz/window-controls` — the native caption buttons (minimize / maximize·restore / close) for a
  * frameless window. Pure presentational view: the maximized state and all actions are injected, so the
- * package has no dependency on the Electron bridge. Extracted from `apps/desktop` per docs/package-map.md.
+ * package has no dependency on the Electron bridge. Extracted from `apps/desktop` per docs/reference/package-map.md.
  */
 export function WindowControls({
   isMaximized,

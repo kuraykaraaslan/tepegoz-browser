@@ -29,7 +29,7 @@ import type { RefTarget } from './cdp-driver-schemas.electron.js';
  *  the two diagnostics probes never share an execution context. */
 const DOM_QUERY_WORLD_ID = 1001;
 
-/** "At most ~200" (phase-s2-perception-v2.md P3-a) — mirrors `MAX_INTERACTABLE_ELEMENTS`. */
+/** "At most ~200" (02-perception-v2.md P3-a) — mirrors `MAX_INTERACTABLE_ELEMENTS`. */
 const MAX_QUERY_MATCHES = 200;
 
 const QueryScriptMatchSchema = z.object({

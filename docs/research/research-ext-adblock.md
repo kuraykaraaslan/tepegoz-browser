@@ -29,7 +29,7 @@ kalmıyor. uBlock'un karşı hamlesi **diferansiyel/sık filtre güncellemesi** 
 - **Tam `webRequest`-sınıfı motor, kural sayısı tavanı olmadan.** Bu raporun merkezî şikâyeti MV3'ün
   dayattığı tavandı; Tepegöz tarayıcının kendisi olduğu için o tavan yok. **Sevk edildi.**
 - **Filtre listesi maliyeti ölçülür olmalı.** Sık ve büyük listeler bellek ve başlangıç süresi demek —
-  [phase-2](../../phases/product/phase-2-adapters-safe-browsing.md) `#### Filter-engine cost` bölümü bu
+  [phase-2](../concepts/product/phases/02-adapters-safe-browsing.md) `#### Filter-engine cost` bölümü bu
   eksenin sahibi; [`research-brave.md`](research-brave.md) aynı maliyeti şikâyet tarafından doğruluyor ve
   **listeleri dile/bölgeye göre daraltmayı** öneriyor.
 - **Sık, küçük, güvenilir filtre güncellemesi** — diferansiyel güncelleme deseni.

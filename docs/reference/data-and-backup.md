@@ -1,0 +1,110 @@
+# Where your data lives, what you can take with you, and what a backup misses
+
+A local-first browser makes a specific promise: the data is on your machine and it is yours. That
+promise is only real if you can answer three questions without reading the source — where is it, how do
+I get a copy out, and what would I lose if this machine died. This page answers them, including the
+parts that are currently gaps.
+
+Everything below lives under the app's **user-data directory**:
+
+| OS      | Path                                    |
+| ------- | --------------------------------------- |
+| Windows | `%APPDATA%\tepegoz`                     |
+| macOS   | `~/Library/Application Support/tepegoz` |
+| Linux   | `~/.config/tepegoz`                     |
+
+## What is stored, and where
+
+| What                                                                                                                                                          | Where                                                | Encrypted?                  |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------- | --------------------------- |
+| History, bookmarks, downloads list, macros, tasks, agent conversations, agent memory & skills, remembered grants, trust profiles, token ledger, event journal | `tepegoz.db` (SQLite)                                | No — except stored logins   |
+| Stored website logins                                                                                                                                         | `tepegoz.db` → `login_credentials`                   | **Yes** — OS keychain       |
+| AI provider API keys                                                                                                                                          | `credentials.enc.json`                               | **Yes** — OS keychain       |
+| Preferences (theme, language, network bindings, extension toggles)                                                                                            | `preferences.json`                                   | No                          |
+| Quarantined downloads awaiting release                                                                                                                        | `Downloads/quarantine/`                              | No                          |
+| Downloaded on-device models                                                                                                                                   | `models/`                                            | No                          |
+| Spelling dictionaries, ad-block lists, translation memory                                                                                                     | `dictionaries/`, `adblock/`, `translate-memory.json` | No                          |
+| Installed third-party extensions                                                                                                                              | `Extensions/`                                        | No                          |
+| VPN/Tor profiles and helper binaries                                                                                                                          | `vpn/`, `bin/`                                       | WireGuard keys: OS keychain |
+
+## What you can export today
+
+| Data              | How                                          | Format                                                                                                        |
+| ----------------- | -------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| Bookmarks         | `tepegoz://bookmarks` → **Export**           | Netscape bookmarks HTML — every other browser imports it                                                      |
+| Stored logins     | Settings → Passwords → Export                | Google-compatible CSV                                                                                         |
+| Browsing history  | `tepegoz://history` → **Export**             | CSV (`url,title,last_visited,visit_count`) — opens in any spreadsheet                                         |
+| Downloads list    | `tepegoz://downloads` → **Export**           | CSV (`filename,url,source_origin,total_bytes,status,risk,created_at,completed_at`) — opens in any spreadsheet |
+| Preferences       | Settings → Reset → **Export settings**       | JSON — re-importable (Settings → **Import settings**)                                                         |
+| Macros            | `tepegoz://com.tepegoz.macros` → **Export**  | JSON — re-importable (**Import** on the same page)                                                            |
+| Scheduled tasks   | `tepegoz://tasks` → **Export**               | JSON — re-importable (**Import** on the same page)                                                            |
+| Trust profiles    | Settings → Privacy → Site trust → **Export** | JSON — re-importable (**Import** on the same screen)                                                          |
+| One agent chat    | Agent panel → export conversation            | Plain text                                                                                                    |
+| One agent session | Agent panel header → diagnostic bundle       | Folder: transcript, per-tab DOM + screenshots, redacted journal                                               |
+
+Bookmark and login exports use the format the other browsers read, on purpose. A JSON dump only this
+application can restore is a backup shaped like lock-in. History and the downloads list have no
+portable _interchange_ format the way bookmarks do, so their export is CSV for inspection and
+archival — there is no history or downloads _import_. The downloads CSV deliberately omits the
+on-disk file paths, the content hash, and the quarantine/trust internals: it is a record of _what_
+was downloaded, not a map of where the bytes landed on this machine. Preferences, macros, scheduled
+tasks, and trust profiles are the cases where a JSON dump is the right answer — there is no
+cross-browser preferences format, cross-tool macro format, cross-tool task format, or cross-browser
+trust-profile format to target, but all four round-trip: **Import** re-applies the file item by item,
+validating each one and skipping anything it does not recognise. Preferences and macros carry no
+secrets at all (API keys stay in the keychain-sealed vault; a macro is a recorded click/type script),
+so both are safe to move between machines outright.
+
+A scheduled task's export is narrower than preferences/macros, on purpose: it carries the task's
+_reusable configuration_ — name, instruction, schedule/trigger, target page — and deliberately leaves
+out its run history and artifacts (a log of what already happened on this machine, not something to
+replay on another one) and its preapproved-write policy, which is real capability, not portable data.
+Every imported task lands in the safe "notify" mode — no write is pre-approved — exactly like a task
+the user just created by hand; broader autonomy has to be granted again, explicitly, on the new
+machine. An imported task's link back to the agent chat it was converted from is also dropped, since
+agent conversations have no export path of their own (below) and the id would not resolve elsewhere.
+
+A trust profile's export is narrower still: only the two fields that are actually reusable data — the
+site's domain and its level (trusted/default/restricted). The row's sync metadata (id, device id,
+timestamp, version) never travels, because import never writes a row directly; it applies each entry
+through the _exact same_ `setTrustProfile` write path the Settings screen's own "Add"/"Update" button
+already calls, which mints fresh identity and a fresh timestamp on THIS install, precisely as if the
+user had typed the domain in by hand. A revoked (tombstoned) entry is never exported as if it were
+live — a site the user removed from the list does not reappear as trusted on another install just
+because it once had a row here. Because import reuses the manual write path rather than a parallel
+one, every invariant a hand-set level already carries — a profile can only ever _tighten_; deleting,
+spending money, and page-driven arguments always keep their confirmation prompt regardless of level —
+applies identically to an imported entry, including one at the `trusted` level: importing "trusted"
+for a site is no more permissive than typing it into the same box by hand, because the code that
+decides what "trusted" is allowed to change never asks how the level got set.
+
+## What you cannot export yet
+
+Agent memory and skills have **no export path**. In this build they are genuinely empty/inert (nothing
+writes to them yet), so this is a real gap in name only — there is nothing there today to move even
+once the path exists. They are readable in principle — `tepegoz.db` is an ordinary SQLite file and
+nothing stops you opening it — but there is no supported way to move them to another installation. See
+the tracked item in [`known-issues.md`](../known-issues.md).
+
+## Backing the whole profile up
+
+Copying the user-data directory while the app is **closed** captures everything in the table above. Two
+things about restoring it are worth knowing before you rely on it:
+
+- **Encrypted data does not travel.** Stored logins and API keys are sealed with the OS keychain
+  (`safeStorage`), which is bound to that user account on that machine. Restore the folder somewhere
+  else and everything else comes back while those decrypt to nothing. That is the protection working —
+  a stolen copy of the profile is not a stolen password list — but it means a machine-to-machine move
+  needs the CSV export, not a file copy.
+- **Copy it closed, not open.** SQLite in WAL mode keeps recent writes in a side file; copying the
+  `.db` alone from a running app can miss them. Quit first, or copy `tepegoz.db*` (all of them).
+
+Uninstalling does not remove the user-data directory. Delete it by hand if you want the data gone —
+and note that this is the only way to remove it, since nothing here is stored in the cloud.
+
+## Not stored anywhere
+
+There is no server. No account, no sync, no telemetry endpoint receiving your browsing. Cloud sync is a
+[Phase 3](../concepts/product/phases/03-backend-cloud-extensions.md) design, which is why the tables that
+hold user data already carry sync metadata (`updated_at`, `version`, `tombstone`, a device id) — so
+turning it on later is a feature, not a migration.

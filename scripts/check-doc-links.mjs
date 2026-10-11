@@ -1,6 +1,6 @@
-// Fails the build if any relative markdown link under `phases/**` points at a file that does not
-// exist. This is the executable form of the S0 exit criterion "zero broken links across phases/"
-// (phases/ai-agent/phase-s0-truth-and-repair.md).
+// Fails the build if any relative markdown link under `docs/concepts/**` points at a file that does not
+// exist. This is the executable form of the S0 exit criterion "zero broken links across docs/concepts/"
+// (docs/concepts/ai-agent/phases/00-truth-and-repair.md).
 //
 // Why this exists as a script rather than a one-off grep: S0 closed its link gate with a
 // hand-counted "all 839 relative links resolve". That number is not reproducible — the tree measures
@@ -8,13 +8,13 @@
 // regression from a different way of counting. The constitution forbids exactly that kind of
 // unfalsifiable claim, so the gate is now a command anyone can re-run instead of a number to trust.
 //
-// Usage: `pnpm docs:links`   (checks phases/**, the S0 gate)
+// Usage: `pnpm docs:links`   (checks docs/concepts/**, the S0 gate)
 //        `pnpm docs:links .` (pass a root to widen the check — CI runs this for the full repo)
 import fs from 'node:fs';
 import path from 'node:path';
 
 const roots = process.argv.slice(2);
-const ROOTS = roots.length > 0 ? roots : ['phases'];
+const ROOTS = roots.length > 0 ? roots : ['docs/concepts'];
 
 // Skip external, in-page, absolute-POSIX and Windows/UNC targets — only repo-relative paths are ours
 // to verify. An absolute or UNC path in a document is a deliberate out-of-repo pointer, not a link we
@@ -35,7 +35,7 @@ function walk(dir) {
   });
 }
 
-// Code spans are stripped before matching: `phases/**` carries ~15 intentional recovery commands of
+// Code spans are stripped before matching: `docs/concepts/**` carries ~15 intentional recovery commands of
 // the form `git show <sha>:phases/ai/<file>` that name deleted historical paths on purpose. Those are
 // documentation of where things went, not links, and must never be "fixed".
 function stripCode(markdown) {

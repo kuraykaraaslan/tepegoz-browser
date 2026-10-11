@@ -5,7 +5,7 @@ import type { AIProvider } from '@tepegoz/shared-types';
  * (SDK @anthropic-ai/sdk 0.107.0). Centralized so the orchestrator and UI reference a single
  * source instead of hardcoding strings.
  *
- * Role assignment per the architecture (docs/ai-transparency.md §1 — "Tier roles"):
+ * Role assignment per the architecture (docs/reference/ai-transparency.md §1 — "Tier roles"):
  *   - Opus 5    → planning (and vision-heavy execution, a later slice)
  *   - Sonnet 5  → standard execution
  *   - Haiku 4.5 → cheap classification
@@ -27,7 +27,7 @@ export type AnthropicModelId = (typeof ANTHROPIC_MODEL)[keyof typeof ANTHROPIC_M
  * plan/exec, cheap for classify): `gpt-5` drives planning AND the reactive exec loop (it must emit the
  * exact decision shape reliably — `gpt-5-mini` does not), and `gpt-5-mini` handles cheap classify. The
  * OpenAI adapter sends no effort field. These ids are TUNABLE DEFAULTS, not verified against a spec
- * (docs/ai-transparency.md §1) — edit here to retune (e.g. a newer `gpt-5.x`, or drop exec to mini).
+ * (docs/reference/ai-transparency.md §1) — edit here to retune (e.g. a newer `gpt-5.x`, or drop exec to mini).
  */
 export const OPENAI_MODEL = {
   plan: 'gpt-5',
@@ -42,7 +42,7 @@ export type OpenAIModelId = (typeof OPENAI_MODEL)[keyof typeof OPENAI_MODEL];
  * provider's map by the SAME `plan | exec | classify` key. Mirrors the capable/cheap tiering: `3-pro`
  * for planning, `3-flash` for the reactive exec loop, `3-flash-lite` for cheap classify. Plain
  * generateContent models (no Anthropic-style effort field). TUNABLE DEFAULTS, not verified against a
- * spec (docs/ai-transparency.md §1) — if Google only publishes dated/preview aliases in a region, swap
+ * spec (docs/reference/ai-transparency.md §1) — if Google only publishes dated/preview aliases in a region, swap
  * the exact id here; the routing LOGIC does not change.
  */
 export const GEMINI_MODEL = {

@@ -1,12 +1,12 @@
 # Reusable prompt — "add a rival's good features to the phases, the Tepegöz way"
 
 Run this **once per rival** (fresh session or a subagent). It reads an existing
-`docs/versus/tepegoz-vs-<rival>.md` comparison + the rival's checkout under `.junk/<rival>/`
+`docs/research/versus/tepegoz-vs-<rival>.md` comparison + the rival's checkout under `.junk/<rival>/`
 
-- Tepegöz's AI surface, and produces a `docs/parities/<rival>-agent-parity.md` proposal
+- Tepegöz's AI surface, and produces a `docs/research/parities/<rival>-agent-parity.md` proposal
   track that maps the rival's genuinely-good-but-missing capabilities to a Tepegöz-conformant
   approach + a suggested phase/ADR home + a draft DoD — the same shape as the already-written
-  `docs/parities/webbrain-agent-parity.md`.
+  `docs/research/parities/webbrain-agent-parity.md`.
 
 ## Placeholders — fill before running
 
@@ -18,9 +18,9 @@ Run this **once per rival** (fresh session or a subagent). It reads an existing
 
 ## Preconditions
 
-- `docs/versus/tepegoz-vs-{RAKİP}.md` already exists (run the comparison first).
+- `docs/research/versus/tepegoz-vs-{RAKİP}.md` already exists (run the comparison first).
 - `.junk/{RAKİP}/` is checked out.
-- `docs/parities/webbrain-agent-parity.md` exists as the structural reference.
+- `docs/research/parities/webbrain-agent-parity.md` exists as the structural reference.
 - For `webbrain` the output already exists — use that slug only to sanity-check the template.
 
 ---
@@ -29,26 +29,26 @@ Run this **once per rival** (fresh session or a subagent). It reads an existing
 
 ```
 GÖREV: {RAKİP_ADI} ({RAKİP}) ile Tepegöz arasında zaten yapılmış olan karşılaştırmayı
-(`docs/versus/tepegoz-vs-{RAKİP}.md`) al; {RAKİP_ADI}'nın GERÇEKTEN İYİ YAPTIĞI ve
+(`docs/research/versus/tepegoz-vs-{RAKİP}.md`) al; {RAKİP_ADI}'nın GERÇEKTEN İYİ YAPTIĞI ve
 Tepegöz'de EKSİK olan yetenekleri "Tepegöz'ün yapacağı şekilde" fazlara/ADR'lere
 yönlendiren ayrıntılı bir öneri track'i yaz.
 
-ÇIKTI: TEK bir yeni dosya  ->  `docs/parities/{RAKİP}-agent-parity.md`
-       + TEK bir düzenleme  ->  `docs/parities/README.md` (indekse satır ekle)
+ÇIKTI: TEK bir yeni dosya  ->  `docs/research/parities/{RAKİP}-agent-parity.md`
+       + TEK bir düzenleme  ->  `docs/research/parities/README.md` (indekse satır ekle)
 Repoda BAŞKA HİÇBİR ŞEYE dokunma. Branch açma, commit etme.
-Referans şablon: `docs/parities/webbrain-agent-parity.md` — yapısını ve DİLİNİ
+Referans şablon: `docs/research/parities/webbrain-agent-parity.md` — yapısını ve DİLİNİ
 (İngilizce) birebir taklit et. Karşılaştırma dosyası Türkçe olsa da bu track
 dosyası İngilizce yazılır (tracks/ klasör konvansiyonu + referans şablonla tutarlılık).
 
 ═══════════════════════════════════════════════════════════════════════════════
 1) ÖNCE OKU (derinlemesine, göz gezdirme değil)
 ═══════════════════════════════════════════════════════════════════════════════
-a) `docs/versus/tepegoz-vs-{RAKİP}.md` — TAMAMINI. Bu dosyanın "kim daha iyi + neden"
+a) `docs/research/versus/tepegoz-vs-{RAKİP}.md` — TAMAMINI. Bu dosyanın "kim daha iyi + neden"
    tablosundaki "{RAKİP_ADI}" lehine çıkan satırlar = ham aday listen.
-b) `docs/parities/webbrain-agent-parity.md` — TAMAMINI. Üreteceğin dosyanın kalıbı bu.
-c) `phases/README.md` — klasör haritası, v1 ship line, cross-cutting compliance
+b) `docs/research/parities/webbrain-agent-parity.md` — TAMAMINI. Üreteceğin dosyanın kalıbı bu.
+c) `docs/concepts/README.md` — klasör haritası, v1 ship line, cross-cutting compliance
    gate'leri, "Already planned — do NOT re-propose" listesi, Phase Status Report kuralı.
-d) `phases/ai-agent/README.md` — S0–S12 faz indeksi + durumları, "Never" listesi,
+d) `docs/concepts/ai-agent/README.md` — S0–S12 faz indeksi + durumları, "Never" listesi,
    "Routing — what stays out" tablosu, anti-debt kuralı.
 e) `.junk/{RAKİP}/` — rakibin deposu. README('lar), mimari/ajan dokümanları, kaynak
    ağacı, ve KİLİT kaynak dosyaları (ajan döngüsü, araç/aksiyon seti, sağlayıcı
@@ -62,7 +62,7 @@ f) Şüpheye düştüğün her Tepegöz iddiasını ilgili `@tepegoz/*` paketind
 2) TEPEGÖZ AI YÜZEYİ — hazır bilgi (şüphede kaynaktan doğrula)
 ═══════════════════════════════════════════════════════════════════════════════
 Tam Electron tarayıcı, strict TS, ~70 `@tepegoz/*` paket monorepo, ADR güdümlü, 1.0
-öncesi. AI roadmap `phases/ai-agent/` (S0–S12, HEPSİ 🟠 measurement-owed, hiçbiri
+öncesi. AI roadmap `docs/concepts/ai-agent/` (S0–S12, HEPSİ 🟠 measurement-owed, hiçbiri
 ✅; sahip notu "hâlâ istediğim gibi çalışmıyor"). Ajan "gerçekten bağlanmış iskelet,
 ince ölçülmüş". Vision/credential-broker/memory ATIL sevk; aynı anda tek run; site
 adaptörü yok; 8 sağlayıcı (bazıları stub); çevrimdışı RAG yok.
@@ -199,7 +199,7 @@ Her workstream bir `ai-agent` faz bölümü gibi yazılır ki gerçek bir faz
 dosyasına kaldırılabilsin.
 
 ═══════════════════════════════════════════════════════════════════════════════
-5) ÜRETİLECEK DOSYA — `docs/parities/{RAKİP}-agent-parity.md` (İngilizce)
+5) ÜRETİLECEK DOSYA — `docs/research/parities/{RAKİP}-agent-parity.md` (İngilizce)
    `webbrain-agent-parity.md` yapısını birebir izle:
 ═══════════════════════════════════════════════════════════════════════════════
 1. `# Track — {RAKİP_ADI} agent-capability parity`
@@ -230,7 +230,7 @@ dosyasına kaldırılabilsin.
 11. `## ADRs owed` — başlıkla (numara YOK), her biri "addendum to ADR-XXXX" ya da
     "new ADR"; kapanışta multi-profile ADR-çakışması dersine atıf.
 
-Sonra `docs/parities/README.md`:
+Sonra `docs/research/parities/README.md`:
 - Giriş paragrafındaki "... unscheduled proposals" sayısını +1 güncelle.
 - Tabloya bir satır ekle: `[{RAKİP}-agent-parity.md](...)` | `📋 Proposed — not
   scheduled ({TARİH})` | 2-3 cümlelik kapsam (kaç workstream, hangileri "sharpen

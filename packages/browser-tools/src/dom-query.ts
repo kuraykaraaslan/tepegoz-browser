@@ -24,7 +24,7 @@ import { sanitizeContent, wrapUntrustedContent } from '@tepegoz/tool-executor';
  * aggregate `content` block.
  */
 
-/** "At most ~200" (phase-s2-perception-v2.md P3-a) — the same bound `MAX_INTERACTABLE_ELEMENTS` uses
+/** "At most ~200" (02-perception-v2.md P3-a) — the same bound `MAX_INTERACTABLE_ELEMENTS` uses
  *  for the actionable-element set, so a query never returns a larger listing than a full page read would. */
 export const MAX_QUERY_MATCHES = 200;
 /** Longest single page-controlled attribute value rendered (mirrors `MAX_STYLE_VALUE_CHARS`). */

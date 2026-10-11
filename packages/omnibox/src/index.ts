@@ -1,6 +1,6 @@
 /**
  * `@tepegoz/omnibox` — the browser address bar (url-bar). Presentational component + the pure
- * inline arithmetic evaluator it uses. Extracted from `apps/desktop` per docs/package-map.md.
+ * inline arithmetic evaluator it uses. Extracted from `apps/desktop` per docs/reference/package-map.md.
  */
 export {
   Omnibox,

@@ -24,7 +24,7 @@ export interface ExtensionsGridProps {
  * `@tepegoz/extensions-ui` — the extensions manager shell (Chrome-style): a searchable grid of
  * extension cards, each with an enable/disable toggle. Owns its own dictionary (`useT(extensionsDict)`);
  * the extension list, manifest labels and enabled-state come from the host as `items`, so the package
- * carries no app-specific extension logic. Extracted from `apps/desktop` per docs/package-map.md.
+ * carries no app-specific extension logic. Extracted from `apps/desktop` per docs/reference/package-map.md.
  */
 export function ExtensionsGrid({ items, onToggle }: ExtensionsGridProps) {
   const t = useT(extensionsDict);

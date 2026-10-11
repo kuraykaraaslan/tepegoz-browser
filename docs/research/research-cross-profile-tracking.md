@@ -5,9 +5,9 @@
 > tespit zincirine** bağlaması.
 >
 > **Tarih.** Derleme 2026-08-21 · bu formata çevirisi 2026-09-02. **Dil notu.** Türkçe.
-> **Sahibi fazlar:** [phase-2](../../phases/product/phase-2-adapters-safe-browsing.md) ·
-> [phase-2c](../../phases/product/phase-2c-classic-browser-essentials.md) (özel/tek-kullanımlık mod) ·
-> [phase-5](../../phases/product/phase-5-vpn-network-privacy.md) (tünelin vaadinin sınırı).
+> **Sahibi fazlar:** [phase-2](../concepts/product/phases/02-adapters-safe-browsing.md) ·
+> [phase-2c](../concepts/product/phases/02c-classic-browser-essentials.md) (özel/tek-kullanımlık mod) ·
+> [phase-5](../concepts/product/phases/05-vpn-network-privacy.md) (tünelin vaadinin sınırı).
 
 ---
 
@@ -26,7 +26,7 @@ izi ve davranışsal sinyaller ayrılmaz — dolayısıyla bağ kurulabilir.
   ettiği dokuz eklenti** ölçülebilir entropi üretiyor; yani ürün, korumaya çalıştığı şeyi kendi eliyle
   zayıflatabilir. Faz 2'de bir blok olarak duruyor ve **ölçülmesi** gereken bir iddia.
 - **"Profil ayırmak izlenmemeyi sağlamaz" dürüstlüğü.** Faz 2c'nin özel/tek-kullanımlık mod metni ve
-  [multi-profile-isolation](../tracks/multi-profile-isolation.md) track'i bu sınırı yazmak zorunda —
+  [multi-profile-isolation](tracks/multi-profile-isolation.md) track'i bu sınırı yazmak zorunda —
   aksi hâlde ürün, veremeyeceği bir söz vermiş olur.
 - **Taşıma katmanı kendi kimliğini taşır.** Çıkış IP'sini değiştirmek **TLS parmak izini** (JA3/JA4
   sınıfı), başlık sırasını ve istek ritmini değiştirmiyor — üçü de anti-bot sistemlerinin standart

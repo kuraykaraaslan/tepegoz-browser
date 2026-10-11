@@ -3,7 +3,7 @@ import { ProfilesPage } from '@tepegoz/profiles-ui';
 import { useSurfaceLocale } from '../app-surface-locale';
 
 /** Desktop host for `tepegoz://profiles` loaded as a real page (ADR-0045,
- *  docs/tracks/multi-profile-isolation.md) — mirrors `BookmarksPageSurface.tsx`'s pattern. `ProfilesPage`
+ *  docs/research/tracks/multi-profile-isolation.md) — mirrors `BookmarksPageSurface.tsx`'s pattern. `ProfilesPage`
  *  re-fetches the list itself after every mutation; there is no cross-process push (a rename made in
  *  another profile's window lands on the next refetch or reopen). */
 export function ProfilesPageSurface() {

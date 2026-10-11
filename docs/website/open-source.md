@@ -114,7 +114,7 @@ strings in the same pull request, module boundary rules, coverage thresholds, an
 trailers in commit messages. All of it is mechanical, and all of it is written down before you start.
 
 **Start here** → [CONTRIBUTING.md](../../CONTRIBUTING.md) · **The binding rules** →
-[engineering rules](../engineering-rules.md)
+[engineering rules](../reference/engineering-rules.md)
 
 ---
 

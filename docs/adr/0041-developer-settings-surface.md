@@ -5,9 +5,9 @@
 - **Date:** 2026-08-28
 - **Refines:** [ADR-0012](0012-browser-tab-model.md) (isolated `WebContentsView` per tab) ·
   **complements** [ADR-0010](0010-ts-tooling-conventions.md) (conventions) ·
-  **contrasts** [tracks/express-settings.md](../tracks/express-settings.md) (rejected: a
+  **contrasts** [tracks/express-settings.md](../research/tracks/express-settings.md) (rejected: a
   settings surface that weakened the renderer boundary)
-- **Track:** [developer-settings-surface.md](../tracks/developer-settings-surface.md)
+- **Track:** [developer-settings-surface.md](../research/tracks/developer-settings-surface.md)
 
 ## Context
 
@@ -30,7 +30,7 @@ flag-level detail included.
 The product also contains an agent that drives the UI and a policy kernel that locks automation out of
 sensitive sites. A settings surface that can weaken the renderer sandbox is not a convenience — it is a
 new attack surface reachable by a mis-wired context menu or a compromised renderer. That is precisely
-why [`express-settings.md`](../tracks/express-settings.md) was rejected. This ADR draws the
+why [`express-settings.md`](../research/tracks/express-settings.md) was rejected. This ADR draws the
 line **before any code** so the line is not drawn later by whoever needed the toggle.
 
 ## Decision
@@ -149,7 +149,7 @@ left in place because it is what shipped on that date, not a live status.
 
 Per-key metadata registry + schema-derived pre-save validation + nested-object drill-down (Tier A), and
 `WebContentDefaultsCard` + `Preferences.webContentDefaults` (Tier C). Full detail in
-[tracks/developer-settings-surface.md](../tracks/developer-settings-surface.md), which is kept current;
+[tracks/developer-settings-surface.md](../research/tracks/developer-settings-surface.md), which is kept current;
 this ADR is not duplicating it line for line.
 
 ### Tier D (added 2026-09-22)
@@ -167,5 +167,5 @@ Spellcheck languages, cache size/location, and DNS-over-HTTPS — all named in t
 description — are deliberately **not** mirrored: none has an owning Settings UI in this codebase today,
 so there is no honest deep-link destination for any of them. Mirroring one anyway would mean either
 inventing a destination or quietly becoming the second write path this tier exists to avoid. Tracked as
-owed in [tracks/developer-settings-surface.md](../tracks/developer-settings-surface.md) § 4, to be added
+owed in [tracks/developer-settings-surface.md](../research/tracks/developer-settings-surface.md) § 4, to be added
 the day each gets its own Settings section.

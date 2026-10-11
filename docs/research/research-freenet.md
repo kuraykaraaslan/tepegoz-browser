@@ -4,7 +4,7 @@
 > kullanıcıları kurulum, paketleme, okunmaz hatalar ve sessiz bağlantı ölümü yüzünden kaybetmesi.
 >
 > **Tarih.** Derleme 2026-08-21 · bu formata çevirisi 2026-09-02. **Dil notu.** Türkçe.
-> **Sahibi faz:** [phase-5](../../phases/product/phase-5-vpn-network-privacy.md) →
+> **Sahibi faz:** [phase-5](../concepts/product/phases/05-vpn-network-privacy.md) →
 > `### Network-privacy onboarding & health (rival evidence: Freenet)`.
 
 ---

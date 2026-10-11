@@ -4,7 +4,7 @@
 
 <!-- One or two sentences: the problem/need, and what this PR changes. Link the phase task / ADR. -->
 
-## Self-review checklist (binding gates — phases/README.md §cross-cutting)
+## Self-review checklist (binding gates — docs/concepts/README.md §cross-cutting)
 
 - [ ] **Happy + sad paths** exercised (error mapping via `AppError` → boundary `{message, statusCode}`)
 - [ ] **Zod `safeParse` at every new trust boundary** (IPC both directions, LLM tool args, adapters, journal, policy)

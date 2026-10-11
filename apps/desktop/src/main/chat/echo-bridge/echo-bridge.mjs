@@ -10,7 +10,7 @@
 // Deliberately NOT part of this: any filesystem or network confinement. This process has the same
 // OS-level access as any other child `node` invocation — see `process-supervisor.ts`'s and
 // `subprocess-adapter.ts`'s own docstrings for why (cwd/env are forwarded, not enforced) and
-// `phases/extensions/ext-chat.md`'s X-chat.8 status for the open gap. This script exists to prove the
+// `docs/concepts/extensions/phases/01-ext-chat.md`'s X-chat.8 status for the open gap. This script exists to prove the
 // RPC/lifecycle contract, not to demonstrate a sandbox that does not exist yet.
 
 import { createInterface } from 'node:readline';

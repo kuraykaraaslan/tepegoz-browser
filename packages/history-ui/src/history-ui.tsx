@@ -53,7 +53,7 @@ export interface HistoryPageProps {
  * list of visited pages, each removable, plus "Clear all". Lazy-loads 50 items at a time via an
  * IntersectionObserver sentinel. Owns its search/list state and its own dictionary (`useT(historyDict)`);
  * the data source (list/remove/clear) is injected, so the package has no dependency on the Electron
- * bridge. Extracted from `apps/desktop` per docs/package-map.md.
+ * bridge. Extracted from `apps/desktop` per docs/reference/package-map.md.
  */
 export function HistoryPage({ list, remove, clear, onExport }: Readonly<HistoryPageProps>) {
   const t = useT(historyDict);

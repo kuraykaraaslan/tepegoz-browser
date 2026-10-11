@@ -3,7 +3,7 @@ import { mkdirSync, writeFileSync, existsSync, rmSync } from 'node:fs';
 import { test, expect, _electron as electron, type ElectronApplication } from '@playwright/test';
 
 /**
- * Multi-profile isolation (ADR-0045, docs/tracks/multi-profile-isolation.md), the part a unit test
+ * Multi-profile isolation (ADR-0045, docs/research/tracks/multi-profile-isolation.md), the part a unit test
  * cannot reach: that a real launch of the built app migrates a pre-existing flat install into
  * `Profiles/default/` on first run and boots into that directory rather than the flat root.
  * (`tepegoz://profiles` rendering + IPC trust is covered generically in `tepegoz-internal-pages.spec.ts`.)

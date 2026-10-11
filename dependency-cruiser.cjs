@@ -64,7 +64,7 @@ module.exports = {
       severity: 'error',
       comment:
         '@tepegoz/omnibox is a presentational chrome leaf (url-bar): it must never import back into ' +
-        'the desktop app. Navigation/clipboard are injected via callbacks. See docs/package-map.md.',
+        'the desktop app. Navigation/clipboard are injected via callbacks. See docs/reference/package-map.md.',
       from: { path: '^packages/omnibox/' },
       to: { path: '^apps/' },
     },
@@ -73,7 +73,7 @@ module.exports = {
       severity: 'error',
       comment:
         '@tepegoz/navigation is a pure URL/allow-list library: no Electron, no app imports. The ' +
-        'desktop adapters inject app.isPackaged and the internal-page set. See docs/package-map.md.',
+        'desktop adapters inject app.isPackaged and the internal-page set. See docs/reference/package-map.md.',
       from: { path: '^packages/navigation/' },
       to: { path: ['^apps/', 'node_modules/electron'] },
     },
@@ -82,7 +82,7 @@ module.exports = {
       severity: 'error',
       comment:
         '@tepegoz/json-store is a pure Node file utility: no Electron, no app imports. Callers pass ' +
-        'the file path and validate the returned shape with zod. See docs/package-map.md.',
+        'the file path and validate the returned shape with zod. See docs/reference/package-map.md.',
       from: { path: '^packages/json-store/' },
       to: { path: ['^apps/', 'node_modules/electron'] },
     },
@@ -91,7 +91,7 @@ module.exports = {
       severity: 'error',
       comment:
         '@tepegoz/credential-vault must stay Electron-free and app-free: the OS keychain (safeStorage) ' +
-        'is injected as SecretCrypto and the file path is injected by the desktop app. See docs/package-map.md.',
+        'is injected as SecretCrypto and the file path is injected by the desktop app. See docs/reference/package-map.md.',
       from: { path: '^packages/credential-vault/' },
       to: { path: ['^apps/', 'node_modules/electron'] },
     },
@@ -100,7 +100,7 @@ module.exports = {
       severity: 'error',
       comment:
         '@tepegoz/desktop-ipc is the IPC contract: it must never import back into the app or Electron. ' +
-        'Its `.` (contract) entry must also stay zod-free so the sandboxed preload can bundle it. See docs/package-map.md.',
+        'Its `.` (contract) entry must also stay zod-free so the sandboxed preload can bundle it. See docs/reference/package-map.md.',
       from: { path: '^packages/desktop-ipc/' },
       to: { path: ['^apps/', 'node_modules/electron'] },
     },
@@ -109,7 +109,7 @@ module.exports = {
       severity: 'error',
       comment:
         '@tepegoz/preferences must stay Electron-free and app-free: the file path is injected by the ' +
-        'desktop app; the Preferences type comes from @tepegoz/desktop-ipc. See docs/package-map.md.',
+        'desktop app; the Preferences type comes from @tepegoz/desktop-ipc. See docs/reference/package-map.md.',
       from: { path: '^packages/preferences/' },
       to: { path: ['^apps/', 'node_modules/electron'] },
     },
@@ -119,7 +119,7 @@ module.exports = {
       comment:
         '@tepegoz/profiles must stay Electron-free and app-free: the desktop app injects profiles.json’s ' +
         'path and resolves which profile a process is. The pure `.` barrel must also stay fs-free so ' +
-        '@tepegoz/profiles-ui can bundle it — fs lives behind the `./store` subpath. See docs/package-map.md.',
+        '@tepegoz/profiles-ui can bundle it — fs lives behind the `./store` subpath. See docs/reference/package-map.md.',
       from: { path: '^packages/profiles/' },
       to: { path: ['^apps/', 'node_modules/electron'] },
     },
@@ -129,7 +129,7 @@ module.exports = {
       comment:
         'The `@tepegoz/profiles` `.` barrel (index/model/registry) is imported by the renderer via ' +
         '@tepegoz/profiles-ui and must never pull Node fs / @tepegoz/json-store. Persistence is the ' +
-        'main-process-only `./store` subpath. See docs/package-map.md.',
+        'main-process-only `./store` subpath. See docs/reference/package-map.md.',
       from: { path: '^packages/profiles/src/(index|profiles-model|profiles-registry)\\.ts$' },
       to: { path: ['^packages/json-store/', '^node:fs', '^fs$'] },
     },
@@ -138,7 +138,7 @@ module.exports = {
       severity: 'error',
       comment:
         '@tepegoz/tab-strip is a presentational chrome leaf: it must never import back into the ' +
-        'desktop app. Selection/close/context-menu/new-tab are injected via callbacks. See docs/package-map.md.',
+        'desktop app. Selection/close/context-menu/new-tab are injected via callbacks. See docs/reference/package-map.md.',
       from: { path: '^packages/tab-strip/' },
       to: { path: '^apps/' },
     },
@@ -148,7 +148,7 @@ module.exports = {
       comment:
         '@tepegoz/extension-host (ADR-0021) is the Electron-free in-process capability supervisor + ' +
         'meta extension-management tools: no Electron, no app imports. The CapabilityRegistry and the ' +
-        'ExtensionManagementHost are injected by the desktop app. See docs/package-map.md.',
+        'ExtensionManagementHost are injected by the desktop app. See docs/reference/package-map.md.',
       from: { path: '^packages/extension-host/' },
       to: { path: ['^apps/', 'node_modules/electron'] },
     },
@@ -157,7 +157,7 @@ module.exports = {
       severity: 'error',
       comment:
         '@tepegoz/macro-engine is a pure deterministic interpreter: no Electron, no app imports. The ' +
-        'MacroHost (CDP/tabs) is injected by the desktop app. See docs/package-map.md.',
+        'MacroHost (CDP/tabs) is injected by the desktop app. See docs/reference/package-map.md.',
       from: { path: '^packages/macro-engine/' },
       to: { path: ['^apps/', 'node_modules/electron'] },
     },
@@ -167,7 +167,7 @@ module.exports = {
       comment:
         '@tepegoz/chat-core is the Electron-free, protocol-agnostic messenger core (ext-chat X-chat.0): ' +
         'normalize / fold / order / send-queue over injected adapter events. No Electron, no app imports — ' +
-        'the desktop ChatService owns the sockets and injects them. See docs/package-map.md.',
+        'the desktop ChatService owns the sockets and injects them. See docs/reference/package-map.md.',
       from: { path: '^packages/chat-core/' },
       to: { path: ['^apps/', 'node_modules/electron'] },
     },
@@ -178,7 +178,7 @@ module.exports = {
         '@tepegoz/mail-core is the Electron-free, protocol-agnostic mail core (ext-mail X-mail.0): ' +
         'MIME parse/build, RFC 5322 address handling, JWZ threading, the filter engine and the search ' +
         'fold. No Electron, no app imports — the desktop MailService owns the sockets and the vault. ' +
-        'See docs/package-map.md.',
+        'See docs/reference/package-map.md.',
       from: { path: '^packages/mail-core/' },
       to: { path: ['^apps/', 'node_modules/electron'] },
     },
@@ -189,7 +189,7 @@ module.exports = {
         '@tepegoz/chat-adapters is the ChatAdapter contract + ChatTransport port + capability presets ' +
         '(ext-chat X-chat.1). Electron-, app- AND Node-free: the desktop ChatService injects a concrete, ' +
         'egress-bound ChatTransport. Native + sandboxed-bridge adapters implement the same interface. ' +
-        'See docs/package-map.md.',
+        'See docs/reference/package-map.md.',
       from: { path: '^packages/chat-adapters/' },
       to: { path: ['^apps/', 'node_modules/electron', '^node:'] },
     },
@@ -199,7 +199,7 @@ module.exports = {
       comment:
         '@tepegoz/socks5 is a pure, incremental SOCKS5 CONNECT client (RFC 1928, no-auth). Electron-, ' +
         'app- AND Node-free: the caller drives it over an injected duplex. Used by the desktop to put ' +
-        'raw chat/mail sockets on the Phase-5 loopback SOCKS binding. See docs/package-map.md.',
+        'raw chat/mail sockets on the Phase-5 loopback SOCKS binding. See docs/reference/package-map.md.',
       from: { path: '^packages/socks5/' },
       to: { path: ['^apps/', 'node_modules/electron', '^node:'] },
     },
@@ -209,7 +209,7 @@ module.exports = {
       comment:
         '@tepegoz/chat-transport-node is the Node (net/tls) + global WebSocket/fetch implementation of ' +
         'ChatTransport (ext-chat X-chat.1). Node builtins are allowed; Electron and the app are not — ' +
-        'the desktop ChatService injects the egress-bound dialer and instantiates it. See docs/package-map.md.',
+        'the desktop ChatService injects the egress-bound dialer and instantiates it. See docs/reference/package-map.md.',
       from: { path: '^packages/chat-transport-node/' },
       to: { path: ['^apps/', 'node_modules/electron'] },
     },
@@ -222,7 +222,7 @@ module.exports = {
         'newline-JSON RPC envelope over its stdio, generic across whatever adapter interface the ' +
         'consuming extension declares (chat today; mail is the expected second consumer). Node ' +
         'builtins (child_process) are allowed; Electron and the app are not — the desktop ChatService ' +
-        '(or its mail equivalent) instantiates it with the real `spawn`. See docs/package-map.md.',
+        '(or its mail equivalent) instantiates it with the real `spawn`. See docs/reference/package-map.md.',
       from: { path: '^packages/adapter-subprocess/' },
       to: { path: ['^apps/', 'node_modules/electron'] },
     },
@@ -232,7 +232,7 @@ module.exports = {
       comment:
         '@tepegoz/chat-ui is the presentational messenger surface (ext-chat X-chat.2): conversation ' +
         'list, timeline, composer, roster, account setup. A renderer leaf — it takes data + callbacks ' +
-        'and must never import back into the desktop app or Electron. See docs/package-map.md.',
+        'and must never import back into the desktop app or Electron. See docs/reference/package-map.md.',
       from: { path: '^packages/chat-ui/' },
       to: { path: ['^apps/', 'node_modules/electron', '^node:'] },
     },
@@ -242,7 +242,7 @@ module.exports = {
       comment:
         '@tepegoz/cert-warning-ui is a presentational chrome leaf (the TLS certificate warning): it ' +
         'must never import back into the desktop app. The certificate details are injected and the ' +
-        'decision leaves through a callback. See docs/package-map.md.',
+        'decision leaves through a callback. See docs/reference/package-map.md.',
       from: { path: '^packages/cert-warning-ui/' },
       to: { path: '^apps/' },
     },
@@ -252,7 +252,7 @@ module.exports = {
       comment:
         '@tepegoz/auth-prompt-ui is a presentational chrome leaf (the 401/407 credential prompt): it ' +
         'must never import back into the desktop app. The challenge details are injected and the ' +
-        'credentials leave through a callback — the package stores nothing. See docs/package-map.md.',
+        'credentials leave through a callback — the package stores nothing. See docs/reference/package-map.md.',
       from: { path: '^packages/auth-prompt-ui/' },
       to: { path: '^apps/' },
     },
@@ -262,7 +262,7 @@ module.exports = {
       comment:
         '@tepegoz/find-bar is a presentational chrome leaf (the Ctrl+F bar): it must never import back ' +
         'into the desktop app. findInPage runs in main; the query, counts and actions are injected. ' +
-        'See docs/package-map.md.',
+        'See docs/reference/package-map.md.',
       from: { path: '^packages/find-bar/' },
       to: { path: '^apps/' },
     },
@@ -271,7 +271,7 @@ module.exports = {
       severity: 'error',
       comment:
         '@tepegoz/window-controls is a presentational chrome leaf: it must never import back into ' +
-        'the desktop app. Maximized state + actions are injected via props. See docs/package-map.md.',
+        'the desktop app. Maximized state + actions are injected via props. See docs/reference/package-map.md.',
       from: { path: '^packages/window-controls/' },
       to: { path: '^apps/' },
     },
@@ -300,7 +300,7 @@ module.exports = {
       comment:
         '@tepegoz/bookmarks-ui is a presentational chrome leaf (the tepegoz://bookmarks manager): it must ' +
         'never import back into the desktop app. The tree, mutations, open + context-menu actions, and copy ' +
-        'are injected. See docs/package-map.md.',
+        'are injected. See docs/reference/package-map.md.',
       from: { path: '^packages/bookmarks-ui/' },
       to: { path: '^apps/' },
     },
@@ -310,7 +310,7 @@ module.exports = {
       comment:
         '@tepegoz/profiles-ui is a presentational chrome leaf (the tepegoz://profiles manager): it must ' +
         'never import back into the desktop app or Electron. List / create / rename / delete / switch are ' +
-        'injected via props; only the @tepegoz/profiles model type is imported. See docs/package-map.md.',
+        'injected via props; only the @tepegoz/profiles model type is imported. See docs/reference/package-map.md.',
       from: { path: '^packages/profiles-ui/' },
       to: { path: ['^apps/', 'node_modules/electron'] },
     },
@@ -319,7 +319,7 @@ module.exports = {
       severity: 'error',
       comment:
         '@tepegoz/history-ui is a presentational chrome leaf: it must never import back into the ' +
-        'desktop app. The history data source (list/remove/clear) is injected. See docs/package-map.md.',
+        'desktop app. The history data source (list/remove/clear) is injected. See docs/reference/package-map.md.',
       from: { path: '^packages/history-ui/' },
       to: { path: '^apps/' },
     },
@@ -328,7 +328,7 @@ module.exports = {
       severity: 'error',
       comment:
         '@tepegoz/downloads-ui is the presentational tepegoz://downloads surface: it must never import ' +
-        'back into the desktop app. Download data and commands are injected. See docs/package-map.md.',
+        'back into the desktop app. Download data and commands are injected. See docs/reference/package-map.md.',
       from: { path: '^packages/downloads-ui/' },
       to: { path: '^apps/' },
     },
@@ -338,7 +338,7 @@ module.exports = {
       comment:
         '@tepegoz/process-ui is the presentational tepegoz://process (Task Manager) surface: it must ' +
         'never import back into the desktop app. The metrics poll and end-process action are injected. ' +
-        'See docs/package-map.md.',
+        'See docs/reference/package-map.md.',
       from: { path: '^packages/process-ui/' },
       to: { path: '^apps/' },
     },
@@ -347,7 +347,7 @@ module.exports = {
       severity: 'error',
       comment:
         '@tepegoz/downloads is the Electron-free download domain model: no Electron, no app imports. ' +
-        'The desktop app owns DownloadItem, quarantine paths, and native open/reveal. See docs/package-map.md.',
+        'The desktop app owns DownloadItem, quarantine paths, and native open/reveal. See docs/reference/package-map.md.',
       from: { path: '^packages/downloads/' },
       to: { path: ['^apps/', 'node_modules/electron'] },
     },
@@ -356,7 +356,7 @@ module.exports = {
       severity: 'error',
       comment:
         '@tepegoz/clipboard is the Electron-free clipboard policy/type model: no Electron, no app ' +
-        'imports. The desktop app owns native clipboard and WebContents commands. See docs/package-map.md.',
+        'imports. The desktop app owns native clipboard and WebContents commands. See docs/reference/package-map.md.',
       from: { path: '^packages/clipboard/' },
       to: { path: ['^apps/', 'node_modules/electron'] },
     },
@@ -365,7 +365,7 @@ module.exports = {
       severity: 'error',
       comment:
         '@tepegoz/uploads is the Electron-free upload broker domain model: no Electron, no app imports. ' +
-        'The desktop app owns file paths, CDP file-input binding, and native dialogs. See docs/package-map.md.',
+        'The desktop app owns file paths, CDP file-input binding, and native dialogs. See docs/reference/package-map.md.',
       from: { path: '^packages/uploads/' },
       to: { path: ['^apps/', 'node_modules/electron'] },
     },
@@ -374,7 +374,7 @@ module.exports = {
       severity: 'error',
       comment:
         '@tepegoz/uploads-ui is the presentational tepegoz://uploads surface: it must never import ' +
-        'back into the desktop app. Upload data and commands are injected. See docs/package-map.md.',
+        'back into the desktop app. Upload data and commands are injected. See docs/reference/package-map.md.',
       from: { path: '^packages/uploads-ui/' },
       to: { path: '^apps/' },
     },
@@ -384,7 +384,7 @@ module.exports = {
       comment:
         '@tepegoz/newtab-ui is the presentational tepegoz://newtab surface (AI/Favorites/Blank chooser): ' +
         'it must never import back into the desktop app. Favorites data and the agent/navigation actions ' +
-        'are injected. See docs/package-map.md.',
+        'are injected. See docs/reference/package-map.md.',
       from: { path: '^packages/newtab-ui/' },
       to: { path: '^apps/' },
     },
@@ -393,7 +393,7 @@ module.exports = {
       severity: 'error',
       comment:
         '@tepegoz/screenshots is the Electron-free screenshot domain/tool package: no Electron, no app ' +
-        'imports. The desktop app owns WebContents capture and full-page sizing. See docs/package-map.md.',
+        'imports. The desktop app owns WebContents capture and full-page sizing. See docs/reference/package-map.md.',
       from: { path: '^packages/screenshots/' },
       to: { path: ['^apps/', 'node_modules/electron'] },
     },
@@ -402,7 +402,7 @@ module.exports = {
       severity: 'error',
       comment:
         '@tepegoz/tasks is the Electron-free saved-task/trigger domain model: no Electron, no app ' +
-        'imports. The desktop app owns scheduling, browser checks, and agent run launching. See docs/package-map.md.',
+        'imports. The desktop app owns scheduling, browser checks, and agent run launching. See docs/reference/package-map.md.',
       from: { path: '^packages/tasks/' },
       to: { path: ['^apps/', 'node_modules/electron'] },
     },
@@ -411,7 +411,7 @@ module.exports = {
       severity: 'error',
       comment:
         '@tepegoz/web-tools is the Electron-free web search/fetch tool package: no Electron, no app ' +
-        'imports. The desktop app injects the concrete outbound HTTP host. See docs/package-map.md.',
+        'imports. The desktop app injects the concrete outbound HTTP host. See docs/reference/package-map.md.',
       from: { path: '^packages/web-tools/' },
       to: { path: ['^apps/', 'node_modules/electron'] },
     },
@@ -420,7 +420,7 @@ module.exports = {
       severity: 'error',
       comment:
         '@tepegoz/tasks-ui is the presentational tepegoz://tasks surface: it must never import ' +
-        'back into the desktop app. Task data, commands, and subscriptions are injected. See docs/package-map.md.',
+        'back into the desktop app. Task data, commands, and subscriptions are injected. See docs/reference/package-map.md.',
       from: { path: '^packages/tasks-ui/' },
       to: { path: '^apps/' },
     },
@@ -429,7 +429,7 @@ module.exports = {
       severity: 'error',
       comment:
         '@tepegoz/settings-ui is a presentational chrome leaf (the generic settings shell): it must ' +
-        'never import back into the desktop app. Section content + copy are injected. See docs/package-map.md.',
+        'never import back into the desktop app. Section content + copy are injected. See docs/reference/package-map.md.',
       from: { path: '^packages/settings-ui/' },
       to: { path: '^apps/' },
     },
@@ -438,7 +438,7 @@ module.exports = {
       severity: 'error',
       comment:
         '@tepegoz/extensions-ui is a presentational chrome leaf (the extensions grid shell): it must ' +
-        'never import back into the desktop app. Items + copy are injected. See docs/package-map.md.',
+        'never import back into the desktop app. Items + copy are injected. See docs/reference/package-map.md.',
       from: { path: '^packages/extensions-ui/' },
       to: { path: '^apps/' },
     },
@@ -448,7 +448,7 @@ module.exports = {
       comment:
         '@tepegoz/bookmarks-bar is a presentational chrome leaf (the bookmarks strip under the nav ' +
         'bar): it must never import back into the desktop app. The list, the open action, and the copy ' +
-        'are injected. See docs/package-map.md.',
+        'are injected. See docs/reference/package-map.md.',
       from: { path: '^packages/bookmarks-bar/' },
       to: { path: '^apps/' },
     },
@@ -457,7 +457,7 @@ module.exports = {
       severity: 'error',
       comment:
         '@tepegoz/nav-toolbar is a presentational chrome leaf (the browser nav bar): it must never ' +
-        'import back into the desktop app. Actions are injected; the extension tray fills an actions slot. See docs/package-map.md.',
+        'import back into the desktop app. Actions are injected; the extension tray fills an actions slot. See docs/reference/package-map.md.',
       from: { path: '^packages/nav-toolbar/' },
       to: { path: '^apps/' },
     },
@@ -466,7 +466,7 @@ module.exports = {
       severity: 'error',
       comment:
         '@tepegoz/browser-chrome is the presentational chrome frame (title row + nav bar): it must ' +
-        'never import back into the desktop app. Actions are injected; the extension tray fills a slot. See docs/package-map.md.',
+        'never import back into the desktop app. Actions are injected; the extension tray fills a slot. See docs/reference/package-map.md.',
       from: { path: '^packages/browser-chrome/' },
       to: { path: '^apps/' },
     },
@@ -475,7 +475,7 @@ module.exports = {
       severity: 'error',
       comment:
         '@tepegoz/browser-menu is a presentational chrome leaf (the reusable menu surface): it must ' +
-        'never import back into the desktop app. Items + copy are injected. See docs/package-map.md.',
+        'never import back into the desktop app. Items + copy are injected. See docs/reference/package-map.md.',
       from: { path: '^packages/browser-menu/' },
       to: { path: '^apps/' },
     },
@@ -484,7 +484,7 @@ module.exports = {
       severity: 'error',
       comment:
         '@tepegoz/browser-tools must stay Electron-free and app-free: the concrete browser operations ' +
-        'are injected via the BrowserHost interface (the desktop app implements it over TabManager). See docs/package-map.md.',
+        'are injected via the BrowserHost interface (the desktop app implements it over TabManager). See docs/reference/package-map.md.',
       from: { path: '^packages/browser-tools/' },
       to: { path: ['^apps/', 'node_modules/electron'] },
     },
@@ -494,7 +494,7 @@ module.exports = {
       comment:
         '@tepegoz/tab-engine is the pure tab-state model + the tab_* agent tools (registerTabTools): ' +
         'no Electron, no app imports. The desktop TabManager owns the WebContentsViews and injects the ' +
-        'TabHost. See docs/package-map.md.',
+        'TabHost. See docs/reference/package-map.md.',
       from: { path: '^packages/tab-engine/' },
       to: { path: ['^apps/', 'node_modules/electron'] },
     },
@@ -504,7 +504,7 @@ module.exports = {
       comment:
         '@tepegoz/journal-tools owns the journal_search_events agent tool: no Electron, no app, no ' +
         'persistence imports. The JournalReader (over EventJournal + SQLite) is injected by the desktop ' +
-        'app. See docs/package-map.md.',
+        'app. See docs/reference/package-map.md.',
       from: { path: '^packages/journal-tools/' },
       to: { path: ['^apps/', 'node_modules/electron'] },
     },
@@ -513,7 +513,7 @@ module.exports = {
       severity: 'error',
       comment:
         '@tepegoz/mcp-client must stay Electron-free and app-free: the SDK Client + stdio transport ' +
-        'and config sourcing are injected by the desktop layer (transport.electron / supervisor.electron). See docs/package-map.md.',
+        'and config sourcing are injected by the desktop layer (transport.electron / supervisor.electron). See docs/reference/package-map.md.',
       from: { path: '^packages/mcp-client/' },
       to: { path: ['^apps/', 'node_modules/electron'] },
     },
@@ -523,7 +523,7 @@ module.exports = {
       comment:
         '@tepegoz/agent-runtime is the Electron-free agentic run engine: the browser tool host, journal ' +
         'reader, active-tab URL and localized handoff copy are injected via AgentRunDeps by the desktop ' +
-        'adapter (main/agent/agent-service.ts). See docs/package-map.md.',
+        'adapter (main/agent/agent-service.ts). See docs/reference/package-map.md.',
       from: { path: '^packages/agent-runtime/' },
       to: { path: ['^apps/', 'node_modules/electron'] },
     },
@@ -534,7 +534,7 @@ module.exports = {
         '@tepegoz/http is the ONE outbound-HTTP seam (own docblock) and must stay pure Node/browser: ' +
         'no Electron, no app imports. The desktop hosts (web-tools-host.electron.ts, ' +
         'download-tools-host.electron.ts, …) and the model-gateway providers are the only callers. ' +
-        'See docs/package-map.md.',
+        'See docs/reference/package-map.md.',
       from: { path: '^packages/http/' },
       to: { path: ['^apps/', 'node_modules/electron'] },
     },

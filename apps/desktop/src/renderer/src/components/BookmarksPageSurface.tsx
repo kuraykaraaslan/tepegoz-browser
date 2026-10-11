@@ -5,7 +5,7 @@ import { bookmarkDialogAnchor } from '../app-bookmarks';
 import { useSurfaceLocale } from '../app-surface-locale';
 
 /** Desktop host for `tepegoz://bookmarks` loaded as a real page (Faz 3 of
- *  phases/tracks/protocol-tepegoz-pages.md) — mirrors `SettingsPageSurface.tsx`'s pattern. `refreshKey`
+ *  docs/concepts/tracks/protocol-tepegoz-pages.md) — mirrors `SettingsPageSurface.tsx`'s pattern. `refreshKey`
  *  is bumped whenever ANY window mutates bookmarks (`onBookmarksChanged`), matching
  *  `app-bookmarks.ts#useBookmarksBar`'s own refetch signal. */
 export function BookmarksPageSurface() {

@@ -5,7 +5,7 @@
 >
 > **Durum:** açık kaynak · Firefox ESR tabanlı · Tor Project.
 > **Tarih.** Derlemeler 2026-07/08 · bu formata çevirisi 2026-09-02. **Dil notu.** Türkçe.
-> **Sahibi faz:** [phase-5](../../phases/product/phase-5-vpn-network-privacy.md) → `### Tor integration`
+> **Sahibi faz:** [phase-5](../concepts/product/phases/05-vpn-network-privacy.md) → `### Tor integration`
 > ve `### Network-privacy onboarding & health`.
 
 ---

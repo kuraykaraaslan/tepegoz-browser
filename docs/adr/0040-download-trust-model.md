@@ -3,7 +3,7 @@
 - **Status:** Accepted (quarantine lifecycle + risk classification + release/HITL gate shipped; the Safe-Browsing URL check is speced here but not yet wired — see Consequences)
 - **Date:** 2026-08-28
 - **Refines:** [ADR-0006](0006-policy-kernel-hitl.md) (deterministic Policy Kernel + HITL) · [ADR-0007](0007-capability-plane-mcp.md) (unified Capability/Tool Plane) · **complements** [ADR-0022](0022-file-operations-sandbox.md) (folder-sandboxed file operations) · [ADR-0004](0004-event-sourced-journal.md) (append-only journal, "shown = recorded")
-- **Phase:** [Phase 2c — Classic Browser Essentials & Downloads](../../phases/product/phase-2c-classic-browser-essentials.md), L10 (Safe Downloads + Download Manager)
+- **Phase:** [Phase 2c — Classic Browser Essentials & Downloads](../concepts/product/phases/02c-classic-browser-essentials.md), L10 (Safe Downloads + Download Manager)
 
 ## Context
 
@@ -63,7 +63,7 @@ raises the bar for the human gate.
   `executable`/`script`. `commandNeedsApproval(record, 'open')` additionally forces one before opening
   anything that is not both `normal` risk and `safe` verdict. So an agent download of a `.zip` from a
   clean origin still cannot leave quarantine without the human, and `retry` re-enters this whole path
-  rather than shortcutting it (see [the 2c retry work](../../phases/product/phase-2c-classic-browser-essentials.md)).
+  rather than shortcutting it (see [the 2c retry work](../concepts/product/phases/02c-classic-browser-essentials.md)).
 
 ### 4. Everything is journaled, redacted, append-only
 

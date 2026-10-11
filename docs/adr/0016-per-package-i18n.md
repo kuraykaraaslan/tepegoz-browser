@@ -53,7 +53,7 @@ presentational leaves or the non-React main process to React.
 - A component rendered outside an `<I18nProvider>` silently falls back to `DEFAULT_LOCALE`; both render
   roots are wrapped to prevent this.
 - Supersedes the "keep catalog keys in `@tepegoz/i18n`" guidance in
-  [ADR-0015](0015-package-extraction-roadmap.md) / `docs/package-map.md` (both updated).
+  [ADR-0015](0015-package-extraction-roadmap.md) / `docs/reference/package-map.md` (both updated).
 - Rejected: **prop-injection everywhere** (keeps the central catalog as the source of truth — the thing we
   wanted to remove); **fully self-contained packages** (each re-translating `common`/`window` — needless
   duplication of OK/Cancel/Close); **React on the root export** (would pull React into the main bundle).

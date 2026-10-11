@@ -30,7 +30,7 @@ export const EXTENSION_ID_RE = /^[a-z0-9]+(\.[a-z0-9-]+)+$/;
  *  capabilities ship; enforcement lands with the Policy Kernel integration (Phase 3).
  *
  *  `accounts` / `background-connection` / `notifications` / `contacts` were added for the
- *  communication extensions (`ext-mail`, `ext-chat` — see `phases/extensions/`): an extension that
+ *  communication extensions (`ext-mail`, `ext-chat` — see `docs/concepts/extensions/`): an extension that
  *  holds server credentials in the vault, keeps a socket open while its surface is closed, raises OS
  *  notifications, or reads an address book. Enforcement (like the rest) lands with the Policy Kernel. */
 export const ExtensionPermissionSchema = z.enum([

@@ -1,0 +1,221 @@
+# Track — Chrome-style multi-profile data & session isolation
+
+- **Status:** ✅ **Landed on `main` (2026-09-08)** — five PRs (`6d22287` · `7cb6130` · `a74e1ca` ·
+  `edc2446` · `dff3ce1`) plus [ADR-0045](../../adr/0045-multi-profile-isolation.md). Chrome-style profiles are
+  created / renamed / deleted / switched from the profile menu and `tepegoz://profiles`; each runs as
+  its own Electron process over `Profiles/<id>/`; a pre-existing flat install migrates on first run.
+  typecheck / lint / test / build / depcruise all green; unit + E2E coverage. Superseded the abandoned
+  `feat/multi-profile-windows` branch — its intent, rebuilt against a `main` ~945 commits further along.
+- **Owner decisions (settled 2026-09-08):**
+  1. **Process-per-profile.** Accept ~200–300 MB RAM per open profile; cross-profile bleed becomes
+     structurally impossible rather than a routing invariant to uphold at ~50 call sites.
+  2. **Profile-scoped partition names** — `persist:tepegoz-profile-<id>` (browsing) /
+     `persist:tepegoz-profile-<id>--app` (chrome), replacing the bare `persist:tepegoz-web` /
+     `persist:tepegoz-app`. Chosen for defense-in-depth even though the process boundary already
+     isolates the partition directories; the cost is threading `<id>` into every partition-name
+     construction site (`window.ts`, `tabs`, the Phase 5 network layer's `binding-service` /
+     `browsing-sessions` / `connection-pool`, downloads, the site-data IPC). Phase 5's per-connection
+     tunnels compose as `persist:tepegoz-profile-<id>--conn-<connId>`.
+  3. **Stays a track** — not a numbered phase row. Delivered via the 5-PR plan below.
+  4. **ADR-0045** (next free; `0025`–`0044` are taken). Supersedes the branch's ADR-0025 draft.
+- **Companion ADR (`docs/adr/0045-multi-profile-isolation.md`, to be written):** supersedes the branch's ADR-0025 draft; refines
+  [ADR-0014](../../adr/0014-user-data-layout-db-connector.md) (single `userData` → `Profiles/<id>/`
+  subdivision), [ADR-0020](../../adr/0020-tab-boundary-model.md) (per-profile partition isolation it
+  deferred), and the Phase 5 network layer's partition-key convention.
+
+## Why
+
+The premise the old roadmap recorded — "BrowserContext isolation already exists; just add the UI" — is
+false. On `main` today:
+
+- Exactly **two hardcoded, permanently shared** Chromium session partitions: `APP_PARTITION =
+'persist:tepegoz-app'` ([`window.ts:18`](../../../apps/desktop/src/main/window.ts#L18)) for chrome and
+  internal pages, `persist:tepegoz-web` for browsed tabs. Every window and every tab in the whole app
+  shares them. (Phase 5 added `persist:tepegoz-web--conn-<id>` tunnel variants, but those are per-VPN
+  connection, not per-identity.)
+- One global `userData` directory (ADR-0014): one `tepegoz.db`, one `preferences.json`, one
+  `credentials.enc.json`, one adblock cache, one dictionaries dir, one download-quarantine dir, one
+  models dir, one third-party `Extensions/` install dir.
+- `PreferenceStore` and `CredentialVault` are `private static` singletons — one slot per process
+  ([`preference-store.ts:16-18`](../../../packages/preferences/src/preference-store.ts#L16)) — so two
+  identities' data cannot even coexist in memory.
+
+There is **no per-profile isolation of any kind**. The Chrome-style profile menu rows
+(`UserMenuPopup.tsx`) are disabled placeholders with nothing behind them.
+
+**Target use case:** a consultant / agency running several client identities on one machine — full data
+isolation per identity (history / bookmarks / passwords / preferences / cookies / extensions), a
+picker/switcher, and two or more identities open **concurrently**, each in its own OS window with an
+avatar + colour so they are never confused.
+
+## Capabilities to deliver
+
+| #   | Capability                                                                                                                                                                                                                                                                                        | State on `main`                   | State on the abandoned branch                                                                |
+| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------- | -------------------------------------------------------------------------------------------- |
+| C1  | **Profile registry** — CRUD over a list of named identities, Chrome-style ids (`default`, then `profile-1`, `profile-2`, …), auto-assigned name + avatar colour, immutable id / editable display name                                                                                             | none                              | `@tepegoz/profiles` package: zod schemas, pure reducers, `profiles.json` store               |
+| C2  | **Full data isolation per profile** — DB, preferences, credential vault, translate memory, adblock, dictionaries, download quarantine, local models, third-party extension installs all live under `Profiles/<id>/`                                                                               | single global `userData`          | every `userData`-derived path repointed through `profile-paths.ts`                           |
+| C3  | **Session / cookie isolation** — each profile gets its own Chromium partition(s); cookies, cache, IndexedDB, localStorage, service workers do not cross                                                                                                                                           | two shared partitions             | per-process `userData` ⇒ Chromium writes a self-contained `Partitions/` per profile          |
+| C4  | **Picker + switcher UI** — working profile menu (add-and-switch, switch, manage, open new window) and a `tepegoz://profiles` manager page (rename / delete / list, last-profile delete refused)                                                                                                   | disabled placeholder rows         | `@tepegoz/profiles-ui` page + `ipc-profiles.ts` + `UserMenuPopup` wired                      |
+| C5  | **Concurrent profiles** — two or more open at once, each window shows its **own** profile, independent menus, agent/task/MCP runs scoped to the profile whose window they belong to                                                                                                               | one active identity, process-wide | each profile is its own Electron process (`--user-data-dir=<root>/Profiles/<id>`)            |
+| C6  | **First-run migration** — an existing flat `userData/{tepegoz.db,-wal,-shm,preferences.json,credentials.enc.json,Partitions/,…}` install moves into `Profiles/default/` before any store opens, existence-guarded, same-volume rename with copy+delete fallback, failure logged and left in place | n/a                               | `migrate-legacy-profile.ts`                                                                  |
+| C7  | **Profile deletion** — confirm dialog, then close its windows, wipe its data directory + partitions as one unit, remove from registry; refuse deleting the last profile or the profile in use                                                                                                     | n/a                               | `deleteProfile` in `ipc-profiles.ts` (process-per-profile: refuse if its process is running) |
+
+## Recommended architecture — process per profile
+
+The branch shipped **two** designs. The first (single process, `PreferenceStore` / `CredentialVault` /
+DB connector each an internal `Map<profileId, Core>` behind an unchanged static facade, routing every
+read/write to "the active profile") **shipped and then failed in use**: changing the theme in one
+profile's window changed it in the other's, because `prefs:get` / `prefs:set` resolved the process-wide
+active profile, not the calling window's. That is the _class_ of bug the design invites — correctness
+depended on ~50 call sites each re-asserting which profile they meant, and one that forgot was silently
+wrong.
+
+The branch's final commit (`90cf04e`) replaced it with **one Electron process per profile**, launched
+with `--user-data-dir=<root>/Profiles/<id>`:
+
+- Inside a process, `app.getPath('userData')` **is** the profile directory. Every store opens a plain
+  path inside it — the pre-multi-profile code, unchanged, routing facade deleted. Cross-profile bleed is
+  structurally impossible: there is no "other profile" in the process to leak into.
+- Chromium writes `Partitions/`, `Cache/`, `Local State` under `userData` ⇒ a profile really is one
+  self-contained, copyable folder — full Chrome parity. Deleting a profile is a single recursive
+  directory remove. Partition **names** _could_ stay `persist:tepegoz-app` / `persist:tepegoz-web`
+  (the process boundary already isolates them), but **decision 2 takes the profile-scoped names**
+  `persist:tepegoz-profile-<id>` / `persist:tepegoz-profile-<id>--app` for defense-in-depth — see the
+  decisions list at the top and PR3 below.
+- `TaskService`, `McpService`, `CapabilityRegistry`, `MacroService`, `FileOperationsHost` are
+  per-process singletons ⇒ genuinely per-profile at no extra cost. An agent run in one profile cannot
+  touch another's data.
+- Electron's single-instance lock is keyed by the user-data dir ⇒ "switch to profile X" is the same
+  spawn whether or not X is running; if it is, the new process's lock fails and the running one's
+  `second-instance` handler focuses its window.
+- The per-window `profileId` threading (`window-profile-map.ts`, the `profileId` params on
+  `createWindow` / `openWindow` / popup + drag-preview factories / tab creation) is **deleted** — every
+  window in a process is the same profile.
+
+**Costs, accepted:** a full Electron runtime per open profile (~200–300 MB — the reason Chrome itself
+does _not_ do this). Deleting a running profile is refused with an actionable message (files locked);
+deleting the profile you are in is refused outright. Cross-profile tab drags are impossible by
+construction (a different process is not a drop target) — matches Chrome.
+
+**Shared mutable state, the one thing this adds:** `profiles.json` is written by multiple processes.
+Mitigate exactly as the branch did — `ProfilesStore` re-reads before every mutation, atomic tmp+rename
+via `@tepegoz/json-store` rules out a torn read, and mutations are only ever explicit user actions
+(create / rename / delete / switch).
+
+## Re-implementation plan against today's `main`
+
+PRs kept small and each a no-user-visible-change checkpoint until the last.
+
+**Progress (2026-09-08, on `main`):** PR1 `6d22287` · PR2 `7cb6130` · PR3 `a74e1ca` · PR4 `edc2446` ·
+PR5 `dff3ce1` — all landed, plus [ADR-0045](../../adr/0045-multi-profile-isolation.md). typecheck / lint /
+test / build / depcruise all green. Profiles are user-visible as of PR4 (the profile menu +
+`tepegoz://profiles`).
+
+1. **PR1 — foundation, no behaviour change.** ✅ `6d22287`
+   - New `@tepegoz/profiles` (Electron-free): `Profile` / `ProfilesFile` types, zod schemas
+     (`ProfileIdSchema = /^(default|profile-\d+)$/`, 8-colour palette), pure reducers
+     (`addProfile` / `renameProfile` / `removeProfile` / `touchLastUsed`, Chrome-style id + colour
+     assignment), `ProfilesStore` singleton over `profiles.json` on a `./store` subpath so the renderer
+     bundle never pulls `fs` transitively.
+   - `apps/desktop/src/main/profiles/profile-paths.ts` — single source for the `Profiles/<id>/` layout.
+   - `migrate-legacy-profile.ts` — flat install → `Profiles/default/`, **including `tepegoz.db-wal` /
+     `-shm` and `Partitions/`** (the branch's two data-safety fixes — omitting the WAL drops everything
+     since the last SQLite checkpoint after a crash; omitting `Partitions/` silently signs the user out).
+   - Repoint every `userData`-derived path (DB connector, `stores.electron.ts`, adblock, translate host,
+     typo-dictionary manager, download service + lifecycle, model manager) through `profile-paths.ts`.
+   - `dependency-cruiser.cjs` allow-rules for the new package; `docs/reference/package-map.md` row.
+2. **PR2 — the boot resolver + migration.** ✅ `7cb6130`
+   - `profiles/profile-boot.ts` — `resolveAndPinProfile()` reads `profiles.json`'s `lastActiveProfileId`
+     **before** `app.whenReady()` and pins `userData` to `Profiles/<id>/`; no forced picker on cold
+     start. Honours `--user-data-dir` (eval harness) and a launcher child's `--profile-id`.
+   - `profiles/profile-paths.ts` — the shared-root layout helpers.
+   - `migrate-legacy-profile.ts` — flat install → `Profiles/default/`, **including `tepegoz.db-wal` /
+     `-shm`, `Partitions/`, and the VPN secrets/binaries**. Existence-guarded per entry.
+   - `index.ts` — the inline userData pin + pre-rename carry-over fold into `resolveAndPinProfile()`.
+   - `profiles/profile-launcher.ts` (spawn with `--user-data-dir`) deferred to PR4 — its only caller is
+     the `switchProfile` IPC.
+   - Still one profile in practice (`default`), just booted through the new path.
+3. **PR3 — profile-scoped partition names.** ✅ `a74e1ca`
+   - `@tepegoz/tab-engine/partition-scope.ts` — one process-wide scope, set once at boot.
+     `directBrowsingPartition()` → `persist:tepegoz-profile-<id>`, `appChromePartition()` →
+     `…--app`; `partitionKeyFor` composes tunnels as `…--conn-<connId>` on the bare base. Unset =
+     the pre-multi-profile `persist:tepegoz-web` / `persist:tepegoz-app` (tests, opted-out runs).
+   - `DIRECT_PARTITION` / `APP_PARTITION` / `CHROME_WEB_PREFERENCES` consts → accessor functions so
+     the scoped name resolves at call time, not module load. `browsing-sessions` `TUNNEL_PREFIX`
+     likewise. Dead `BROWSING_PARTITION` re-export dropped.
+   - `migrate-legacy-profile.ts` renames the on-disk `Partitions/` directories to the scoped names, so
+     an existing user's cookies / logins are not orphaned.
+   - Session-level hooks (CSP, the `webRequest` multiplexer, download interception, `user-agent-host`)
+     need no per-process re-registration — process-per-profile gives each its own copy for free.
+4. **PR4 — IPC + UI.** ✅
+   - `@tepegoz/desktop-ipc`: `contract-profiles.ts` / `api-profiles.ts`, six `profiles:*` channels
+     (`list` / `get-active` / `create` / `rename` / `delete` / `switch`). `safeParse` on every input at
+     the boundary via `@tepegoz/profiles/schemas`. `get-active` is THIS process's profile —
+     process-per-profile, no sender-window resolution (the plan's earlier note was for the in-process
+     design).
+   - `apps/desktop/src/main/ipc/ipc-profiles.ts` + `apps/desktop/src/preload/api-profiles.ts` +
+     `profiles/profile-launcher.ts` (its only caller).
+   - `@tepegoz/profiles-ui` — presentational `ProfilesPage` (avatar colour + initial, inline rename,
+     delete behind a confirm step + last-profile guard, switch, add), own `src/i18n/{en,tr}.ts`.
+   - `tepegoz://profiles` route via `REAL_PAGE_HOSTS` / `REAL_PAGE_BASE_URLS` / `navigation-url` + the
+     `main.tsx` host dispatch (`ProfilesPageSurface`).
+   - `UserMenuPopup.tsx` rows wired: add-and-switch, switch (focus existing window or spawn), manage,
+     new window. Passwords / account / sync stay disabled (out of scope); Guest stays disabled
+     (phase-2c, unrelated).
+5. **PR5 — deletion guards + E2E + ADR.** ✅
+   - `deleteProfile` guards (last profile, in-use profile, locked files → actionable message) — landed
+     with PR4's `ipc-profiles.ts`.
+   - `PopupWindowManager` needs no per-owning-window map fix (different processes ⇒ different menus) —
+     confirmed; the branch's deferred papercut note does not apply.
+   - `TEPEGOZ_PROFILES_ROOT` seam so the real profile system is testable against an isolated directory.
+   - E2E: `e2e/multi-profile.spec.ts` (flat → `Profiles/default/` migration + boots into it);
+     `tepegoz://profiles` added to `tepegoz-internal-pages.spec.ts`'s generic renders-real-content /
+     IPC-trust sweep.
+   - [ADR-0045](../../adr/0045-multi-profile-isolation.md) written, superseding the branch's ADR-0025 draft.
+
+## The security line (non-negotiable — CLAUDE.md, ADR-0010)
+
+- Renderer stays untrusted; the profile API is typed `contextBridge` only, `safeParse` at the IPC
+  boundary. No profile id or path crosses from the renderer unvalidated against `ProfileIdSchema`.
+- `credentials.enc.json` stays `safeStorage`-encrypted per profile; never logged, never in the renderer
+  bundle. Each profile's vault is a separate file under `Profiles/<id>/`.
+- A profile switch must not leak the previous profile's in-memory secrets into the new process — with
+  process-per-profile this is automatic (fresh process), which is a security argument _for_ that design.
+
+## Explicitly out of scope
+
+- **Cloud sync** of any profile data — a later phase.
+- The **MV3 `ExtensionHost` execution engine** itself (still unbuilt, its own roadmap task) — this track
+  only guarantees that whenever it lands, each profile already has its own isolated `Extensions/` install
+  directory, not a shared one. The bundled built-in extension **catalog**
+  (`resources/extensions.catalog.json`) stays a single read-only app resource; only installed/enabled
+  state is per-profile.
+- **Guest / private-ephemeral mode** (phase-2c) — unrelated, unbuilt; its menu placeholder stays
+  disabled.
+- **Per-site** `webPreferences` / partition overrides — profile-wide only.
+
+## Reference — what the abandoned branch already wrote
+
+`git show feat/multi-profile-windows` — 5 commits, all 2026-08-17, merge-base `ab11931` (2026-07-11):
+
+| Commit    | What                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `2c6a5a5` | `docs(profiles)` — ADR-0025 draft + `@tepegoz/profiles` registry package + `migrate-legacy-profile.ts` + `profile-paths.ts`; every `userData`-derived path repointed. Non-user-visible foundation.                                                                                                                                                                                                                                                                                               |
+| `f007eaa` | `refactor(profiles)` — `PreferenceStore` / `CredentialVault` / DB connector: `private static` singleton → internal `Map<profileId, Core>` behind the **same** static class name + signatures, so ~50 call sites and every existing test needed zero changes. `.init(deps)` becomes permanent sugar for `.open('default', deps)`. **This is the in-process design that later failed — see `90cf04e`.**                                                                                            |
+| `8529801` | `feat(profiles)` — per-profile Chromium partitions `persist:tepegoz-profile-<id>[--app]`; `profileId` threaded through window / popup / drag-preview / tab creation and per-window nav+prefs reads; session hooks (CSP, webRequest mux, download interception) re-registered per opened profile; cross-profile tab drag tears off a new window instead of merging into the wrong strip; boot resolves the profile from the registry's last-active pointer.                                       |
+| `5de36d7` | `feat(profiles)` — profile IPC contract (list / get-active / create / rename / delete / switch, sender-window-resolved), `@tepegoz/profiles-ui` manager page at `tepegoz://profiles`, `UserMenuPopup` placeholders → working actions; delete closes windows + clears sessions + removes the data dir, refuses the last one. `@tepegoz/profiles` split onto a `./store` subpath so the renderer never pulls `fs`.                                                                                 |
+| `90cf04e` | `feat(profiles)` — **replaces the in-process design**: each profile is its own Electron process (`--user-data-dir=<root>/Profiles/<id>`), routing facade deleted, `Partitions/` nested inside the profile folder (Chrome parity, one-shot deletion), agent/task/MCP engines per-profile for free, per-window `profileId` threading + `window-profile-map.ts` deleted. Fixes the migration's missing `tepegoz.db-wal` / `-shm` and `Partitions/`. Adds `profile-boot.ts` + `profile-launcher.ts`. |
+
+Verified live on the branch: two profiles as fully separate process trees at once (each with its own
+browser / renderer / gpu / utility processes) holding distinct themes (dark vs light) with no bleed.
+
+## Why it is not just merged
+
+- ~350 commits behind `main`; merge-base predates the phases consolidation
+  (`docs/concepts/phase-3-backend-cloud-extensions.md`, which the branch edits, no longer exists), the Phase 5
+  network / tunnel-partition layer, and the `protocol.handle` internal-pages rework — all three touch the
+  exact files this branch touches.
+- ADR number collision (`0025` is taken on `main`).
+- The in-process → process-per-profile pivot means commits `f007eaa` / `8529801` are partly superseded
+  by `90cf04e` **within the branch itself** — a clean cherry-pick would re-introduce then remove the
+  facade. Rebuild from `90cf04e`'s end state, not the commit sequence.

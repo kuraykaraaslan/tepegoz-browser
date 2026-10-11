@@ -4,8 +4,8 @@
 > anlama geldiği. Alan araştırması; rakip incelemesi değil.
 >
 > **Tarih.** Derleme 2026-08-21 · bu formata çevirisi 2026-09-02. **Dil notu.** Türkçe.
-> **Sahibi fazlar:** [phase-5](../../phases/product/phase-5-vpn-network-privacy.md) ·
-> [phase-2](../../phases/product/phase-2-adapters-safe-browsing.md) (parmak izi stratejisi).
+> **Sahibi fazlar:** [phase-5](../concepts/product/phases/05-vpn-network-privacy.md) ·
+> [phase-2](../concepts/product/phases/02-adapters-safe-browsing.md) (parmak izi stratejisi).
 
 ---
 

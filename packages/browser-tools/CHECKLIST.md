@@ -37,7 +37,7 @@
 - [ ] Snapshot'lar büyük sayfalarda model context'ine sığacak makul boyutta kalmalı
 - [ ] `readPage` başlık ve URL'i her zaman döndürmeli
 - [ ] Aynı `BrowserHost` birden çok sekme için kullanılabilmeli
-- [ ] Paket `apps/desktop`'tan çıkarılmış olmalı (`docs/package-map.md`)
+- [ ] Paket `apps/desktop`'tan çıkarılmış olmalı (`docs/reference/package-map.md`)
 - [ ] `PageSnapshot` / `ElementsSnapshot` tipleri dışa aktarılmalı
 
 ## Çok niş

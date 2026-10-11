@@ -102,7 +102,7 @@ account, no telemetry and no backend — and the problems we already know about 
 of discovered by you.
 
 **[CLAIM]** Known issues are published at [known issues](../known-issues.md). Phase-by-phase status is
-at [the roadmap](../../phases/README.md).
+at [the roadmap](../concepts/README.md).
 
 ---
 

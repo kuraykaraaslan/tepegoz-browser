@@ -2,7 +2,7 @@
 
 - **Status:** Accepted (the decision layer only — see Consequences)
 - **Date:** 2026-08-20
-- **Phase:** [Phase 12 — Developer Platform & Marketplace Economy](../../phases/product/phase-12-developer-platform-marketplace.md), L5/L8 (SBOM + SLSA provenance attestation gate)
+- **Phase:** [Phase 12 — Developer Platform & Marketplace Economy](../concepts/product/phases/12-developer-platform-marketplace.md), L5/L8 (SBOM + SLSA provenance attestation gate)
 
 ## Numbering note
 
